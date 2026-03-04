@@ -254,6 +254,10 @@ li { margin-bottom: var(--s2); font-size: var(--t-body); }
 .fw-700       { font-weight: 700; }
 .fw-800       { font-weight: 800; }
 
+/* Short-form aliases used by live-map components */
+.muted  { color: var(--muted); }
+.subtle { color: var(--subtle); }
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
