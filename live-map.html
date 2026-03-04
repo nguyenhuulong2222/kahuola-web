@@ -1,118 +1,847 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kahu Ola | Layer Library</title>
-  <meta name="description" content="Kahu Ola Layer Library for fire, weather, air, earth, ocean, and satellite situational awareness.">
-  <link rel="canonical" href="https://kahuola.org/live-map.html">
-  <link rel="icon" href="./assets/favicon/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="./assets/favicon/favicon-32.png" sizes="32x32" type="image/png">
-  <link rel="icon" href="./assets/favicon/favicon-192.png" sizes="192x192" type="image/png">
-  <link rel="apple-touch-icon" href="./assets/favicon/apple-touch-icon.png" sizes="180x180">
-  <script>
-    if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      document.documentElement.classList.add("motion-ready");
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kahu Ola — Live Hazard Map</title>
+  <meta name="description" content="Transparency Portal: Live civic hazard layers for Maui County. NASA FIRMS fire hotspots, NOAA smoke, EPA AirNow, PacIOOS, USGS — routed through Kahu Ola broker." />
+
+  <!-- Fonts: DM Sans (clean civic) + DM Mono (data) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Leaflet — NO defer so it's ready before our script -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <style>
+    /* ── Design tokens ──────────────────────────────────── */
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #1c2128;
+      --border:   rgba(255,255,255,.08);
+      --border2:  rgba(255,255,255,.14);
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --teal:     #0ea5a4;
+      --teal2:    #0d9494;
+      --amber:    #f59e0b;
+      --red:      #ef4444;
+      --green:    #22c55e;
+      --shadow:   0 8px 32px rgba(0,0,0,.5);
+      --radius:   14px;
+      --tap:      44px;
+      --font:     'DM Sans', ui-sans-serif, system-ui, sans-serif;
+      --mono:     'DM Mono', ui-monospace, monospace;
+      --panel-w:  400px;
     }
-  </script>
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="./live-map.css">
+
+    /* ── Reset ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: var(--font); color: var(--text); background: var(--bg); overflow: hidden; }
+    a { color: var(--teal); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button { font-family: var(--font); cursor: pointer; }
+
+    /* ── Legal bar ──────────────────────────────────────── */
+    .legal-bar {
+      position: fixed;
+      top: 0; left: 0; right: var(--panel-w);
+      z-index: 900;
+      background: rgba(245,158,11,.12);
+      border-bottom: 1px solid rgba(245,158,11,.25);
+      padding: 7px 16px;
+      font-size: 12px;
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .legal-bar a { color: var(--amber); text-decoration: underline; }
+
+    /* ── Map ────────────────────────────────────────────── */
+    #map {
+      position: fixed;
+      top: 33px; /* legal bar height */
+      left: 0;
+      right: var(--panel-w);
+      bottom: 0;
+      z-index: 1;
+    }
+
+    /* ── Panel ──────────────────────────────────────────── */
+    .panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: var(--panel-w);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 800;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 16px 0;
+      flex-shrink: 0;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .brand-mark {
+      width: 36px; height: 36px;
+      background: var(--teal);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 14px; color: #fff;
+      flex-shrink: 0;
+    }
+    .brand-copy strong { font-size: 16px; font-weight: 800; display: block; }
+    .brand-copy span { font-size: 12px; color: var(--muted); }
+
+    /* Nav back link */
+    .nav-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .nav-back:hover { color: var(--text); text-decoration: none; }
+
+    /* Tabs */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      padding: 0 16px 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .tab:hover { border-color: var(--border2); color: var(--text); }
+    .tab[aria-selected="true"] {
+      background: rgba(14,165,164,.15);
+      border-color: rgba(14,165,164,.4);
+      color: var(--teal);
+    }
+
+    /* Mode bar */
+    .mode-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .mode-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .mode-btns { display: flex; gap: 6px; }
+    .mode-btn {
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      transition: all .15s;
+    }
+    .mode-btn.active {
+      background: rgba(14,165,164,.15);
+      border-color: rgba(14,165,164,.4);
+      color: var(--teal);
+    }
+
+    /* Scrollable content */
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    /* Layer rows */
+    .layer-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .layer-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .layer-row input[type=checkbox] {
+      width: 18px; height: 18px;
+      margin-top: 2px;
+      accent-color: var(--teal);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .layer-info { flex: 1; min-width: 0; }
+    .layer-name { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .layer-meta { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .status-chip {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--mono);
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+    .chip-live    { color: var(--green);  border-color: rgba(34,197,94,.3);  background: rgba(34,197,94,.08); }
+    .chip-unknown { color: var(--muted);  border-color: var(--border); }
+    .chip-error   { color: var(--amber);  border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.08); }
+    .chip-off     { color: var(--muted);  border-color: var(--border); }
+
+    /* Broker status kv */
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 7px 10px; font-size: 13px; }
+    .k { color: var(--muted); font-weight: 500; }
+    .v { color: var(--text); font-weight: 600; font-family: var(--mono); font-size: 12px; }
+
+    /* Legend */
+    .legend-item { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text); padding: 3px 0; }
+    .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .legend-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+
+    /* Footer */
+    .panel-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+      line-height: 1.5;
+    }
+
+    /* Placeholder tabs */
+    .placeholder {
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+      padding: 4px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      :root { --panel-w: 100vw; }
+      .legal-bar { right: 0; }
+      #map { top: 33px; right: 0; bottom: 45vh; }
+      .panel { top: calc(33px + 55vh); }
+      .tabs { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Leaflet popup style */
+    .leaflet-popup-content-wrapper {
+      background: var(--surface2) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border2) !important;
+      border-radius: 10px !important;
+      box-shadow: var(--shadow) !important;
+      font-family: var(--font) !important;
+    }
+    .leaflet-popup-tip { background: var(--surface2) !important; }
+    .leaflet-popup-close-button { color: var(--muted) !important; }
+
+    /* Fade in animation */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .panel { animation: fadeUp .3s ease; }
+  </style>
 </head>
-<body class="portal-body">
-  <div class="site-shell">
-    <header class="site-header">
-      <div class="container">
-        <nav class="site-nav" aria-label="Primary">
-          <a class="brand" href="./index.html#top">
-            <span class="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 64 64" focusable="false" aria-hidden="true">
-                <circle cx="32" cy="32" r="27.5" stroke="#102437" stroke-width="1.4"></circle>
-                <rect x="18.8" y="14.6" width="5.2" height="3.7" rx="0.95" fill="#102437"></rect>
-                <rect x="14.4" y="15.4" width="3.2" height="2.1" rx="0.55" fill="#102437"></rect>
-                <rect x="25.2" y="15.4" width="3.2" height="2.1" rx="0.55" fill="#102437"></rect>
-                <path d="M21.4 18.3V20.6" stroke="#102437" stroke-width="1.5" stroke-linecap="round"></path>
-                <path d="M21.4 20.6C28.4 13.2 43.4 15.2 48.2 25.8C51.5 33 48.3 41.7 40.7 46.9" stroke="#0EA5A4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                <path d="M22.4 19.5C27.4 24.5 32 30.6 40.8 41.2" stroke="#0EA5A4" stroke-width="1.05" stroke-linecap="round" stroke-dasharray="0.01 4.2" opacity="0.78"></path>
-                <path d="M15.5 43.9L27.7 36.2L35.4 39.8L48.8 43.9" stroke="#102437" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                <path d="M41 41.4L42.4 42.8L41 44.2L39.6 42.8Z" fill="#FFB700"></path>
-              </svg>
-            </span>
-            <span class="brand-copy"><strong>Kahu Ola</strong><span>Guardian of Life</span></span>
-          </a>
-          <div class="nav-stack">
-            <ul class="nav-links">
-              <li><a href="./index.html#status" data-nav="status">Status</a></li>
-              <li><a href="./index.html#modules" data-nav="modules">Modules</a></li>
-              <li><a href="./live-map.html" aria-current="page">Live Map</a></li>
-              <li><a href="./index.html#about" data-nav="about">About</a></li>
-              <li><a href="./index.html#compliance" data-nav="compliance">Compliance</a></li>
-            </ul>
-            <ul class="nav-utilities">
-              <li><a href="./privacy.html">Privacy</a></li>
-              <li><a href="./support.html">Support</a></li>
-            </ul>
-          </div>
-        </nav>
-      </div>
-    </header>
 
-    <main class="portal-main">
-      <section class="portal-frame" aria-labelledby="portal-title">
-        <div id="portal-map" class="portal-map" aria-label="Layer library map"></div>
-        <div class="portal-shell">
-          <aside class="portal-panel">
-            <header>
-              <p class="portal-kicker">Transparency Portal</p>
-              <h1 id="portal-title" class="portal-title">Layer Library</h1>
-              <p class="portal-copy">All live data routes through <code>https://kahuola.org/api/tiles/*</code>. The browser never receives upstream keys.</p>
-            </header>
-            <section class="portal-card">
-              <div class="portal-split">
-                <div>
-                  <h2 class="panel-title">Mode</h2>
-                  <p id="mode-copy" class="panel-copy">Lite keeps the map focused on Hawaii.</p>
-                </div>
-                <div id="mode-switch" class="mode-switch" role="group" aria-label="Map mode"></div>
-              </div>
-            </section>
-            <div id="tab-list" class="tab-list" role="tablist" aria-label="Layer categories"></div>
-            <div class="portal-scroll">
-              <section id="tab-panel" aria-live="polite"></section>
-              <section class="legend-card" aria-labelledby="legend-title">
-                <h2 id="legend-title" class="legend-title">Dynamic Legend</h2>
-                <div id="legend-content"><p class="panel-copy">Turn on a layer to see its legend.</p></div>
-              </section>
-              <section class="notice-card" aria-labelledby="notice-title">
-                <p class="portal-kicker">Broker Status</p>
-                <h2 id="notice-title" class="panel-title">Configuration</h2>
-                <p id="health-note" class="panel-copy">Checking Worker health and upstream configuration.</p>
-                <ul id="legal-list" class="legal-list"></ul>
-              </section>
-            </div>
-          </aside>
-        </div>
-      </section>
-    </main>
+<body>
 
-    <footer class="footer">
-      <div class="container footer-inner">
-        <div class="footer-copy">
-          <strong>Kahu Ola</strong>
-          <span>Guardian of Life</span>
-          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
-        </div>
-        <div class="footer-links">
-          <a href="./privacy.html">Privacy</a>
-          <a href="./support.html">Support</a>
-        </div>
-        <p class="footer-legal">Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
-      </div>
-    </footer>
+  <!-- Legal notice bar -->
+  <div class="legal-bar" role="note" aria-label="Important notice">
+    <span>⚠</span>
+    <span>Not an official government service. Always follow official emergency directives.</span>
+    <a href="./privacy.html">Privacy</a>
+    <a href="./support.html">Support</a>
+    <a href="./index.html" style="margin-left:auto;">← Home</a>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="./layers.config.js"></script>
-  <script src="./live-map.app.js"></script>
+  <!-- Map container -->
+  <div id="map" aria-label="Kahu Ola hazard map — Maui County"></div>
+
+  <!-- Right panel -->
+  <aside class="panel" aria-label="Layer Library">
+
+    <div class="panel-header">
+      <a href="./index.html" class="nav-back" aria-label="Back to home">
+        <span>←</span> kahuola.org
+      </a>
+      <div class="brand-row">
+        <div class="brand-mark">KO</div>
+        <div class="brand-copy">
+          <strong>Layer Library</strong>
+          <span>Transparency Portal · kahuola.org/api/tiles/*</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" role="tablist" aria-label="Layer categories">
+      <button class="tab" role="tab" aria-selected="true"  data-tab="fire"      aria-controls="panel-fire">Fire</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="weather"   aria-controls="panel-weather">Wind</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="air"       aria-controls="panel-air">Air</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="earth"     aria-controls="panel-earth">Earth</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="ocean"     aria-controls="panel-ocean">Ocean</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="satellite" aria-controls="panel-satellite">Sat</button>
+    </div>
+
+    <!-- Mode toggle -->
+    <div class="mode-bar">
+      <span class="mode-label">Map mode</span>
+      <div class="mode-btns" role="group" aria-label="Map mode">
+        <button id="modeLite" class="mode-btn" type="button" aria-pressed="false">Maui Focus</button>
+        <button id="modeFull" class="mode-btn active" type="button" aria-pressed="true">Hawaii Full</button>
+      </div>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- FIRE tab -->
+      <div id="panel-fire" role="tabpanel" data-panel>
+        <div class="card">
+          <div class="card-title">🔥 Fire Signals</div>
+
+          <label class="layer-row" for="layerFirms">
+            <input type="checkbox" id="layerFirms" aria-label="Toggle NASA FIRMS hotspots layer" />
+            <div class="layer-info">
+              <div class="layer-name">NASA FIRMS Hotspots</div>
+              <div class="layer-meta">VIIRS SNPP NRT · ~5–15 min · GeoJSON via broker</div>
+            </div>
+            <span class="status-chip chip-unknown" id="status-firms" aria-label="Layer status">···</span>
+          </label>
+
+          <label class="layer-row" for="layerWfigs">
+            <input type="checkbox" id="layerWfigs" aria-label="Toggle NIFC fire perimeters layer" />
+            <div class="layer-info">
+              <div class="layer-name">NIFC Fire Perimeters</div>
+              <div class="layer-meta">WFIGS current incidents · ~1 hr · GeoJSON via broker</div>
+            </div>
+            <span class="status-chip chip-unknown" id="status-wfigs" aria-label="Layer status">···</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- WEATHER tab -->
+      <div id="panel-weather" role="tabpanel" data-panel hidden>
+        <div class="card">
+          <div class="card-title">🌬 Weather / Wind</div>
+          <p class="placeholder">NOAA/NWS and RAWS weather station layers — coming in next release.</p>
+        </div>
+      </div>
+
+      <!-- AIR tab -->
+      <div id="panel-air" role="tabpanel" data-panel hidden>
+        <div class="card">
+          <div class="card-title">💨 Air Quality</div>
+          <label class="layer-row" for="layerAirnow">
+            <input type="checkbox" id="layerAirnow" aria-label="Toggle EPA AirNow AQI layer" />
+            <div class="layer-info">
+              <div class="layer-name">EPA AirNow AQI Tiles</div>
+              <div class="layer-meta">XYZ tile layer · ~1 hr · via broker</div>
+            </div>
+            <span class="status-chip chip-unknown" id="status-airnow" aria-label="Layer status">···</span>
+          </label>
+          <div style="margin-top:10px; font-size:12px; color:var(--muted);">
+            Kupuna advisory: AQI 101+ = limit outdoor activity. AQI 151+ = stay indoors.
+          </div>
+        </div>
+      </div>
+
+      <!-- EARTH tab -->
+      <div id="panel-earth" role="tabpanel" data-panel hidden>
+        <div class="card">
+          <div class="card-title">🌋 Earth / Seismic</div>
+          <p class="placeholder">USGS earthquake feed — coming in next release.</p>
+        </div>
+      </div>
+
+      <!-- OCEAN tab -->
+      <div id="panel-ocean" role="tabpanel" data-panel hidden>
+        <div class="card">
+          <div class="card-title">🌊 Ocean / Coastal</div>
+          <label class="layer-row" for="layerPacioos">
+            <input type="checkbox" id="layerPacioos" aria-label="Toggle PacIOOS sea surface temp layer" />
+            <div class="layer-info">
+              <div class="layer-name">PacIOOS Sea Surface Temp</div>
+              <div class="layer-meta">WMS · ~24 hr · via broker</div>
+            </div>
+            <span class="status-chip chip-unknown" id="status-pacioos" aria-label="Layer status">···</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- SATELLITE tab -->
+      <div id="panel-satellite" role="tabpanel" data-panel hidden>
+        <div class="card">
+          <div class="card-title">🛰 Satellite</div>
+          <label class="layer-row" for="layerGoes">
+            <input type="checkbox" id="layerGoes" aria-label="Toggle NOAA GOES-West layer" />
+            <div class="layer-info">
+              <div class="layer-name">NOAA GOES-West</div>
+              <div class="layer-meta">WMS · ~10 min · via broker</div>
+            </div>
+            <span class="status-chip chip-unknown" id="status-goes" aria-label="Layer status">···</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="card">
+        <div class="card-title">Legend</div>
+        <div id="legend"><span class="legend-empty">Enable a layer to see its legend.</span></div>
+      </div>
+
+      <!-- Broker status -->
+      <div class="card">
+        <div class="card-title">Broker Status</div>
+        <div class="kv">
+          <div class="k">Health</div>   <div class="v" id="brokerHealth">Checking…</div>
+          <div class="k">Last check</div><div class="v" id="brokerChecked">—</div>
+          <div class="k">Latency</div>  <div class="v" id="brokerLatency">—</div>
+          <div class="k">Records</div>  <div class="v" id="brokerRecords">—</div>
+          <div class="k">Cache</div>    <div class="v" id="brokerCache">—</div>
+        </div>
+      </div>
+
+      <!-- Config info -->
+      <div class="card">
+        <div class="card-title">Configuration</div>
+        <div class="kv">
+          <div class="k">Mode</div>       <div class="v" id="cfgMode">—</div>
+          <div class="k">Base URL</div>   <div class="v" style="font-size:11px; word-break:break-all;">kahuola.org/api/tiles/*</div>
+          <div class="k">Keys</div>       <div class="v">Server-side only</div>
+          <div class="k">Doctrine</div>   <div class="v">V4.3.1</div>
+        </div>
+      </div>
+
+      <!-- Official sources -->
+      <div class="card">
+        <div class="card-title">Official Sources</div>
+        <div style="font-size:13px; line-height:1.9; color:var(--muted);">
+          <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noreferrer">NASA FIRMS</a> ·
+          <a href="https://www.weather.gov/" target="_blank" rel="noreferrer">NWS</a> ·
+          <a href="https://www.airnow.gov/" target="_blank" rel="noreferrer">AirNow</a> ·
+          <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noreferrer">NIFC WFIGS</a> ·
+          <a href="https://www.pacioos.hawaii.edu/" target="_blank" rel="noreferrer">PacIOOS</a> ·
+          <a href="https://www.usgs.gov/" target="_blank" rel="noreferrer">USGS</a> ·
+          <a href="https://www.mauicounty.gov/" target="_blank" rel="noreferrer">Maui County</a>
+        </div>
+      </div>
+
+    </div><!-- end panel-body -->
+
+    <div class="panel-footer">
+      Kahu Ola is an independent civic technology initiative. Not affiliated with NASA, NOAA, EPA, NIFC, or any government agency. All data via publicly available Open Data APIs.
+    </div>
+
+  </aside>
+
+  <script>
+  // ── Wait for Leaflet to be ready ───────────────────────────────────────────
+  (function init() {
+    if (typeof L === 'undefined') {
+      return setTimeout(init, 50);
+    }
+    run();
+  })();
+
+  function run() {
+
+    // ── Map setup ────────────────────────────────────────────────────────────
+    const map = L.map('map', { zoomControl: true }).setView([20.8, -156.3], 9);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // ── Mode management ──────────────────────────────────────────────────────
+    const MODES = {
+      lite: { center: [20.8, -156.3], zoom: 9,  maxZoom: 14, label: 'Maui Focus' },
+      full: { center: [20.5, -157.5], zoom: 7,  maxZoom: 18, label: 'Hawaii Full' }
+    };
+
+    let currentMode = localStorage.getItem('kahuola_map_mode') || 'full';
+
+    function applyMode(m) {
+      currentMode = m;
+      localStorage.setItem('kahuola_map_mode', m);
+      const cfg = MODES[m];
+      map.setView(cfg.center, cfg.zoom);
+      map.options.maxZoom = cfg.maxZoom;
+      document.getElementById('cfgMode').textContent = cfg.label;
+      document.getElementById('modeLite').classList.toggle('active', m === 'lite');
+      document.getElementById('modeLite').setAttribute('aria-pressed', m === 'lite');
+      document.getElementById('modeFull').classList.toggle('active', m === 'full');
+      document.getElementById('modeFull').setAttribute('aria-pressed', m === 'full');
+    }
+
+    document.getElementById('modeLite').addEventListener('click', () => applyMode('lite'));
+    document.getElementById('modeFull').addEventListener('click', () => applyMode('full'));
+    applyMode(currentMode);
+
+    // ── Tab management ───────────────────────────────────────────────────────
+    const tabs   = Array.from(document.querySelectorAll('[role="tab"]'));
+    const panels = Array.from(document.querySelectorAll('[data-panel]'));
+
+    function showTab(name) {
+      tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false'));
+      panels.forEach(p => { p.hidden = (p.id !== 'panel-' + name); });
+      history.replaceState(null, '', '#' + name);
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+    const anchor = (location.hash || '').replace('#', '').trim();
+    if (['fire','weather','air','earth','ocean','satellite'].includes(anchor)) {
+      showTab(anchor);
+    }
+
+    // ── Status chips ─────────────────────────────────────────────────────────
+    function setChip(id, state) {
+      const el = document.getElementById('status-' + id);
+      if (!el) return;
+      const map = {
+        live:     { text: '● Live',      cls: 'chip-live' },
+        error:    { text: '⚠ Error',     cls: 'chip-error' },
+        unknown:  { text: '···',         cls: 'chip-unknown' },
+        off:      { text: 'Not configured', cls: 'chip-off' },
+      };
+      const s = map[state] || map.unknown;
+      el.textContent = s.text;
+      el.className = 'status-chip ' + s.cls;
+      el.setAttribute('aria-label', 'Layer status: ' + s.text);
+    }
+
+    // ── Broker health check ──────────────────────────────────────────────────
+    async function checkHealth() {
+      const healthEl   = document.getElementById('brokerHealth');
+      const checkedEl  = document.getElementById('brokerChecked');
+      const latencyEl  = document.getElementById('brokerLatency');
+
+      try {
+        const t0  = performance.now();
+        const res = await fetch('/api/tiles/health', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+        const dt  = Math.round(performance.now() - t0);
+        const j   = await res.json();
+
+        healthEl.textContent  = (j.status === 'ok' || j.ok) ? '✓ OK' : '✗ ERROR';
+        checkedEl.textContent = new Date().toLocaleTimeString();
+        latencyEl.textContent = dt + ' ms';
+
+        // Update per-layer chips from health upstreams
+        const up = j.upstreams || {};
+        ['firms','wfigs','airnow','pacioos','goes'].forEach(id => {
+          if (id in up) setChip(id, up[id] ? 'live' : 'error');
+        });
+
+      } catch {
+        healthEl.textContent  = '··· (Worker not deployed)';
+        checkedEl.textContent = new Date().toLocaleTimeString();
+        latencyEl.textContent = '—';
+        ['firms','wfigs','airnow','pacioos','goes'].forEach(id => setChip(id, 'unknown'));
+      }
+    }
+    checkHealth();
+
+    // ── Legend management ────────────────────────────────────────────────────
+    const LEGENDS = {
+      firms: [
+        { color: '#7f1d1d', label: 'Hotspot 0–12h (high recency)' },
+        { color: '#dc2626', label: 'Hotspot 12–24h' },
+        { color: '#f97316', label: 'Hotspot 24–48h' },
+        { color: '#6b7280', label: 'Point size ≈ FRP (fire radiative power)' },
+      ],
+      wfigs: [
+        { color: '#ff4500', label: 'Active fire perimeter (NIFC WFIGS)' },
+      ],
+      airnow: [
+        { color: '#00e400', label: 'Good (0–50)' },
+        { color: '#ffff00', label: 'Moderate (51–100)' },
+        { color: '#ff7e00', label: 'Unhealthy Sensitive (101–150)' },
+        { color: '#ff0000', label: 'Unhealthy (151–200)' },
+        { color: '#8f3f97', label: 'Very Unhealthy (201–300)' },
+        { color: '#7e0023', label: 'Hazardous (301+)' },
+      ],
+      pacioos: [
+        { color: '#0000ff', label: 'Cool SST' },
+        { color: '#00ffff', label: 'Moderate SST' },
+        { color: '#ff0000', label: 'Warm SST' },
+      ],
+      goes: [
+        { color: '#cccccc', label: 'Cloud cover (GOES-West)' },
+      ],
+    };
+
+    const activeLegendIds = new Set();
+
+    function updateLegend() {
+      const el = document.getElementById('legend');
+      if (activeLegendIds.size === 0) {
+        el.innerHTML = '<span class="legend-empty">Enable a layer to see its legend.</span>';
+        return;
+      }
+      let html = '';
+      activeLegendIds.forEach(id => {
+        const items = LEGENDS[id] || [];
+        items.forEach(item => {
+          html += `<div class="legend-item">
+            <span class="swatch" style="background:${item.color}; border:1px solid rgba(255,255,255,.1)"></span>
+            <span>${item.label}</span>
+          </div>`;
+        });
+      });
+      el.innerHTML = html;
+    }
+
+    // ── Active Leaflet layers ────────────────────────────────────────────────
+    const activeLayers = {};
+
+    function removeLayer(id) {
+      if (activeLayers[id]) {
+        map.removeLayer(activeLayers[id]);
+        delete activeLayers[id];
+      }
+      activeLegendIds.delete(id);
+      updateLegend();
+      setChip(id, 'unknown');
+      document.getElementById('brokerRecords').textContent = '—';
+      document.getElementById('brokerCache').textContent   = '—';
+    }
+
+    // ── FIRMS hotspots (GeoJSON via broker) ──────────────────────────────────
+    function markerStyle(props) {
+      let fill = '#dc2626';
+      try {
+        const d = (props.acq_date || '').trim();
+        const t = String(props.acq_time || '').trim().padStart(4, '0');
+        if (d && t.length === 4) {
+          const ts = Date.parse(`${d}T${t.slice(0,2)}:${t.slice(2,4)}:00Z`);
+          if (!isNaN(ts)) {
+            const h = (Date.now() - ts) / 3_600_000;
+            fill = h <= 12 ? '#7f1d1d' : h <= 24 ? '#dc2626' : '#f97316';
+          }
+        }
+      } catch {}
+      const frp = Math.max(0, Number(props.frp || 0));
+      return { fill, r: Math.max(4, Math.min(12, 4 + Math.sqrt(frp))) };
+    }
+
+    async function loadFirms() {
+      setChip('firms', 'unknown');
+      removeLayer('firms');
+
+      const b    = map.getBounds();
+      const days = currentMode === 'lite' ? 1 : 2;
+      const lim  = currentMode === 'lite' ? 800 : 3000;
+      // FIRMS area CSV endpoint: WEST,SOUTH,EAST,NORTH
+      const url  = `/api/firms/hotspots?dataset=VIIRS_SNPP_NRT&days=${days}` +
+                   `&bbox=${b.getWest().toFixed(4)},${b.getSouth().toFixed(4)},` +
+                   `${b.getEast().toFixed(4)},${b.getNorth().toFixed(4)}&limit=${lim}`;
+
+      try {
+        const res  = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
+        const cHit = res.headers.get('X-Kahuola-Cache') || '—';
+        document.getElementById('brokerCache').textContent = cHit;
+
+        const j   = await res.json();
+        const rec = j?.features?.length ?? j?.properties?.returnedRecords ?? 0;
+        document.getElementById('brokerRecords').textContent = String(rec);
+        document.getElementById('brokerChecked').textContent = new Date().toLocaleTimeString();
+        document.getElementById('brokerLatency').textContent = (j?.properties?.upstreamLatencyMs ?? '—') + ' ms';
+
+        activeLayers.firms = L.geoJSON(j, {
+          pointToLayer: (f, ll) => {
+            const s = markerStyle(f.properties || {});
+            return L.circleMarker(ll, {
+              radius: s.r, fillColor: s.fill,
+              color: 'rgba(0,0,0,.3)', weight: 1, fillOpacity: 0.88
+            });
+          },
+          onEachFeature: (f, layer) => {
+            const p = f.properties || {};
+            layer.bindPopup(`
+              <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;color:#e6edf3">
+                <b style="color:#f97316">🔥 NASA FIRMS Hotspot</b><br>
+                FRP: <b>${p.frp ?? '—'}</b> MW &nbsp;|&nbsp; Brightness: ${p.bright_ti4 ?? '—'} K<br>
+                Confidence: ${p.confidence ?? '—'}<br>
+                Acquired: ${p.acq_date ?? ''} ${String(p.acq_time??'').padStart(4,'0')} UTC<br>
+                Day/Night: ${p.daynight ?? '—'} &nbsp;|&nbsp; Satellite: ${p.satellite ?? '—'}
+              </div>
+            `);
+          }
+        }).addTo(map);
+
+        activeLegendIds.add('firms');
+        updateLegend();
+        setChip('firms', 'live');
+
+      } catch (e) {
+        setChip('firms', 'error');
+        document.getElementById('brokerRecords').textContent = 'Error';
+      }
+    }
+
+    // ── WFIGS fire perimeters (GeoJSON via broker) ───────────────────────────
+    async function loadWfigs() {
+      setChip('wfigs', 'unknown');
+      removeLayer('wfigs');
+
+      try {
+        const res = await fetch('/api/tiles/geojson/wfigs', { signal: AbortSignal.timeout(12000) });
+        const cHit = res.headers.get('X-Kahuola-Cache') || '—';
+        document.getElementById('brokerCache').textContent = cHit;
+
+        const j = await res.json();
+        document.getElementById('brokerRecords').textContent = String(j?.features?.length ?? 0);
+        document.getElementById('brokerChecked').textContent = new Date().toLocaleTimeString();
+
+        activeLayers.wfigs = L.geoJSON(j, {
+          style: { color: '#ff4500', fillColor: '#ff6347', fillOpacity: 0.18, weight: 2 },
+          onEachFeature: (f, layer) => {
+            const p = f.properties || {};
+            const official = p.official !== false;
+            const badge = official
+              ? '<span style="color:#22c55e">● OFFICIAL</span>'
+              : '<span style="color:#f59e0b">● ESTIMATED — verify with NIFC</span>';
+            layer.bindPopup(`
+              <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;color:#e6edf3">
+                <b style="color:#ff6347">🔥 Fire Perimeter</b><br>
+                ${badge}<br>
+                Name: ${p.IncidentName ?? p.name ?? '—'}<br>
+                Acres: ${p.GISAcres ? Number(p.GISAcres).toLocaleString() : '—'}<br>
+                Updated: ${p.DateCurrent ?? p.updated ?? '—'}
+              </div>
+            `);
+          }
+        }).addTo(map);
+
+        activeLegendIds.add('wfigs');
+        updateLegend();
+        setChip('wfigs', 'live');
+
+      } catch {
+        setChip('wfigs', 'error');
+      }
+    }
+
+    // ── AirNow XYZ tiles ─────────────────────────────────────────────────────
+    function loadAirnow() {
+      removeLayer('airnow');
+      try {
+        activeLayers.airnow = L.tileLayer('/api/tiles/xyz/airnow/{z}/{x}/{y}.png', {
+          tileSize: 256, opacity: 0.75,
+          errorTileUrl: '',
+        }).addTo(map);
+        activeLegendIds.add('airnow');
+        updateLegend();
+        setChip('airnow', 'live');
+      } catch { setChip('airnow', 'error'); }
+    }
+
+    // ── PacIOOS WMS ──────────────────────────────────────────────────────────
+    function loadPacioos() {
+      removeLayer('pacioos');
+      try {
+        activeLayers.pacioos = L.tileLayer.wms('/api/tiles/wms/pacioos', {
+          layers: 'CRW_SST', format: 'image/png', transparent: true,
+          version: '1.1.1', opacity: 0.7,
+        }).addTo(map);
+        activeLegendIds.add('pacioos');
+        updateLegend();
+        setChip('pacioos', 'live');
+      } catch { setChip('pacioos', 'error'); }
+    }
+
+    // ── GOES WMS ─────────────────────────────────────────────────────────────
+    function loadGoes() {
+      removeLayer('goes');
+      try {
+        activeLayers.goes = L.tileLayer.wms('/api/tiles/wms/goes', {
+          layers: 'Mesoscale-2_AirMass_RGB', format: 'image/png',
+          transparent: true, version: '1.1.1', opacity: 0.65,
+        }).addTo(map);
+        activeLegendIds.add('goes');
+        updateLegend();
+        setChip('goes', 'live');
+      } catch { setChip('goes', 'error'); }
+    }
+
+    // ── Layer toggle wiring ──────────────────────────────────────────────────
+    function wire(id, onFn) {
+      const cb = document.getElementById('layer' + id.charAt(0).toUpperCase() + id.slice(1));
+      if (!cb) return;
+      cb.addEventListener('change', () => {
+        if (cb.checked) onFn();
+        else removeLayer(id);
+      });
+    }
+
+    wire('firms',   loadFirms);
+    wire('wfigs',   loadWfigs);
+    wire('airnow',  loadAirnow);
+    wire('pacioos', loadPacioos);
+    wire('goes',    loadGoes);
+
+    // ── Reload FIRMS on map move (debounced) ─────────────────────────────────
+    let moveTimer = null;
+    map.on('moveend', () => {
+      const cb = document.getElementById('layerFirms');
+      if (!cb || !cb.checked) return;
+      clearTimeout(moveTimer);
+      moveTimer = setTimeout(loadFirms, 400);
+    });
+
+  } // end run()
+  </script>
+
 </body>
 </html>
