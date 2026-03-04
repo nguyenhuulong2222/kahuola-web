@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support | Kahu Ola</title>
+  <meta name="description" content="Support and operational guidance for Kahu Ola.">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="container">
+        <nav class="site-nav" aria-label="Primary">
+          <a class="brand" href="./index.html">
+            <span class="brand-mark" aria-hidden="true">KO</span>
+            <span class="brand-copy">
+              <strong>Kahu Ola</strong>
+              <span>Guardian of Life</span>
+            </span>
+          </a>
+          <div class="nav-stack">
+            <ul class="nav-links">
+              <li><a href="./index.html">Home</a></li>
+            </ul>
+            <ul class="nav-utilities">
+              <li><a href="./privacy.html">Privacy</a></li>
+              <li><a href="./support.html" aria-current="page">Support</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main class="document-shell">
+      <div class="container document-grid">
+        <section class="document-hero glass">
+          <p class="section-label">Support</p>
+          <h1 class="document-title">Support and operational guidance</h1>
+          <p class="lead">
+            Kahu Ola keeps support direct and review-friendly. For operational questions, compliance requests, or general help, contact <a href="mailto:long@kahuola.org">long@kahuola.org</a>.
+          </p>
+          <div class="meta-row document-meta">
+            <span class="chip">Support contact: long@kahuola.org</span>
+            <span class="chip">Independent civic tech for Maui</span>
+          </div>
+          <div class="doc-actions">
+            <a class="button button--secondary" href="./index.html">Back to Home</a>
+            <a class="button button--ghost" href="./privacy.html">Privacy</a>
+          </div>
+        </section>
+
+        <div class="policy-stack">
+          <section class="policy-block">
+            <h2>FAQ</h2>
+            <ul class="faq-list">
+              <li class="faq-item">
+                <h3>Is Kahu Ola an official government app?</h3>
+                <p>No. Kahu Ola is an independent civic technology initiative and should be treated as a supplemental informational tool.</p>
+              </li>
+              <li class="faq-item">
+                <h3>Why do some module buttons remain disabled?</h3>
+                <p>The public portal shows the production roadmap, but interactive modules stay marked as coming soon until each workflow is ready for safe release.</p>
+              </li>
+              <li class="faq-item">
+                <h3>Does the landing page call government APIs directly in my browser?</h3>
+                <p>No. The public landing page uses static presentation patterns for clarity and resilience. Live browser-side calls are intentionally limited on the public homepage.</p>
+              </li>
+            </ul>
+          </section>
+
+          <section class="policy-block">
+            <h2>Troubleshooting</h2>
+            <ul class="checklist">
+              <li>Refresh the page to ensure the latest static build is loaded.</li>
+              <li>Confirm that <code>./styles.css</code> loads and that browser extensions are not blocking local assets.</li>
+              <li>Use the root production URLs only: <code>/</code>, <code>/privacy.html</code>, and <code>/support.html</code>.</li>
+              <li>If a module is labeled coming soon, that behavior is expected in the current release.</li>
+            </ul>
+          </section>
+
+          <section class="policy-block">
+            <h2>Permissions</h2>
+            <p><strong>Location:</strong> Location access should only be requested when a specific safety function needs it, such as shelter distance, route context, or proximity-based alerts. The intended model is contextual use rather than continuous background collection.</p>
+            <p><strong>Notifications:</strong> Notification access may be used on supported client platforms so residents can receive timely civic safety prompts. Users can disable notifications at any time in device settings.</p>
+          </section>
+
+          <section class="policy-block disclaimer-block">
+            <h2>Not Official Government App</h2>
+            <p>Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
+          </section>
+
+          <section class="policy-block">
+            <h2>Official sources residents should follow</h2>
+            <ul class="official-links">
+              <li><a href="https://www.weather.gov/">weather.gov (NWS)</a></li>
+              <li><a href="https://www.ready.gov/">ready.gov</a></li>
+              <li><a href="https://www.tsunami.gov/">tsunami.gov</a></li>
+              <li><a href="https://www.usgs.gov/natural-hazards">usgs.gov (hazards)</a></li>
+              <li><a href="https://www.airnow.gov/">airnow.gov</a></li>
+              <li><a href="https://www.fema.gov/">fema.gov</a></li>
+              <li><a href="https://www.mauicounty.gov/">mauicounty.gov (local guidance)</a></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-copy">
+          <strong>Kahu Ola</strong>
+          <span>Guardian of Life</span>
+          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
+        </div>
+        <div class="footer-links">
+          <a href="./privacy.html">Privacy</a>
+          <a href="./support.html">Support</a>
+        </div>
+        <p class="footer-legal">Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kahu Ola | Guardian of Life</title>
+  <meta name="description" content="Kahu Ola is a calm, high-trust civic-tech portal for Maui safety, built around clear guidance, on-device edge processing, and accessible design.">
+  <link rel="icon" href="./assets/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="./assets/favicon/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="./assets/favicon/favicon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="./assets/favicon/apple-touch-icon.png" sizes="180x180">
+  <script>
+    if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.documentElement.classList.add("motion-ready");
+    }
+  </script>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="container">
+        <nav class="site-nav" aria-label="Primary">
+          <a class="brand" href="./index.html#top">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64" focusable="false" aria-hidden="true">
+                <circle cx="32" cy="32" r="27.5" stroke="#102437" stroke-width="1.4"></circle>
+                <rect x="18.8" y="14.6" width="5.2" height="3.7" rx="0.95" fill="#102437"></rect>
+                <rect x="14.4" y="15.4" width="3.2" height="2.1" rx="0.55" fill="#102437"></rect>
+                <rect x="25.2" y="15.4" width="3.2" height="2.1" rx="0.55" fill="#102437"></rect>
+                <path d="M21.4 18.3V20.6" stroke="#102437" stroke-width="1.5" stroke-linecap="round"></path>
+                <path d="M21.4 20.6C28.4 13.2 43.4 15.2 48.2 25.8C51.5 33 48.3 41.7 40.7 46.9" stroke="#0EA5A4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M22.4 19.5C27.4 24.5 32 30.6 40.8 41.2" stroke="#0EA5A4" stroke-width="1.05" stroke-linecap="round" stroke-dasharray="0.01 4.2" opacity="0.78"></path>
+                <path d="M15.5 43.9L27.7 36.2L35.4 39.8L48.8 43.9" stroke="#102437" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M41 41.4L42.4 42.8L41 44.2L39.6 42.8Z" fill="#FFB700"></path>
+              </svg>
+            </span>
+            <span class="brand-copy">
+              <strong>Kahu Ola</strong>
+              <span>Guardian of Life</span>
+            </span>
+          </a>
+          <div class="nav-stack">
+            <ul class="nav-links">
+              <li><a href="./index.html#status" data-nav="status">Status</a></li>
+              <li><a href="./index.html#modules" data-nav="modules">Modules</a></li>
+              <li><a href="./live-map.html">Live Map</a></li>
+              <li><a href="./index.html#about" data-nav="about">About</a></li>
+              <li><a href="./index.html#compliance" data-nav="compliance">Compliance</a></li>
+            </ul>
+            <ul class="nav-utilities">
+              <li><a href="./privacy.html">Privacy</a></li>
+              <li><a href="./support.html">Support</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy reveal">
+            <p class="hero-kicker">Independent civic tech for Maui County</p>
+            <h1 class="hero-title">Kahu Ola</h1>
+            <p class="hero-subhead">Guardian of Life</p>
+            <p class="hero-note">
+              A quiet, high-trust portal for preparedness, situational awareness, and recovery. Kahu Ola translates public safety signals into a cleaner, more legible experience for Maui residents and families.
+            </p>
+            <div class="chip-row" aria-label="Core commitments">
+              <span class="chip">On-device Edge Processing</span>
+              <span class="chip">Maui civic-tech focus</span>
+              <span class="chip">Accessible by design</span>
+            </div>
+            <div class="button-row">
+              <a class="button button--primary" href="#modules">Explore Modules</a>
+              <a class="button button--secondary" href="./support.html">Get Support</a>
+            </div>
+          </div>
+          <div class="glass hero-art reveal" aria-hidden="true">
+            <div class="hero-mark-stage">
+              <img class="hero-emblem hero-emblem--glow" src="./assets/sentinel-eye.svg" alt="" width="416" height="416">
+              <img class="hero-emblem" src="./assets/sentinel-eye.svg" alt="" width="416" height="416">
+            </div>
+            <p class="hero-caption">Sentinel Eye mark for calm visibility and direction.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="status">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="section-label">Data Status Board</p>
+            <h2 class="section-title">A clear reference posture for NASA, NOAA, and USGS</h2>
+            <p class="lead">
+              This is a static production page. The board below is intentionally simple and trustworthy, without making live calls from the browser.
+            </p>
+          </div>
+          <div class="about-grid">
+            <div class="status-board reveal" role="status" aria-live="polite">
+              <div class="status-top">
+                <strong>Agency reference signals</strong>
+                <span class="chip">Live readiness view</span>
+              </div>
+              <p class="status-note">Static demo status (no live calls on this page)</p>
+              <div class="status-list">
+                <div class="status-item">
+                  <div>
+                    <strong>NASA</strong>
+                    <span>Remote sensing context for fire-adjacent awareness.</span>
+                  </div>
+                  <span class="status-live">Live</span>
+                </div>
+                <div class="status-item">
+                  <div>
+                    <strong>NOAA</strong>
+                    <span>Weather and atmospheric reference for local conditions.</span>
+                  </div>
+                  <span class="status-live">Live</span>
+                </div>
+                <div class="status-item">
+                  <div>
+                    <strong>USGS</strong>
+                    <span>Hazard and terrain context for civic readiness.</span>
+                  </div>
+                  <span class="status-live">Live</span>
+                </div>
+              </div>
+              <p class="status-meta">Last checked (HST): <time id="last-checked">Updating locally…</time></p>
+            </div>
+            <aside class="surface status-side reveal">
+              <p class="section-label">Why it is static</p>
+              <h2 class="phase-title">Production clarity comes first</h2>
+              <p class="phase-desc">
+                Kahu Ola avoids fragile browser-side fetch behavior on the landing page. The status board is a deliberate public-facing summary, not an operational control room, and it is labeled accordingly.
+              </p>
+              <ul class="about-list">
+                <li>Readable at a glance during stressful moments.</li>
+                <li>No hidden network dependency for this view.</li>
+                <li>Designed for review by users, partners, and auditors.</li>
+              </ul>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="integrity">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="section-label">System Integrity</p>
+            <h2 class="section-title">Public Data Sources &amp; System Integrity</h2>
+            <p class="lead">Independent civic technology using publicly available open-data APIs.</p>
+            <p class="muted">
+              Agency names below are used as plain-text references only. Kahu Ola does not use government logos, does not claim endorsement, and does not present any public institution as a partner or sponsor.
+            </p>
+          </div>
+
+          <div class="integrity-note surface reveal">
+            <p class="section-label">Data Integrity</p>
+            <h3 class="phase-title">Operational safeguards and official follow-up</h3>
+            <p>
+              Kahu Ola uses multi-source validation across public-domain feeds, near-real-time ingestion where supported, and on-device edge processing for location-sensitive functions. The platform is a supplemental civic tool and is not a replacement for official emergency directives from Maui County or other authorized agencies.
+            </p>
+            <p class="muted">Official sources residents should follow:</p>
+            <ul class="official-links">
+              <li><a href="https://www.weather.gov/">weather.gov (NWS)</a></li>
+              <li><a href="https://www.ready.gov/">ready.gov</a></li>
+              <li><a href="https://www.tsunami.gov/">tsunami.gov</a></li>
+              <li><a href="https://www.usgs.gov/natural-hazards">usgs.gov (hazards)</a></li>
+              <li><a href="https://www.airnow.gov/">airnow.gov</a></li>
+              <li><a href="https://www.fema.gov/">fema.gov</a></li>
+              <li><a href="https://www.mauicounty.gov/">mauicounty.gov (local guidance)</a></li>
+            </ul>
+          </div>
+
+          <div class="surface source-panel reveal">
+            <p class="section-label">Agency Reference Signals</p>
+            <h3 class="phase-title">Sixteen reference interfaces used for validation, explanation, and delivery</h3>
+            <p class="phase-desc">Each card identifies the source by name, links to its official documentation, and explains the specific Kahu Ola modules it supports. These are neutral references only, not brand endorsements.</p>
+          </div>
+
+          <div class="sources-layout section-head">
+            <section class="source-category surface reveal" aria-labelledby="federal-sensors-title">
+              <p class="section-label">Category 1</p>
+              <h3 id="federal-sensors-title">Federal &amp; Academic Natural Hazard Sensors (Open Data)</h3>
+              <p>Public U.S. hazard and environmental feeds used for situational awareness and validation.</p>
+              <div class="source-list">
+                <article class="source-card">
+                  <span class="source-badge">NASA FIRMS - Public Data</span>
+                  <h4>NASA FIRMS (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://firms.modaps.eosdis.nasa.gov/">firms.modaps.eosdis.nasa.gov</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Satellite-derived thermal anomaly detection for early wildfire situational awareness.</p>
+                    <p><strong>Supports:</strong> Fire Watch, Alert Buddy, Verified Updates.</p>
+                    <p><strong>Community Impact:</strong> Enables earlier awareness before ground-level reports reach Maui residents.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">NOAA Forecast - Public Data</span>
+                  <h4>NOAA Weather.gov Forecast API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://www.weather.gov/documentation/services-web-api">api.weather.gov</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Forecast and gridpoint weather context for wind, humidity, and changing local conditions.</p>
+                    <p><strong>Supports:</strong> Weather Radar, Evac Route, Supplies Planner.</p>
+                    <p><strong>Community Impact:</strong> Helps Maui households judge fast-moving weather risk before travel or evacuation.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">NOAA Alerts - Public Data</span>
+                  <h4>NOAA Weather.gov Alerts API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://api.weather.gov/openapi.json">api.weather.gov/openapi.json</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Public alert bulletin ingestion for watches, warnings, and active hazard statements.</p>
+                    <p><strong>Supports:</strong> Alert Buddy, Verified Updates, Family Check-in.</p>
+                    <p><strong>Community Impact:</strong> Keeps public-facing summaries aligned with official alert timing.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">NOAA Tides - Public Data</span>
+                  <h4>NOAA Tides &amp; Currents API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://api.tidesandcurrents.noaa.gov/api/prod/">api.tidesandcurrents.noaa.gov</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Coastal water level and tide reference for shoreline and harbor conditions.</p>
+                    <p><strong>Supports:</strong> Water Safety, Road Conditions.</p>
+                    <p><strong>Community Impact:</strong> Supports safer planning for coastal communities, harbor users, and low-lying areas.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">USGS Seismic - Public Data</span>
+                  <h4>USGS Earthquake Hazards API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://earthquake.usgs.gov/fdsnws/event/1/">earthquake.usgs.gov</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Seismic event reference and aftershock context for regional hazard awareness.</p>
+                    <p><strong>Supports:</strong> Alert Buddy, Verified Updates, Recovery Resources.</p>
+                    <p><strong>Community Impact:</strong> Adds another trusted signal when Maui residents need rapid event context.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">USGS Water - Public Data</span>
+                  <h4>USGS Water Services API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://waterservices.usgs.gov/">waterservices.usgs.gov</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Streamflow and water-monitoring references for water-related disruption scenarios.</p>
+                    <p><strong>Supports:</strong> Water Safety, Community Signals.</p>
+                    <p><strong>Community Impact:</strong> Helps residents understand changing water conditions during severe events.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">FEMA Recovery - Public Data</span>
+                  <h4>FEMA OpenFEMA API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://www.fema.gov/about/openfema/api">fema.gov/about/openfema/api</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Disaster declarations and recovery-reference data for post-event workflows.</p>
+                    <p><strong>Supports:</strong> Recovery Resources, Shelter Finder.</p>
+                    <p><strong>Community Impact:</strong> Gives Maui residents clearer access to recovery context after major incidents.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">EPA Air - Public Data</span>
+                  <h4>EPA AirNow API (Public Open Data)</h4>
+                  <p class="source-source">Source: <a href="https://docs.airnowapi.org/">docs.airnowapi.org</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Air quality and smoke exposure reference data for health-aware decision support.</p>
+                    <p><strong>Supports:</strong> Air Quality, Alert Buddy.</p>
+                    <p><strong>Community Impact:</strong> Helps Maui residents make safer choices about masks, sheltering, and outdoor activity.</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="source-category surface reveal" aria-labelledby="ai-language-title">
+              <p class="section-label">Category 2</p>
+              <h3 id="ai-language-title">AI &amp; Language Processing</h3>
+              <p>Neutral language and safety systems used to turn technical inputs into clearer explanations.</p>
+              <div class="source-list">
+                <article class="source-card">
+                  <span class="source-badge">OpenAI - Operational AI</span>
+                  <h4>OpenAI Responses API</h4>
+                  <p class="source-source">Source: <a href="https://platform.openai.com/docs/api-reference/responses">platform.openai.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Structured plain-language summaries that translate raw signal feeds into readable civic guidance.</p>
+                    <p><strong>Supports:</strong> Verified Updates, Community Signals, First Aid Guide.</p>
+                    <p><strong>Community Impact:</strong> Makes complex data easier for Maui residents to understand quickly.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">OpenAI - Safety Filter</span>
+                  <h4>OpenAI Moderations API</h4>
+                  <p class="source-source">Source: <a href="https://platform.openai.com/docs/api-reference/moderations">platform.openai.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Safety screening for community-submitted text or operator-generated content.</p>
+                    <p><strong>Supports:</strong> Community Signals, Family Check-in, Verified Updates.</p>
+                    <p><strong>Community Impact:</strong> Reduces the chance of harmful, misleading, or unsafe language in shared updates.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">OpenAI - Semantic Matching</span>
+                  <h4>OpenAI Embeddings API</h4>
+                  <p class="source-source">Source: <a href="https://platform.openai.com/docs/api-reference/embeddings">platform.openai.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Semantic matching across advisories, reports, and repeated public notices.</p>
+                    <p><strong>Supports:</strong> Verified Updates, Recovery Resources, Supplies Planner.</p>
+                    <p><strong>Community Impact:</strong> Helps reduce duplicate noise and keeps critical updates more coherent.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">Apple - On-Device NLP</span>
+                  <h4>Apple Natural Language Framework</h4>
+                  <p class="source-source">Source: <a href="https://developer.apple.com/documentation/naturallanguage">developer.apple.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> On-device language parsing and normalization where supported on Apple platforms.</p>
+                    <p><strong>Supports:</strong> Family Check-in, Alert Buddy, Community Signals.</p>
+                    <p><strong>Community Impact:</strong> Keeps sensitive text processing closer to the device while improving readability.</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="source-category surface reveal" aria-labelledby="delivery-systems-title">
+              <p class="section-label">Category 3</p>
+              <h3 id="delivery-systems-title">Infrastructure &amp; Delivery Systems</h3>
+              <p>Distribution and reliability layers that move public information to the web and supported client surfaces.</p>
+              <div class="source-list">
+                <article class="source-card">
+                  <span class="source-badge">Firebase - Delivery</span>
+                  <h4>Firebase Cloud Messaging</h4>
+                  <p class="source-source">Source: <a href="https://firebase.google.com/docs/cloud-messaging">firebase.google.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Push-notification delivery for supported client applications.</p>
+                    <p><strong>Supports:</strong> Alert Buddy, Family Check-in, Verified Updates.</p>
+                    <p><strong>Community Impact:</strong> Speeds delivery of urgent safety prompts when fast notice matters.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">Slack - Operations</span>
+                  <h4>Slack Incoming Webhooks</h4>
+                  <p class="source-source">Source: <a href="https://api.slack.com/messaging/webhooks">api.slack.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Maintainer-side operational routing for system checks and signal escalation.</p>
+                    <p><strong>Supports:</strong> Verified Updates, Fire Watch, Community Signals.</p>
+                    <p><strong>Community Impact:</strong> Supports faster human review when conditions shift quickly.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">GitHub Pages - Web Delivery</span>
+                  <h4>GitHub Pages</h4>
+                  <p class="source-source">Source: <a href="https://docs.github.com/en/pages">docs.github.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Static delivery layer for the public information portal at kahuola.org.</p>
+                    <p><strong>Supports:</strong> Verified Updates, Recovery Resources.</p>
+                    <p><strong>Community Impact:</strong> Keeps the public web layer lightweight, resilient, and easy to access.</p>
+                  </div>
+                </article>
+                <article class="source-card">
+                  <span class="source-badge">Apple Maps - Interface</span>
+                  <h4>MapKit JS</h4>
+                  <p class="source-source">Source: <a href="https://developer.apple.com/documentation/mapkitjs">developer.apple.com</a></p>
+                  <div class="source-meta">
+                    <p><strong>Data:</strong> Mapping surfaces for shelter, route, and location context on supported clients.</p>
+                    <p><strong>Supports:</strong> Shelter Finder, Evac Route, Road Conditions.</p>
+                    <p><strong>Community Impact:</strong> Helps Maui residents interpret place-based safety information faster.</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <div class="disclaimer-block reveal">
+            <p>Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="modules">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="section-label">Modules</p>
+            <h2 class="section-title">Sixteen feature tiles grouped by response phase</h2>
+            <p class="lead">
+              The roadmap stays visible and structured. Each module is placed where it belongs: alerting, preparation, or recovery.
+            </p>
+          </div>
+
+          <div class="phase-stack">
+            <section class="phase-group reveal" aria-labelledby="phase-alert-title">
+              <p class="phase-label">Phase</p>
+              <h3 class="phase-title" id="phase-alert-title">Alert</h3>
+              <p class="phase-desc">Rapid awareness tools for early signal recognition and clearer situational understanding.</p>
+              <div class="tile-grid">
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 4v5c0 4.2-2.8 7.5-7 9-4.2-1.5-7-4.8-7-9V7l7-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 8v5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><circle cx="12" cy="16" r="1" fill="currentColor"></circle></svg>
+                    <div>
+                      <h3>Alert Buddy</h3>
+                      <p>Immediate, plain-language prompts for faster recognition of risk.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Alert Buddy (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21c0-3 2-5 4-7 1.9-1.8 3-3.2 3-5a3 3 0 0 0-6 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M12 21c3-1.2 5-3.3 5-6.2 0-2.1-1-3.6-2.7-4.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Fire Watch</h3>
+                      <p>Reference visibility for wildfire-adjacent signal monitoring.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Fire Watch (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5-1.2A3.7 3.7 0 1 1 18 16H8a3 3 0 0 1-3-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 19h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Air Quality</h3>
+                      <p>Readable air-condition guidance for exposure decisions.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Air Quality (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.7"></circle><path d="M12 5v3m0 8v3M5 12h3m8 0h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Weather Radar</h3>
+                      <p>Fast scanning of changing wind and storm context.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Weather Radar (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M15 11l5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 9h7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Road Conditions</h3>
+                      <p>Movement and access cues before a route is chosen.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Road Conditions (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"></rect></svg>
+                    <div>
+                      <h3>Verified Updates</h3>
+                      <p>Cleaner summaries that prioritize confirmed information.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Verified Updates (Coming soon)">Open</button>
+                </article>
+              </div>
+            </section>
+
+            <section class="phase-group reveal" aria-labelledby="phase-prepare-title">
+              <p class="phase-label">Phase</p>
+              <h3 class="phase-title" id="phase-prepare-title">Prepare</h3>
+              <p class="phase-desc">Planning tools for sheltering, routing, coordination, and essential readiness.</p>
+              <div class="tile-grid">
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1v-8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+                    <div>
+                      <h3>Shelter Finder</h3>
+                      <p>Simple shelter wayfinding for faster, calmer relocation.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Shelter Finder (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l14-14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M13 5h6v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 10v9h9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Evac Route</h3>
+                      <p>Readable evacuation direction with less decision friction.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Evac Route (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm6 1a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="none" stroke="currentColor" stroke-width="1.7"></path><path d="M4.5 19a4.5 4.5 0 0 1 9 0m1.5 0a3.5 3.5 0 0 1 4.5-3.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Family Check-in</h3>
+                      <p>Structured prompts to confirm who is safe and where.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Family Check-in (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 14c-1.7 0-3-1.3-3-3s1.3-3 3-3c1.2 0 2.2.5 2.8 1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M14.5 17.5c2.5 0 4.5-1.6 4.5-3.5S17 10.5 14.5 10.5c-1.8 0-3.4.8-4.1 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Pet Safety</h3>
+                      <p>Practical pet-care readiness for transport and shelter.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Pet Safety (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z" fill="none" stroke="currentColor" stroke-width="1.7"></path><path d="M10 4v6m4-6v6m-4 4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Supplies Planner</h3>
+                      <p>Clear checklists for food, water, medicine, and basics.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Supplies Planner (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M8 10h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><rect x="5" y="4" width="14" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.7"></rect></svg>
+                    <div>
+                      <h3>First Aid Guide</h3>
+                      <p>Accessible first-response references for immediate care.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open First Aid Guide (Coming soon)">Open</button>
+                </article>
+              </div>
+            </section>
+
+            <section class="phase-group reveal" aria-labelledby="phase-recover-title">
+              <p class="phase-label">Phase</p>
+              <h3 class="phase-title" id="phase-recover-title">Recover</h3>
+              <p class="phase-desc">Post-incident tools to reconnect, restore, and guide households through next steps.</p>
+              <div class="tile-grid">
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6l2-3 3 6 2-3h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Recovery Resources</h3>
+                      <p>Guidance for aid access, documentation, and next actions.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Recovery Resources (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10M7 12h6M7 16h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="1.7"></path></svg>
+                    <div>
+                      <h3>Community Signals</h3>
+                      <p>Simple local reporting cues for neighbors and support flows.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Community Signals (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4c3.5 4 5 7 5 10a5 5 0 1 1-10 0c0-3 1.5-6 5-10z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M10 15c.4.9 1.1 1.5 2 1.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <h3>Water Safety</h3>
+                      <p>Water-use guidance when supply or quality is uncertain.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Water Safety (Coming soon)">Open</button>
+                </article>
+                <article class="tile">
+                  <div class="tile-header">
+                    <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L6 14h5l-1 7 8-12h-5l1-6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+                    <div>
+                      <h3>Power Outage</h3>
+                      <p>Continuity reminders for lighting, charging, and safe use.</p>
+                    </div>
+                  </div>
+                  <span class="feature-caption">Coming soon</span>
+                  <button class="button button--ghost" type="button" disabled aria-label="Open Power Outage (Coming soon)">Open</button>
+                </article>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="about">
+        <div class="container about-grid">
+          <div class="reveal">
+            <p class="section-label">About Kahu Ola</p>
+            <h2 class="section-title">Independent civic technology for Maui County</h2>
+            <p class="lead">
+              Kahu Ola is an independent civic-tech effort designed to complement, not replace, official alerts. It focuses on legibility, steady guidance, and a more careful public-facing experience during disruption.
+            </p>
+            <ul class="about-list">
+              <li>References public data sources including NASA, NOAA, and USGS.</li>
+              <li>Support and compliance contact: <a href="mailto:long@kahuola.org">long@kahuola.org</a>.</li>
+              <li class="disclaimer">Follow official Maui emergency guidance.</li>
+            </ul>
+          </div>
+          <aside class="surface reveal">
+            <p class="section-label">Project stance</p>
+            <h2 class="phase-title">Calm, authoritative, and public-serving</h2>
+            <p class="phase-desc">
+              The portal is intentionally restrained. It avoids hype, keeps copy short, and uses accessible structure so households can find critical context faster.
+            </p>
+            <div class="callout">
+              Kahu Ola is built around on-device edge processing principles for location-sensitive safety features, minimizing exposure of raw precise location data by default.
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="compliance">
+        <div class="container compliance-grid">
+          <div class="reveal">
+            <p class="section-label">Compliance</p>
+            <h2 class="section-title">Privacy and support pages remain prominent and review-ready</h2>
+            <p class="lead">
+              Location-sensitive functions are designed so processing happens on the user side through edge methods by default. The root-domain privacy and support pages are linked below and remain available for review.
+            </p>
+            <div class="doc-actions">
+              <a class="button button--primary" href="./privacy.html">View Privacy</a>
+              <a class="button button--secondary" href="./support.html">View Support</a>
+            </div>
+          </div>
+          <aside class="glass reveal">
+            <p class="section-label">Privacy summary</p>
+            <h2 class="phase-title">Minimal data exposure</h2>
+            <p class="phase-desc">
+              Kahu Ola emphasizes on-device edge processing for precise location use cases. The intent is to support safety workflows without default storage of raw precise location on centralized servers.
+            </p>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-copy">
+          <strong>Kahu Ola</strong>
+          <span>Guardian of Life</span>
+          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
+        </div>
+        <div class="footer-links">
+          <a href="./privacy.html">Privacy</a>
+          <a href="./support.html">Support</a>
+        </div>
+        <p class="footer-legal">Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var timeNode = document.getElementById("last-checked");
+      if (timeNode) {
+        var formatter = new Intl.DateTimeFormat("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+          timeZone: "Pacific/Honolulu"
+        });
+        timeNode.textContent = formatter.format(new Date()) + " HST";
+      }
+
+      var navLinks = Array.prototype.slice.call(document.querySelectorAll("[data-nav]"));
+      var sections = navLinks
+        .map(function (link) {
+          var id = link.getAttribute("data-nav");
+          return document.getElementById(id);
+        })
+        .filter(Boolean);
+
+      function setActive(id) {
+        navLinks.forEach(function (link) {
+          if (link.getAttribute("data-nav") === id) {
+            link.setAttribute("aria-current", "location");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      }
+
+      if (navLinks.length) {
+        setActive(navLinks[0].getAttribute("data-nav"));
+      }
+
+      var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var reveals = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
+
+      if (!reduceMotion) {
+        document.documentElement.classList.add("motion-ready");
+      } else {
+        reveals.forEach(function (node) {
+          node.classList.add("is-visible");
+        });
+      }
+
+      if ("IntersectionObserver" in window) {
+        if (!reduceMotion) {
+          var revealObserver = new IntersectionObserver(function (entries, observer) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("is-visible");
+                observer.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.12 });
+
+          reveals.forEach(function (node) {
+            revealObserver.observe(node);
+          });
+        }
+
+        var sectionObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              setActive(entry.target.id);
+            }
+          });
+        }, {
+          rootMargin: "-35% 0px -45% 0px",
+          threshold: 0.01
+        });
+
+        sections.forEach(function (section) {
+          sectionObserver.observe(section);
+        });
+      } else {
+        reveals.forEach(function (node) {
+          node.classList.add("is-visible");
+        });
+      }
+    }());
+  </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kahu Ola | Layer Library</title>
+  <meta name="description" content="Kahu Ola Layer Library for fire, weather, air, earth, ocean, and satellite situational awareness.">
+  <link rel="canonical" href="https://kahuola.org/live-map.html">
+  <link rel="icon" href="./assets/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="./assets/favicon/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="./assets/favicon/favicon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="./assets/favicon/apple-touch-icon.png" sizes="180x180">
+  <script>
+    if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.documentElement.classList.add("motion-ready");
+    }
+  </script>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="./live-map.css">
+</head>
+<body class="portal-body">
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="container">
+        <nav class="site-nav" aria-label="Primary">
+          <a class="brand" href="./index.html#top">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64" focusable="false" aria-hidden="true">
+                <circle cx="32" cy="32" r="27.5" stroke="#102437" stroke-width="1.4"></circle>
+                <rect x="18.8" y="14.6" width="5.2" height="3.7" rx="0.95" fill="#102437"></rect>
+                <rect x="14.4" y="15.4" width="3.2" height="2.1" rx="0.55" fill="#102437"></rect>
+                <rect x="25.2" y="15.4" width="3.2" height="2.1" rx="0.55" fill="#102437"></rect>
+                <path d="M21.4 18.3V20.6" stroke="#102437" stroke-width="1.5" stroke-linecap="round"></path>
+                <path d="M21.4 20.6C28.4 13.2 43.4 15.2 48.2 25.8C51.5 33 48.3 41.7 40.7 46.9" stroke="#0EA5A4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M22.4 19.5C27.4 24.5 32 30.6 40.8 41.2" stroke="#0EA5A4" stroke-width="1.05" stroke-linecap="round" stroke-dasharray="0.01 4.2" opacity="0.78"></path>
+                <path d="M15.5 43.9L27.7 36.2L35.4 39.8L48.8 43.9" stroke="#102437" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M41 41.4L42.4 42.8L41 44.2L39.6 42.8Z" fill="#FFB700"></path>
+              </svg>
+            </span>
+            <span class="brand-copy"><strong>Kahu Ola</strong><span>Guardian of Life</span></span>
+          </a>
+          <div class="nav-stack">
+            <ul class="nav-links">
+              <li><a href="./index.html#status" data-nav="status">Status</a></li>
+              <li><a href="./index.html#modules" data-nav="modules">Modules</a></li>
+              <li><a href="./live-map.html" aria-current="page">Live Map</a></li>
+              <li><a href="./index.html#about" data-nav="about">About</a></li>
+              <li><a href="./index.html#compliance" data-nav="compliance">Compliance</a></li>
+            </ul>
+            <ul class="nav-utilities">
+              <li><a href="./privacy.html">Privacy</a></li>
+              <li><a href="./support.html">Support</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main class="portal-main">
+      <section class="portal-frame" aria-labelledby="portal-title">
+        <div id="portal-map" class="portal-map" aria-label="Layer library map"></div>
+        <div class="portal-shell">
+          <aside class="portal-panel">
+            <header>
+              <p class="portal-kicker">Transparency Portal</p>
+              <h1 id="portal-title" class="portal-title">Layer Library</h1>
+              <p class="portal-copy">All live data routes through <code>https://kahuola.org/api/tiles/*</code>. The browser never receives upstream keys.</p>
+            </header>
+            <section class="portal-card">
+              <div class="portal-split">
+                <div>
+                  <h2 class="panel-title">Mode</h2>
+                  <p id="mode-copy" class="panel-copy">Lite keeps the map focused on Hawaii.</p>
+                </div>
+                <div id="mode-switch" class="mode-switch" role="group" aria-label="Map mode"></div>
+              </div>
+            </section>
+            <div id="tab-list" class="tab-list" role="tablist" aria-label="Layer categories"></div>
+            <div class="portal-scroll">
+              <section id="tab-panel" aria-live="polite"></section>
+              <section class="legend-card" aria-labelledby="legend-title">
+                <h2 id="legend-title" class="legend-title">Dynamic Legend</h2>
+                <div id="legend-content"><p class="panel-copy">Turn on a layer to see its legend.</p></div>
+              </section>
+              <section class="notice-card" aria-labelledby="notice-title">
+                <p class="portal-kicker">Broker Status</p>
+                <h2 id="notice-title" class="panel-title">Configuration</h2>
+                <p id="health-note" class="panel-copy">Checking Worker health and upstream configuration.</p>
+                <ul id="legal-list" class="legal-list"></ul>
+              </section>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-copy">
+          <strong>Kahu Ola</strong>
+          <span>Guardian of Life</span>
+          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
+        </div>
+        <div class="footer-links">
+          <a href="./privacy.html">Privacy</a>
+          <a href="./support.html">Support</a>
+        </div>
+        <p class="footer-legal">Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="./layers.config.js"></script>
+  <script src="./live-map.app.js"></script>
+</body>
+</html>
