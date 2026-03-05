@@ -1,0 +1,7 @@
+# Canonical redirect: /index.html -> root
+/index.html   /   301
+
+# Clean URL aliases
+/portal       /portal.html   301
+/privacy      /privacy.html  301
+/support      /support.html  301

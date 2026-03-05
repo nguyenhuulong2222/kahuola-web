@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────
+# Cloudflare Pages – Security + Caching Headers
+# kahuola.org  |  V4  |  civic tech / static site
+# ─────────────────────────────────────────────────────────────
+
+# ── Global security baseline ─────────────────────────────────
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.tile.openstreetmap.org https://kahuola.org; connect-src 'self' https://kahuola.org https://api.kahuola.org https://firms.modaps.eosdis.nasa.gov https://fonts.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+# ── HTML pages – short cache to prevent stale UI ─────────────
+/
+  Cache-Control: public, max-age=60
+
+/index.html
+  Cache-Control: public, max-age=60
+
+/portal.html
+  Cache-Control: public, max-age=60
+
+/privacy.html
+  Cache-Control: public, max-age=3600
+
+/support.html
+  Cache-Control: public, max-age=3600
+
+# ── Static assets – long cache (cache-busted via ?v=...) ──────
+/styles.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/layers.config.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
