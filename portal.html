@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <title>Kahu Ola — Transparency Portal (Live Map)</title>
   <meta name="description" content="Transparency Portal: live civic hazard layers for Maui & Hawai‘i. NASA FIRMS, NOAA, EPA AirNow, PacIOOS, USGS — routed through Kahu Ola broker (keys never in client)." />
@@ -11,7 +11,7 @@
   <!-- SEO: canonical + crawl -->
   <link rel="canonical" href="https://kahuola.org/portal.html" />
   <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#F8FAFC" />
 
   <!-- Open Graph -->
   <meta property="og:type"        content="website" />
@@ -43,7 +43,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <!-- Civic M3 Light -->
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=4.3.1-5" />
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -81,23 +81,16 @@
 
   <a class="skip-link" href="#map">Skip to map</a>
 
-  <header class="site-header portal-header">
-    <div class="container">
-      <nav class="site-nav" aria-label="Primary">
-        <a class="brand" href="./index.html" aria-label="Kahu Ola — Guardian of Life">
-          <img class="brand-logo" src="./assets/brand/logo-lockup.svg" alt="Kahu Ola — Guardian of Life" />
-        </a>
-
-        <div class="nav-stack">
-          <ul class="nav-links">
-            <li><a href="./index.html">Home</a></li>
-            <li><a href="./portal.html" aria-current="page">Live Map</a></li>
-          </ul>
-          <ul class="nav-utilities">
-            <li><a href="./privacy.html">Privacy</a></li>
-            <li><a href="./support.html">Support</a></li>
-          </ul>
-        </div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./index.html" aria-label="Kahu Ola — Guardian of Life">
+        <img class="brand-logo" src="./assets/brand/logo-lockup.svg" alt="Kahu Ola — Guardian of Life" />
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a class="nav-link" href="./index.html">Home</a>
+        <a class="nav-link is-active" href="./portal.html">Live Map</a>
+        <a class="nav-link" href="./privacy.html">Privacy</a>
+        <a class="nav-link" href="./support.html">Support</a>
       </nav>
     </div>
   </header>
@@ -112,7 +105,10 @@
   <div id="map" aria-label="Kahu Ola Live Map"></div>
 
   <!-- Panel -->
-  <aside class="panel" aria-label="Layer Library Panel">
+  <aside class="panel" id="layerPanel" aria-label="Layer Library Panel">
+    <!-- M3 bottom-sheet drag handle (mobile only) -->
+    <div class="drag-handle" id="panelDragHandle" role="button" tabindex="0"
+         aria-label="Toggle layer panel" aria-expanded="false"></div>
     <div class="panel-header">
       <h1>Layer Library</h1>
       <p class="muted" style="margin:10px 0 0;">
@@ -725,6 +721,32 @@
 
     // First load: try freshness (will degrade gracefully if worker not yet updated)
     refreshFirmsFreshness();
+
+    // ─────────────────────────────────────────────────────────
+    // Mobile bottom-sheet toggle
+    // Tap drag handle → collapse/expand the layer panel
+    // ─────────────────────────────────────────────────────────
+    (function () {
+      const handle = document.getElementById("panelDragHandle");
+      const panel  = document.getElementById("layerPanel");
+      if (!handle || !panel) return;
+
+      function toggle() {
+        const expanding = !panel.classList.contains("expanded");
+        panel.classList.toggle("expanded", expanding);
+        handle.setAttribute("aria-expanded", String(expanding));
+      }
+
+      handle.addEventListener("click", toggle);
+      handle.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+      });
+
+      // Prevent panel scroll from propagating to the map underneath
+      panel.addEventListener("touchmove", function (e) {
+        e.stopPropagation();
+      }, { passive: true });
+    }());
   </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <title>Kahu Ola — Guardian of Life</title>
   <meta name="description" content="Kahu Ola is an independent, privacy-first civic hazard intelligence platform for Hawai‘i — built to bridge upstream Open Data signals (NASA, NOAA, USGS, EPA) to residents with clarity and resilience." />
@@ -10,7 +10,7 @@
 
   <link rel="canonical" href="https://kahuola.org/" />
   <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#F8FAFC" />
 
   <meta property="og:type"        content="website" />
   <meta property="og:locale"      content="en_US" />
@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=4.3.1-4" />
 
   <script type="application/ld+json">
   {
@@ -51,23 +51,16 @@
   <a class="skip-link" href="#main">Skip to content</a>
 
   <div class="site-shell">
-    <header class="site-header">
-      <div class="container">
-        <nav class="site-nav" aria-label="Primary">
-          <a class="brand" href="./index.html" aria-label="Kahu Ola — Guardian of Life">
-            <img class="brand-logo" src="./assets/brand/logo-lockup.svg" alt="Kahu Ola — Guardian of Life" />
-          </a>
-
-          <div class="nav-stack">
-            <ul class="nav-links">
-              <li><a href="./index.html" aria-current="page">Home</a></li>
-              <li><a href="./portal.html">Live Map</a></li>
-            </ul>
-            <ul class="nav-utilities">
-              <li><a href="./privacy.html">Privacy</a></li>
-              <li><a href="./support.html">Support</a></li>
-            </ul>
-          </div>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="./index.html" aria-label="Kahu Ola — Guardian of Life">
+          <img class="brand-logo" src="./assets/brand/logo-lockup.svg" alt="Kahu Ola — Guardian of Life" />
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a class="nav-link is-active" href="./index.html">Home</a>
+          <a class="nav-link" href="./portal.html">Live Map</a>
+          <a class="nav-link" href="./privacy.html">Privacy</a>
+          <a class="nav-link" href="./support.html">Support</a>
         </nav>
       </div>
     </header>
