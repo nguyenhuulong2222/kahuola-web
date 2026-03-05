@@ -20,10 +20,19 @@
 /index.html
   Cache-Control: public, max-age=60
 
+/portal
+  Cache-Control: public, max-age=60
+
 /portal.html
   Cache-Control: public, max-age=60
 
+/privacy
+  Cache-Control: public, max-age=3600
+
 /privacy.html
+  Cache-Control: public, max-age=3600
+
+/support
   Cache-Control: public, max-age=3600
 
 /support.html

@@ -9,7 +9,7 @@
 
 - [ ] Repo is up to date on `main` (or whichever branch you deploy from)
 - [ ] `_headers`, `_redirects`, `robots.txt`, `sitemap.xml` are committed
-- [ ] All internal links use relative paths (`./index.html`, `./portal.html`, etc.)
+- [ ] All internal links use clean URL paths (`/`, `/portal`, `/privacy`, `/support`) — never `.html` suffixes
 - [ ] All `/api/` fetch calls use `location.origin` (no hardcoded domains) — already confirmed in `portal.html`
 
 ---
@@ -104,10 +104,12 @@ After DNS propagates (usually < 5 min on Cloudflare, up to 48h on external DNS):
 |------------------------------------|--------------------------------------------------|
 | `https://kahuola.org/`             | Serves `index.html` (home page)                  |
 | `https://kahuola.org/index.html`   | Redirects 301 → `https://kahuola.org/`           |
-| `https://kahuola.org/portal.html`  | Serves live map page                             |
-| `https://kahuola.org/portal`       | Redirects 301 → `/portal.html`                   |
-| `https://kahuola.org/privacy.html` | Serves privacy page                              |
-| `https://kahuola.org/support.html` | Serves support page                              |
+| `https://kahuola.org/portal`       | Serves live map page — HTTP 200, no redirect     |
+| `https://kahuola.org/portal.html`  | Redirects 301 → `/portal` (Pages HTML stripping) |
+| `https://kahuola.org/privacy`      | Serves privacy page — HTTP 200, no redirect      |
+| `https://kahuola.org/privacy.html` | Redirects 301 → `/privacy` (Pages HTML stripping)|
+| `https://kahuola.org/support`      | Serves support page — HTTP 200, no redirect      |
+| `https://kahuola.org/support.html` | Redirects 301 → `/support` (Pages HTML stripping)|
 | `https://kahuola.org/api/health`   | Worker responds (if `/api/health` is implemented)|
 | Response headers                   | Includes `X-Content-Type-Options: nosniff`, etc. |
 | `https://kahuola.org/robots.txt`   | Returns robots.txt                               |
