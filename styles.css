@@ -165,8 +165,18 @@ code{font-family:var(--font-mono);background:var(--code-bg);padding:2px 6px;bord
 }
 .site-nav .brand-logo{height:28px !important;width:auto}
 @media (max-width:520px){.site-nav .brand-logo{height:24px !important}}
-.brand .brand-logo{height:28px !important;width:auto !important;display:block !important}
-.brand svg.brand-logo{height:28px !important;width:auto !important}
-.brand img.brand-logo{height:28px !important;width:auto !important}
-@media (max-width:520px){.brand .brand-logo{height:24px !important}}
+.brand img.brand-logo,
+.brand svg.brand-logo,
+header img.brand-logo {
+  height: 34px !important;
+  width: auto !important;
+  display: block !important;
+}
+@media (max-width: 520px) {
+  .brand img.brand-logo,
+  .brand svg.brand-logo,
+  header img.brand-logo {
+    height: 30px !important;
+  }
+}
 .brand-mark,.brand-badge{width:auto !important;height:auto !important;padding:0 !important}
