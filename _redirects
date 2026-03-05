@@ -1,5 +1,3 @@
-# Canonical redirect: remove /index.html to avoid duplicate content.
-# NOTE: Do NOT add /portal -> /portal.html or similar aliases here.
-# Cloudflare Pages automatically strips .html and serves clean URLs;
-# adding those rules creates ERR_TOO_MANY_REDIRECTS loops.
-/index.html   /   301
+# Cloudflare Pages _redirects
+# Intentionally minimal — Cloudflare Pages serves clean URLs automatically.
+# Do NOT add .html aliases here; they conflict with Pages' HTML-stripping and loop.
