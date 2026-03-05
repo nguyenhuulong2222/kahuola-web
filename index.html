@@ -4,681 +4,277 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>Kahu Ola — Transparency Portal (Live Map)</title>
-  <meta name="description" content="Transparency Portal: live civic hazard layers for Maui & Hawai‘i. NASA FIRMS, NOAA, EPA AirNow, PacIOOS, USGS — routed through Kahu Ola broker (keys never in client)." />
-  <meta name="keywords" content="Maui Wildfire Map, NASA FIRMS, NOAA HMS, NOAA GOES, AirNow AQI, PacIOOS, USGS, Civic Tech, Hawaii" />
+  <title>Kahu Ola — Guardian of Life</title>
+  <meta name="description" content="Kahu Ola is an independent, privacy-first civic hazard intelligence platform for Hawai‘i — built to bridge upstream Open Data signals (NASA, NOAA, USGS, EPA) to residents with clarity and resilience." />
+  <meta name="keywords" content="Maui wildfire, Hawaii safety, civic tech, hazard intelligence, NASA FIRMS, NOAA, USGS, AirNow" />
 
-  <!-- SEO: canonical + crawl -->
   <link rel="canonical" href="https://kahuola.org/" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#2563eb" />
 
-  <!-- Open Graph -->
   <meta property="og:type"        content="website" />
   <meta property="og:locale"      content="en_US" />
   <meta property="og:site_name"   content="Kahu Ola" />
-  <meta property="og:title"       content="Kahu Ola — Transparency Portal (Live Map)" />
-  <meta property="og:description" content="Live civic hazard layers for Maui &amp; Hawai'i. NASA FIRMS fire hotspots, NOAA smoke, EPA AirNow, PacIOOS, USGS — routed through Kahu Ola broker (keys never in client)." />
+  <meta property="og:title"       content="Kahu Ola — Guardian of Life" />
+  <meta property="og:description" content="An independent, fail-proof civic hazard intelligence platform for Hawai‘i. Privacy-first. Grant-ready. Built for the community." />
   <meta property="og:url"         content="https://kahuola.org/" />
 
-  <!-- Twitter Card -->
   <meta name="twitter:card"        content="summary" />
-  <meta name="twitter:title"       content="Kahu Ola — Transparency Portal" />
-  <meta name="twitter:description" content="Live civic hazard layers for Maui &amp; Hawai'i. NASA FIRMS, NOAA, EPA AirNow, PacIOOS, USGS." />
+  <meta name="twitter:title"       content="Kahu Ola — Guardian of Life" />
+  <meta name="twitter:description" content="Independent, privacy-first civic hazard intelligence for Hawai‘i." />
 
-  <!-- Favicon (SVG emoji, zero extra request) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌺</text></svg>" />
 
-  <!-- DNS prefetch for CDNs used at runtime -->
-  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
-  <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Civic M3 Light -->
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-
-  <!-- Layer config -->
-  <script src="./layers.config.js"></script>
-
-  <!-- Structured data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Kahu Ola — Transparency Portal",
-    "description": "Live civic hazard layers for Maui & Hawai'i. NASA FIRMS fire hotspots, NOAA smoke, EPA AirNow, PacIOOS ocean data, USGS earthquakes.",
+    "@type": "WebSite",
+    "name": "Kahu Ola",
     "url": "https://kahuola.org/",
-    "applicationCategory": "PublicSafetyApplication",
-    "operatingSystem": "Any",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "areaServed": { "@type": "State", "name": "Hawaii" }
+    "description": "Independent, privacy-first civic hazard intelligence platform for Hawai‘i."
   }
   </script>
 </head>
 
 <body>
-  <noscript>
-    <style>
-      body { display:flex; align-items:center; justify-content:center; height:100vh;
-             font-family:sans-serif; font-size:1.1rem; padding:2rem; text-align:center;
-             background:#f5f7fb; color:#0c1220; }
-    </style>
-    <p>Kahu Ola — Transparency Portal requires JavaScript. Please enable JavaScript to use this application.</p>
-  </noscript>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-  <!-- Legal bar -->
-  <div class="legal-bar">
-    <strong>Transparency Portal:</strong> Raw upstream open data visualization. Not an official directive.
-    &nbsp;·&nbsp; All live routes go through <code>/api/</code> (keys never in client).
-  </div>
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="container">
+        <nav class="site-nav" aria-label="Primary">
+          <a class="brand" href="./index.html">
+            <span class="brand-mark" aria-hidden="true">🌺</span>
+            <span class="brand-copy">
+              <strong>Kahu Ola</strong>
+              <span>Guardian of Life</span>
+            </span>
+          </a>
 
-  <!-- Map -->
-  <div id="map" aria-label="Kahu Ola Live Map"></div>
-
-  <!-- Panel -->
-  <aside class="panel" aria-label="Layer Library Panel">
-    <div class="panel-header">
-      <h1>Layer Library</h1>
-      <p class="muted" style="margin:10px 0 0;">
-        Tabs organize layers by domain. Turn layers on to see dynamic legends.
-      </p>
-
-      <!-- Mode -->
-      <div class="mode-bar">
-        <div class="mode-btns" role="group" aria-label="Performance mode">
-          <button class="mode-btn" id="modeLiteBtn" type="button" aria-pressed="true">Lite</button>
-          <button class="mode-btn" id="modeFullBtn" type="button" aria-pressed="false">Full</button>
-        </div>
-        <div class="subtle" id="modeHint">Lite keeps the map focused on Hawai‘i.</div>
+          <div class="nav-stack">
+            <ul class="nav-links">
+              <li><a href="./index.html" aria-current="page">Home</a></li>
+              <li><a href="./portal.html">Live Map</a></li>
+            </ul>
+            <ul class="nav-utilities">
+              <li><a href="./privacy.html">Privacy</a></li>
+              <li><a href="./support.html">Support</a></li>
+            </ul>
+          </div>
+        </nav>
       </div>
+    </header>
 
-      <!-- Tabs -->
-      <div class="tabs" id="tabs" role="tablist" aria-label="Layer category tabs" style="margin-top:14px;"></div>
-    </div>
+    <main id="main">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="section-label">Independent Civic Technology · Hawai‘i</p>
+            <h1 class="hero-title">Kahu Ola — Guardian of Life</h1>
+            <p class="hero-lead">
+              An independent, fail‑proof civic hazard intelligence platform for Hawai‘i —
+              built to bridge upstream Open Data signals to residents with clarity, resilience, and privacy.
+            </p>
 
-    <div class="panel-body">
-      <!-- Data Freshness -->
-      <section class="freshness-banner" id="freshnessCard" data-state="stale" aria-live="polite">
-        <div class="status-row">
-          <strong id="freshnessTitle">🟡 MAY BE STALE</strong>
-          <span class="status-chip" id="freshnessChip">Unknown</span>
-        </div>
+            <div class="hero-cta">
+              <a class="button button--primary" href="#download">Download App</a>
+              <a class="button button--secondary" href="./portal.html">Launch Live Map</a>
+            </div>
 
-        <div class="kv">
-          <div class="k">NASA newest</div><div class="v" id="newestAcq">—</div>
-          <div class="k">Age</div><div class="v" id="newestAge">—</div>
-          <div class="k">NASA oldest</div><div class="v" id="oldestAcq">—</div>
-          <div class="k">Worker served</div><div class="v" id="servedAt">—</div>
-          <div class="k">Latency</div><div class="v" id="latencyMs">—</div>
-        </div>
-
-        <div class="verify-link" id="verifyRow">
-          Verify on <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA FIRMS ↗</a>
-        </div>
-      </section>
-
-      <!-- Layer controls -->
-      <section>
-        <h2 class="card-title" style="margin:0 0 12px;">Layers</h2>
-        <div id="layerList" style="display:grid; gap:12px;"></div>
-      </section>
-
-      <!-- Dynamic legend -->
-      <section>
-        <h2 class="card-title" style="margin:0 0 12px;">Dynamic Legend</h2>
-        <div id="legendBox" class="card" style="padding:16px;">
-          <div class="legend-empty">Turn on a layer to see its legend.</div>
-        </div>
-      </section>
-
-      <!-- Government links -->
-      <section>
-        <h2 class="card-title" style="margin:0 0 12px;">Government Links</h2>
-        <div class="source-links">
-          <a class="source-link" href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA FIRMS ↗</a>
-          <a class="source-link" href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener noreferrer">NOAA HMS ↗</a>
-          <a class="source-link" href="https://www.goes.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA GOES ↗</a>
-          <a class="source-link" href="https://www.airnow.gov/" target="_blank" rel="noopener noreferrer">EPA AirNow ↗</a>
-          <a class="source-link" href="https://pacioos.hawaii.edu/" target="_blank" rel="noopener noreferrer">PacIOOS ↗</a>
-          <a class="source-link" href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS ↗</a>
-        </div>
-      </section>
-    </div>
-
-    <div class="panel-footer">
-      Kahu Ola · Transparency Portal (V4). If a layer is missing, it’s intentionally not deployed or upstream changed.
-    </div>
-  </aside>
-
-  <script>
-    // ─────────────────────────────────────────────────────────
-    // Helpers: HST time + age formatting
-    // ─────────────────────────────────────────────────────────
-    const TZ = "Pacific/Honolulu";
-
-    function toHstString(iso) {
-      if (!iso) return "—";
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return "—";
-      return new Intl.DateTimeFormat("en-US", {
-        timeZone: TZ,
-        year: "numeric", month: "short", day: "2-digit",
-        hour: "2-digit", minute: "2-digit", second: "2-digit",
-        hour12: true
-      }).format(d) + " HST";
-    }
-
-    function formatAge(ms) {
-      if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
-      const s = Math.floor(ms / 1000);
-      const m = Math.floor(s / 60);
-      const h = Math.floor(m / 60);
-      const d = Math.floor(h / 24);
-
-      if (d > 0) return `${d}d ${h % 24}h ago`;
-      if (h > 0) return `${h}h ${m % 60}m ago`;
-      if (m > 0) return `${m} min ago`;
-      return `${Math.max(0, s)} sec ago`;
-    }
-
-    // Freshness policy (V4): based on NASA acquisition time, NOT generated_at
-    // Tune thresholds anytime.
-    const FRESH_MAX_MS = 30 * 60 * 1000;    // <= 30 min
-    const STALE_MAX_MS = 2 * 60 * 60 * 1000; // <= 2 hours
-
-    function setFreshnessState(state, titleText, chipText) {
-      const card = document.getElementById("freshnessCard");
-      card.dataset.state = state;
-      document.getElementById("freshnessTitle").textContent = titleText;
-      document.getElementById("freshnessChip").textContent = chipText;
-    }
-
-    function applyFreshnessFromMeta(meta) {
-      // meta expected shape:
-      // { generated_at, upstreamLatencyMs, newest_acq_at, oldest_acq_at }
-      // generated_at is Worker processing time (always fresh), used only for "servedAt".
-      const servedAt = meta?.generated_at || meta?.generatedAt || null;
-      const newest = meta?.newest_acq_at || null;
-      const oldest = meta?.oldest_acq_at || null;
-
-      document.getElementById("servedAt").textContent = toHstString(servedAt);
-      document.getElementById("latencyMs").textContent = meta?.upstreamLatencyMs != null ? `${meta.upstreamLatencyMs} ms` : "—";
-      document.getElementById("newestAcq").textContent = newest ? toHstString(newest) : "—";
-      document.getElementById("oldestAcq").textContent = oldest ? toHstString(oldest) : "—";
-
-      // If Worker does not provide NASA acquisition times, we must be honest.
-      if (!newest) {
-        setFreshnessState("stale", "🟡 MAY BE STALE", "Unknown (acq time missing)");
-        document.getElementById("newestAge").textContent = "—";
-        return;
-      }
-
-      const now = Date.now();
-      const newestMs = new Date(newest).getTime();
-      const age = now - newestMs;
-
-      document.getElementById("newestAge").textContent = formatAge(age);
-
-      if (!Number.isFinite(age) || age < 0) {
-        setFreshnessState("stale", "🟡 MAY BE STALE", "Clock mismatch");
-        return;
-      }
-      if (age <= FRESH_MAX_MS) {
-        setFreshnessState("fresh", "🟢 FRESH", "Recent NASA acq");
-      } else if (age <= STALE_MAX_MS) {
-        setFreshnessState("stale", "🟡 MAY BE STALE", "Aging NASA acq");
-      } else {
-        setFreshnessState("outdated", "🔴 OUTDATED", "Old NASA acq");
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Leaflet map
-    // ─────────────────────────────────────────────────────────
-    const cfg = window.KAHUOLA_LAYERS_CONFIG;
-    if (!cfg) {
-      alert("layers.config.js missing: window.KAHUOLA_LAYERS_CONFIG not found.");
-    }
-
-    const storageKey = cfg?.portal?.storageKey || "kahuola_portal_mode";
-    const defaultMode = cfg?.portal?.defaultMode || "lite";
-
-    function getMode() {
-      return localStorage.getItem(storageKey) || defaultMode;
-    }
-
-    function setMode(mode) {
-      localStorage.setItem(storageKey, mode);
-    }
-
-    const map = L.map("map", { zoomControl: true });
-
-    // Base map (OSM)
-    const base = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Runtime state
-    const runtime = {
-      mode: getMode(),
-      activeTab: cfg.tabs?.[0] || "Fire",
-      layersById: new Map(),
-      leafletByLayerId: new Map(),
-      activeLegendLayerId: null,
-      goesActiveProduct: null
-    };
-
-    function applyModeToMap() {
-      const m = cfg.portal.modes[runtime.mode];
-      const hint = document.getElementById("modeHint");
-
-      if (runtime.mode === "lite") {
-        document.getElementById("modeLiteBtn").setAttribute("aria-pressed", "true");
-        document.getElementById("modeFullBtn").setAttribute("aria-pressed", "false");
-        hint.textContent = "Lite keeps the map focused on Hawai‘i.";
-      } else {
-        document.getElementById("modeLiteBtn").setAttribute("aria-pressed", "false");
-        document.getElementById("modeFullBtn").setAttribute("aria-pressed", "true");
-        hint.textContent = "Full allows broader exploration and higher zoom.";
-      }
-
-      map.setView(m.initialCenter, m.initialZoom);
-
-      if (m.bounds) {
-        const sw = L.latLng(m.bounds.sw[0], m.bounds.sw[1]);
-        const ne = L.latLng(m.bounds.ne[0], m.bounds.ne[1]);
-        const bounds = L.latLngBounds(sw, ne);
-        map.setMaxBounds(bounds.pad(0.12));
-      } else {
-        map.setMaxBounds(null);
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Tabs + layers list UI
-    // ─────────────────────────────────────────────────────────
-    function renderTabs() {
-      const tabsEl = document.getElementById("tabs");
-      tabsEl.innerHTML = "";
-
-      cfg.tabs.forEach((tabName) => {
-        const btn = document.createElement("button");
-        btn.className = "tab";
-        btn.type = "button";
-        btn.role = "tab";
-        btn.setAttribute("aria-selected", String(tabName === runtime.activeTab));
-        btn.textContent = tabName;
-
-        btn.addEventListener("click", () => {
-          runtime.activeTab = tabName;
-          renderTabs();
-          renderLayerList();
-        });
-
-        tabsEl.appendChild(btn);
-      });
-    }
-
-    function setLegendForLayer(layer) {
-      const box = document.getElementById("legendBox");
-      const legend = layer?.legend;
-      if (!legend) {
-        box.innerHTML = `<div class="legend-empty">No legend available for this layer.</div>`;
-        return;
-      }
-
-      const itemsHtml = (legend.items || []).map(it => {
-        const sw = it.swatch || "#e5e7eb";
-        return `
-          <div class="legend-item">
-            <span class="swatch" style="background:${sw};"></span>
-            <span>${it.label || ""}</span>
+            <div class="hero-badges">
+              <span class="chip">Zero PII by architecture</span>
+              <span class="chip">Cache‑first &amp; fail‑soft</span>
+              <span class="chip">Grant‑ready civic platform</span>
+            </div>
           </div>
-        `;
-      }).join("");
 
-      box.innerHTML = `
-        <div style="display:grid; gap:10px;">
-          <div style="display:grid; gap:4px;">
-            <strong style="font-size:18px;">${legend.title || "Legend"}</strong>
-            <div class="subtle" style="font-size:14px;">${legend.note || ""}</div>
+          <aside class="hero-card glass" aria-label="Compliance and trust summary">
+            <h2 class="card-title" style="margin:0 0 12px;">Compliance snapshot</h2>
+            <div class="kv">
+              <div class="k">Status</div><div class="v">Independent civic tech</div>
+              <div class="k">Purpose</div><div class="v">Situational awareness &amp; safety clarity</div>
+              <div class="k">Privacy</div><div class="v">No accounts · no tracking · no data selling</div>
+              <div class="k">Live data</div><div class="v">Brokered through <code>/api/</code> (keys never in client)</div>
+            </div>
+            <p class="subtle" style="margin:14px 0 0;">
+              For App Store / Play review: see <a href="./privacy.html">Privacy</a> and <a href="./support.html">Support</a>.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <p class="section-label">Our story</p>
+            <h2 class="section-title">Why Kahu Ola exists</h2>
+            <p class="lead">
+              Lahaina showed a hard truth: life‑saving information can be fragmented, delayed, and difficult to interpret under stress.
+              Kahu Ola is being built to make upstream hazard signals understandable and actionable for Maui residents —
+              without pretending to be an official directive.
+            </p>
           </div>
-          <div style="display:grid; gap:10px;">
-            ${itemsHtml || `<div class="legend-empty">No legend items.</div>`}
+
+          <div class="feature-grid">
+            <div class="feature card">
+              <h3>Clarity under pressure</h3>
+              <p>Translate multiple public‑source signals into a calm, readable civic interface — especially for kupuna and families.</p>
+            </div>
+            <div class="feature card">
+              <h3>Resilient by design</h3>
+              <p>Cache‑first architecture: validated snapshots and fail‑soft behavior when upstream services are slow or down.</p>
+            </div>
+            <div class="feature card">
+              <h3>Privacy as an invariant</h3>
+              <p>Proximity checks are designed for on‑device (edge) computation. No sign‑in required for core safety views.</p>
+            </div>
           </div>
         </div>
-      `;
-    }
+      </section>
 
-    // Create Leaflet layer instances
-    function buildLeafletLayer(layer) {
-      const modeCfg = cfg.portal.modes[runtime.mode];
-      const opacity = modeCfg.tileOpacity ?? 0.7;
+      <section class="section section--alt">
+        <div class="container">
+          <div class="section-head">
+            <p class="section-label">Vision</p>
+            <h2 class="section-title">Built for the community. Free forever.</h2>
+            <p class="lead">
+              Our trajectory is to become a 501(c)(3) non‑profit.
+              Kahu Ola is designed to be grant‑ready civic infrastructure — transparent, auditable, and community‑first.
+            </p>
+          </div>
 
-      if (layer.type === "xyz") {
-        return L.tileLayer(layer.endpointUrl, { opacity, maxZoom: modeCfg.maxZoom || 18 });
-      }
+          <div class="callout">
+            <strong>Non‑profit strategy:</strong> independent civic tech now → formal 501(c)(3) later, with public documentation,
+            open‑data attribution, and no agency endorsement claims.
+          </div>
+        </div>
+      </section>
 
-      if (layer.type === "wms") {
-        // WMS proxied through Worker; params from config
-        const params = { ...(layer.wmsParams || {}) };
-        // GOES product switch supported
-        if (layer.id === "goes" && runtime.goesActiveProduct) {
-          const prod = (layer.products || []).find(p => p.id === runtime.goesActiveProduct);
-          if (prod?.wmsLayer) params.LAYERS = prod.wmsLayer;
-        }
-        return L.tileLayer.wms(layer.endpointUrl, {
-          ...params,
-          transparent: true,
-          format: params.FORMAT || "image/png",
-          opacity,
-          maxZoom: modeCfg.maxZoom || 18
-        });
-      }
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <p class="section-label">Privacy-first architecture</p>
+            <h2 class="section-title">Zero PII. Zero tracking.</h2>
+            <p class="lead">
+              Kahu Ola is designed around a simple rule: we do not need to know who you are to help you stay safe.
+              Location geofencing is intended to run on your device (edge computing).
+            </p>
+          </div>
 
-      if (layer.type === "geojson") {
-        // GeoJSON layers fetched on toggle
-        return null;
-      }
+          <div class="feature-grid">
+            <div class="feature card">
+              <h3>No accounts required</h3>
+              <p>Core safety views are accessible without sign‑in.</p>
+            </div>
+            <div class="feature card">
+              <h3>On-device proximity</h3>
+              <p>Hazard distance checks are designed to compute locally whenever supported by the client platform.</p>
+            </div>
+            <div class="feature card">
+              <h3>No data selling</h3>
+              <p>No advertising profiles. No behavioral tracking. No brokered personal data.</p>
+            </div>
+          </div>
 
-      return null;
-    }
+          <p class="subtle" style="margin-top:14px;">
+            Full detail for reviewers and auditors: <a href="./privacy.html">Privacy Policy</a>.
+          </p>
+        </div>
+      </section>
 
-    async function fetchGeojson(layer) {
-      const modeCfg = cfg.portal.modes[runtime.mode];
-      const url = new URL(layer.endpointUrl, location.origin);
+      <section class="section section--alt" id="data">
+        <div class="container">
+          <div class="section-head">
+            <p class="section-label">Data infrastructure</p>
+            <h2 class="section-title">Agency reference signals (text only)</h2>
+            <p class="lead">
+              Kahu Ola visualizes publicly available Open Data signals. We use text‑only attribution and direct documentation links —
+              no official logos, no insignias, and no implied endorsement.
+            </p>
+          </div>
 
-      // Respect lite bounds if supported
-      if (runtime.mode === "lite" && layer.supportsLiteBounds && modeCfg.bounds) {
-        // optional: pass bbox to worker if it supports it
-        const sw = modeCfg.bounds.sw;
-        const ne = modeCfg.bounds.ne;
-        url.searchParams.set("bbox", `${sw[1]},${sw[0]},${ne[1]},${ne[0]}`); // west,south,east,north
-      }
+          <div class="api-grid" role="list">
+            <div class="api card" role="listitem"><h3>NASA FIRMS</h3><p>Wildfire hotspots (VIIRS/MODIS).</p><a class="api-link" href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>NOAA HMS</h3><p>Smoke/fire products for situational context.</p><a class="api-link" href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>NOAA GOES</h3><p>Geostationary satellite imagery (thermal/smoke).</p><a class="api-link" href="https://www.goes.noaa.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>NWS API</h3><p>Official alerts &amp; forecasts reference.</p><a class="api-link" href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
 
-      const t0 = performance.now();
-      const res = await fetch(url.toString(), { cache: "no-store" });
-      const t1 = performance.now();
-      if (!res.ok) throw new Error(`GeoJSON fetch failed (${res.status})`);
+            <div class="api card" role="listitem"><h3>USGS Earthquakes</h3><p>Earthquake feeds for Hawai‘i.</p><a class="api-link" href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>USGS Water Services</h3><p>Stream gauges &amp; flood context.</p><a class="api-link" href="https://waterservices.usgs.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>EPA AirNow</h3><p>Air quality index &amp; smoke health context.</p><a class="api-link" href="https://docs.airnowapi.org/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>NIFC WFIGS</h3><p>Interagency fire perimeters &amp; incident context.</p><a class="api-link" href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
 
-      const gj = await res.json();
-      const latencyMs = Math.round(t1 - t0);
+            <div class="api card" role="listitem"><h3>FEMA Open Data</h3><p>Disaster declarations, assistance &amp; recovery references.</p><a class="api-link" href="https://www.fema.gov/openfema-data-page" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>PacIOOS ERDDAP</h3><p>Ocean conditions (currents, sea level, buoys).</p><a class="api-link" href="https://pacioos.hawaii.edu/data/erddap/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>NOAA Tides &amp; Currents</h3><p>Water levels and coastal context.</p><a class="api-link" href="https://api.tidesandcurrents.noaa.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>NOAA Tsunami.gov</h3><p>Tsunami information and official guidance reference.</p><a class="api-link" href="https://www.tsunami.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
 
-      return { gj, latencyMs };
-    }
+            <div class="api card" role="listitem"><h3>Synoptic (MesoWest)</h3><p>Weather station telemetry reference.</p><a class="api-link" href="https://docs.synopticdata.com/services/weather-data-api/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>Hawai‘i Geospatial Portal</h3><p>Static boundary layers and local context.</p><a class="api-link" href="https://geoportal.hawaii.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>USGS Hazards</h3><p>Hazard program references (multi‑hazard).</p><a class="api-link" href="https://www.usgs.gov/natural-hazards" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+            <div class="api card" role="listitem"><h3>Ready.gov</h3><p>Preparedness guidance reference for residents.</p><a class="api-link" href="https://www.ready.gov/" target="_blank" rel="noopener noreferrer">Documentation ↗</a></div>
+          </div>
 
-    function addOrRemoveLayer(layer, enabled) {
-      const existing = runtime.leafletByLayerId.get(layer.id);
+          <p class="subtle" style="margin-top:14px;">
+            Transparency note: live map layers route through <code>/api/</code> so keys are never exposed to the client.
+          </p>
+        </div>
+      </section>
 
-      if (!enabled) {
-        if (existing) {
-          map.removeLayer(existing);
-          runtime.leafletByLayerId.delete(layer.id);
-        }
-        return;
-      }
+      <section class="section" id="download">
+        <div class="container">
+          <div class="section-head">
+            <p class="section-label">Download</p>
+            <h2 class="section-title">Mobile app coming soon</h2>
+            <p class="lead">We are preparing iOS and Android releases with a review‑friendly compliance package.</p>
+          </div>
 
-      // WMS/XYZ immediate
-      if (layer.type === "wms" || layer.type === "xyz") {
-        if (!existing) {
-          const ll = buildLeafletLayer(layer);
-          if (ll) {
-            ll.addTo(map);
-            runtime.leafletByLayerId.set(layer.id, ll);
-          }
-        }
-        return;
-      }
+          <div class="download-grid">
+            <div class="card">
+              <h3>iOS</h3>
+              <p class="subtle">TestFlight / App Store release preparation.</p>
+              <a class="button button--primary" href="mailto:long@kahuola.org?subject=Kahu%20Ola%20iOS%20Waitlist">Join iOS waitlist</a>
+            </div>
+            <div class="card">
+              <h3>Android</h3>
+              <p class="subtle">Google Play release preparation.</p>
+              <a class="button button--secondary" href="mailto:long@kahuola.org?subject=Kahu%20Ola%20Android%20Waitlist">Join Android waitlist</a>
+            </div>
+            <div class="card">
+              <h3>For reviewers / funders</h3>
+              <p class="subtle">One-click access to compliance pages and the public portal.</p>
+              <div class="stack">
+                <a class="button button--ghost" href="./privacy.html">Privacy Policy</a>
+                <a class="button button--ghost" href="./support.html">Support</a>
+                <a class="button button--ghost" href="./portal.html">Transparency Portal</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
 
-      // GeoJSON async fetch
-      if (layer.type === "geojson") {
-        (async () => {
-          try {
-            const { gj } = await fetchGeojson(layer);
-            const geo = L.geoJSON(gj, {
-              style: { color: "#7c3aed", weight: 2 },
-              pointToLayer: (_f, latlng) => L.circleMarker(latlng, {
-                radius: 6,
-                weight: 2,
-                color: "#f59e0b",
-                fillColor: "#f59e0b",
-                fillOpacity: 0.7
-              })
-            });
-            geo.addTo(map);
-            runtime.leafletByLayerId.set(layer.id, geo);
-          } catch (e) {
-            console.warn("GeoJSON layer failed:", layer.id, e);
-            alert(`Layer failed: ${layer.source?.name || layer.id}`);
-          }
-        })();
-      }
-    }
-
-    function shouldEnableByDefault(layer) {
-      if (runtime.mode === "lite") return !!layer.enabledByDefaultLite;
-      return !!layer.enabledByDefaultFull;
-    }
-
-    function renderLayerList() {
-      const list = document.getElementById("layerList");
-      list.innerHTML = "";
-
-      const layers = (cfg.layers || []).filter(l => l.tab === runtime.activeTab);
-
-      layers.forEach(layer => {
-        runtime.layersById.set(layer.id, layer);
-
-        const row = document.createElement("div");
-        row.className = "layer-row";
-
-        const left = document.createElement("div");
-        const name = document.createElement("div");
-        name.className = "layer-name";
-        name.textContent = layer.source?.name || layer.id;
-
-        const meta = document.createElement("div");
-        meta.className = "layer-meta";
-        const impl = layer.workerImplemented ? "Brokered" : "Not deployed";
-        meta.textContent = `${impl} · Latency ${layer.latencyHint || "—"} · Type ${layer.type.toUpperCase()}`;
-
-        left.appendChild(name);
-        left.appendChild(meta);
-
-        const right = document.createElement("div");
-
-        // Toggle button
-        const toggle = document.createElement("button");
-        toggle.className = "mode-btn"; // reuse style; still >=48px
-        toggle.type = "button";
-
-        const isOn = runtime.leafletByLayerId.has(layer.id);
-        toggle.setAttribute("aria-pressed", String(isOn));
-        toggle.textContent = isOn ? "On" : "Off";
-
-        toggle.addEventListener("click", async () => {
-          const nowOn = runtime.leafletByLayerId.has(layer.id);
-          addOrRemoveLayer(layer, !nowOn);
-          renderLayerList();
-
-          // Legend tracks last interacted layer
-          runtime.activeLegendLayerId = layer.id;
-          setLegendForLayer(layer);
-
-          // Freshness: if FIRMS turned on, fetch FIRMS meta (acq times)
-          if (layer.id === "firms" && !nowOn) {
-            await refreshFirmsFreshness();
-          }
-        });
-
-        right.appendChild(toggle);
-
-        // GOES product select if active tab and layer is GOES
-        if (layer.id === "goes" && (layer.products || []).length) {
-          const sel = document.createElement("select");
-          sel.style.minHeight = "48px";
-          sel.style.borderRadius = "999px";
-          sel.style.border = "1px solid rgba(11,18,32,.12)";
-          sel.style.padding = "0 12px";
-          sel.style.marginLeft = "10px";
-          sel.style.fontWeight = "700";
-
-          (layer.products || []).forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = p.label;
-            sel.appendChild(opt);
-          });
-
-          runtime.goesActiveProduct = runtime.goesActiveProduct || layer.defaultProduct || layer.products[0].id;
-          sel.value = runtime.goesActiveProduct;
-
-          sel.addEventListener("change", () => {
-            runtime.goesActiveProduct = sel.value;
-
-            // rebuild GOES if on
-            const existing = runtime.leafletByLayerId.get("goes");
-            if (existing) {
-              map.removeLayer(existing);
-              runtime.leafletByLayerId.delete("goes");
-              addOrRemoveLayer(layer, true);
-            }
-
-            // Legend note update
-            const prod = layer.products.find(p => p.id === runtime.goesActiveProduct);
-            if (prod?.legendNote) {
-              const merged = {
-                ...layer,
-                legend: {
-                  ...(layer.legend || {}),
-                  note: prod.legendNote
-                }
-              };
-              setLegendForLayer(merged);
-            }
-          });
-
-          right.appendChild(sel);
-        }
-
-        row.appendChild(left);
-        row.appendChild(right);
-        list.appendChild(row);
-      });
-
-      if (layers.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "subtle";
-        empty.textContent = "No layers in this category yet.";
-        list.appendChild(empty);
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Data freshness fetch (FIRMS JSON/CSV API routed by worker)
-    // We intentionally do NOT treat generated_at as NASA freshness.
-    // We request a small bbox around Hawai‘i. Worker should compute:
-    // - newest_acq_at / oldest_acq_at (ISO)
-    // - generated_at (ISO) + upstreamLatencyMs
-    // ─────────────────────────────────────────────────────────
-    async function refreshFirmsFreshness() {
-      try {
-        const modeCfg = cfg.portal.modes[runtime.mode];
-        // If lite bounds exist, use them. Else fallback Hawai‘i bbox.
-        const b = modeCfg.bounds
-          ? { west: modeCfg.bounds.sw[1], south: modeCfg.bounds.sw[0], east: modeCfg.bounds.ne[1], north: modeCfg.bounds.ne[0] }
-          : { west: -161.0, south: 18.0, east: -154.0, north: 23.0 };
-
-        // A small query is enough—Worker should still compute newest/oldest acq from returned set.
-        const url = new URL("/api/firms/hotspots", location.origin);
-        url.searchParams.set("dataset", "VIIRS_SNPP_NRT");
-        url.searchParams.set("days", "2");
-        // west,south,east,north
-        url.searchParams.set("bbox", `${b.west},${b.south},${b.east},${b.north}`);
-        url.searchParams.set("limit", "500");
-
-        const t0 = performance.now();
-        const res = await fetch(url.toString(), { cache: "no-store" });
-        const t1 = performance.now();
-        const latency = Math.round(t1 - t0);
-
-        if (!res.ok) throw new Error(`FIRMS meta fetch failed (${res.status})`);
-
-        const data = await res.json();
-        const props = data?.properties || {};
-        // Pass through measured latency if worker didn't include
-        if (props.upstreamLatencyMs == null) props.upstreamLatencyMs = latency;
-
-        // IMPORTANT: We expect worker to add newest_acq_at/oldest_acq_at based on acq_date/acq_time.
-        applyFreshnessFromMeta(props);
-
-        // If no records, still show served + latency, but mark as "Unknown" (no detections)
-        if (props.returnedRecords === 0 && !props.newest_acq_at) {
-          setFreshnessState("stale", "🟡 MAY BE STALE", "No records / unknown acq");
-        }
-      } catch (e) {
-        console.warn("Freshness refresh failed:", e);
-        setFreshnessState("stale", "🟡 MAY BE STALE", "Freshness check failed");
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Init
-    // ─────────────────────────────────────────────────────────
-    document.getElementById("modeLiteBtn").addEventListener("click", () => {
-      runtime.mode = "lite";
-      setMode("lite");
-      applyModeToMap();
-      // re-render + auto-enable defaults
-      runtime.leafletByLayerId.forEach(ll => map.removeLayer(ll));
-      runtime.leafletByLayerId.clear();
-      autoEnableDefaults();
-      renderLayerList();
-      // refresh freshness if firms on by default
-      refreshFirmsFreshness();
-    });
-
-    document.getElementById("modeFullBtn").addEventListener("click", () => {
-      runtime.mode = "full";
-      setMode("full");
-      applyModeToMap();
-      runtime.leafletByLayerId.forEach(ll => map.removeLayer(ll));
-      runtime.leafletByLayerId.clear();
-      autoEnableDefaults();
-      renderLayerList();
-      refreshFirmsFreshness();
-    });
-
-    function autoEnableDefaults() {
-      (cfg.layers || []).forEach(layer => {
-        if (shouldEnableByDefault(layer)) {
-          addOrRemoveLayer(layer, true);
-          runtime.activeLegendLayerId = layer.id;
-        }
-      });
-
-      if (runtime.activeLegendLayerId) {
-        setLegendForLayer(runtime.layersById.get(runtime.activeLegendLayerId));
-      }
-    }
-
-    applyModeToMap();
-    renderTabs();
-    renderLayerList();        // populate layersById + initial render (all Off)
-    autoEnableDefaults();     // enable defaults on map + set legend
-    renderLayerList();        // re-render so toggle buttons reflect actual On/Off state
-
-    // First load: try freshness (will degrade gracefully if worker not yet updated)
-    refreshFirmsFreshness();
-  </script>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-copy">
+          <strong>Kahu Ola</strong>
+          <span>Guardian of Life</span>
+          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
+        </div>
+        <div class="footer-links">
+          <a href="./portal.html">Live Map</a>
+          <a href="./privacy.html">Privacy</a>
+          <a href="./support.html">Support</a>
+        </div>
+        <p class="footer-legal">&quot;Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.&quot;</p>
+      </div>
+    </footer>
+  </div>
 </body>
 </html>
