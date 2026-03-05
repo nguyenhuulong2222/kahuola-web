@@ -1,3 +1,7 @@
 # Cloudflare Pages _redirects
-# Intentionally minimal — Cloudflare Pages serves clean URLs automatically.
-# Do NOT add .html aliases here; they conflict with Pages' HTML-stripping and loop.
+# Canonical HTML → clean URL redirects (302 = not permanently cached by browsers).
+# This overwrites any stale browser-cached 301s from a previous bad deployment.
+/index.html   /          302
+/portal.html  /portal    302
+/privacy.html /privacy   302
+/support.html /support   302
