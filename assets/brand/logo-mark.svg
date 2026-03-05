@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Kahu Ola mark">
+  <defs>
+    <linearGradient id="petalGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFB15A"/>
+      <stop offset="55%" stop-color="#FF6A7A"/>
+      <stop offset="100%" stop-color="#D94BFF"/>
+    </linearGradient>
+    <linearGradient id="petalGrad2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFB15A"/>
+      <stop offset="60%" stop-color="#FF5E8A"/>
+      <stop offset="100%" stop-color="#B24BFF"/>
+    </linearGradient>
+    <radialGradient id="discGrad" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#1B2A3B"/>
+      <stop offset="100%" stop-color="#0B1220"/>
+    </radialGradient>
+  </defs>
+
+  <g transform="translate(512,512)">
+    <circle cx="0" cy="0" r="420" fill="none" stroke="#BFD3EA" stroke-opacity="0.55" stroke-width="24"/>
+    <circle cx="0" cy="0" r="398" fill="url(#discGrad)"/>
+    <path d="M0,-285 C105,-285 180,-210 180,-105 C180,-20 120,50 0,140 C-120,50 -180,-20 -180,-105 C-180,-210 -105,-285 0,-285Z" fill="url(#petalGrad)" opacity="0.95"/>
+    <g transform="rotate(72)">
+      <path d="M0,-285 C105,-285 180,-210 180,-105 C180,-20 120,50 0,140 C-120,50 -180,-20 -180,-105 C-180,-210 -105,-285 0,-285Z" fill="url(#petalGrad2)" opacity="0.92"/>
+    </g>
+    <g transform="rotate(144)">
+      <path d="M0,-285 C105,-285 180,-210 180,-105 C180,-20 120,50 0,140 C-120,50 -180,-20 -180,-105 C-180,-210 -105,-285 0,-285Z" fill="url(#petalGrad)" opacity="0.92"/>
+    </g>
+    <g transform="rotate(216)">
+      <path d="M0,-285 C105,-285 180,-210 180,-105 C180,-20 120,50 0,140 C-120,50 -180,-20 -180,-105 C-180,-210 -105,-285 0,-285Z" fill="url(#petalGrad2)" opacity="0.92"/>
+    </g>
+    <g transform="rotate(288)">
+      <path d="M0,-285 C105,-285 180,-210 180,-105 C180,-20 120,50 0,140 C-120,50 -180,-20 -180,-105 C-180,-210 -105,-285 0,-285Z" fill="url(#petalGrad)" opacity="0.92"/>
+    </g>
+    <circle cx="0" cy="0" r="46" fill="#111827"/>
+    <circle cx="0" cy="0" r="28" fill="#FF4F8A"/>
+  </g>
+</svg>

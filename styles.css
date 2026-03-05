@@ -36,13 +36,9 @@ code{font-family:var(--font-mono);background:var(--code-bg);padding:2px 6px;bord
   background:rgba(246,248,252,.72);
 }
 .site-nav{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0}
-.brand{display:flex;align-items:center;gap:12px;min-height:44px}
-.brand-mark{
-  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
-  background:rgba(37,99,235,.10);border:1px solid rgba(37,99,235,.18);font-size:22px
-}
-.brand-copy strong{display:block;font-size:16px;letter-spacing:.2px}
-.brand-copy span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.brand-logo{height:36px;width:auto;display:block}
+@media (max-width:520px){.brand-logo{height:30px}}
 .nav-stack{display:flex;align-items:center;gap:16px}
 .nav-links,.nav-utilities{display:flex;align-items:center;gap:10px;list-style:none;margin:0;padding:0}
 .nav-links a,.nav-utilities a{
