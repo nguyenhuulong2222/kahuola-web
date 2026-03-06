@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./styles.css?v=4.3.1-4" />
+  <link rel="stylesheet" href="./styles.css?v=4.4.0" />
 
   <script type="application/ld+json">
   {
@@ -53,14 +53,18 @@
   <div class="site-shell">
     <header class="topbar">
       <div class="topbar-inner">
-        <a class="brand" href="./index.html" aria-label="Kahu Ola — Guardian of Life">
-          <img class="brand-logo" src="./assets/brand/logo-lockup.svg" alt="Kahu Ola — Guardian of Life" />
+        <a class="brand" href="/" aria-label="Kahu Ola — Guardian of Life">
+          <img class="brand-mark" src="./assets/brand/logo-mark.svg" alt="" role="presentation" width="1024" height="1024" fetchpriority="high" />
+          <span class="brand-wordmark" aria-hidden="true">
+            <span class="brand-name">Kahu Ola</span>
+            <span class="brand-tagline">Guardian of Life</span>
+          </span>
         </a>
         <nav class="nav" aria-label="Primary">
-          <a class="nav-link is-active" href="./index.html">Home</a>
-          <a class="nav-link" href="./portal.html">Live Map</a>
-          <a class="nav-link" href="./privacy.html">Privacy</a>
-          <a class="nav-link" href="./support.html">Support</a>
+          <a class="nav-link is-active" href="/">Home</a>
+          <a class="nav-link" href="/portal">Live Map</a>
+          <a class="nav-link" href="/privacy">Privacy</a>
+          <a class="nav-link" href="/support">Support</a>
         </nav>
       </div>
     </header>
@@ -78,7 +82,7 @@
 
             <div class="hero-cta">
               <a class="button button--primary" href="#download">Download App</a>
-              <a class="button button--secondary" href="./portal.html">Launch Live Map</a>
+              <a class="button button--secondary" href="/portal">Launch Live Map</a>
             </div>
 
             <div class="hero-badges">
@@ -97,7 +101,7 @@
               <div class="k">Live data</div><div class="v">Brokered through <code>/api/</code> (keys never in client)</div>
             </div>
             <p class="subtle" style="margin:14px 0 0;">
-              For App Store / Play review: see <a href="./privacy.html">Privacy</a> and <a href="./support.html">Support</a>.
+              For App Store / Play review: see <a href="/privacy">Privacy</a> and <a href="/support">Support</a>.
             </p>
           </aside>
         </div>
@@ -222,7 +226,7 @@
           </div>
 
           <p class="subtle" style="margin-top:14px;">
-            Full detail for reviewers and auditors: <a href="./privacy.html">Privacy Policy</a>.
+            Full detail for reviewers and auditors: <a href="/privacy">Privacy Policy</a>.
           </p>
         </div>
       </section>
@@ -289,9 +293,9 @@
               <h3>For reviewers / funders</h3>
               <p class="subtle">One-click access to compliance pages and the public portal.</p>
               <div class="stack">
-                <a class="button button--ghost" href="./privacy.html">Privacy Policy</a>
-                <a class="button button--ghost" href="./support.html">Support</a>
-                <a class="button button--ghost" href="./portal.html">Transparency Portal</a>
+                <a class="button button--ghost" href="/privacy">Privacy Policy</a>
+                <a class="button button--ghost" href="/support">Support</a>
+                <a class="button button--ghost" href="/portal">Transparency Portal</a>
               </div>
             </div>
           </div>
@@ -307,6 +311,9 @@
           <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
         </div>
         <div class="footer-links">
+          <a href="/portal">Live Map</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/support">Support</a>
           <a href="./index.html" aria-current="page">Home</a>
           <a href="./portal.html">Live Map</a>
           <a href="./privacy.html">Privacy</a>
