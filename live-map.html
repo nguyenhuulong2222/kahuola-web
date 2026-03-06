@@ -161,23 +161,27 @@
     }
     .nav-back:hover { background: var(--surface-2); border-color: var(--border); text-decoration: none; color: var(--text); }
 
-    .brand-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .panel-kicker {
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .panel-title {
+      font-size: 22px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .panel-intro {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
       margin-bottom: 14px;
     }
-    .brand-mark {
-      width: 40px; height: 40px;
-      background: var(--primary);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 15px; color: #fff;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(37,99,235,.25);
-    }
-    .brand-copy strong { font-size: 17px; font-weight: 800; display: block; color: var(--text); }
-    .brand-copy span { font-size: 12px; color: var(--muted); font-family: var(--mono); }
 
     /* ── Tabs ───────────────────────────────────────────── */
     .tabs {
@@ -461,7 +465,7 @@
     }
   </style>
 </head>
-<body>
+<body class="page-live-map">
 
   <!-- Legal bar -->
   <div class="legal-bar" role="note" aria-label="Important notice">
@@ -482,13 +486,9 @@
       <a href="./index.html" class="nav-back" aria-label="Back to home">
         ← kahuola.org
       </a>
-      <div class="brand-row">
-        <div class="brand-mark" aria-hidden="true">KO</div>
-        <div class="brand-copy">
-          <strong>Layer Library</strong>
-          <span>kahuola.org/api/tiles/*</span>
-        </div>
-      </div>
+      <p class="panel-kicker">Live Map</p>
+      <h1 class="panel-title">Layer Library</h1>
+      <p class="panel-intro">kahuola.org/api/tiles/*</p>
 
       <!-- Tabs -->
       <div class="tabs" role="tablist" aria-label="Layer categories">

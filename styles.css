@@ -256,3 +256,252 @@ code{font-family:var(--font-mono);background:var(--code-bg);padding:2px 6px;bord
   .hero-cta,.cta-row{flex-direction:column}
   .hero-cta a,.cta-row a{width:100%}
 }
+
+/* ==========================================================================
+   KAHU OLA V4 — SECONDARY PAGE NORMALIZATION PATCH
+   Add at END of styles.css
+   Purpose:
+   - Homepage only: large hero branding
+   - Privacy / Support / Portal: compact secondary-page system
+   - Live Map: operational shell only, no giant hero logo
+   ========================================================================== */
+
+/* 1) Shared page-shell for secondary pages */
+.document-shell,
+.portal-shell,
+.page-shell {
+  padding: var(--s7) 0 var(--s9);
+  background:
+    linear-gradient(180deg, #f7f9fd 0%, var(--bg) 100%);
+  min-height: calc(100vh - 72px);
+}
+
+.document-grid,
+.portal-grid {
+  display: grid;
+  gap: var(--s6);
+  align-content: start;
+}
+
+/* 2) Secondary-page hero: text-first, no giant logo system */
+.document-hero,
+.portal-hero,
+.page-hero {
+  position: relative;
+  padding: clamp(24px, 3.2vw, 40px);
+  border-radius: var(--r-xl);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--b);
+  box-shadow: var(--sh-md);
+  overflow: hidden;
+}
+
+/* Calm civic surface, not homepage poster treatment */
+.document-hero::before,
+.portal-hero::before,
+.page-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, rgba(37,99,235,.05), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(2,132,199,.05), transparent 28%);
+}
+
+/* Keep content above decorative layer */
+.document-hero > *,
+.portal-hero > *,
+.page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.document-title,
+.page-title {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  margin: 0;
+  color: var(--text);
+}
+
+.document-meta,
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: center;
+}
+
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  align-items: center;
+  margin-top: var(--s4);
+}
+
+/* 3) HARD V4 RULE:
+   Secondary pages must never render giant legacy logo / hero branding blocks.
+   This catches old markup without deleting the page.
+*/
+.document-shell .hero-brand,
+.document-shell .brand-hero,
+.document-shell .logo-hero,
+.document-shell .page-brand-hero,
+.document-shell .brand-lockup-hero,
+.document-shell .hero-logo-wrap,
+.document-shell .hero-logo,
+.document-shell .brand-lockup,
+.document-shell .brand-banner,
+.document-shell .masthead-brand,
+.document-shell img[src*="logo-lockup"],
+.document-shell img[src*="logo-header"],
+.document-shell img[src*="brand-package"],
+.document-shell svg[aria-label*="Kahu Ola"],
+.document-shell .hero-title + img,
+.document-shell .hero-title + svg,
+
+.portal-shell .hero-brand,
+.portal-shell .brand-hero,
+.portal-shell .logo-hero,
+.portal-shell .page-brand-hero,
+.portal-shell .brand-lockup-hero,
+.portal-shell .hero-logo-wrap,
+.portal-shell .hero-logo,
+.portal-shell .brand-lockup,
+.portal-shell .brand-banner,
+.portal-shell .masthead-brand,
+.portal-shell img[src*="logo-lockup"],
+.portal-shell img[src*="logo-header"],
+.portal-shell img[src*="brand-package"],
+.portal-shell svg[aria-label*="Kahu Ola"],
+
+.page-shell .hero-brand,
+.page-shell .brand-hero,
+.page-shell .logo-hero,
+.page-shell .page-brand-hero,
+.page-shell .brand-lockup-hero,
+.page-shell .hero-logo-wrap,
+.page-shell .hero-logo,
+.page-shell .brand-lockup,
+.page-shell .brand-banner,
+.page-shell .masthead-brand,
+.page-shell img[src*="logo-lockup"],
+.page-shell img[src*="logo-header"],
+.page-shell img[src*="brand-package"],
+.page-shell svg[aria-label*="Kahu Ola"] {
+  display: none !important;
+}
+
+/* 4) Policy/content stack normalization */
+.policy-stack {
+  display: grid;
+  gap: var(--s4);
+}
+
+.policy-block {
+  background: var(--surface);
+  border: 1px solid var(--b);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-sm);
+  padding: clamp(20px, 2.4vw, 28px);
+  display: grid;
+  gap: var(--s3);
+}
+
+.policy-block h2 {
+  font-size: clamp(22px, 2.2vw, 30px);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.policy-block h3 {
+  font-size: clamp(18px, 1.8vw, 22px);
+  margin: 0;
+}
+
+.policy-block p,
+.policy-block li {
+  color: var(--muted);
+}
+
+.faq-list,
+.checklist,
+.official-links {
+  margin: 0;
+}
+
+.faq-item + .faq-item {
+  margin-top: var(--s4);
+}
+
+/* 5) Footer consistency */
+.footer-copy span {
+  display: block;
+  color: var(--subtle);
+  font-size: var(--t-sm);
+  line-height: 1.45;
+}
+
+/* 6) Header stability for all non-home pages */
+.site-header {
+  isolation: isolate;
+}
+
+.brand {
+  position: relative;
+  z-index: 2;
+}
+
+.brand-mark {
+  overflow: hidden;
+}
+
+/* 7) Optional body hooks for explicit control */
+body.page-support .document-shell,
+body.page-privacy .document-shell,
+body.page-portal .portal-shell {
+  padding-top: var(--s7);
+}
+
+/* 8) Live-map / operational page guard
+   Prevent accidental giant branding on map-like pages.
+*/
+body.page-live-map .hero,
+body.page-live-map .brand-hero,
+body.page-live-map .logo-hero,
+body.page-live-map .document-hero,
+body.page-live-map .page-brand-hero,
+body.page-live-map img[src*="logo-lockup"],
+body.page-live-map img[src*="logo-header"] {
+  display: none !important;
+}
+
+/* 9) Mobile */
+@media (max-width: 860px) {
+  .document-shell,
+  .portal-shell,
+  .page-shell {
+    padding: var(--s5) 0 var(--s7);
+  }
+
+  .document-hero,
+  .portal-hero,
+  .page-hero,
+  .policy-block {
+    border-radius: var(--r-lg);
+  }
+
+  .doc-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .doc-actions > a,
+  .doc-actions > button {
+    width: 100%;
+    justify-content: center;
+  }
+}
