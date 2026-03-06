@@ -505,3 +505,22 @@ body.page-live-map img[src*="logo-header"] {
     justify-content: center;
   }
 }
+
+/* 10) Hard guard for legacy oversized topbar lockup on secondary pages */
+body.page-portal .topbar .brand-logo,
+body.page-privacy .topbar .brand-logo,
+body.page-support .topbar .brand-logo,
+body.page-portal .topbar img[src*="logo-lockup"],
+body.page-privacy .topbar img[src*="logo-lockup"],
+body.page-support .topbar img[src*="logo-lockup"],
+body.page-portal .topbar img[src*="logo-header"],
+body.page-privacy .topbar img[src*="logo-header"],
+body.page-support .topbar img[src*="logo-header"] {
+  display: none !important;
+}
+
+/* Fallback for stale legacy markup that injected brand-logo into topbar */
+.topbar .brand > img.brand-logo,
+.topbar .nav > img.brand-logo {
+  display: none !important;
+}
