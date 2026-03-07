@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kahu Ola — Live Map (Moved)</title>
+
+  <!-- Canonical points to the true destination; noindex so /portal doesn't compete -->
+  <link rel="canonical" href="https://kahuola.org/live-map.html" />
+  <meta name="robots" content="noindex, follow" />
+
+  <!-- Meta refresh — fastest fallback for browsers without JS -->
+  <meta http-equiv="refresh" content="0; url=./live-map.html" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #f5f7fa;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .msg { text-align: center; max-width: 360px; }
+    .msg p { font-size: 16px; color: #4b5563; margin: 8px 0 20px; }
+    .msg a {
+      display: inline-block;
+      padding: 12px 28px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 999px;
+      text-decoration: none;
+    }
+    .msg a:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="msg">
+    <p>Redirecting to the Live Map&hellip;</p>
+    <a href="./live-map.html">Open Live Map</a>
+  </div>
+
+  <!-- JS redirect fires before paint in all modern browsers -->
+  <script>window.location.replace('./live-map.html');</script>
+</body>
+</html>
