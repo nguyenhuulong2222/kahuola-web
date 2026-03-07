@@ -143,7 +143,6 @@ footer {
   </div>
 </div>
 
-<script src="./mapbox-config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN2GqnQ=" crossorigin=""></script>
 <script>
 "use strict";
@@ -157,7 +156,7 @@ L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_toke
   id: 'mapbox/dark-v11',
   tileSize: 512,
   zoomOffset: -1,
-  accessToken: window.MAPBOX_TOKEN
+  accessToken: 'pk.eyJ1Ijoibmd1eWVuaHV1bG9uZzIyIiwiYSI6ImNtbWc3ZzhoYzAyM2kzMnB5b29jNXlvZjkifQ.-dnT299gpTccebePes5Hiw'
 }).addTo(map);
 setTimeout(() => { map.invalidateSize(); }, 300);
 

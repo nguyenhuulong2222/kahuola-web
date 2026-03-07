@@ -4,4 +4,3 @@ worker/node_modules/
 worker/.wrangler/
 .claude/
 _merge_work
-mapbox-config.js
