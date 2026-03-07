@@ -1,1060 +1,769 @@
 <!doctype html>
 <html lang="en">
 <head>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>Kahu Ola | Live Hazard Map</title>
-
-<meta name="description" content="Kahu Ola civic wildfire situational awareness for Hawaiʻi.">
-
-<link rel="canonical" href="https://kahuola.org/live-map.html">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#0c0c0c">
-
-<!--
-  CSP: connect-src chỉ cho phép kahuola.org + demotiles
-  Invariant I: client không được gọi upstream trực tiếp
--->
-<meta http-equiv="Content-Security-Policy"
-  content="
-    default-src 'self';
-    script-src 'self' https://unpkg.com;
-    style-src 'self' https://fonts.googleapis.com https://unpkg.com 'unsafe-inline';
-    font-src https://fonts.gstatic.com;
-    img-src 'self' data: blob: https://demotiles.maplibre.org;
-    connect-src https://kahuola.org https://demotiles.maplibre.org;
-  ">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-
-<style>
-
-/* ═══════════════════════════════════════════
-   KAHU OLA V4.3.1 — DESIGN SYSTEM
-   Wildfire-First · Privacy-First · Civic-Grade
-   ═══════════════════════════════════════════ */
-
-:root {
-  --bg:        #0c0c0c;
-  --surface:   #161616;
-  --panel:     rgba(14,14,14,.82);
-  --border:    rgba(255,255,255,.07);
-  --border-hi: rgba(255,255,255,.13);
-
-  --text:      #e8e8e8;
-  --text-dim:  #aaa;
-  --muted:     #666;
-
-  --accent:    #ff5722;
-  --fire-crit: #ff1744;
-  --green:     #4caf50;
-  --amber:     #ff9800;
-  --red:       #f44336;
-  --blue:      #42a5f5;
-
-  --radius:    8px;
-  --radius-sm: 5px;
-
-  --font-body: "DM Sans", system-ui, sans-serif;
-  --font-mono: "DM Mono", monospace;
-}
-
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 14px;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── App Shell ── */
-#app {
-  display: grid;
-  grid-template-rows: 56px 1fr;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* ── Header ── */
-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-  z-index: 200;
-}
-
-.logo {
-  font-weight: 600;
-  font-size: 15px;
-  line-height: 1.2;
-}
-
-.logo small {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  letter-spacing: .05em;
-}
-
-/* ── Banner stack — §21 priority order ── */
-#banner-stack {
-  flex: 1;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.banner {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  letter-spacing: .02em;
-  animation: slideIn .2s ease;
-}
-
-.banner.hidden { display: none; }
-
-.banner-red   { background: rgba(244,67,54,.14);  border: 1px solid rgba(244,67,54,.35);  color: #ef9a9a; }
-.banner-amber { background: rgba(255,152,0,.11);  border: 1px solid rgba(255,152,0,.30);  color: #ffcc80; }
-.banner-blue  { background: rgba(66,165,245,.10); border: 1px solid rgba(66,165,245,.28); color: #90caf9; }
-
-.b-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.banner-red   .b-dot { background: var(--red); }
-.banner-amber .b-dot { background: var(--amber); }
-.banner-blue  .b-dot { background: var(--blue); }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(8px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-/* ── Map wrapper ── */
-#map-wrapper {
-  position: relative;
-  overflow: hidden;
-}
-
-/* ── Map ── */
-#map {
-  width: 100%;
-  height: 100%;
-}
-
-/* ── Floating metrics panel ── */
-.panel {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 270px;
-  background: var(--panel);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius);
-  overflow: hidden;
-  z-index: 100;
-}
-
-.panel-header {
-  padding: 10px 14px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.panel-title {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  color: var(--muted);
-  text-transform: uppercase;
-  font-family: var(--font-mono);
-}
-
-.panel-body {
-  padding: 10px 14px;
-}
-
-/* ── Metric row ── */
-.metric {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-  gap: 8px;
-}
-
-.metric:last-of-type { border-bottom: none; }
-
-.metric-label {
-  font-size: 12px;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-.metric-value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: right;
-}
-
-.val-fire  { color: var(--accent); }
-.val-good  { color: var(--green); }
-.val-amber { color: var(--amber); }
-.val-muted { color: var(--muted); }
-.val-crit  { color: var(--fire-crit); }
-
-/* ── Freshness badge — §20 ── */
-.freshness {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  padding: 2px 6px;
-  border-radius: 3px;
-  text-transform: uppercase;
-  font-family: var(--font-mono);
-  margin-top: 8px;
-}
-
-.f-fresh      { background: rgba(76,175,80,.12);   color: var(--green); border: 1px solid rgba(76,175,80,.25); }
-.f-stale-ok   { background: rgba(255,152,0,.10);   color: var(--amber); border: 1px solid rgba(255,152,0,.25); }
-.f-stale-drop { background: rgba(102,102,102,.12); color: #888;         border: 1px solid rgba(102,102,102,.2); }
-.f-unknown    { background: rgba(102,102,102,.08); color: #666;         border: 1px solid rgba(102,102,102,.15); }
-
-/* ── Refresh button ── */
-.refresh-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 6px 0;
-  background: none;
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .04em;
-  cursor: pointer;
-  transition: border-color .15s, color .15s;
-}
-
-.refresh-btn:hover    { border-color: var(--accent); color: var(--accent); }
-.refresh-btn:disabled { opacity: .35; cursor: not-allowed; }
-
-/* ── Diagnostics panel — §19 ── */
-.diag-panel {
-  position: absolute;
-  left: 16px;
-  bottom: 36px;
-  width: 230px;
-  background: var(--panel);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius);
-  z-index: 100;
-  display: none;
-  overflow: hidden;
-}
-
-.diag-panel.open { display: block; }
-
-.diag-header {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  user-select: none;
-}
-
-.diag-title {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--font-mono);
-}
-
-.diag-close {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 14px;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0 2px;
-}
-
-.diag-body { padding: 8px 12px; }
-
-.diag-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 3px 0;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  border-bottom: 1px solid var(--border);
-}
-
-.diag-row:last-child { border-bottom: none; }
-.diag-key { color: var(--muted); }
-.diag-val { font-weight: 500; }
-
-/* ── Diag toggle ── */
-.diag-toggle-btn {
-  position: absolute;
-  left: 16px;
-  bottom: 36px;
-  background: var(--panel);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .04em;
-  padding: 5px 10px;
-  cursor: pointer;
-  z-index: 100;
-  transition: border-color .15s, color .15s;
-}
-
-.diag-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ── Fire markers ── */
-.marker {
-  width: 8px; height: 8px;
-  background: var(--accent);
-  border-radius: 2px;
-  box-shadow: 0 0 8px rgba(255,87,34,.55);
-  cursor: pointer;
-  transition: transform .15s;
-}
-
-.marker:hover    { transform: scale(1.5); }
-
-.marker.critical {
-  background: var(--fire-crit);
-  animation: pulseFire 1.1s ease-in-out infinite;
-}
-
-@keyframes pulseFire {
-  0%,100% { box-shadow: 0 0 5px rgba(255,23,68,.5);  transform: scale(1);    }
-  50%     { box-shadow: 0 0 14px rgba(255,23,68,.85); transform: scale(1.35); }
-}
-
-/* ── Popup ── */
-.maplibregl-popup-content {
-  background: #111 !important;
-  border: 1px solid rgba(255,255,255,.1) !important;
-  border-radius: var(--radius) !important;
-  color: var(--text) !important;
-  font-family: var(--font-body) !important;
-  font-size: 12px !important;
-  padding: 10px 13px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,.5) !important;
-}
-
-.maplibregl-popup-tip { border-top-color: #111 !important; }
-
-.popup-title {
-  font-weight: 600;
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.popup-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
-
-.popup-row span:last-child {
-  color: var(--text);
-  font-family: var(--font-mono);
-}
-
-/* ── MapLibre control overrides ── */
-.maplibregl-ctrl-top-left { top: 16px; left: 16px; }
-
-.maplibregl-ctrl-group {
-  background: rgba(20,20,20,.85) !important;
-  border: 1px solid var(--border-hi) !important;
-  border-radius: var(--radius-sm) !important;
-  backdrop-filter: blur(8px);
-}
-
-.maplibregl-ctrl-group button {
-  background-color: transparent !important;
-  color: var(--text-dim) !important;
-}
-
-.maplibregl-ctrl-group button:hover {
-  background: rgba(255,255,255,.06) !important;
-  color: var(--text) !important;
-}
-
-.maplibregl-ctrl-scale {
-  background: rgba(0,0,0,.5) !important;
-  border-color: var(--border-hi) !important;
-  color: var(--text-dim) !important;
-  font-family: var(--font-mono) !important;
-  font-size: 10px !important;
-}
-
-/* ── §33 Legal disclaimer ── */
-footer {
-  position: absolute;
-  bottom: 8px;
-  right: 16px;
-  font-size: 10px;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  letter-spacing: .02em;
-  z-index: 100;
-  text-align: right;
-  pointer-events: none;
-}
-
-/* ── Loading spinner ── */
-.spinner {
-  display: inline-block;
-  width: 10px; height: 10px;
-  border: 1.5px solid rgba(255,255,255,.15);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .65s linear infinite;
-  vertical-align: middle;
-  margin-right: 4px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Mobile ── */
-@media (max-width: 600px) {
-  .panel { right: 8px; top: 8px; width: 220px; }
-  .diag-toggle-btn { display: none; }
-  footer { display: none; }
-}
-
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kahu Ola | Live Hazard Map</title>
+  <meta name="description" content="Kahu Ola civic wildfire situational awareness for Hawaiʻi.">
+  <link rel="canonical" href="https://kahuola.org/live-map.html">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#0c0c0c">
+
+  <meta http-equiv="Content-Security-Policy"
+    content="
+      default-src 'self';
+      script-src 'self' https://unpkg.com blob:;
+      style-src 'self' https://fonts.googleapis.com https://unpkg.com 'unsafe-inline';
+      font-src https://fonts.gstatic.com;
+      img-src 'self' data: blob: https:;
+      connect-src 'self' https://kahuola.org https://demotiles.maplibre.org https://tiles.openfreemap.org https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com;
+    ">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    :root{
+      --bg:#0c0c0c;
+      --surface:#151515;
+      --panel:rgba(16,16,16,.82);
+      --border:rgba(255,255,255,.08);
+      --border-hi:rgba(255,255,255,.14);
+      --text:#e8e8e8;
+      --text-dim:#a7a7a7;
+      --muted:#6f6f6f;
+      --accent:#ff5722;
+      --crit:#ff1744;
+      --green:#4caf50;
+      --amber:#ff9800;
+      --red:#f44336;
+      --radius:10px;
+      --radius-sm:6px;
+      --font-body:"DM Sans",system-ui,sans-serif;
+      --font-mono:"DM Mono",monospace;
+    }
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+    html,body{
+      height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--font-body);
+      font-size:14px;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    #app{
+      display:grid;
+      grid-template-rows:56px 1fr;
+      height:100vh;
+      overflow:hidden;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:0 16px;
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      position:relative;
+      z-index:20;
+    }
+
+    .logo{
+      font-weight:700;
+      font-size:15px;
+      line-height:1.15;
+      letter-spacing:-.01em;
+    }
+
+    .logo small{
+      display:block;
+      font-size:10px;
+      color:var(--muted);
+      font-family:var(--font-mono);
+      letter-spacing:.05em;
+      font-weight:500;
+      margin-top:2px;
+    }
+
+    #banner-stack{
+      margin-left:auto;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      justify-content:flex-end;
+    }
+
+    .banner{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:var(--radius-sm);
+      font-size:11px;
+      font-weight:500;
+      font-family:var(--font-mono);
+      letter-spacing:.02em;
+    }
+
+    .hidden{display:none !important}
+
+    .banner-amber{background:rgba(255,152,0,.12);border:1px solid rgba(255,152,0,.32);color:#ffcc80}
+    .banner-red{background:rgba(244,67,54,.14);border:1px solid rgba(244,67,54,.32);color:#ef9a9a}
+    .dot{width:5px;height:5px;border-radius:50%}
+    .banner-amber .dot{background:var(--amber)}
+    .banner-red .dot{background:var(--red)}
+
+    #map-wrap{
+      position:relative;
+      overflow:hidden;
+      background:#000;
+    }
+
+    #map{
+      position:absolute;
+      inset:0;
+    }
+
+    .panel{
+      position:absolute;
+      right:16px;
+      top:16px;
+      width:290px;
+      background:var(--panel);
+      border:1px solid var(--border-hi);
+      border-radius:var(--radius);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      overflow:hidden;
+      z-index:10;
+      box-shadow:0 10px 30px rgba(0,0,0,.28);
+    }
+
+    .panel-head{
+      padding:10px 14px 8px;
+      border-bottom:1px solid var(--border);
+      font-size:10px;
+      font-family:var(--font-mono);
+      font-weight:600;
+      letter-spacing:.08em;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .panel-body{padding:10px 14px}
+
+    .metric{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:8px;
+      padding:7px 0;
+      border-bottom:1px solid var(--border);
+    }
+
+    .metric:last-of-type{border-bottom:none}
+
+    .metric-label{
+      font-size:12px;
+      color:var(--text-dim);
+    }
+
+    .metric-value{
+      font-size:13px;
+      font-family:var(--font-mono);
+      font-weight:600;
+      text-align:right;
+    }
+
+    .v-fire{color:var(--accent)}
+    .v-good{color:var(--green)}
+    .v-warn{color:var(--amber)}
+    .v-crit{color:var(--crit)}
+    .v-dim{color:var(--muted)}
+
+    .freshness{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      margin-top:8px;
+      padding:2px 7px;
+      border-radius:4px;
+      font-size:10px;
+      font-weight:600;
+      font-family:var(--font-mono);
+      letter-spacing:.05em;
+      text-transform:uppercase;
+    }
+
+    .f-fresh{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.28);color:var(--green)}
+    .f-stale{background:rgba(255,152,0,.12);border:1px solid rgba(255,152,0,.28);color:var(--amber)}
+    .f-old{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#8a8a8a}
+    .f-unknown{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#777}
+
+    .refresh-btn{
+      width:100%;
+      margin-top:10px;
+      min-height:34px;
+      border:1px solid var(--border-hi);
+      border-radius:var(--radius-sm);
+      background:transparent;
+      color:var(--text-dim);
+      font-size:11px;
+      font-family:var(--font-mono);
+      cursor:pointer;
+    }
+
+    .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .refresh-btn:disabled{opacity:.4;cursor:not-allowed}
+
+    .diag-btn{
+      position:absolute;
+      left:16px;
+      bottom:16px;
+      z-index:10;
+      min-height:32px;
+      padding:0 10px;
+      border:1px solid var(--border-hi);
+      border-radius:var(--radius-sm);
+      background:var(--panel);
+      color:var(--text-dim);
+      font-size:11px;
+      font-family:var(--font-mono);
+      cursor:pointer;
+    }
+
+    .diag{
+      position:absolute;
+      left:16px;
+      bottom:56px;
+      width:240px;
+      z-index:10;
+      background:var(--panel);
+      border:1px solid var(--border-hi);
+      border-radius:var(--radius);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      overflow:hidden;
+      display:none;
+    }
+
+    .diag.open{display:block}
+
+    .diag-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 12px;
+      border-bottom:1px solid var(--border);
+      font-size:10px;
+      font-family:var(--font-mono);
+      font-weight:600;
+      letter-spacing:.07em;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .diag-close{
+      background:none;
+      border:none;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:14px;
+      line-height:1;
+    }
+
+    .diag-body{padding:8px 12px}
+
+    .diag-row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:4px 0;
+      border-bottom:1px solid var(--border);
+      font-size:11px;
+      font-family:var(--font-mono);
+    }
+
+    .diag-row:last-child{border-bottom:none}
+    .diag-key{color:var(--muted)}
+    .diag-val{font-weight:500}
+
+    .marker{
+      width:9px;
+      height:9px;
+      background:var(--accent);
+      border-radius:2px;
+      box-shadow:0 0 8px rgba(255,87,34,.55);
+      cursor:pointer;
+    }
+
+    .marker.critical{
+      background:var(--crit);
+      box-shadow:0 0 12px rgba(255,23,68,.75);
+    }
+
+    .maplibregl-popup-content{
+      background:#111 !important;
+      border:1px solid rgba(255,255,255,.1) !important;
+      color:var(--text) !important;
+      border-radius:var(--radius) !important;
+      font-family:var(--font-body) !important;
+      font-size:12px !important;
+      padding:10px 12px !important;
+    }
+
+    .maplibregl-ctrl-group{
+      background:rgba(20,20,20,.88) !important;
+      border:1px solid var(--border-hi) !important;
+      border-radius:var(--radius-sm) !important;
+    }
+
+    .maplibregl-ctrl-scale{
+      background:rgba(0,0,0,.52) !important;
+      color:var(--text-dim) !important;
+      border-color:var(--border-hi) !important;
+      font-family:var(--font-mono) !important;
+      font-size:10px !important;
+    }
+
+    .maplibregl-ctrl-attrib{
+      background:rgba(0,0,0,.55) !important;
+      color:var(--muted) !important;
+      font-size:10px !important;
+    }
+
+    footer{
+      position:absolute;
+      right:16px;
+      bottom:12px;
+      z-index:10;
+      font-size:10px;
+      color:var(--muted);
+      font-family:var(--font-mono);
+      pointer-events:none;
+    }
+
+    .spinner{
+      display:inline-block;
+      width:10px;
+      height:10px;
+      border:1.5px solid rgba(255,255,255,.14);
+      border-top-color:var(--accent);
+      border-radius:50%;
+      animation:spin .7s linear infinite;
+      vertical-align:middle;
+      margin-right:4px;
+    }
+
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    @media (max-width:600px){
+      .panel{top:8px;right:8px;width:220px}
+      .diag-btn,.diag,footer{display:none}
+      #banner-stack{display:none}
+    }
+  </style>
 </head>
-
 <body>
-<div id="app">
+  <div id="app">
+    <header role="banner">
+      <div class="logo" aria-label="Kahu Ola — Civic Hazard Map">
+        🔥 Kahu Ola
+        <small>V4.3.1 · CIVIC HAZARD MAP</small>
+      </div>
 
-  <!-- ══════════════════════
-       HEADER — always renders
-       Invariant II guaranteed
-       ══════════════════════ -->
-  <header role="banner">
+      <div id="banner-stack" role="status" aria-live="polite">
+        <div id="b-offline" class="banner banner-amber hidden"><span class="dot"></span><span id="b-offline-text">Offline — showing cached data</span></div>
+        <div id="b-degraded" class="banner banner-amber hidden"><span class="dot"></span>Source degraded</div>
+        <div id="b-parse" class="banner banner-red hidden"><span class="dot"></span>Data format error</div>
+      </div>
+    </header>
 
-    <div class="logo" aria-label="Kahu Ola — Civic Hazard Map V4.3.1">
-      🔥 Kahu Ola
-      <small>V4.3.1 · CIVIC HAZARD MAP</small>
+    <div id="map-wrap">
+      <div id="map" role="main" aria-label="Hawaiʻi wildfire map"></div>
+
+      <div class="panel" role="complementary" aria-label="Fire hazard metrics">
+        <div class="panel-head">Fire Signals · Maui Region</div>
+        <div class="panel-body">
+          <div class="metric">
+            <span class="metric-label">Detections</span>
+            <span class="metric-value v-fire" id="fire-count"><span class="spinner"></span></span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Nearest</span>
+            <span class="metric-value" id="nearest-fire">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Critical</span>
+            <span class="metric-value" id="critical-count">—</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Fetched</span>
+            <span class="metric-value v-dim" id="fetch-time">—</span>
+          </div>
+
+          <div id="freshness-badge" class="freshness f-unknown">● UNKNOWN</div>
+          <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">↻ REFRESH</button>
+        </div>
+      </div>
+
+      <button class="diag-btn" id="diag-btn" aria-expanded="false" aria-controls="diag">⚙ SYSTEM</button>
+
+      <div class="diag" id="diag" role="region" aria-label="System diagnostics">
+        <div class="diag-head">
+          <span>§19 Diagnostics</span>
+          <button class="diag-close" id="diag-close" aria-label="Close diagnostics">✕</button>
+        </div>
+        <div class="diag-body">
+          <div class="diag-row"><span class="diag-key">networkFailures</span><span class="diag-val" id="d-net">0</span></div>
+          <div class="diag-row"><span class="diag-key">parseFailures</span><span class="diag-val" id="d-parse">0</span></div>
+          <div class="diag-row"><span class="diag-key">consecutiveFailures</span><span class="diag-val" id="d-consec">0</span></div>
+          <div class="diag-row"><span class="diag-key">offline</span><span class="diag-val" id="d-offline">false</span></div>
+          <div class="diag-row"><span class="diag-key">cooldown</span><span class="diag-val" id="d-cooldown">false</span></div>
+          <div class="diag-row"><span class="diag-key">privacyModel</span><span class="diag-val" style="color:var(--green)">Zero PII</span></div>
+        </div>
+      </div>
+
+      <footer>Kahu Ola civic technology · not an official emergency directive</footer>
     </div>
+  </div>
 
-    <!-- Banner stack — §21 priority: parse > offline > degraded > cooldown -->
-    <div id="banner-stack" role="status" aria-live="polite" aria-label="System status">
+  <script>
+    "use strict";
 
-      <div id="b-parse" class="banner banner-red hidden" role="alert" aria-label="Data format error">
-        <span class="b-dot"></span>Data format error
-      </div>
+    const AGGREGATOR_BASE = "https://kahuola.org";
+    const FIRE_ENDPOINT = `${AGGREGATOR_BASE}/api/firms/hotspots?bbox=-157.2,20.4,-156.1,21.2&days=1`;
+    const REF_CENTER = [-156.675, 20.878];
+    const POLL_MS = 5 * 60 * 1000;
+    const FETCH_TIMEOUT_MS = 12000;
 
-      <div id="b-offline" class="banner banner-amber hidden" aria-label="Offline mode">
-        <span class="b-dot"></span>
-        <span id="b-offline-text">Offline — showing cached data</span>
-      </div>
+    const DS = {
+      networkFailures: 0,
+      parseFailures: 0,
+      consecutiveFailures: 0,
+      isOffline: false,
+      inCooldown: false,
+      cooldownUntil: null,
+      lastFireFetchAt: null,
+      get isCooldownActive() {
+        return this.inCooldown && this.cooldownUntil && Date.now() < this.cooldownUntil;
+      },
+      success() {
+        this.consecutiveFailures = 0;
+        this.isOffline = false;
+        this.inCooldown = false;
+        this.lastFireFetchAt = new Date();
+        syncDiag();
+      },
+      error(type) {
+        if (type === "network") this.networkFailures++;
+        if (type === "parse") this.parseFailures++;
+        this.consecutiveFailures++;
+        syncDiag();
+      },
+      cooldown(sec = 60) {
+        this.inCooldown = true;
+        this.cooldownUntil = Date.now() + sec * 1000;
+        syncDiag();
+      }
+    };
 
-      <div id="b-degraded" class="banner banner-amber hidden" aria-label="Degraded data source">
-        <span class="b-dot"></span>Data source temporarily degraded
-      </div>
-
-      <div id="b-cooldown" class="banner banner-blue hidden" aria-label="Rate limit cooldown">
-        <span class="b-dot"></span>Data temporarily unavailable — retrying shortly
-      </div>
-
-    </div>
-
-  </header>
-
-  <!-- ══════════════════════
-       MAP WRAPPER
-       ══════════════════════ -->
-  <div id="map-wrapper">
-
-    <div id="map" role="main" aria-label="Hawai'i wildfire hazard map"></div>
-
-    <!-- ── Floating metrics panel ── -->
-    <div class="panel" role="complementary" aria-label="Fire hazard metrics">
-
-      <div class="panel-header">
-        <div class="panel-title">Fire Signals · Maui Region</div>
-      </div>
-
-      <div class="panel-body">
-
-        <div class="metric">
-          <span class="metric-label">Detections</span>
-          <span class="metric-value val-fire" id="fire-count" aria-label="Fire detection count">
-            <span class="spinner"></span>
-          </span>
-        </div>
-
-        <div class="metric">
-          <span class="metric-label">Nearest</span>
-          <span class="metric-value" id="nearest-fire" aria-label="Nearest fire distance">—</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric-label">Critical</span>
-          <span class="metric-value" id="critical-count" aria-label="Critical severity detections">—</span>
-        </div>
-
-        <div class="metric">
-          <span class="metric-label">Fetched</span>
-          <span class="metric-value val-muted" id="fetch-time" aria-label="Last fetch time">—</span>
-        </div>
-
-        <!-- §20 Stale Policy badge — display only, never influences alerts -->
-        <div id="freshness-badge" class="freshness f-unknown"
-          role="status" aria-label="Data freshness: unknown">
-          ● UNKNOWN
-        </div>
-
-        <button class="refresh-btn" id="refresh-btn"
-          aria-label="Manually refresh hazard data">
-          ↻ REFRESH
-        </button>
-
-      </div>
-    </div><!-- /.panel -->
-
-    <!-- Diagnostics toggle button -->
-    <button class="diag-toggle-btn" id="diag-toggle-btn"
-      aria-expanded="false" aria-controls="diag-panel"
-      aria-label="Open system diagnostics">
-      ⚙ SYSTEM
-    </button>
-
-    <!-- ── §19 Data Integrity Screen ── -->
-    <div class="diag-panel" id="diag-panel"
-      role="region" aria-label="System diagnostics — §19 Data Integrity">
-
-      <div class="diag-header" id="diag-header">
-        <span class="diag-title">§19 Diagnostics</span>
-        <button class="diag-close" aria-label="Close diagnostics">✕</button>
-      </div>
-
-      <div class="diag-body">
-        <div class="diag-row">
-          <span class="diag-key">networkFailures</span>
-          <span class="diag-val" id="d-net">0</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">parseFailures</span>
-          <span class="diag-val" id="d-parse">0</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">consecutiveFailures</span>
-          <span class="diag-val" id="d-consec">0</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">aggregatorHealth</span>
-          <span class="diag-val" id="d-health" style="color:var(--green)">healthy</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">cooldownActive</span>
-          <span class="diag-val" id="d-cooldown">false</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">offline</span>
-          <span class="diag-val" id="d-offline">false</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">privacyModel</span>
-          <span class="diag-val" style="color:var(--green)">Zero PII</span>
-        </div>
-        <div class="diag-row">
-          <span class="diag-key">endpoint</span>
-          <span class="diag-val val-muted" style="font-size:9px">kahuola.org/api/*</span>
-        </div>
-      </div>
-    </div><!-- /.diag-panel -->
-
-    <!-- §33 Legal disclaimer — always visible, absolute -->
-    <footer role="contentinfo">
-      Kahu Ola civic technology · not an official emergency directive
-    </footer>
-
-  </div><!-- /#map-wrapper -->
-
-</div><!-- /#app -->
-
-<script>
-/* ═══════════════════════════════════════════════════════════════
-   KAHU OLA V4.3.1 — MAP ENGINE
-   ───────────────────────────────────────────────────────────────
-   Invariant I   — all data via kahuola.org Worker only
-   Invariant II  — UI renders under all failure conditions
-   Invariant III — fail-closed: ParseException → return []
-   Invariant IV  — Zero PII: no GPS transmitted, on-device only
-   Invariant V   — perimeter official/estimated hard rule (§21)
-   ═══════════════════════════════════════════════════════════════ */
-
-"use strict";
-
-/* ─────────────────────────────────────────────────────────
-   AGGREGATOR BASE — Invariant I
-   Client knows ONLY this Worker origin. Never upstream APIs.
-   ───────────────────────────────────────────────────────── */
-
-const AGGREGATOR_BASE = "https://kahuola.org";
-
-const ENDPOINTS = {
-  fire: `${AGGREGATOR_BASE}/api/firms/hotspots?bbox=-157.2,20.4,-156.1,21.2&days=1`,
-};
-
-/* Reference center — Lahaina · on-device only · never transmitted (Invariant IV) */
-const REF_CENTER = [-156.675, 20.878];
-
-/* §15 Energy rules: 5-minute minimum polling floor */
-const POLL_INTERVAL_MS   = 5 * 60 * 1000;
-const FETCH_TIMEOUT_MS   = 12_000;
-const DEGRADED_THRESHOLD = 3;
-
-/* ─────────────────────────────────────────────────────────
-   DIAGNOSTICS STORE — mirrors Flutter §11 schema
-   ───────────────────────────────────────────────────────── */
-
-const DS = {
-  networkFailures:     0,
-  parseFailures:       0,
-  consecutiveFailures: 0,
-  aggregatorHealth:    "healthy",  // healthy | degraded | unavailable
-  inCooldown:          false,
-  cooldownUntil:       null,
-  isOffline:           false,
-  lastFireFetchAt:     null,
-
-  get isCooldownActive() {
-    return this.inCooldown && this.cooldownUntil && Date.now() < this.cooldownUntil;
-  },
-
-  recordError(domain) {
-    if (domain === "network") {
-      this.networkFailures++;
-      this.consecutiveFailures++;
-    } else if (domain === "parse") {
-      this.parseFailures++;
-      this.consecutiveFailures++;
-    }
-    if (this.consecutiveFailures >= DEGRADED_THRESHOLD) {
-      this.aggregatorHealth = "degraded";
-    }
-    this._syncUI();
-  },
-
-  recordSuccess() {
-    this.consecutiveFailures = 0;
-    this.aggregatorHealth    = "healthy";
-    this.inCooldown          = false;
-    this.isOffline           = false;
-    this.lastFireFetchAt     = new Date();
-    this._syncUI();
-  },
-
-  enterCooldown(seconds = 60) {
-    this.inCooldown    = true;
-    this.cooldownUntil = Date.now() + seconds * 1000;
-    this._syncUI();
-  },
-
-  /* §21 Banner priority: parse > offline > degraded > cooldown */
-  _syncUI() {
-    showBanner("b-parse",    this.parseFailures > 0);
-    showBanner("b-offline",  this.isOffline);
-    showBanner("b-degraded", this.aggregatorHealth === "degraded" && !this.isOffline);
-    showBanner("b-cooldown", this.isCooldownActive);
-
-    setText("d-net",     this.networkFailures);
-    setText("d-parse",   this.parseFailures);
-    setText("d-consec",  this.consecutiveFailures);
-    setText("d-cooldown",this.isCooldownActive ? "true" : "false");
-    setText("d-offline", this.isOffline ? "true" : "false");
-
-    const hEl = document.getElementById("d-health");
-    if (hEl) {
-      hEl.textContent = this.aggregatorHealth;
-      hEl.style.color = { healthy: "var(--green)", degraded: "var(--amber)", unavailable: "var(--red)" }
-        [this.aggregatorHealth] || "var(--muted)";
-    }
-  },
-};
-
-/* ─────────────────────────────────────────────────────────
-   UTILS
-   ───────────────────────────────────────────────────────── */
-
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = String(val);
-}
-
-function showBanner(id, show) {
-  const el = document.getElementById(id);
-  if (el) show ? el.classList.remove("hidden") : el.classList.add("hidden");
-}
-
-function hstTime(date) {
-  return (date || new Date()).toLocaleTimeString("en-US", {
-    timeZone: "Pacific/Honolulu",
-    hour: "2-digit",
-    minute: "2-digit",
-  }) + " HST";
-}
-
-/* Haversine — on-device only, result never transmitted */
-function distMiles(a, b) {
-  const R    = 3958.8;
-  const dLat = (b[1] - a[1]) * Math.PI / 180;
-  const dLon = (b[0] - a[0]) * Math.PI / 180;
-  const lat1 = a[1] * Math.PI / 180;
-  const lat2 = b[1] * Math.PI / 180;
-  const x    = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
-}
-
-/* §20 Stale Policy — display classification only */
-function freshnessOf(fetchedAt) {
-  if (!fetchedAt) return "unknown";
-  const ageMin = (Date.now() - fetchedAt.getTime()) / 60_000;
-  if (ageMin <= 10) return "fresh";
-  if (ageMin <= 60) return "stale_ok";
-  return "stale_drop";
-}
-
-function applyFreshnessBadge(fetchedAt) {
-  const el = document.getElementById("freshness-badge");
-  if (!el) return;
-  const f = freshnessOf(fetchedAt);
-  const cfg = {
-    fresh:      ["f-fresh",      "✓ FRESH",         "Data freshness: fresh"],
-    stale_ok:   ["f-stale-ok",   "⚠ MAY BE STALE",  "Data freshness: may be stale"],
-    stale_drop: ["f-stale-drop", "✗ OUTDATED",       "Data freshness: outdated"],
-    unknown:    ["f-unknown",    "● UNKNOWN",        "Data freshness: unknown"],
-  };
-  const [cls, label, ariaLabel] = cfg[f];
-  el.className = `freshness ${cls}`;
-  el.textContent = label;
-  el.setAttribute("aria-label", ariaLabel);
-}
-
-/* ─────────────────────────────────────────────────────────
-   STRICT FETCH — Invariant III
-   ParseException → return [] · never partial render
-   ───────────────────────────────────────────────────────── */
-
-async function strictFetch(url) {
-  const ctrl  = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timer);
-
-    /* §13 Rate limit */
-    if (res.status === 429) {
-      DS.enterCooldown(60);
-      return [];
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value);
     }
 
-    if (!res.ok) {
-      DS.recordError("network");
-      return [];
+    function show(id, on) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("hidden", !on);
     }
 
-    /* Invariant III: strict JSON parse */
-    let data;
-    try {
-      data = JSON.parse(await res.text());
-    } catch {
-      DS.recordError("parse");
-      return [];
+    function syncDiag() {
+      setText("d-net", DS.networkFailures);
+      setText("d-parse", DS.parseFailures);
+      setText("d-consec", DS.consecutiveFailures);
+      setText("d-offline", DS.isOffline ? "true" : "false");
+      setText("d-cooldown", DS.isCooldownActive ? "true" : "false");
+
+      show("b-offline", DS.isOffline);
+      show("b-parse", DS.parseFailures > 0);
+      show("b-degraded", DS.consecutiveFailures >= 3 && !DS.isOffline);
     }
 
-    /* Schema validation — Invariant III: never auto-correct */
-    if (!data || typeof data !== "object") {
-      DS.recordError("parse");
-      return [];
+    function hstTime(date) {
+      return (date || new Date()).toLocaleTimeString("en-US", {
+        timeZone: "Pacific/Honolulu",
+        hour: "2-digit",
+        minute: "2-digit"
+      }) + " HST";
     }
 
-    const features = Array.isArray(data.features) ? data.features : [];
-    DS.recordSuccess();
-    return features;
-
-  } catch (err) {
-    clearTimeout(timer);
-    if (!navigator.onLine) DS.isOffline = true;
-    DS.recordError("network");
-    return []; /* Invariant II: always return clean empty array */
-  }
-}
-
-/* ─────────────────────────────────────────────────────────
-   MAP — style: demotiles (per requirement)
-   Invariant II: error handler prevents crash
-   ───────────────────────────────────────────────────────── */
-
-const map = new maplibregl.Map({
-  container: "map",
-  style: "https://demotiles.maplibre.org/style.json",
-  center: REF_CENTER,
-  zoom: 11,
-  attributionControl: true,
-});
-
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
-map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
-
-/* Invariant II: map style error never crashes the panel */
-map.on("error", () => { /* swallow — metrics panel remains interactive */ });
-
-/* ─────────────────────────────────────────────────────────
-   MARKERS
-   ───────────────────────────────────────────────────────── */
-
-let fireMarkers = [];
-
-function clearMarkers() {
-  fireMarkers.forEach(m => m.remove());
-  fireMarkers = [];
-}
-
-function addFireMarker(coord, severity) {
-  const el = document.createElement("div");
-  el.className = "marker" + (severity === "CRITICAL" ? " critical" : "");
-  el.setAttribute("role", "img");
-  el.setAttribute("aria-label", `Fire detection, severity ${severity}`);
-
-  const popup = new maplibregl.Popup({ closeButton: false, offset: 10 })
-    .setHTML(`
-      <div class="popup-title">🔥 Fire Detection</div>
-      <div class="popup-row">
-        <span>Severity</span>
-        <span>${severity || "UNKNOWN"}</span>
-      </div>
-      <div class="popup-row">
-        <span>Coord</span>
-        <span>${coord[1].toFixed(3)}, ${coord[0].toFixed(3)}</span>
-      </div>
-    `);
-
-  fireMarkers.push(
-    new maplibregl.Marker({ element: el })
-      .setLngLat(coord)
-      .setPopup(popup)
-      .addTo(map)
-  );
-}
-
-/* ─────────────────────────────────────────────────────────
-   LOAD FIRE SIGNALS
-   Invariant I: routes through Worker /api/firms/*
-   Invariant II: UI always shows something on error
-   Invariant III: invalid features are dropped, never rendered
-   ───────────────────────────────────────────────────────── */
-
-async function loadFireSignals() {
-  const btn = document.getElementById("refresh-btn");
-  if (btn) btn.disabled = true;
-
-  /* Invariant II: loading state, never blank */
-  document.getElementById("fire-count").innerHTML = `<span class="spinner"></span>`;
-
-  const features = await strictFetch(ENDPOINTS.fire);
-
-  clearMarkers();
-
-  let closest       = Infinity;
-  let criticalCount = 0;
-
-  features.forEach(f => {
-    /* Invariant III: strict field validation — drop invalid records */
-    if (!f?.geometry?.coordinates) return;
-    const c = f.geometry.coordinates;
-    if (!Array.isArray(c) || c.length < 2) return;
-    /* GeoJSON coordinate bounds */
-    if (c[0] < -180 || c[0] > 180 || c[1] < -90 || c[1] > 90) return;
-
-    const sev = f.properties?.severity || "UNKNOWN";
-    if (sev === "CRITICAL") criticalCount++;
-
-    addFireMarker(c, sev);
-
-    const d = distMiles(REF_CENTER, c);
-    if (d < closest) closest = d;
-  });
-
-  /* Update metrics — Invariant II: always populate DOM */
-  const countEl = document.getElementById("fire-count");
-  if (countEl) {
-    countEl.textContent = String(features.length);
-    countEl.className   = `metric-value ${features.length > 0 ? "val-fire" : "val-good"}`;
-  }
-
-  const nearEl = document.getElementById("nearest-fire");
-  if (nearEl) {
-    if (features.length === 0) {
-      nearEl.textContent = "None";
-      nearEl.className   = "metric-value val-good";
-    } else {
-      nearEl.textContent = closest < 9999 ? closest.toFixed(1) + " mi" : "—";
-      nearEl.className   = `metric-value ${closest < 5 ? "val-crit" : closest < 20 ? "val-amber" : "val-fire"}`;
+    function distMiles(a, b) {
+      const R = 3958.8;
+      const dLat = (b[1] - a[1]) * Math.PI / 180;
+      const dLon = (b[0] - a[0]) * Math.PI / 180;
+      const lat1 = a[1] * Math.PI / 180;
+      const lat2 = b[1] * Math.PI / 180;
+      const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     }
-  }
 
-  const critEl = document.getElementById("critical-count");
-  if (critEl) {
-    critEl.textContent = criticalCount > 0 ? String(criticalCount) : "None";
-    critEl.className   = `metric-value ${criticalCount > 0 ? "val-crit" : "val-good"}`;
-  }
+    function applyFreshness(date) {
+      const el = document.getElementById("freshness-badge");
+      if (!el) return;
 
-  setText("fetch-time", DS.lastFireFetchAt ? hstTime(DS.lastFireFetchAt) : "—");
-  applyFreshnessBadge(DS.lastFireFetchAt);
+      if (!date) {
+        el.className = "freshness f-unknown";
+        el.textContent = "● UNKNOWN";
+        return;
+      }
 
-  if (DS.isOffline && DS.lastFireFetchAt) {
-    setText("b-offline-text", `Offline — last: ${hstTime(DS.lastFireFetchAt)}`);
-  }
-
-  if (btn) btn.disabled = false;
-}
-
-/* ─────────────────────────────────────────────────────────
-   CONNECTIVITY
-   ───────────────────────────────────────────────────────── */
-
-window.addEventListener("offline", () => {
-  DS.isOffline = true;
-  DS._syncUI();
-});
-
-window.addEventListener("online", () => {
-  DS.isOffline = false;
-  DS._syncUI();
-  loadFireSignals(); /* auto-refresh on reconnect */
-});
-
-/* ─────────────────────────────────────────────────────────
-   DIAGNOSTICS PANEL — §19
-   ───────────────────────────────────────────────────────── */
-
-const diagPanel  = document.getElementById("diag-panel");
-const diagToggle = document.getElementById("diag-toggle-btn");
-
-diagToggle?.addEventListener("click", () => {
-  const open = diagPanel.classList.toggle("open");
-  diagToggle.setAttribute("aria-expanded", String(open));
-  if (open) {
-    diagToggle.style.display = "none";
-    DS._syncUI();
-  }
-});
-
-document.getElementById("diag-header")?.addEventListener("click", () => {
-  diagPanel.classList.remove("open");
-  diagToggle.setAttribute("aria-expanded", "false");
-  if (diagToggle) diagToggle.style.display = "";
-});
-
-/* ─────────────────────────────────────────────────────────
-   REFRESH BUTTON
-   ───────────────────────────────────────────────────────── */
-
-document.getElementById("refresh-btn")?.addEventListener("click", () => {
-  if (DS.isCooldownActive) return;
-  loadFireSignals();
-});
-
-/* ─────────────────────────────────────────────────────────
-   INIT — §10 Bootstrap
-   Invariant II: map.on("load") + graceful fail
-   ───────────────────────────────────────────────────────── */
-
-map.on("load", () => {
-  loadFireSignals();
-});
-
-/* §15 Energy rules: minimum 5-minute polling floor */
-setInterval(() => {
-  if (!DS.isCooldownActive && !DS.isOffline) {
-    loadFireSignals();
-  }
-}, POLL_INTERVAL_MS);
-
-/* ─────────────────────────────────────────────────────────
-   INVARIANT I RUNTIME GUARD
-   Block any direct upstream API calls — architectural fence
-   ───────────────────────────────────────────────────────── */
-
-const _nativeFetch = window.fetch.bind(window);
-
-window.fetch = function kahuOlaFetch(url, ...args) {
-  const u = String(url);
-  const BLOCKED_UPSTREAMS = [
-    "firms.modaps.eosdis.nasa.gov",
-    "airnowapi.org",
-    "hazards.weather.gov",
-    "api.weather.gov",
-    "wfigs.fire.ca.gov",
-    "mesowest.utah.edu",
-  ];
-  for (const domain of BLOCKED_UPSTREAMS) {
-    if (u.includes(domain)) {
-      DS.recordError("network");
-      return Promise.reject(new Error(`KahuOla:InvariantI — upstream call blocked: ${domain}`));
+      const ageMin = (Date.now() - date.getTime()) / 60000;
+      if (ageMin <= 10) {
+        el.className = "freshness f-fresh";
+        el.textContent = "✓ FRESH";
+      } else if (ageMin <= 60) {
+        el.className = "freshness f-stale";
+        el.textContent = "⚠ MAY BE STALE";
+      } else {
+        el.className = "freshness f-old";
+        el.textContent = "✗ OUTDATED";
+      }
     }
-  }
-  return _nativeFetch(url, ...args);
-};
 
-</script>
+    async function strictFetch(url) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timer);
+
+        if (res.status === 429) {
+          DS.cooldown(60);
+          return [];
+        }
+        if (!res.ok) {
+          DS.error("network");
+          return [];
+        }
+
+        let json;
+        try {
+          json = JSON.parse(await res.text());
+        } catch {
+          DS.error("parse");
+          return [];
+        }
+
+        if (!json || typeof json !== "object" || !Array.isArray(json.features)) {
+          DS.error("parse");
+          return [];
+        }
+
+        DS.success();
+        return json.features;
+      } catch {
+        clearTimeout(timer);
+        if (!navigator.onLine) DS.isOffline = true;
+        DS.error("network");
+        return [];
+      }
+    }
+
+    const styleCandidates = [
+      "https://demotiles.maplibre.org/style.json",
+      "https://tiles.openfreemap.org/styles/dark/style.json"
+    ];
+    let styleIndex = 0;
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: styleCandidates[styleIndex],
+      center: REF_CENTER,
+      zoom: 11,
+      attributionControl: true,
+      antialias: false,
+      failIfMajorPerformanceCaveat: false
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+    map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
+
+    map.on("error", () => {
+      if (styleIndex < styleCandidates.length - 1) {
+        styleIndex += 1;
+        try { map.setStyle(styleCandidates[styleIndex]); } catch (_) {}
+      }
+    });
+
+    let markers = [];
+
+    function clearMarkers() {
+      markers.forEach(m => m.remove());
+      markers = [];
+    }
+
+    function addMarker(coord, severity) {
+      const el = document.createElement("div");
+      el.className = "marker" + (severity === "CRITICAL" ? " critical" : "");
+
+      const popup = new maplibregl.Popup({ closeButton: false, offset: 10 })
+        .setHTML(
+          `<div style="font-weight:600;margin-bottom:4px">🔥 Fire Detection</div>
+           <div>Severity: ${severity || "UNKNOWN"}</div>
+           <div style="margin-top:4px;color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(3)}, ${coord[0].toFixed(3)}</div>`
+        );
+
+      markers.push(
+        new maplibregl.Marker({ element: el })
+          .setLngLat(coord)
+          .setPopup(popup)
+          .addTo(map)
+      );
+    }
+
+    async function loadFireSignals() {
+      const btn = document.getElementById("refresh-btn");
+      if (btn) btn.disabled = true;
+
+      const countEl = document.getElementById("fire-count");
+      if (countEl) {
+        countEl.className = "metric-value v-fire";
+        countEl.innerHTML = '<span class="spinner"></span>';
+      }
+
+      let features = await strictFetch(FIRE_ENDPOINT);
+
+      if (features.length > 200) {
+        features = features.slice(0, 200);
+      }
+
+      clearMarkers();
+
+      let closest = Infinity;
+      let criticalCount = 0;
+
+      for (const f of features) {
+        if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
+        const c = f.geometry.coordinates;
+        if (c.length < 2) continue;
+        if (c[0] < -180 || c[0] > 180 || c[1] < -90 || c[1] > 90) continue;
+
+        const severity = f.properties?.severity || "UNKNOWN";
+        if (severity === "CRITICAL") criticalCount++;
+
+        addMarker(c, severity);
+
+        const d = distMiles(REF_CENTER, c);
+        if (d < closest) closest = d;
+      }
+
+      if (countEl) {
+        countEl.textContent = String(features.length);
+        countEl.className = "metric-value " + (features.length > 0 ? "v-fire" : "v-good");
+      }
+
+      const nearEl = document.getElementById("nearest-fire");
+      if (nearEl) {
+        if (features.length === 0) {
+          nearEl.textContent = "None";
+          nearEl.className = "metric-value v-good";
+        } else {
+          nearEl.textContent = closest.toFixed(1) + " mi";
+          nearEl.className = "metric-value " + (closest < 5 ? "v-crit" : closest < 20 ? "v-warn" : "v-fire");
+        }
+      }
+
+      const critEl = document.getElementById("critical-count");
+      if (critEl) {
+        if (criticalCount > 0) {
+          critEl.textContent = String(criticalCount);
+          critEl.className = "metric-value v-crit";
+        } else {
+          critEl.textContent = "None";
+          critEl.className = "metric-value v-good";
+        }
+      }
+
+      setText("fetch-time", DS.lastFireFetchAt ? hstTime(DS.lastFireFetchAt) : "—");
+      applyFreshness(DS.lastFireFetchAt);
+
+      if (DS.isOffline && DS.lastFireFetchAt) {
+        setText("b-offline-text", `Offline — last: ${hstTime(DS.lastFireFetchAt)}`);
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = DS.isCooldownActive ? "COOLDOWN" : "↻ REFRESH";
+      }
+    }
+
+    window.addEventListener("offline", () => {
+      DS.isOffline = true;
+      syncDiag();
+    });
+
+    window.addEventListener("online", () => {
+      DS.isOffline = false;
+      syncDiag();
+      loadFireSignals();
+    });
+
+    document.getElementById("refresh-btn")?.addEventListener("click", () => {
+      if (!DS.isCooldownActive) loadFireSignals();
+    });
+
+    const diag = document.getElementById("diag");
+    const diagBtn = document.getElementById("diag-btn");
+    document.getElementById("diag-btn")?.addEventListener("click", () => {
+      const open = diag.classList.toggle("open");
+      diagBtn.setAttribute("aria-expanded", String(open));
+      if (open) diagBtn.style.display = "none";
+    });
+    document.getElementById("diag-close")?.addEventListener("click", () => {
+      diag.classList.remove("open");
+      diagBtn.setAttribute("aria-expanded", "false");
+      diagBtn.style.display = "";
+    });
+
+    map.on("load", () => {
+      loadFireSignals();
+    });
+
+    setInterval(() => {
+      if (!DS.isOffline && !DS.isCooldownActive) loadFireSignals();
+    }, POLL_MS);
+
+    const _nativeFetch = window.fetch.bind(window);
+    window.fetch = function(url, ...args) {
+      const s = String(url);
+      const blocked = [
+        "firms.modaps.eosdis.nasa.gov",
+        "airnowapi.org",
+        "api.weather.gov",
+        "hazards.weather.gov",
+        "wfigs.fire.ca.gov",
+        "mesowest.utah.edu"
+      ];
+      for (const d of blocked) {
+        if (s.includes(d)) {
+          DS.error("network");
+          return Promise.reject(new Error("InvariantI blocked upstream"));
+        }
+      }
+      return _nativeFetch(url, ...args);
+    };
+  </script>
 </body>
 </html>
