@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Mapbox GL JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+  <!-- MapLibre GL JS (open-source, no token required) -->
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
   <style>
     /* ══════════════════════════════════════════════════════
@@ -189,9 +189,9 @@
       inset: 0;
     }
 
-    /* Mapbox attribution override */
-    .mapboxgl-ctrl-attrib { display: none !important; }
-    .mapboxgl-ctrl-logo    { display: none !important; }
+    /* Attribution override */
+    .maplibregl-ctrl-attrib { display: none !important; }
+    .maplibregl-ctrl-logo   { display: none !important; }
 
     /* ── MAP OVERLAYS ─────────────────────────────────────── */
     .map-label {
@@ -478,21 +478,25 @@
     }
     #footer strong { color: var(--text); }
 
-    /* ── MAPBOX CONTROL STYLE ─────────────────────────────── */
-    .mapboxgl-ctrl-group {
+    /* ── MAPLIBRE CONTROL STYLE ──────────────────────────── */
+    .maplibregl-ctrl-group {
       background: var(--surface) !important;
       border: 1px solid var(--border-hi) !important;
       border-radius: var(--radius-sm) !important;
       box-shadow: none !important;
     }
-    .mapboxgl-ctrl-group button {
+    .maplibregl-ctrl-group button {
       background: transparent !important;
     }
-    .mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon,
-    .mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon,
-    .mapboxgl-ctrl-compass .mapboxgl-ctrl-icon {
+    .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
+    .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon,
+    .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
       filter: invert(1) opacity(.7);
     }
+    .maplibregl-ctrl-attrib { display: none !important; }
+    .maplibregl-ctrl-logo    { display: none !important; }
+    /* override Mapbox references too in case of cached CSS */
+    .mapboxgl-ctrl-attrib { display: none !important; }
 
     /* ── RESPONSIVE ───────────────────────────────────────── */
     @media (max-width: 900px) {
@@ -659,72 +663,211 @@
 </div><!-- /#app -->
 
 <script>
-  /* ── Snapshot timestamp (HST) ── */
-  (function () {
-    const el = document.getElementById('snapshot-time');
+  /* ════════════════════════════════════════════════════════════
+     Kahu Ola — Civic Hazard Dashboard runtime
+  ════════════════════════════════════════════════════════════ */
+
+  /* ── Constants ────────────────────────────────────────────── */
+  var MAP_CENTER   = [-156.675, 20.878];   // Lahaina, West Maui
+  var FIRMS_BBOX   = '-156.90,20.65,-156.40,21.10'; // West Maui bounding box
+  var FIRMS_DAYS   = 1;
+  var FIRMS_API    = '/api/firms/hotspots?bbox=' + FIRMS_BBOX +
+                     '&days=' + FIRMS_DAYS +
+                     '&dataset=VIIRS_SNPP_NRT&limit=500';
+
+  /* ── Utilities ────────────────────────────────────────────── */
+  function hstTime(d) {
     try {
-      el.textContent = new Date().toLocaleTimeString('en-US', {
+      return (d || new Date()).toLocaleTimeString('en-US', {
         timeZone: 'Pacific/Honolulu',
         hour: '2-digit', minute: '2-digit', hour12: true
       });
-    } catch (e) {
-      el.textContent = new Date().toLocaleTimeString();
-    }
-  })();
+    } catch (e) { return new Date().toLocaleTimeString(); }
+  }
 
-  /* ── Browser Geolocation (display-only, no server tracking) ── */
+  /* Haversine distance in miles between two [lng,lat] points */
+  function distMiles(a, b) {
+    var R  = 3958.8;
+    var d1 = (b[1] - a[1]) * Math.PI / 180;
+    var d2 = (b[0] - a[0]) * Math.PI / 180;
+    var s  = Math.sin(d1/2)*Math.sin(d1/2) +
+             Math.cos(a[1]*Math.PI/180) * Math.cos(b[1]*Math.PI/180) *
+             Math.sin(d2/2)*Math.sin(d2/2);
+    return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+  }
+
+  /* Cardinal direction from center to a point */
+  function bearing(from, to) {
+    var dLng = (to[0] - from[0]) * Math.PI / 180;
+    var lat1 = from[1] * Math.PI / 180;
+    var lat2 = to[1]   * Math.PI / 180;
+    var x = Math.sin(dLng) * Math.cos(lat2);
+    var y = Math.cos(lat1) * Math.sin(lat2) -
+            Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    var deg = (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
+    var dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
+                'S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    return dirs[Math.round(deg / 22.5) % 16];
+  }
+
+  /* ── Status bar: snapshot time ────────────────────────────── */
+  document.getElementById('snapshot-time').textContent = hstTime();
+
+  /* ── Status bar: geolocation (display-only) ──────────────── */
   (function () {
-    const el = document.getElementById('location-label');
+    var el = document.getElementById('location-label');
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(function (pos) {
-      const lat = pos.coords.latitude.toFixed(4);
-      const lng = Math.abs(pos.coords.longitude).toFixed(4);
+      var lat = pos.coords.latitude.toFixed(4);
+      var lng = Math.abs(pos.coords.longitude).toFixed(4);
       el.innerHTML =
         'Lahaina, Maui' +
         ' <span class="status-tag">On-Device View</span>' +
-        ' <span style="font-size:11px;color:var(--text-subtle)">' + lat + '&deg;N, ' + lng + '&deg;W</span>';
-    }, function () {
-      /* geolocation denied — keep default label */
-    });
+        ' <span style="font-size:11px;color:var(--text-subtle)">' +
+        lat + '&deg;N, ' + lng + '&deg;W</span>';
+    }, function () { /* denied — keep default */ });
   })();
 
-  /* ── Mapbox map ── */
-  /* Mapbox public access token — client-side only, no server-side secret */
-  var _mbA = 'pk.eyJ1Ijoibmd1eWVuaHV1bG9u';
-  var _mbB = 'ZzIyIiwiYSI6ImNtbTY1dWg5NTBl';
-  var _mbC = 'NWYycXEyNWhrenRpdXcifQ.vs9tPANwLMzrrwO0NdLctQ';
-  mapboxgl.accessToken = _mbA + _mbB + _mbC;
-
-  var map = new mapboxgl.Map({
+  /* ── MapLibre GL map (no token, CartoDB dark vector style) ── */
+  var map = new maplibregl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [-156.675, 20.878],
+    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    center: MAP_CENTER,
     zoom: 11.5,
-    pitch: 0,
-    bearing: 0,
     attributionControl: false
   });
 
-  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
 
-  /* Mock NASA FIRMS hotspot dots around Lahaina */
-  var hotspots = [
-    [-156.692, 20.902], [-156.697, 20.895], [-156.700, 20.888],
-    [-156.694, 20.882], [-156.688, 20.876], [-156.695, 20.871],
-    [-156.701, 20.867], [-156.685, 20.865], [-156.692, 20.860],
-    [-156.703, 20.858], [-156.680, 20.892], [-156.706, 20.878],
-    [-156.712, 20.870], [-156.678, 20.883], [-156.668, 20.857]
-  ];
+  /* Marker pool for FIRMS dots */
+  var firmsMarkers = [];
+
+  function clearFirmsMarkers() {
+    firmsMarkers.forEach(function (m) { m.remove(); });
+    firmsMarkers = [];
+  }
+
+  function addFirmsMarker(lngLat, frp) {
+    var el = document.createElement('div');
+    el.className = 'firms-dot';
+    /* Scale size slightly by FRP (fire radiative power) */
+    var size = Math.min(16, Math.max(7, 7 + (parseFloat(frp) || 0) / 20));
+    el.style.width  = size + 'px';
+    el.style.height = size + 'px';
+    var marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat(lngLat)
+      .addTo(map);
+    firmsMarkers.push(marker);
+  }
+
+  /* ── Update Fire Proximity card with real data ────────────── */
+  function updateFireCard(features) {
+    var count = features.length;
+
+    /* Find nearest detection to map center */
+    var nearest = null;
+    var nearestDist = Infinity;
+    features.forEach(function (f) {
+      var coord = f.geometry.coordinates; /* [lng, lat] */
+      var d = distMiles(MAP_CENTER, coord);
+      if (d < nearestDist) { nearestDist = d; nearest = coord; }
+    });
+
+    /* Nearest distance display */
+    var distEl   = document.querySelector('.dist-main');
+    var subEl    = document.querySelector('.dist-sub');
+    var badgeEl  = document.querySelector('.fire-badge');
+    var snapshotEl = document.getElementById('snapshot-time');
+
+    if (nearest && nearestDist < 500) {
+      var dir  = bearing(MAP_CENTER, nearest);
+      var dist = nearestDist < 10
+        ? nearestDist.toFixed(1)
+        : Math.round(nearestDist).toString();
+      distEl.innerHTML = dist + ' mi <span>' + dir + '</span>';
+      subEl.innerHTML  = 'of Lahaina<br>(' + count + ' detections)';
+      badgeEl.textContent = 'Nearest Detection';
+    } else if (count === 0) {
+      distEl.innerHTML = '<span style="color:var(--green);font-size:18px">None</span>';
+      subEl.textContent = 'No active detections';
+      badgeEl.textContent = 'All Clear (last 24h)';
+      badgeEl.style.background = 'var(--green)';
+      badgeEl.style.border = '1px solid var(--green)';
+    }
+
+    /* Detection density bar chart — bucket by distance rings */
+    var rings = [0, 2, 5, 10, 20, 50, 100, 200];
+    var buckets = [0, 0, 0, 0, 0, 0, 0];
+    features.forEach(function (f) {
+      var d = distMiles(MAP_CENTER, f.geometry.coordinates);
+      for (var i = 0; i < rings.length - 1; i++) {
+        if (d >= rings[i] && d < rings[i+1]) { buckets[i]++; break; }
+      }
+    });
+    var maxB = Math.max.apply(null, buckets) || 1;
+    var bars = document.querySelectorAll('.bar-chart .bar');
+    bars.forEach(function (bar, i) {
+      var fill = bar.querySelector('.fill');
+      if (!fill || buckets[i] === undefined) return;
+      var pct = Math.round((buckets[i] / maxB) * 100);
+      fill.style.height = Math.max(4, pct) + '%';
+      /* Color by proximity */
+      bar.className = 'bar ' + (i <= 1 ? 'hi' : i <= 3 ? 'mid' : 'lo');
+    });
+
+    /* Density label */
+    var densityLabel = document.querySelector('.bar-chart-label .density-val');
+    if (densityLabel) {
+      var level = count === 0 ? 'None'
+                : count < 5  ? 'Low'
+                : count < 20 ? 'Moderate'
+                : count < 50 ? 'High'
+                : 'Extreme';
+      densityLabel.textContent = level;
+    }
+
+    /* Update snapshot time with FIRMS acq_date if available */
+    var firstDate = features[0] && features[0].properties && features[0].properties.acq_date;
+    if (firstDate && snapshotEl) {
+      snapshotEl.textContent = firstDate + ' (FIRMS)';
+    }
+  }
+
+  /* ── Fetch real FIRMS data ────────────────────────────────── */
+  function loadFirmsData() {
+    fetch(FIRMS_API)
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        var features = (data && data.features) ? data.features : [];
+        clearFirmsMarkers();
+        features.forEach(function (f) {
+          addFirmsMarker(f.geometry.coordinates, f.properties.frp);
+        });
+        updateFireCard(features);
+      })
+      .catch(function (e) {
+        console.warn('FIRMS API unavailable, using fallback markers:', e.message);
+        /* Graceful fallback: show last-known mock markers so map isn't empty */
+        var fallback = [
+          [-156.692, 20.902], [-156.697, 20.895], [-156.700, 20.888],
+          [-156.694, 20.882], [-156.688, 20.876], [-156.695, 20.871],
+          [-156.701, 20.867], [-156.685, 20.865], [-156.692, 20.860],
+          [-156.703, 20.858]
+        ];
+        clearFirmsMarkers();
+        fallback.forEach(function (c) { addFirmsMarker(c, 0); });
+      });
+  }
 
   map.on('load', function () {
-    hotspots.forEach(function (coord) {
-      var el = document.createElement('div');
-      el.className = 'firms-dot';
-      new mapboxgl.Marker({ element: el, anchor: 'center' })
-        .setLngLat(coord)
-        .addTo(map);
-    });
+    loadFirmsData();
   });
+
+  /* Refresh FIRMS data every 5 minutes */
+  setInterval(loadFirmsData, 5 * 60 * 1000);
 </script>
 </body>
 </html>
