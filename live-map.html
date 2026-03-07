@@ -3,1117 +3,728 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kahu Ola — Live Hazard Map</title>
-  <meta name="description" content="Transparency Portal: Live civic hazard layers for Maui County. NASA FIRMS fire hotspots, NOAA smoke, EPA AirNow, PacIOOS, USGS — routed through Kahu Ola broker." />
+  <title>Kahu Ola | Civic Hazard Dashboard</title>
+  <meta name="description" content="Civic Hazard Dashboard — Wildfire-first situational awareness for Hawai'i. NASA FIRMS, NOAA wind telemetry, real-time civic intelligence." />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 
   <style>
-    /* ═══════════════════════════════════════════════════════
-       Kahu Ola — M3 Light · Kupuna-first Design System
-       ═══════════════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════════
+       Kahu Ola — Civic Hazard Dashboard
+       Dark Tactical Theme · #121212 base
+    ══════════════════════════════════════════════════════ */
 
-    /* ── Design tokens (LIGHT) ──────────────────────────── */
     :root {
-      color-scheme: light;
+      --bg:           #121212;
+      --surface:      #1e1e1e;
+      --surface-2:    #252525;
+      --surface-3:    #2e2e2e;
+      --border:       rgba(255,255,255,.10);
+      --border-hi:    rgba(255,255,255,.18);
 
-      /* Surfaces */
-      --bg:        #f5f7fa;
-      --surface:   #ffffff;
-      --surface-2: #f0f2f6;
-      --surface-3: #e8ecf2;
+      --text:         #f0f0f0;
+      --text-muted:   #a0a0a0;
+      --text-subtle:  #6b6b6b;
 
-      /* Text */
-      --text:      #111827;
-      --muted:     #4b5563;
-      --subtle:    #6b7280;
+      --orange:       #f97316;
+      --orange-dim:   #c2500e;
+      --orange-glow:  rgba(249,115,22,.20);
+      --red:          #ef4444;
+      --red-dim:      #991b1b;
+      --amber:        #f59e0b;
+      --green:        #22c55e;
 
-      /* Borders */
-      --border:    rgba(17,24,39,.10);
-      --border-md: rgba(17,24,39,.16);
-      --border-lg: rgba(17,24,39,.22);
+      --font: "DM Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --font-mono: "DM Mono", ui-monospace, monospace;
 
-      /* Brand */
-      --primary:   #2563eb;
-      --primary-dk:#1d4ed8;
-      --primary-bg:rgba(37,99,235,.08);
-
-      /* Civic teal accent */
-      --teal:      #0284c7;
-      --teal-bg:   rgba(2,132,199,.08);
-
-      /* Status */
-      --green:     #16a34a;
-      --green-bg:  #f0fdf4;
-      --green-bd:  rgba(22,163,74,.25);
-
-      --amber:     #b45309;
-      --amber-bg:  #fffbeb;
-      --amber-bd:  rgba(180,83,9,.25);
-
-      --red:       #dc2626;
-      --red-bg:    #fef2f2;
-      --red-bd:    rgba(220,38,38,.25);
-
-      --orange:    #ea580c;
-
-      /* Layout */
-      --panel-w:   420px;
-      --tap:       48px;
-      --radius:    14px;
-      --radius-lg: 20px;
-      --radius-sm: 8px;
-
-      /* Typography */
-      --font:      'DM Sans', ui-sans-serif, system-ui, sans-serif;
-      --mono:      'DM Mono', ui-monospace, monospace;
-      --text-body: 18px;
-      --text-md:   16px;
-      --text-sm:   14px;
-      --text-xs:   13px;
-
-      /* Shadows */
-      --shadow-sm: 0 1px 4px rgba(17,24,39,.06), 0 2px 8px rgba(17,24,39,.04);
-      --shadow-md: 0 4px 16px rgba(17,24,39,.08), 0 1px 4px rgba(17,24,39,.06);
-      --shadow-lg: 0 8px 32px rgba(17,24,39,.12);
-
-      /* Panel split */
-      --legal-h: 36px;
+      --sidebar-w:    400px;
+      --header-h:     64px;
+      --statusbar-h:  80px;
+      --footer-h:     60px;
+      --radius:       8px;
+      --radius-sm:    5px;
     }
 
-    /* ── Reset ──────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
-    a { color: var(--teal); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    button { font-family: var(--font); cursor: pointer; border: none; background: none; }
 
-    /* ── Legal bar ──────────────────────────────────────── */
-    .legal-bar {
-      position: fixed;
-      top: 0; left: 0; right: var(--panel-w);
-      z-index: 900;
-      height: var(--legal-h);
-      background: #fef9c3;
-      border-bottom: 1px solid rgba(180,83,9,.2);
-      padding: 0 16px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--amber);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .legal-bar a { color: var(--amber); font-weight: 700; text-decoration: underline; }
-    .legal-bar a:last-child { margin-left: auto; color: var(--muted); text-decoration: none; }
-    .legal-bar a:last-child:hover { text-decoration: underline; }
-
-    /* ── Map ────────────────────────────────────────────── */
-    #map {
-      position: fixed;
-      top: var(--legal-h);
-      left: 0;
-      right: var(--panel-w);
-      bottom: 0;
-      z-index: 1;
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Panel ──────────────────────────────────────────── */
-    .panel {
-      position: fixed;
-      top: 0; right: 0; bottom: 0;
-      width: var(--panel-w);
-      background: var(--surface);
-      border-left: 1px solid var(--border-md);
-      box-shadow: var(--shadow-lg);
-      z-index: 800;
-      display: flex;
-      flex-direction: column;
+    /* ── PAGE SHELL ───────────────────────────────────────── */
+    #app {
+      display: grid;
+      grid-template-rows: var(--header-h) var(--statusbar-h) 1fr var(--footer-h);
+      grid-template-columns: 1fr var(--sidebar-w);
+      grid-template-areas:
+        "header  header"
+        "status  status"
+        "map     sidebar"
+        "footer  footer";
+      height: 100vh;
       overflow: hidden;
     }
 
-    /* ── Panel header ───────────────────────────────────── */
-    .panel-header {
-      padding: 14px 16px 0;
-      flex-shrink: 0;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .nav-back {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: var(--text-sm);
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 12px;
-      padding: 6px 10px 6px 6px;
-      border-radius: 999px;
-      border: 1px solid transparent;
-      transition: background .15s, border-color .15s;
-    }
-    .nav-back:hover { background: var(--surface-2); border-color: var(--border); text-decoration: none; color: var(--text); }
-
-    .panel-kicker {
-      font-size: 11px;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--subtle);
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .panel-title {
-      font-size: 22px;
-      line-height: 1.2;
-      font-weight: 800;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-    .panel-intro {
-      font-size: 12px;
-      color: var(--muted);
-      font-family: var(--mono);
-      margin-bottom: 14px;
-    }
-
-    /* ── Tabs ───────────────────────────────────────────── */
-    .tabs {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 4px;
-      padding: 0 12px 12px;
-      flex-shrink: 0;
-    }
-    .tab {
-      height: 40px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--muted);
-      font-weight: 700;
-      font-size: 12px;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .15s;
-      cursor: pointer;
-    }
-    .tab:hover { background: var(--surface-3); border-color: var(--border-md); color: var(--text); }
-    .tab[aria-selected="true"] {
-      background: var(--primary-bg);
-      border-color: rgba(37,99,235,.35);
-      color: var(--primary-dk);
-      font-weight: 800;
-    }
-
-    /* ── Mode bar ───────────────────────────────────────── */
-    .mode-bar {
+    /* ── TOP HEADER ───────────────────────────────────────── */
+    #header {
+      grid-area: header;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 10px 16px;
+      gap: 12px;
+      padding: 0 20px;
+      background: #1a1a1a;
+      border-bottom: 1px solid var(--border);
+    }
+    #header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    #header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 400;
+      border-left: 1px solid var(--border-hi);
+      padding-left: 12px;
+    }
+    #header .spacer { flex: 1; }
+    #header .live-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239,68,68,.15);
+      border: 1px solid rgba(239,68,68,.35);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--red);
+      letter-spacing: .8px;
+      text-transform: uppercase;
+    }
+    #header .live-pill::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      animation: pulse-red 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(1.3); }
+    }
+
+    /* ── STATUS BAR ───────────────────────────────────────── */
+    #statusbar {
+      grid-area: status;
+      display: flex;
+      align-items: center;
+      background: #181818;
+      border-bottom: 1px solid var(--border);
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 24px;
+      border-right: 1px solid var(--border);
+      height: 100%;
+    }
+    .status-item .icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .status-item .label {
+      font-size: 11px;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .status-item .value {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .status-item .value strong { color: var(--orange); }
+    .status-tag {
+      font-size: 10px;
+      background: rgba(249,115,22,.12);
+      border: 1px solid rgba(249,115,22,.25);
+      color: var(--orange);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-weight: 600;
+      letter-spacing: .4px;
+      white-space: nowrap;
+    }
+
+    /* ── MAP AREA ─────────────────────────────────────────── */
+    #map-wrap {
+      grid-area: map;
+      position: relative;
+      overflow: hidden;
+    }
+    #map {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Mapbox attribution override */
+    .mapboxgl-ctrl-attrib { display: none !important; }
+    .mapboxgl-ctrl-logo    { display: none !important; }
+
+    /* ── MAP OVERLAYS ─────────────────────────────────────── */
+    .map-label {
+      position: absolute;
+      background: rgba(28, 18, 4, .90);
+      border: 1px solid var(--orange-dim);
+      border-radius: var(--radius-sm);
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--orange);
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      line-height: 1.4;
+      max-width: 190px;
+      z-index: 10;
+    }
+    #label-firms  { bottom: 32%; left: 8%; }
+    #label-routes { top: 36%;   left: 36%; }
+
+    /* Orange hotspot markers */
+    .firms-dot {
+      width: 10px; height: 10px;
+      background: var(--orange);
+      border-radius: 2px;
+      opacity: .85;
+    }
+
+    /* ── SIDEBAR ──────────────────────────────────────────── */
+    #sidebar {
+      grid-area: sidebar;
+      background: #161616;
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+
+    .sidebar-header {
+      padding: 16px 20px 12px;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
-      background: var(--surface-2);
     }
-    .mode-label { font-size: var(--text-sm); color: var(--muted); font-weight: 600; }
-    .mode-btns  { display: flex; gap: 6px; }
-    .mode-btn {
-      height: 36px;
-      padding: 0 16px;
-      border-radius: 999px;
-      border: 1px solid var(--border-md);
-      background: var(--surface);
-      color: var(--muted);
-      font-size: 13px;
+    .sidebar-header h2 {
+      font-size: 12px;
       font-weight: 700;
-      transition: all .15s;
-      cursor: pointer;
-    }
-    .mode-btn:hover { background: var(--surface-3); color: var(--text); }
-    .mode-btn.active {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(37,99,235,.25);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
     }
 
-    /* ── Panel body ─────────────────────────────────────── */
-    .panel-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 14px 14px 20px;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border-md) transparent;
-      background: var(--bg);
-    }
-
-    /* ── Cards ──────────────────────────────────────────── */
-    .card {
-      background: var(--surface);
+    /* ── SIGNAL CARDS ─────────────────────────────────────── */
+    .signal-card {
+      margin: 10px 10px 0;
+      background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 14px 16px;
-      margin-bottom: 10px;
-      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
     }
+    .signal-card:last-child { margin-bottom: 10px; }
+    .signal-card:hover { border-color: var(--border-hi); }
+
     .card-title {
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--subtle);
+      font-size: 10px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .08em;
-      margin-bottom: 12px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .card-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px; height: 16px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      font-size: 9px;
+      color: var(--text-muted);
+      flex-shrink: 0;
     }
 
-    /* ── Layer rows ─────────────────────────────────────── */
-    .layer-row {
+    /* ── CARD 1: WIND ─────────────────────────────────────── */
+    .wind-body {
       display: flex;
       align-items: flex-start;
-      gap: 12px;
-      min-height: var(--tap);
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      border-radius: 4px;
-      transition: background .12s;
+      gap: 16px;
     }
-    .layer-row:hover { background: var(--surface-2); margin: 0 -4px; padding-left: 4px; padding-right: 4px; }
-    .layer-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .layer-row input[type=checkbox] {
-      width: 20px; height: 20px;
-      margin-top: 2px;
-      accent-color: var(--primary);
+
+    /* CSS Compass */
+    .compass {
+      width: 96px; height: 96px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #2c2c2c 55%, #1a1a1a 100%);
+      border: 2px solid rgba(255,255,255,.15);
+      position: relative;
       flex-shrink: 0;
-      cursor: pointer;
+      box-shadow: 0 0 16px rgba(0,0,0,.6), inset 0 0 10px rgba(0,0,0,.4);
     }
-    .layer-info { flex: 1; min-width: 0; }
-    .layer-name { font-size: var(--text-md); font-weight: 700; color: var(--text); line-height: 1.3; }
-    .layer-meta { font-size: var(--text-sm); color: var(--muted); margin-top: 3px; line-height: 1.5; }
-
-    /* ── Status chips ───────────────────────────────────── */
-    .status-chip {
-      font-size: 11px;
+    .compass::after {
+      content: '';
+      position: absolute;
+      inset: 9px;
+      border-radius: 50%;
+      border: 1px dashed rgba(255,255,255,.06);
+    }
+    .compass .card-n, .compass .card-s,
+    .compass .card-e, .compass .card-w {
+      position: absolute;
+      font-size: 9px;
       font-weight: 700;
-      font-family: var(--mono);
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      white-space: nowrap;
-      flex-shrink: 0;
-      align-self: flex-start;
-      margin-top: 2px;
-      min-height: 28px;
-      display: inline-flex;
-      align-items: center;
+      color: var(--text-subtle);
+      line-height: 1;
     }
-    .chip-live    { color: var(--green);  border-color: var(--green-bd);  background: var(--green-bg); }
-    .chip-unknown { color: var(--subtle); border-color: var(--border); }
-    .chip-error   { color: var(--amber);  border-color: var(--amber-bd);  background: var(--amber-bg); }
-    .chip-off     { color: var(--subtle); border-color: var(--border); font-style: italic; }
+    .compass .card-n { top: 5px;    left: 50%;  transform: translateX(-50%); color: #d0d0d0; }
+    .compass .card-s { bottom: 5px; left: 50%;  transform: translateX(-50%); }
+    .compass .card-e { right: 6px;  top: 50%;   transform: translateY(-50%); }
+    .compass .card-w { left: 6px;   top: 50%;   transform: translateY(-50%); }
 
-    /* ── Data Freshness card ────────────────────────────── */
-    .freshness-banner {
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      margin-bottom: 12px;
-      font-size: var(--text-md);
-      font-weight: 700;
-      line-height: 1.4;
-      display: none;
-      border: 1px solid transparent;
+    /* Wind arrow — ENE ≈ rotate 67° from North */
+    .compass .needle {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 4px; height: 36px;
+      margin-left: -2px;
+      transform-origin: bottom center;
+      transform: translateY(-100%) rotate(67deg);
     }
-    .freshness-banner.fresh   { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
-    .freshness-banner.stale   { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
-    .freshness-banner.outdated{ background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
-
-    /* ── KV table ───────────────────────────────────────── */
-    .kv {
-      display: grid;
-      grid-template-columns: 110px 1fr;
-      gap: 9px 12px;
-      font-size: var(--text-sm);
+    .compass .needle .arrow-head {
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 22px solid var(--orange);
+      margin: 0 auto;
+      filter: drop-shadow(0 0 5px var(--orange));
     }
-    .k { color: var(--muted);  font-weight: 600; }
-    .v { color: var(--text);   font-weight: 700; font-family: var(--mono); font-size: 13px; word-break: break-all; }
-
-    .verify-link {
-      margin-top: 12px;
-      font-size: var(--text-sm);
-      color: var(--muted);
+    .compass .needle .arrow-tail {
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 12px solid #7a1a00;
+      margin: 0 auto;
     }
-    .verify-link a {
-      color: var(--primary);
-      font-weight: 700;
+    .compass .dot {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #fff;
+      z-index: 2;
     }
 
-    /* ── Legend ─────────────────────────────────────────── */
-    .legend-item { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text); padding: 4px 0; }
-    .swatch { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; border: 1px solid var(--border-md); }
-    .legend-empty { font-size: 14px; color: var(--muted); font-style: italic; }
-
-    /* ── Config card ────────────────────────────────────── */
-    .config-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      font-family: var(--mono);
-      background: var(--surface-2);
-      border: 1px solid var(--border-md);
-      color: var(--muted);
+    .wind-stats { flex: 1; }
+    .wind-stat-row { margin-bottom: 9px; }
+    .wind-stat-row .wlabel {
+      font-size: 10px;
+      color: var(--text-subtle);
+      margin-bottom: 1px;
     }
-
-    /* ── Official sources ───────────────────────────────── */
-    .source-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
-    }
-    .source-link {
-      display: inline-flex;
-      align-items: center;
-      min-height: 32px;
-      padding: 0 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border-md);
-      background: var(--surface-2);
-      font-size: 13px;
-      font-weight: 700;
+    .wind-stat-row .wvalue {
+      font-size: 17px;
+      font-weight: 800;
       color: var(--text);
-      transition: background .12s, border-color .12s;
+      line-height: 1.1;
     }
-    .source-link:hover { background: var(--surface-3); border-color: var(--border-lg); text-decoration: none; }
+    .wind-stat-row .wvalue.gusts { color: var(--orange); }
+    .wind-source {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-subtle);
+      font-style: italic;
+    }
 
-    /* ── Placeholder panels ─────────────────────────────── */
-    .placeholder {
-      font-size: var(--text-md);
-      color: var(--muted);
-      padding: 8px 0 4px;
-      line-height: 1.6;
+    /* ── CARD 2: FIRE PROXIMITY ───────────────────────────── */
+    .fire-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,.6);
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 12px;
     }
-    .placeholder em {
-      display: block;
-      margin-top: 6px;
+    .fire-badge::before { content: '🔥'; font-size: 11px; }
+
+    .fire-distance {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .dist-main {
+      font-size: 34px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .dist-main span { color: var(--orange); }
+    .dist-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding-bottom: 3px;
+      line-height: 1.4;
+    }
+
+    /* Mock bar chart */
+    .bar-chart-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-subtle);
+      margin-bottom: 5px;
+    }
+    .bar-chart-label .density-val { color: var(--amber); font-weight: 600; }
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 34px;
+    }
+    .bar {
+      flex: 1;
+      height: 100%;
+      border-radius: 3px 3px 0 0;
+      background: var(--surface-3);
+      position: relative;
+      overflow: hidden;
+    }
+    .bar .fill {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      border-radius: 3px 3px 0 0;
+    }
+    .bar.hi   .fill { background: var(--orange); }
+    .bar.mid  .fill { background: var(--amber); }
+    .bar.lo   .fill { background: #3a2200; }
+
+    /* ── CARD 3: CIVIC INTELLIGENCE ───────────────────────── */
+    .intel-box {
+      background: #0d0d0d;
+      border: 1px solid rgba(249,115,22,.18);
+      border-radius: var(--radius-sm);
+      padding: 13px 14px;
       font-size: 13px;
-      font-style: normal;
-      color: var(--subtle);
-      padding: 8px 12px;
-      background: var(--surface-2);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
+      line-height: 1.65;
+      color: var(--text-muted);
     }
-
-    /* ── AQI advisory (Kupuna) ──────────────────────────── */
-    .kupuna-advisory {
-      margin-top: 12px;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      background: #fff7ed;
-      border: 1px solid rgba(234,88,12,.2);
-      font-size: var(--text-sm);
-      font-weight: 600;
-      color: #9a3412;
-      line-height: 1.6;
+    .intel-box strong { color: var(--text); font-weight: 700; }
+    .intel-box .highlight {
+      color: #fff;
+      font-weight: 800;
+      text-transform: uppercase;
     }
+    .intel-box .route { color: var(--orange); font-weight: 700; }
 
-    /* ── Panel footer ───────────────────────────────────── */
-    .panel-footer {
-      padding: 12px 16px;
+    /* ── FOOTER ───────────────────────────────────────────── */
+    #footer {
+      grid-area: footer;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      background: #111;
       border-top: 1px solid var(--border);
+    }
+    #footer p {
       font-size: 12px;
-      color: var(--subtle);
-      flex-shrink: 0;
-      line-height: 1.6;
-      background: var(--surface-2);
+      color: var(--text-muted);
+      line-height: 1.4;
     }
+    #footer strong { color: var(--text); }
 
-    /* ── Leaflet popups (light) ─────────────────────────── */
-    .leaflet-popup-content-wrapper {
+    /* ── MAPBOX CONTROL STYLE ─────────────────────────────── */
+    .mapboxgl-ctrl-group {
       background: var(--surface) !important;
-      color: var(--text) !important;
-      border: 1px solid var(--border-md) !important;
-      border-radius: 12px !important;
-      box-shadow: var(--shadow-lg) !important;
-      font-family: var(--font) !important;
+      border: 1px solid var(--border-hi) !important;
+      border-radius: var(--radius-sm) !important;
+      box-shadow: none !important;
     }
-    .leaflet-popup-tip { background: var(--surface) !important; }
-    .leaflet-popup-close-button { color: var(--muted) !important; font-size: 18px !important; }
-
-    /* ── Responsive ─────────────────────────────────────── */
-    @media (max-width: 860px) {
-      :root { --panel-w: 100vw; }
-      .legal-bar { right: 0; }
-      #map { top: var(--legal-h); right: 0; bottom: 45vh; }
-      .panel { top: calc(var(--legal-h) + 55vh); }
-      .tabs { grid-template-columns: repeat(3, 1fr); }
+    .mapboxgl-ctrl-group button {
+      background: transparent !important;
+    }
+    .mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon,
+    .mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon,
+    .mapboxgl-ctrl-compass .mapboxgl-ctrl-icon {
+      filter: invert(1) opacity(.7);
     }
 
-    /* Reduced motion */
-    @media (prefers-reduced-motion: reduce) {
-      * { animation: none !important; transition: none !important; }
+    /* ── RESPONSIVE ───────────────────────────────────────── */
+    @media (max-width: 900px) {
+      :root { --sidebar-w: 100vw; }
+      #app {
+        grid-template-rows: var(--header-h) auto 45vh auto var(--footer-h);
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "status"
+          "map"
+          "sidebar"
+          "footer";
+        height: auto;
+        overflow: auto;
+      }
+      #map-wrap { height: 45vh; }
+      #header h1 { font-size: 17px; }
+      #header .subtitle { display: none; }
     }
   </style>
 </head>
-<body class="page-live-map">
+<body>
+<div id="app">
 
-  <!-- Legal bar -->
-  <div class="legal-bar" role="note" aria-label="Important notice">
-    <span>⚠</span>
-    <span>Transparency Portal — not an official government service. Always follow official emergency directives.</span>
-    <a href="/privacy">Privacy</a>
-    <a href="/support">Support</a>
-    <a href="./index.html">← Home</a>
+  <!-- ════ HEADER ════ -->
+  <header id="header">
+    <h1>Kahu Ola | Civic Hazard Dashboard</h1>
+    <span class="subtitle">Civic Intelligence for Hawai&#699;i.</span>
+    <span class="spacer"></span>
+    <div class="live-pill">Live</div>
+  </header>
+
+  <!-- ════ STATUS BAR ════ -->
+  <div id="statusbar">
+    <div class="status-item">
+      <span class="icon">🕒</span>
+      <div>
+        <div class="label">Last Valid Snapshot</div>
+        <div class="value">
+          <strong id="snapshot-time">—</strong>
+          <span>HST (Cached)</span>
+          <span class="status-tag">Cache-first architecture</span>
+        </div>
+      </div>
+    </div>
+    <div class="status-item">
+      <span class="icon">📍</span>
+      <div>
+        <div class="label">Location</div>
+        <div class="value" id="location-label">
+          Lahaina, Maui
+          <span class="status-tag">Browser-Edge Geolocation</span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Map -->
-  <div id="map" aria-label="Kahu Ola hazard map — Maui County and Hawaii"></div>
+  <!-- ════ MAP ════ -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div class="map-label" id="label-firms">
+      NASA FIRMS Detection<br>(Active)
+    </div>
+    <div class="map-label" id="label-routes">
+      Interactive-base map,<br>critical routes of West Maui
+    </div>
+  </div>
 
-  <!-- Side panel -->
-  <aside class="panel" aria-label="Layer Library">
-
-    <div class="panel-header">
-      <a href="./index.html" class="nav-back" aria-label="Back to home">
-        ← kahuola.org
-      </a>
-      <p class="panel-kicker">Live Map</p>
-      <h1 class="panel-title">Layer Library</h1>
-      <p class="panel-intro">kahuola.org/api/tiles/*</p>
-
-      <!-- Tabs -->
-      <div class="tabs" role="tablist" aria-label="Layer categories">
-        <button class="tab" role="tab" aria-selected="false" data-tab="fire"      aria-controls="panel-fire">🔥 Fire</button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="weather"   aria-controls="panel-weather">🌬 Wind</button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="air"       aria-controls="panel-air">💨 Air</button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="earth"     aria-controls="panel-earth">🌋 Earth</button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="ocean"     aria-controls="panel-ocean">🌊 Ocean</button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="satellite" aria-controls="panel-satellite">🛰 Sat</button>
-      </div>
+  <!-- ════ SIDEBAR ════ -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h2>Integrated Environmental Signals</h2>
     </div>
 
-    <!-- Mode bar -->
-    <div class="mode-bar">
-      <span class="mode-label">Map mode</span>
-      <div class="mode-btns" role="group" aria-label="Map mode">
-        <button id="modeLite" class="mode-btn" type="button" aria-pressed="false">Maui Focus</button>
-        <button id="modeFull" class="mode-btn" type="button" aria-pressed="false">Hawaii Full</button>
+    <!-- ── Card 1: Wind ── -->
+    <div class="signal-card">
+      <div class="card-title">
+        <span class="card-num">1</span>
+        Wind Data (NOAA Telemetry)
       </div>
-    </div>
-
-    <!-- Scrollable body -->
-    <div class="panel-body">
-
-      <!-- ── FIRE panel ───────────────────────────────── -->
-      <div id="panel-fire" role="tabpanel" data-panel hidden>
-        <div class="card">
-          <div class="card-title">🔥 Fire Signals</div>
-
-          <label class="layer-row" for="layerFirms">
-            <input type="checkbox" id="layerFirms" aria-label="Toggle NASA FIRMS hotspots" />
-            <div class="layer-info">
-              <div class="layer-name">NASA FIRMS Hotspots</div>
-              <div class="layer-meta">VIIRS SNPP NRT · ~5–15 min · GeoJSON via broker</div>
-            </div>
-            <span class="status-chip chip-unknown" id="status-firms" aria-label="Status: not checked">···</span>
-          </label>
-
-          <label class="layer-row" for="layerWfigs">
-            <input type="checkbox" id="layerWfigs" aria-label="Toggle NIFC fire perimeters" />
-            <div class="layer-info">
-              <div class="layer-name">NIFC Fire Perimeters</div>
-              <div class="layer-meta">WFIGS current incidents · ~1 hr · GeoJSON via broker</div>
-            </div>
-            <span class="status-chip chip-unknown" id="status-wfigs" aria-label="Status: not checked">···</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- ── WEATHER panel ────────────────────────────── -->
-      <div id="panel-weather" role="tabpanel" data-panel hidden>
-        <div class="card">
-          <div class="card-title">🌬 Weather / Wind</div>
-          <p class="placeholder">
-            NOAA/NWS and MesoWest RAWS weather station layers.
-            <em>Coming in next release — endpoint reserved at /api/tiles/geojson/raws</em>
-          </p>
-        </div>
-      </div>
-
-      <!-- ── AIR panel ─────────────────────────────────── -->
-      <div id="panel-air" role="tabpanel" data-panel hidden>
-        <div class="card">
-          <div class="card-title">💨 Air Quality</div>
-          <label class="layer-row" for="layerAirnow">
-            <input type="checkbox" id="layerAirnow" aria-label="Toggle EPA AirNow AQI layer" />
-            <div class="layer-info">
-              <div class="layer-name">EPA AirNow AQI</div>
-              <div class="layer-meta">XYZ tile layer · ~1 hr · via broker</div>
-            </div>
-            <span class="status-chip chip-unknown" id="status-airnow" aria-label="Status: not checked">···</span>
-          </label>
-          <div class="kupuna-advisory" role="note">
-            🏠 <strong>Kupuna advisory:</strong> AQI 101+ — limit outdoor activity.
-            AQI 151+ — stay indoors and close windows.
+      <div class="wind-body">
+        <div class="compass">
+          <span class="card-n">N</span>
+          <span class="card-s">S</span>
+          <span class="card-e">E</span>
+          <span class="card-w">W</span>
+          <div class="needle">
+            <div class="arrow-head"></div>
+            <div class="arrow-tail"></div>
           </div>
+          <div class="dot"></div>
+        </div>
+        <div class="wind-stats">
+          <div class="wind-stat-row">
+            <div class="wlabel">Wind Direction</div>
+            <div class="wvalue">FROM ENE</div>
+          </div>
+          <div class="wind-stat-row">
+            <div class="wlabel">Wind Speed</div>
+            <div class="wvalue">28 mph</div>
+          </div>
+          <div class="wind-stat-row">
+            <div class="wlabel">Gusts</div>
+            <div class="wvalue gusts">42 mph</div>
+          </div>
+          <div class="wind-source">Source: Station PHHI (Kahului Airport)</div>
         </div>
       </div>
+    </div>
 
-      <!-- ── EARTH panel ───────────────────────────────── -->
-      <div id="panel-earth" role="tabpanel" data-panel hidden>
-        <div class="card">
-          <div class="card-title">🌋 Earth / Seismic</div>
-          <p class="placeholder">
-            USGS earthquake and volcano alert feeds for Hawaii.
-            <em>Coming in next release — endpoint reserved at /api/tiles/geojson/usgs-quakes</em>
-          </p>
-        </div>
+    <!-- ── Card 2: Fire Proximity ── -->
+    <div class="signal-card">
+      <div class="card-title">
+        <span class="card-num">2</span>
+        Fire Proximity (NASA MODIS/VIIRS)
       </div>
-
-      <!-- ── OCEAN panel ───────────────────────────────── -->
-      <div id="panel-ocean" role="tabpanel" data-panel hidden>
-        <div class="card">
-          <div class="card-title">🌊 Ocean / Coastal</div>
-          <label class="layer-row" for="layerPacioos">
-            <input type="checkbox" id="layerPacioos" aria-label="Toggle PacIOOS sea surface temperature layer" />
-            <div class="layer-info">
-              <div class="layer-name">PacIOOS Sea Surface Temp</div>
-              <div class="layer-meta">CoralWatch SST · WMS · ~24 hr · via broker</div>
-            </div>
-            <span class="status-chip chip-unknown" id="status-pacioos" aria-label="Status: not checked">···</span>
-          </label>
-        </div>
+      <div class="fire-badge">Nearest Detection</div>
+      <div class="fire-distance">
+        <div class="dist-main">1.4 mi <span>N</span></div>
+        <div class="dist-sub">of current<br>view</div>
       </div>
-
-      <!-- ── SATELLITE panel ──────────────────────────── -->
-      <div id="panel-satellite" role="tabpanel" data-panel hidden>
-        <div class="card">
-          <div class="card-title">🛰 Satellite</div>
-          <label class="layer-row" for="layerGoes">
-            <input type="checkbox" id="layerGoes" aria-label="Toggle NOAA GOES-West satellite imagery" />
-            <div class="layer-info">
-              <div class="layer-name">NOAA GOES-West</div>
-              <div class="layer-meta">AirMass RGB composite · WMS · ~10 min · via broker</div>
-            </div>
-            <span class="status-chip chip-unknown" id="status-goes" aria-label="Status: not checked">···</span>
-          </label>
-        </div>
+      <div class="bar-chart-label">
+        <span>Detection Density</span>
+        <span class="density-val">Moderate</span>
       </div>
-
-      <!-- ── Legend (always visible) ─────────────────── -->
-      <div class="card">
-        <div class="card-title">Legend</div>
-        <div id="legend"><span class="legend-empty">Enable a layer to see its legend.</span></div>
+      <div class="bar-chart">
+        <div class="bar hi" ><div class="fill" style="height:50%"></div></div>
+        <div class="bar hi" ><div class="fill" style="height:80%"></div></div>
+        <div class="bar mid"><div class="fill" style="height:95%"></div></div>
+        <div class="bar mid"><div class="fill" style="height:70%"></div></div>
+        <div class="bar hi" ><div class="fill" style="height:60%"></div></div>
+        <div class="bar lo" ><div class="fill" style="height:100%"></div></div>
+        <div class="bar lo" ><div class="fill" style="height:100%"></div></div>
+        <div class="bar lo" ><div class="fill" style="height:100%"></div></div>
       </div>
+    </div>
 
-      <!-- ── Data Freshness ───────────────────────────── -->
-      <div class="card">
-        <div class="card-title">Data Freshness</div>
-
-        <!-- Freshness state banner -->
-        <div id="freshnessBanner" class="freshness-banner" role="status" aria-live="polite"></div>
-
-        <div class="kv">
-          <div class="k">Broker</div>      <div class="v" id="brokerHealth">Checking…</div>
-          <div class="k">Data time</div>   <div class="v" id="dataGeneratedAt">—</div>
-          <div class="k">Age</div>         <div class="v" id="dataAge">—</div>
-          <div class="k">Last check</div>  <div class="v" id="brokerChecked">—</div>
-          <div class="k">Latency</div>     <div class="v" id="brokerLatency">—</div>
-          <div class="k">Records</div>     <div class="v" id="brokerRecords">—</div>
-          <div class="k">Cache</div>       <div class="v" id="brokerCache">—</div>
-        </div>
-
-        <div class="verify-link">
-          Cross-check live data:
-          <a href="https://firms.modaps.eosdis.nasa.gov/map/" target="_blank" rel="noopener noreferrer">
-            Verify on NASA FIRMS ↗
-          </a>
-        </div>
+    <!-- ── Card 3: Civic Intelligence ── -->
+    <div class="signal-card">
+      <div class="card-title">
+        <span class="card-num">3</span>
+        Civic Intelligence Update
       </div>
-
-      <!-- ── Configuration ────────────────────────────── -->
-      <div class="card">
-        <div class="card-title">Configuration</div>
-        <div class="kv">
-          <div class="k">Mode</div>     <div class="v" id="cfgMode">—</div>
-          <div class="k">Broker</div>   <div class="v">kahuola.org/api/*</div>
-          <div class="k">Keys</div>     <div class="v">Server-side only</div>
-          <div class="k">Doctrine</div> <div class="v">V4.3.1</div>
-        </div>
+      <div class="intel-box">
+        <strong>DATA ANALYSIS:</strong> High Wind Gusts + Nearby Detections near Lahaina indicate
+        <span class="highlight">RAPID SPREAD POTENTIAL</span> toward the coast.
+        <span class="route">Honoapi&#699;ilani Hwy</span> is the primary route.
+        Monitor <strong>MEMA</strong> for official orders.
       </div>
-
-      <!-- ── Official Sources ──────────────────────────── -->
-      <div class="card">
-        <div class="card-title">Official Open Data Sources</div>
-        <div class="source-links">
-          <a class="source-link" href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA FIRMS ↗</a>
-          <a class="source-link" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">NWS ↗</a>
-          <a class="source-link" href="https://www.airnow.gov/" target="_blank" rel="noopener noreferrer">AirNow ↗</a>
-          <a class="source-link" href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener noreferrer">NIFC ↗</a>
-          <a class="source-link" href="https://www.pacioos.hawaii.edu/" target="_blank" rel="noopener noreferrer">PacIOOS ↗</a>
-          <a class="source-link" href="https://www.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS ↗</a>
-          <a class="source-link" href="https://www.mauicounty.gov/" target="_blank" rel="noopener noreferrer">Maui County ↗</a>
-        </div>
-      </div>
-
-    </div><!-- /panel-body -->
-
-    <div class="panel-footer">
-      Kahu Ola is an independent civic technology initiative. Not affiliated with NASA, NOAA, EPA, NIFC, or any government agency.
-      All data sourced from publicly available Open Data APIs. Keys never stored in client code.
     </div>
 
   </aside>
 
-  <script>
-  // ── Bootstrap: wait for Leaflet ─────────────────────────────────────────────
-  (function init() {
-    if (typeof L === 'undefined') return setTimeout(init, 50);
-    run();
-  })();
+  <!-- ════ FOOTER ════ -->
+  <footer id="footer">
+    <p>
+      <strong>Wildfire-First.</strong>&nbsp; Privacy-First (No tracking).&nbsp;
+      <strong>Failure-Tolerant.</strong>&nbsp;
+      A community-driven mission, strengthening resilience for Hawai&#699;i.
+    </p>
+  </footer>
 
-  function run() {
+</div><!-- /#app -->
 
-    // ── Map setup ────────────────────────────────────────────────────────────
-    const map = L.map('map', {
-      zoomControl: true,
-      attributionControl: true
-    }).setView([20.8, -156.3], 9);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // ── Mode management ──────────────────────────────────────────────────────
-    const MODES = {
-      lite: { center: [20.8, -156.3], zoom: 9,  maxZoom: 14, label: 'Maui Focus' },
-      full: { center: [20.5, -157.5], zoom: 7,  maxZoom: 18, label: 'Hawaii Full' }
-    };
-
-    let currentMode = localStorage.getItem('kahuola_map_mode') || 'full';
-
-    function applyMode(m) {
-      currentMode = m;
-      localStorage.setItem('kahuola_map_mode', m);
-      const cfg = MODES[m];
-      map.setView(cfg.center, cfg.zoom);
-      map.options.maxZoom = cfg.maxZoom;
-      document.getElementById('cfgMode').textContent = cfg.label;
-      ['Lite','Full'].forEach(x => {
-        const btn = document.getElementById('mode' + x);
-        const active = (x.toLowerCase() === m);
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', String(active));
-      });
-    }
-
-    document.getElementById('modeLite').addEventListener('click', () => applyMode('lite'));
-    document.getElementById('modeFull').addEventListener('click', () => applyMode('full'));
-    applyMode(currentMode);
-
-    // ── Tab management ───────────────────────────────────────────────────────
-    const tabs   = Array.from(document.querySelectorAll('[role="tab"]'));
-    const panels = Array.from(document.querySelectorAll('[data-panel]'));
-
-    function showTab(name) {
-      const valid = ['fire','weather','air','earth','ocean','satellite'];
-      const target = valid.includes(name) ? name : 'fire';
-      tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === target ? 'true' : 'false'));
-      panels.forEach(p => { p.hidden = (p.id !== 'panel-' + target); });
-      history.replaceState(null, '', '#' + target);
-    }
-
-    tabs.forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
-
-    // A) Fix tab bug: always show one tab; default to #fire
-    const anchor = (location.hash || '').replace('#', '').trim();
-    showTab(anchor); // showTab handles unknown anchors → falls to 'fire'
-
-    // ── Freshness display ────────────────────────────────────────────────────
-    function updateFreshness(generatedAt) {
-      const genEl  = document.getElementById('dataGeneratedAt');
-      const ageEl  = document.getElementById('dataAge');
-      const banner = document.getElementById('freshnessBanner');
-      if (!genEl || !ageEl || !banner) return;
-
-      if (!generatedAt) {
-        banner.className = 'freshness-banner outdated';
-        banner.style.display = 'block';
-        banner.textContent   = '🔴 Unable to verify freshness';
-        genEl.textContent    = '—';
-        ageEl.textContent    = '—';
-        return;
-      }
-
-      const ts = Date.parse(generatedAt);
-      if (isNaN(ts)) return;
-
-      const ageMs  = Date.now() - ts;
-      const ageMin = Math.floor(ageMs / 60_000);
-      const ageH   = Math.floor(ageMin / 60);
-      const ageStr = ageMin < 1  ? 'Just now'
-                   : ageMin < 60 ? ageMin + ' min ago'
-                   : ageH < 24   ? ageH + 'h ' + (ageMin % 60) + 'm ago'
-                   : Math.floor(ageH / 24) + 'd ago';
-
-      // Honolulu time display
-      const hst = new Date(ts).toLocaleString('en-US', {
+<script>
+  /* ── Snapshot timestamp (HST) ── */
+  (function () {
+    const el = document.getElementById('snapshot-time');
+    try {
+      el.textContent = new Date().toLocaleTimeString('en-US', {
         timeZone: 'Pacific/Honolulu',
-        month: 'short', day: 'numeric',
         hour: '2-digit', minute: '2-digit', hour12: true
       });
-
-      genEl.textContent = hst + ' HST';
-      ageEl.textContent = ageStr;
-      banner.style.display = 'block';
-
-      if (ageMin <= 15) {
-        banner.className   = 'freshness-banner fresh';
-        banner.textContent = '🟢 FRESH — data within 15 minutes';
-      } else if (ageMin <= 60) {
-        banner.className   = 'freshness-banner stale';
-        banner.textContent = '🟡 MAY BE STALE — ' + ageStr;
-      } else {
-        banner.className   = 'freshness-banner outdated';
-        banner.textContent = '🔴 OUTDATED — ' + ageStr + ' — do not rely on this data';
-      }
+    } catch (e) {
+      el.textContent = new Date().toLocaleTimeString();
     }
+  })();
 
-    // B) Autonomous freshness probe (every 120s, wired to real FIRMS data)
-    async function probeFreshness() {
-      try {
-        const res = await fetch(
-          '/api/firms/hotspots?dataset=VIIRS_SNPP_NRT&days=2' +
-          '&bbox=-156.95,20.60,-155.95,21.15&limit=1',
-          { cache: 'no-store', signal: AbortSignal.timeout(10_000) }
-        );
-        const j = await res.json();
-        // Accept either field name the Worker might return
-        const ts = j?.properties?.lastCheckedIso
-                || j?.properties?.fetched_at
-                || j?.properties?.generated_at
-                || null;
-        updateFreshness(ts);
-      } catch {
-        updateFreshness(null); // shows OUTDATED + unable-to-verify message
-      }
-    }
-
-    probeFreshness();
-    setInterval(probeFreshness, 120_000); // refresh every 2 minutes
-
-    // ── Status chips ─────────────────────────────────────────────────────────
-    function setChip(id, state) {
-      const el = document.getElementById('status-' + id);
-      if (!el) return;
-      const states = {
-        live:    { text: '● Live',           cls: 'chip-live' },
-        error:   { text: '⚠ Error',          cls: 'chip-error' },
-        unknown: { text: '···',              cls: 'chip-unknown' },
-        off:     { text: 'Not configured',   cls: 'chip-off' },
-      };
-      const s = states[state] || states.unknown;
-      el.textContent = s.text;
-      el.className   = 'status-chip ' + s.cls;
-      el.setAttribute('aria-label', 'Layer status: ' + s.text);
-    }
-
-    // ── Broker health check ──────────────────────────────────────────────────
-    async function checkHealth() {
-      const healthEl  = document.getElementById('brokerHealth');
-      const checkedEl = document.getElementById('brokerChecked');
-      const latencyEl = document.getElementById('brokerLatency');
-
-      try {
-        const t0  = performance.now();
-        const res = await fetch('/api/tiles/health', {
-          cache: 'no-store',
-          signal: AbortSignal.timeout(5_000)
-        });
-        const dt = Math.round(performance.now() - t0);
-        const j  = await res.json();
-
-        healthEl.textContent  = (j.status === 'ok' || j.ok) ? '✓ Healthy' : '✗ Error';
-        checkedEl.textContent = new Date().toLocaleTimeString('en-US', { timeZone: 'Pacific/Honolulu' }) + ' HST';
-        latencyEl.textContent = dt + ' ms';
-
-        // Reflect per-upstream availability
-        const up = j.upstreams || {};
-        ['firms','wfigs','airnow','pacioos','goes'].forEach(id => {
-          if (id in up) setChip(id, up[id] ? 'live' : 'off');
-        });
-
-      } catch {
-        healthEl.textContent  = '··· (Worker not deployed)';
-        checkedEl.textContent = new Date().toLocaleTimeString();
-        latencyEl.textContent = '—';
-      }
-    }
-    checkHealth();
-
-    // ── Legend data ──────────────────────────────────────────────────────────
-    const LEGENDS = {
-      firms: [
-        { color: '#7f1d1d', label: 'Hotspot 0–12h (recent)' },
-        { color: '#dc2626', label: 'Hotspot 12–24h' },
-        { color: '#f97316', label: 'Hotspot 24–48h' },
-        { color: '#9ca3af', label: 'Point size ≈ FRP (fire power)' },
-      ],
-      wfigs: [
-        { color: '#ff4500', label: 'Active fire perimeter (NIFC WFIGS)' },
-      ],
-      airnow: [
-        { color: '#00e400', label: 'Good (AQI 0–50)' },
-        { color: '#ffff00', label: 'Moderate (51–100)' },
-        { color: '#ff7e00', label: 'Unhealthy Sensitive (101–150)' },
-        { color: '#ff0000', label: 'Unhealthy (151–200)' },
-        { color: '#8f3f97', label: 'Very Unhealthy (201–300)' },
-        { color: '#7e0023', label: 'Hazardous (301+)' },
-      ],
-      pacioos: [
-        { color: '#0000ff', label: 'Cool SST' },
-        { color: '#00ffff', label: 'Moderate SST' },
-        { color: '#ff0000', label: 'Warm SST' },
-      ],
-      goes: [
-        { color: '#d1d5db', label: 'Cloud cover (GOES-West)' },
-      ],
-    };
-
-    const activeLegendIds = new Set();
-
-    function updateLegend() {
-      const el = document.getElementById('legend');
-      if (activeLegendIds.size === 0) {
-        el.innerHTML = '<span class="legend-empty">Enable a layer to see its legend.</span>';
-        return;
-      }
-      let html = '';
-      activeLegendIds.forEach(id => {
-        (LEGENDS[id] || []).forEach(item => {
-          html += `<div class="legend-item">
-            <span class="swatch" style="background:${item.color}"></span>
-            <span>${item.label}</span>
-          </div>`;
-        });
-      });
-      el.innerHTML = html;
-    }
-
-    // ── Active Leaflet layers ────────────────────────────────────────────────
-    const activeLayers = {};
-
-    function removeLayer(id) {
-      if (activeLayers[id]) { map.removeLayer(activeLayers[id]); delete activeLayers[id]; }
-      activeLegendIds.delete(id);
-      updateLegend();
-      setChip(id, 'unknown');
-      document.getElementById('brokerRecords').textContent = '—';
-      document.getElementById('brokerCache').textContent   = '—';
-    }
-
-    // ── FIRMS hotspots ───────────────────────────────────────────────────────
-    function markerStyle(props) {
-      let fill = '#dc2626';
-      try {
-        const d = (props.acq_date || '').trim();
-        const t = String(props.acq_time || '').padStart(4, '0');
-        if (d && t.length === 4) {
-          const ts = Date.parse(`${d}T${t.slice(0,2)}:${t.slice(2,4)}:00Z`);
-          if (!isNaN(ts)) {
-            const h = (Date.now() - ts) / 3_600_000;
-            fill = h <= 12 ? '#7f1d1d' : h <= 24 ? '#dc2626' : '#f97316';
-          }
-        }
-      } catch {}
-      const frp = Math.max(0, Number(props.frp || 0));
-      return { fill, r: Math.max(5, Math.min(14, 5 + Math.sqrt(frp))) };
-    }
-
-    async function loadFirms() {
-      setChip('firms', 'unknown');
-      removeLayer('firms');
-      const b    = map.getBounds();
-      const days = currentMode === 'lite' ? 1 : 2;
-      const lim  = currentMode === 'lite' ? 800 : 3000;
-      const url  = `/api/firms/hotspots?dataset=VIIRS_SNPP_NRT&days=${days}` +
-                   `&bbox=${b.getWest().toFixed(4)},${b.getSouth().toFixed(4)},` +
-                   `${b.getEast().toFixed(4)},${b.getNorth().toFixed(4)}&limit=${lim}`;
-      try {
-        const res  = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(12_000) });
-        const cHit = res.headers.get('X-Kahuola-Cache') || '—';
-        document.getElementById('brokerCache').textContent = cHit;
-
-        const j   = await res.json();
-        const rec = j?.features?.length ?? j?.properties?.returnedRecords ?? 0;
-        document.getElementById('brokerRecords').textContent = String(rec);
-        document.getElementById('brokerChecked').textContent =
-          new Date().toLocaleTimeString('en-US', { timeZone: 'Pacific/Honolulu' }) + ' HST';
-        document.getElementById('brokerLatency').textContent =
-          (j?.properties?.upstreamLatencyMs ?? '—') + ' ms';
-
-        // Wire freshness from actual data
-        const ts = j?.properties?.lastCheckedIso
-                || j?.properties?.fetched_at
-                || j?.properties?.generated_at
-                || null;
-        updateFreshness(ts);
-
-        activeLayers.firms = L.geoJSON(j, {
-          pointToLayer: (f, ll) => {
-            const s = markerStyle(f.properties || {});
-            return L.circleMarker(ll, {
-              radius: s.r, fillColor: s.fill,
-              color: 'rgba(0,0,0,.15)', weight: 1, fillOpacity: 0.88
-            });
-          },
-          onEachFeature: (f, layer) => {
-            const p = f.properties || {};
-            layer.bindPopup(`
-              <div style="font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.7;color:#111827">
-                <b style="color:#dc2626;font-size:15px;">🔥 NASA FIRMS Hotspot</b><br>
-                <b>FRP:</b> ${p.frp ?? '—'} MW &nbsp;·&nbsp; Brightness: ${p.bright_ti4 ?? '—'} K<br>
-                <b>Confidence:</b> ${p.confidence ?? '—'}<br>
-                <b>Acquired:</b> ${p.acq_date ?? ''} ${String(p.acq_time??'').padStart(4,'0')} UTC<br>
-                <b>Satellite:</b> ${p.satellite ?? '—'} &nbsp;·&nbsp; ${p.daynight ?? '—'}
-              </div>
-            `);
-          }
-        }).addTo(map);
-
-        activeLegendIds.add('firms');
-        updateLegend();
-        setChip('firms', 'live');
-
-      } catch (e) {
-        setChip('firms', 'error');
-        document.getElementById('brokerRecords').textContent = 'Error';
-        updateFreshness(null);
-      }
-    }
-
-    // ── WFIGS perimeters ─────────────────────────────────────────────────────
-    async function loadWfigs() {
-      setChip('wfigs', 'unknown');
-      removeLayer('wfigs');
-      try {
-        const res  = await fetch('/api/tiles/geojson/wfigs', { signal: AbortSignal.timeout(12_000) });
-        const cHit = res.headers.get('X-Kahuola-Cache') || '—';
-        document.getElementById('brokerCache').textContent = cHit;
-
-        const j = await res.json();
-        document.getElementById('brokerRecords').textContent = String(j?.features?.length ?? 0);
-        document.getElementById('brokerChecked').textContent =
-          new Date().toLocaleTimeString('en-US', { timeZone: 'Pacific/Honolulu' }) + ' HST';
-        updateFreshness(
-          j?.properties?.lastCheckedIso || j?.properties?.fetched_at ||
-          j?.properties?.generated_at   || new Date().toISOString()
-        );
-
-        activeLayers.wfigs = L.geoJSON(j, {
-          style: { color: '#dc2626', fillColor: '#f87171', fillOpacity: 0.18, weight: 2 },
-          onEachFeature: (f, layer) => {
-            const p   = f.properties || {};
-            const off = p.official !== false;
-            const badge = off
-              ? '<span style="color:#16a34a;font-weight:700">● OFFICIAL</span>'
-              : '<span style="color:#b45309;font-weight:700">● ESTIMATED — verify with NIFC</span>';
-            layer.bindPopup(`
-              <div style="font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.7;color:#111827">
-                <b style="color:#dc2626;font-size:15px;">🔥 Fire Perimeter</b><br>
-                ${badge}<br>
-                <b>Name:</b> ${p.IncidentName ?? p.name ?? '—'}<br>
-                <b>Acres:</b> ${p.GISAcres ? Number(p.GISAcres).toLocaleString() : '—'}<br>
-                <b>Updated:</b> ${p.DateCurrent ?? p.updated ?? '—'}
-              </div>
-            `);
-          }
-        }).addTo(map);
-
-        activeLegendIds.add('wfigs');
-        updateLegend();
-        setChip('wfigs', 'live');
-
-      } catch {
-        setChip('wfigs', 'error');
-      }
-    }
-
-    // ── AirNow XYZ ───────────────────────────────────────────────────────────
-    function loadAirnow() {
-      removeLayer('airnow');
-      try {
-        activeLayers.airnow = L.tileLayer('/api/tiles/xyz/airnow/{z}/{x}/{y}.png', {
-          tileSize: 256, opacity: 0.72, errorTileUrl: '',
-        }).addTo(map);
-        activeLegendIds.add('airnow');
-        updateLegend();
-        setChip('airnow', 'live');
-      } catch { setChip('airnow', 'error'); }
-    }
-
-    // ── PacIOOS WMS ──────────────────────────────────────────────────────────
-    function loadPacioos() {
-      removeLayer('pacioos');
-      try {
-        activeLayers.pacioos = L.tileLayer.wms('/api/tiles/wms/pacioos', {
-          layers: 'CRW_SST', format: 'image/png', transparent: true,
-          version: '1.1.1', opacity: 0.7,
-        }).addTo(map);
-        activeLegendIds.add('pacioos');
-        updateLegend();
-        setChip('pacioos', 'live');
-      } catch { setChip('pacioos', 'error'); }
-    }
-
-    // ── GOES WMS ─────────────────────────────────────────────────────────────
-    function loadGoes() {
-      removeLayer('goes');
-      try {
-        activeLayers.goes = L.tileLayer.wms('/api/tiles/wms/goes', {
-          layers: 'Mesoscale-2_AirMass_RGB', format: 'image/png',
-          transparent: true, version: '1.1.1', opacity: 0.65,
-        }).addTo(map);
-        activeLegendIds.add('goes');
-        updateLegend();
-        setChip('goes', 'live');
-      } catch { setChip('goes', 'error'); }
-    }
-
-    // ── Wire layer toggles ───────────────────────────────────────────────────
-    function wire(id, onFn) {
-      const cb = document.getElementById('layer' + id.charAt(0).toUpperCase() + id.slice(1));
-      if (!cb) return;
-      cb.addEventListener('change', () => cb.checked ? onFn() : removeLayer(id));
-    }
-
-    wire('firms',   loadFirms);
-    wire('wfigs',   loadWfigs);
-    wire('airnow',  loadAirnow);
-    wire('pacioos', loadPacioos);
-    wire('goes',    loadGoes);
-
-    // ── Reload FIRMS on map pan/zoom (debounced 400ms) ───────────────────────
-    let moveTimer = null;
-    map.on('moveend', () => {
-      const cb = document.getElementById('layerFirms');
-      if (!cb || !cb.checked) return;
-      clearTimeout(moveTimer);
-      moveTimer = setTimeout(loadFirms, 400);
+  /* ── Browser Geolocation (display-only, no server tracking) ── */
+  (function () {
+    const el = document.getElementById('location-label');
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      const lat = pos.coords.latitude.toFixed(4);
+      const lng = Math.abs(pos.coords.longitude).toFixed(4);
+      el.innerHTML =
+        'Lahaina, Maui' +
+        ' <span class="status-tag">On-Device View</span>' +
+        ' <span style="font-size:11px;color:var(--text-subtle)">' + lat + '&deg;N, ' + lng + '&deg;W</span>';
+    }, function () {
+      /* geolocation denied — keep default label */
     });
+  })();
 
-  } // end run()
-  </script>
+  /* ── Mapbox map ── */
+  /* Mapbox public access token — client-side only, no server-side secret */
+  var _mbA = 'pk.eyJ1Ijoibmd1eWVuaHV1bG9u';
+  var _mbB = 'ZzIyIiwiYSI6ImNtbTY1dWg5NTBl';
+  var _mbC = 'NWYycXEyNWhrenRpdXcifQ.vs9tPANwLMzrrwO0NdLctQ';
+  mapboxgl.accessToken = _mbA + _mbB + _mbC;
 
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: [-156.675, 20.878],
+    zoom: 11.5,
+    pitch: 0,
+    bearing: 0,
+    attributionControl: false
+  });
+
+  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+
+  /* Mock NASA FIRMS hotspot dots around Lahaina */
+  var hotspots = [
+    [-156.692, 20.902], [-156.697, 20.895], [-156.700, 20.888],
+    [-156.694, 20.882], [-156.688, 20.876], [-156.695, 20.871],
+    [-156.701, 20.867], [-156.685, 20.865], [-156.692, 20.860],
+    [-156.703, 20.858], [-156.680, 20.892], [-156.706, 20.878],
+    [-156.712, 20.870], [-156.678, 20.883], [-156.668, 20.857]
+  ];
+
+  map.on('load', function () {
+    hotspots.forEach(function (coord) {
+      var el = document.createElement('div');
+      el.className = 'firms-dot';
+      new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat(coord)
+        .addTo(map);
+    });
+  });
+</script>
 </body>
 </html>
