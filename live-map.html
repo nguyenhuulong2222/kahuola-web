@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0c0c0c">
 <link rel="canonical" href="https://kahuola.org/live-map.html">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=DM+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
 <style>
 :root {
@@ -47,15 +48,15 @@ nav.topnav a.is-active { background: rgba(37,99,235,0.09); color: #1d4ed8; }
 /* map + panel wrapper */
 #map-wrap { position: relative; width: 100%; height: 100%; }
 
-iframe#map {
-  width: 100%; height: 100%; border: none; display: block;
+#map {
+  width: 100%; height: 100%;
 }
 
 /* floating panel */
 .panel {
   position: absolute; right: 16px; top: 16px; width: 255px;
   background: var(--panel); backdrop-filter: blur(12px);
-  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; z-index: 10;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; z-index: 400;
 }
 .p-title {
   padding: 9px 14px 7px; font-size: 10px; font-weight: 600; letter-spacing: .08em;
@@ -121,14 +122,7 @@ footer {
 
   <div id="map-wrap">
 
-    <!-- Google Maps iframe — no API key needed for basic embed -->
-    <iframe id="map"
-      src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d55000!2d-156.675!3d20.878!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sen!2sus!4v1"
-      allowfullscreen
-      loading="lazy"
-      referrerpolicy="no-referrer-when-downgrade"
-      title="Maui hazard map">
-    </iframe>
+    <div id="map"></div>
 
     <!-- metrics panel -->
     <div class="panel">
@@ -149,8 +143,24 @@ footer {
   </div>
 </div>
 
+<script src="./mapbox-config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN2GqnQ=" crossorigin=""></script>
 <script>
 "use strict";
+
+/* ── Leaflet + Mapbox native tile integration ── */
+const map = L.map('map', { zoomControl: false }).setView([20.7984, -156.3319], 10);
+L.control.zoom({ position: 'bottomleft' }).addTo(map);
+L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+  attribution: '© <a href="https://www.mapbox.com/">Mapbox</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+  maxZoom: 19,
+  id: 'mapbox/dark-v11',
+  tileSize: 512,
+  zoomOffset: -1,
+  accessToken: window.MAPBOX_TOKEN
+}).addTo(map);
+setTimeout(() => { map.invalidateSize(); }, 300);
+
 
 /* Invariant I — all data via kahuola.org Worker only */
 const AGGREGATOR_BASE = "https://kahuola.org";
