@@ -22,10 +22,20 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 header {
   display: flex; align-items: center; gap: 12px; padding: 0 16px;
-  background: var(--surface); border-bottom: 1px solid var(--border); z-index: 100;
+  background: #ffffff; border-bottom: 1px solid rgba(12,18,32,0.10); z-index: 100;
 }
-.logo { font-weight: 600; font-size: 15px; line-height: 1.2; }
-.logo small { display: block; font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.logo { font-weight: 600; font-size: 15px; line-height: 1.2; color: #0f172a; }
+.logo small { display: block; font-size: 10px; color: #64748b; font-family: var(--mono); }
+
+nav.topnav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+nav.topnav a {
+  display: inline-flex; align-items: center; padding: 6px 12px;
+  border-radius: 6px; font-size: 14px; font-weight: 600;
+  color: #3f526a; text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+nav.topnav a:hover { background: #f2f4f8; color: #0c1220; }
+nav.topnav a.is-active { background: rgba(37,99,235,0.09); color: #1d4ed8; }
 
 #banners { flex: 1; display: flex; gap: 6px; justify-content: flex-end; }
 .banner { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px; font-size: 11px; font-family: var(--mono); }
@@ -95,13 +105,18 @@ footer {
 <div id="app">
 
   <header>
-    <div class="logo">🔥 Kahu Ola <small>V4.3.1 · CIVIC HAZARD MAP</small></div>
+    <a href="./index.html" class="logo" style="text-decoration:none;">🌺 Kahu Ola <small>Guardian of Life</small></a>
     <div id="banners" role="status" aria-live="polite">
       <div id="b-parse"    class="banner b-red   hidden">⚠ Data format error</div>
       <div id="b-offline"  class="banner b-amber hidden">Offline</div>
       <div id="b-degraded" class="banner b-amber hidden">Source degraded</div>
       <div id="b-cooldown" class="banner b-blue  hidden">Retrying…</div>
     </div>
+    <nav class="topnav" aria-label="Primary">
+      <a class="is-active" href="/live-map.html">Live Map</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/support">Support</a>
+    </nav>
   </header>
 
   <div id="map-wrap">
