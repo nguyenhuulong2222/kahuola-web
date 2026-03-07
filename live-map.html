@@ -1,873 +1,1060 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kahu Ola | Civic Hazard Dashboard</title>
-  <meta name="description" content="Civic Hazard Dashboard — Wildfire-first situational awareness for Hawai'i. NASA FIRMS, NOAA wind telemetry, real-time civic intelligence." />
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <!-- MapLibre GL JS (open-source, no token required) -->
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<title>Kahu Ola | Live Hazard Map</title>
 
-  <style>
-    /* ══════════════════════════════════════════════════════
-       Kahu Ola — Civic Hazard Dashboard
-       Dark Tactical Theme · #121212 base
-    ══════════════════════════════════════════════════════ */
+<meta name="description" content="Kahu Ola civic wildfire situational awareness for Hawaiʻi.">
 
-    :root {
-      --bg:           #121212;
-      --surface:      #1e1e1e;
-      --surface-2:    #252525;
-      --surface-3:    #2e2e2e;
-      --border:       rgba(255,255,255,.10);
-      --border-hi:    rgba(255,255,255,.18);
+<link rel="canonical" href="https://kahuola.org/live-map.html">
 
-      --text:         #f0f0f0;
-      --text-muted:   #a0a0a0;
-      --text-subtle:  #6b6b6b;
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0c0c0c">
 
-      --orange:       #f97316;
-      --orange-dim:   #c2500e;
-      --orange-glow:  rgba(249,115,22,.20);
-      --red:          #ef4444;
-      --red-dim:      #991b1b;
-      --amber:        #f59e0b;
-      --green:        #22c55e;
+<!--
+  CSP: connect-src chỉ cho phép kahuola.org + demotiles
+  Invariant I: client không được gọi upstream trực tiếp
+-->
+<meta http-equiv="Content-Security-Policy"
+  content="
+    default-src 'self';
+    script-src 'self' https://unpkg.com;
+    style-src 'self' https://fonts.googleapis.com https://unpkg.com 'unsafe-inline';
+    font-src https://fonts.gstatic.com;
+    img-src 'self' data: blob: https://demotiles.maplibre.org;
+    connect-src https://kahuola.org https://demotiles.maplibre.org;
+  ">
 
-      --font: "DM Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-      --font-mono: "DM Mono", ui-monospace, monospace;
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-      --sidebar-w:    400px;
-      --header-h:     64px;
-      --statusbar-h:  80px;
-      --footer-h:     60px;
-      --radius:       8px;
-      --radius-sm:    5px;
-    }
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: 14px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
+/* ═══════════════════════════════════════════
+   KAHU OLA V4.3.1 — DESIGN SYSTEM
+   Wildfire-First · Privacy-First · Civic-Grade
+   ═══════════════════════════════════════════ */
 
-    /* ── PAGE SHELL ───────────────────────────────────────── */
-    #app {
-      display: grid;
-      grid-template-rows: var(--header-h) var(--statusbar-h) 1fr var(--footer-h);
-      grid-template-columns: 1fr var(--sidebar-w);
-      grid-template-areas:
-        "header  header"
-        "status  status"
-        "map     sidebar"
-        "footer  footer";
-      height: 100vh;
-      overflow: hidden;
-    }
+:root {
+  --bg:        #0c0c0c;
+  --surface:   #161616;
+  --panel:     rgba(14,14,14,.82);
+  --border:    rgba(255,255,255,.07);
+  --border-hi: rgba(255,255,255,.13);
 
-    /* ── TOP HEADER ───────────────────────────────────────── */
-    #header {
-      grid-area: header;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 20px;
-      background: #1a1a1a;
-      border-bottom: 1px solid var(--border);
-    }
-    #header h1 {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.4px;
-      color: var(--text);
-      white-space: nowrap;
-    }
-    #header .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 400;
-      border-left: 1px solid var(--border-hi);
-      padding-left: 12px;
-    }
-    #header .spacer { flex: 1; }
-    #header .live-pill {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(239,68,68,.15);
-      border: 1px solid rgba(239,68,68,.35);
-      border-radius: 99px;
-      padding: 4px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--red);
-      letter-spacing: .8px;
-      text-transform: uppercase;
-    }
-    #header .live-pill::before {
-      content: '';
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--red);
-      animation: pulse-red 1.4s ease-in-out infinite;
-    }
-    @keyframes pulse-red {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: .4; transform: scale(1.3); }
-    }
+  --text:      #e8e8e8;
+  --text-dim:  #aaa;
+  --muted:     #666;
 
-    /* ── STATUS BAR ───────────────────────────────────────── */
-    #statusbar {
-      grid-area: status;
-      display: flex;
-      align-items: center;
-      background: #181818;
-      border-bottom: 1px solid var(--border);
-    }
-    .status-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 24px;
-      border-right: 1px solid var(--border);
-      height: 100%;
-    }
-    .status-item .icon {
-      font-size: 18px;
-      line-height: 1;
-    }
-    .status-item .label {
-      font-size: 11px;
-      color: var(--text-subtle);
-      text-transform: uppercase;
-      letter-spacing: .6px;
-      font-weight: 600;
-      margin-bottom: 3px;
-    }
-    .status-item .value {
-      font-size: 14px;
-      color: var(--text);
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .status-item .value strong { color: var(--orange); }
-    .status-tag {
-      font-size: 10px;
-      background: rgba(249,115,22,.12);
-      border: 1px solid rgba(249,115,22,.25);
-      color: var(--orange);
-      border-radius: 4px;
-      padding: 2px 7px;
-      font-weight: 600;
-      letter-spacing: .4px;
-      white-space: nowrap;
-    }
+  --accent:    #ff5722;
+  --fire-crit: #ff1744;
+  --green:     #4caf50;
+  --amber:     #ff9800;
+  --red:       #f44336;
+  --blue:      #42a5f5;
 
-    /* ── MAP AREA ─────────────────────────────────────────── */
-    #map-wrap {
-      grid-area: map;
-      position: relative;
-      overflow: hidden;
-    }
-    #map {
-      position: absolute;
-      inset: 0;
-    }
+  --radius:    8px;
+  --radius-sm: 5px;
 
-    /* Attribution override */
-    .maplibregl-ctrl-attrib { display: none !important; }
-    .maplibregl-ctrl-logo   { display: none !important; }
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", monospace;
+}
 
-    /* ── MAP OVERLAYS ─────────────────────────────────────── */
-    .map-label {
-      position: absolute;
-      background: rgba(28, 18, 4, .90);
-      border: 1px solid var(--orange-dim);
-      border-radius: var(--radius-sm);
-      padding: 7px 11px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--orange);
-      pointer-events: none;
-      backdrop-filter: blur(4px);
-      line-height: 1.4;
-      max-width: 190px;
-      z-index: 10;
-    }
-    #label-firms  { bottom: 32%; left: 8%; }
-    #label-routes { top: 36%;   left: 36%; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-    /* Orange hotspot markers */
-    .firms-dot {
-      width: 10px; height: 10px;
-      background: var(--orange);
-      border-radius: 2px;
-      opacity: .85;
-    }
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
 
-    /* ── SIDEBAR ──────────────────────────────────────────── */
-    #sidebar {
-      grid-area: sidebar;
-      background: #161616;
-      border-left: 1px solid var(--border);
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-    #sidebar::-webkit-scrollbar { width: 4px; }
-    #sidebar::-webkit-scrollbar-track { background: transparent; }
-    #sidebar::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+/* ── App Shell ── */
+#app {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
 
-    .sidebar-header {
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .sidebar-header h2 {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: var(--text-muted);
-    }
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 200;
+}
 
-    /* ── SIGNAL CARDS ─────────────────────────────────────── */
-    .signal-card {
-      margin: 10px 10px 0;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      flex-shrink: 0;
-    }
-    .signal-card:last-child { margin-bottom: 10px; }
-    .signal-card:hover { border-color: var(--border-hi); }
+.logo {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+}
 
-    .card-title {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .card-num {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px; height: 16px;
-      border-radius: 4px;
-      background: var(--surface-3);
-      font-size: 9px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
+.logo small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: .05em;
+}
 
-    /* ── CARD 1: WIND ─────────────────────────────────────── */
-    .wind-body {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-    }
+/* ── Banner stack — §21 priority order ── */
+#banner-stack {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 
-    /* CSS Compass */
-    .compass {
-      width: 96px; height: 96px;
-      border-radius: 50%;
-      background: radial-gradient(circle at center, #2c2c2c 55%, #1a1a1a 100%);
-      border: 2px solid rgba(255,255,255,.15);
-      position: relative;
-      flex-shrink: 0;
-      box-shadow: 0 0 16px rgba(0,0,0,.6), inset 0 0 10px rgba(0,0,0,.4);
-    }
-    .compass::after {
-      content: '';
-      position: absolute;
-      inset: 9px;
-      border-radius: 50%;
-      border: 1px dashed rgba(255,255,255,.06);
-    }
-    .compass .card-n, .compass .card-s,
-    .compass .card-e, .compass .card-w {
-      position: absolute;
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--text-subtle);
-      line-height: 1;
-    }
-    .compass .card-n { top: 5px;    left: 50%;  transform: translateX(-50%); color: #d0d0d0; }
-    .compass .card-s { bottom: 5px; left: 50%;  transform: translateX(-50%); }
-    .compass .card-e { right: 6px;  top: 50%;   transform: translateY(-50%); }
-    .compass .card-w { left: 6px;   top: 50%;   transform: translateY(-50%); }
+.banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  letter-spacing: .02em;
+  animation: slideIn .2s ease;
+}
 
-    /* Wind arrow — ENE ≈ rotate 67° from North */
-    .compass .needle {
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 4px; height: 36px;
-      margin-left: -2px;
-      transform-origin: bottom center;
-      transform: translateY(-100%) rotate(67deg);
-    }
-    .compass .needle .arrow-head {
-      width: 0; height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-bottom: 22px solid var(--orange);
-      margin: 0 auto;
-      filter: drop-shadow(0 0 5px var(--orange));
-    }
-    .compass .needle .arrow-tail {
-      width: 0; height: 0;
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      border-top: 12px solid #7a1a00;
-      margin: 0 auto;
-    }
-    .compass .dot {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: #fff;
-      z-index: 2;
-    }
+.banner.hidden { display: none; }
 
-    .wind-stats { flex: 1; }
-    .wind-stat-row { margin-bottom: 9px; }
-    .wind-stat-row .wlabel {
-      font-size: 10px;
-      color: var(--text-subtle);
-      margin-bottom: 1px;
-    }
-    .wind-stat-row .wvalue {
-      font-size: 17px;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1.1;
-    }
-    .wind-stat-row .wvalue.gusts { color: var(--orange); }
-    .wind-source {
-      margin-top: 8px;
-      font-size: 10px;
-      color: var(--text-subtle);
-      font-style: italic;
-    }
+.banner-red   { background: rgba(244,67,54,.14);  border: 1px solid rgba(244,67,54,.35);  color: #ef9a9a; }
+.banner-amber { background: rgba(255,152,0,.11);  border: 1px solid rgba(255,152,0,.30);  color: #ffcc80; }
+.banner-blue  { background: rgba(66,165,245,.10); border: 1px solid rgba(66,165,245,.28); color: #90caf9; }
 
-    /* ── CARD 2: FIRE PROXIMITY ───────────────────────────── */
-    .fire-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--red-dim);
-      border: 1px solid rgba(239,68,68,.6);
-      border-radius: 4px;
-      padding: 3px 9px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #fff;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 12px;
-    }
-    .fire-badge::before { content: '🔥'; font-size: 11px; }
+.b-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.banner-red   .b-dot { background: var(--red); }
+.banner-amber .b-dot { background: var(--amber); }
+.banner-blue  .b-dot { background: var(--blue); }
 
-    .fire-distance {
-      display: flex;
-      align-items: flex-end;
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-    .dist-main {
-      font-size: 34px;
-      font-weight: 900;
-      color: #fff;
-      letter-spacing: -1px;
-      line-height: 1;
-    }
-    .dist-main span { color: var(--orange); }
-    .dist-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-      padding-bottom: 3px;
-      line-height: 1.4;
-    }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
-    /* Mock bar chart */
-    .bar-chart-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: var(--text-subtle);
-      margin-bottom: 5px;
-    }
-    .bar-chart-label .density-val { color: var(--amber); font-weight: 600; }
-    .bar-chart {
-      display: flex;
-      align-items: flex-end;
-      gap: 3px;
-      height: 34px;
-    }
-    .bar {
-      flex: 1;
-      height: 100%;
-      border-radius: 3px 3px 0 0;
-      background: var(--surface-3);
-      position: relative;
-      overflow: hidden;
-    }
-    .bar .fill {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      border-radius: 3px 3px 0 0;
-    }
-    .bar.hi   .fill { background: var(--orange); }
-    .bar.mid  .fill { background: var(--amber); }
-    .bar.lo   .fill { background: #3a2200; }
+/* ── Map wrapper ── */
+#map-wrapper {
+  position: relative;
+  overflow: hidden;
+}
 
-    /* ── CARD 3: CIVIC INTELLIGENCE ───────────────────────── */
-    .intel-box {
-      background: #0d0d0d;
-      border: 1px solid rgba(249,115,22,.18);
-      border-radius: var(--radius-sm);
-      padding: 13px 14px;
-      font-size: 13px;
-      line-height: 1.65;
-      color: var(--text-muted);
-    }
-    .intel-box strong { color: var(--text); font-weight: 700; }
-    .intel-box .highlight {
-      color: #fff;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-    .intel-box .route { color: var(--orange); font-weight: 700; }
+/* ── Map ── */
+#map {
+  width: 100%;
+  height: 100%;
+}
 
-    /* ── FOOTER ───────────────────────────────────────────── */
-    #footer {
-      grid-area: footer;
-      display: flex;
-      align-items: center;
-      padding: 0 24px;
-      background: #111;
-      border-top: 1px solid var(--border);
-    }
-    #footer p {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.4;
-    }
-    #footer strong { color: var(--text); }
+/* ── Floating metrics panel ── */
+.panel {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 270px;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  overflow: hidden;
+  z-index: 100;
+}
 
-    /* ── MAPLIBRE CONTROL STYLE ──────────────────────────── */
-    .maplibregl-ctrl-group {
-      background: var(--surface) !important;
-      border: 1px solid var(--border-hi) !important;
-      border-radius: var(--radius-sm) !important;
-      box-shadow: none !important;
-    }
-    .maplibregl-ctrl-group button {
-      background: transparent !important;
-    }
-    .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
-    .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon,
-    .maplibregl-ctrl-compass .maplibregl-ctrl-icon {
-      filter: invert(1) opacity(.7);
-    }
-    .maplibregl-ctrl-attrib { display: none !important; }
-    .maplibregl-ctrl-logo    { display: none !important; }
-    /* override Mapbox references too in case of cached CSS */
-    .mapboxgl-ctrl-attrib { display: none !important; }
+.panel-header {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
 
-    /* ── RESPONSIVE ───────────────────────────────────────── */
-    @media (max-width: 900px) {
-      :root { --sidebar-w: 100vw; }
-      #app {
-        grid-template-rows: var(--header-h) auto 45vh auto var(--footer-h);
-        grid-template-columns: 1fr;
-        grid-template-areas:
-          "header"
-          "status"
-          "map"
-          "sidebar"
-          "footer";
-        height: auto;
-        overflow: auto;
-      }
-      #map-wrap { height: 45vh; }
-      #header h1 { font-size: 17px; }
-      #header .subtitle { display: none; }
-    }
-  </style>
+.panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.panel-body {
+  padding: 10px 14px;
+}
+
+/* ── Metric row ── */
+.metric {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.metric:last-of-type { border-bottom: none; }
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.val-fire  { color: var(--accent); }
+.val-good  { color: var(--green); }
+.val-amber { color: var(--amber); }
+.val-muted { color: var(--muted); }
+.val-crit  { color: var(--fire-crit); }
+
+/* ── Freshness badge — §20 ── */
+.freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  margin-top: 8px;
+}
+
+.f-fresh      { background: rgba(76,175,80,.12);   color: var(--green); border: 1px solid rgba(76,175,80,.25); }
+.f-stale-ok   { background: rgba(255,152,0,.10);   color: var(--amber); border: 1px solid rgba(255,152,0,.25); }
+.f-stale-drop { background: rgba(102,102,102,.12); color: #888;         border: 1px solid rgba(102,102,102,.2); }
+.f-unknown    { background: rgba(102,102,102,.08); color: #666;         border: 1px solid rgba(102,102,102,.15); }
+
+/* ── Refresh button ── */
+.refresh-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 0;
+  background: none;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+
+.refresh-btn:hover    { border-color: var(--accent); color: var(--accent); }
+.refresh-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ── Diagnostics panel — §19 ── */
+.diag-panel {
+  position: absolute;
+  left: 16px;
+  bottom: 36px;
+  width: 230px;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  z-index: 100;
+  display: none;
+  overflow: hidden;
+}
+
+.diag-panel.open { display: block; }
+
+.diag-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.diag-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.diag-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.diag-body { padding: 8px 12px; }
+
+.diag-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border);
+}
+
+.diag-row:last-child { border-bottom: none; }
+.diag-key { color: var(--muted); }
+.diag-val { font-weight: 500; }
+
+/* ── Diag toggle ── */
+.diag-toggle-btn {
+  position: absolute;
+  left: 16px;
+  bottom: 36px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  padding: 5px 10px;
+  cursor: pointer;
+  z-index: 100;
+  transition: border-color .15s, color .15s;
+}
+
+.diag-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Fire markers ── */
+.marker {
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255,87,34,.55);
+  cursor: pointer;
+  transition: transform .15s;
+}
+
+.marker:hover    { transform: scale(1.5); }
+
+.marker.critical {
+  background: var(--fire-crit);
+  animation: pulseFire 1.1s ease-in-out infinite;
+}
+
+@keyframes pulseFire {
+  0%,100% { box-shadow: 0 0 5px rgba(255,23,68,.5);  transform: scale(1);    }
+  50%     { box-shadow: 0 0 14px rgba(255,23,68,.85); transform: scale(1.35); }
+}
+
+/* ── Popup ── */
+.maplibregl-popup-content {
+  background: #111 !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  padding: 10px 13px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5) !important;
+}
+
+.maplibregl-popup-tip { border-top-color: #111 !important; }
+
+.popup-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.popup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.popup-row span:last-child {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+/* ── MapLibre control overrides ── */
+.maplibregl-ctrl-top-left { top: 16px; left: 16px; }
+
+.maplibregl-ctrl-group {
+  background: rgba(20,20,20,.85) !important;
+  border: 1px solid var(--border-hi) !important;
+  border-radius: var(--radius-sm) !important;
+  backdrop-filter: blur(8px);
+}
+
+.maplibregl-ctrl-group button {
+  background-color: transparent !important;
+  color: var(--text-dim) !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background: rgba(255,255,255,.06) !important;
+  color: var(--text) !important;
+}
+
+.maplibregl-ctrl-scale {
+  background: rgba(0,0,0,.5) !important;
+  border-color: var(--border-hi) !important;
+  color: var(--text-dim) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+}
+
+/* ── §33 Legal disclaimer ── */
+footer {
+  position: absolute;
+  bottom: 8px;
+  right: 16px;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: .02em;
+  z-index: 100;
+  text-align: right;
+  pointer-events: none;
+}
+
+/* ── Loading spinner ── */
+.spinner {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .65s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .panel { right: 8px; top: 8px; width: 220px; }
+  .diag-toggle-btn { display: none; }
+  footer { display: none; }
+}
+
+</style>
 </head>
+
 <body>
 <div id="app">
 
-  <!-- ════ HEADER ════ -->
-  <header id="header">
-    <h1>Kahu Ola | Civic Hazard Dashboard</h1>
-    <span class="subtitle">Civic Intelligence for Hawai&#699;i.</span>
-    <span class="spacer"></span>
-    <div class="live-pill">Live</div>
+  <!-- ══════════════════════
+       HEADER — always renders
+       Invariant II guaranteed
+       ══════════════════════ -->
+  <header role="banner">
+
+    <div class="logo" aria-label="Kahu Ola — Civic Hazard Map V4.3.1">
+      🔥 Kahu Ola
+      <small>V4.3.1 · CIVIC HAZARD MAP</small>
+    </div>
+
+    <!-- Banner stack — §21 priority: parse > offline > degraded > cooldown -->
+    <div id="banner-stack" role="status" aria-live="polite" aria-label="System status">
+
+      <div id="b-parse" class="banner banner-red hidden" role="alert" aria-label="Data format error">
+        <span class="b-dot"></span>Data format error
+      </div>
+
+      <div id="b-offline" class="banner banner-amber hidden" aria-label="Offline mode">
+        <span class="b-dot"></span>
+        <span id="b-offline-text">Offline — showing cached data</span>
+      </div>
+
+      <div id="b-degraded" class="banner banner-amber hidden" aria-label="Degraded data source">
+        <span class="b-dot"></span>Data source temporarily degraded
+      </div>
+
+      <div id="b-cooldown" class="banner banner-blue hidden" aria-label="Rate limit cooldown">
+        <span class="b-dot"></span>Data temporarily unavailable — retrying shortly
+      </div>
+
+    </div>
+
   </header>
 
-  <!-- ════ STATUS BAR ════ -->
-  <div id="statusbar">
-    <div class="status-item">
-      <span class="icon">🕒</span>
-      <div>
-        <div class="label">Last Valid Snapshot</div>
-        <div class="value">
-          <strong id="snapshot-time">—</strong>
-          <span>HST (Cached)</span>
-          <span class="status-tag">Cache-first architecture</span>
+  <!-- ══════════════════════
+       MAP WRAPPER
+       ══════════════════════ -->
+  <div id="map-wrapper">
+
+    <div id="map" role="main" aria-label="Hawai'i wildfire hazard map"></div>
+
+    <!-- ── Floating metrics panel ── -->
+    <div class="panel" role="complementary" aria-label="Fire hazard metrics">
+
+      <div class="panel-header">
+        <div class="panel-title">Fire Signals · Maui Region</div>
+      </div>
+
+      <div class="panel-body">
+
+        <div class="metric">
+          <span class="metric-label">Detections</span>
+          <span class="metric-value val-fire" id="fire-count" aria-label="Fire detection count">
+            <span class="spinner"></span>
+          </span>
+        </div>
+
+        <div class="metric">
+          <span class="metric-label">Nearest</span>
+          <span class="metric-value" id="nearest-fire" aria-label="Nearest fire distance">—</span>
+        </div>
+
+        <div class="metric">
+          <span class="metric-label">Critical</span>
+          <span class="metric-value" id="critical-count" aria-label="Critical severity detections">—</span>
+        </div>
+
+        <div class="metric">
+          <span class="metric-label">Fetched</span>
+          <span class="metric-value val-muted" id="fetch-time" aria-label="Last fetch time">—</span>
+        </div>
+
+        <!-- §20 Stale Policy badge — display only, never influences alerts -->
+        <div id="freshness-badge" class="freshness f-unknown"
+          role="status" aria-label="Data freshness: unknown">
+          ● UNKNOWN
+        </div>
+
+        <button class="refresh-btn" id="refresh-btn"
+          aria-label="Manually refresh hazard data">
+          ↻ REFRESH
+        </button>
+
+      </div>
+    </div><!-- /.panel -->
+
+    <!-- Diagnostics toggle button -->
+    <button class="diag-toggle-btn" id="diag-toggle-btn"
+      aria-expanded="false" aria-controls="diag-panel"
+      aria-label="Open system diagnostics">
+      ⚙ SYSTEM
+    </button>
+
+    <!-- ── §19 Data Integrity Screen ── -->
+    <div class="diag-panel" id="diag-panel"
+      role="region" aria-label="System diagnostics — §19 Data Integrity">
+
+      <div class="diag-header" id="diag-header">
+        <span class="diag-title">§19 Diagnostics</span>
+        <button class="diag-close" aria-label="Close diagnostics">✕</button>
+      </div>
+
+      <div class="diag-body">
+        <div class="diag-row">
+          <span class="diag-key">networkFailures</span>
+          <span class="diag-val" id="d-net">0</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">parseFailures</span>
+          <span class="diag-val" id="d-parse">0</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">consecutiveFailures</span>
+          <span class="diag-val" id="d-consec">0</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">aggregatorHealth</span>
+          <span class="diag-val" id="d-health" style="color:var(--green)">healthy</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">cooldownActive</span>
+          <span class="diag-val" id="d-cooldown">false</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">offline</span>
+          <span class="diag-val" id="d-offline">false</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">privacyModel</span>
+          <span class="diag-val" style="color:var(--green)">Zero PII</span>
+        </div>
+        <div class="diag-row">
+          <span class="diag-key">endpoint</span>
+          <span class="diag-val val-muted" style="font-size:9px">kahuola.org/api/*</span>
         </div>
       </div>
-    </div>
-    <div class="status-item">
-      <span class="icon">📍</span>
-      <div>
-        <div class="label">Location</div>
-        <div class="value" id="location-label">
-          Lahaina, Maui
-          <span class="status-tag">Browser-Edge Geolocation</span>
-        </div>
-      </div>
-    </div>
-  </div>
+    </div><!-- /.diag-panel -->
 
-  <!-- ════ MAP ════ -->
-  <div id="map-wrap">
-    <div id="map"></div>
-    <div class="map-label" id="label-firms">
-      NASA FIRMS Detection<br>(Active)
-    </div>
-    <div class="map-label" id="label-routes">
-      Interactive-base map,<br>critical routes of West Maui
-    </div>
-  </div>
+    <!-- §33 Legal disclaimer — always visible, absolute -->
+    <footer role="contentinfo">
+      Kahu Ola civic technology · not an official emergency directive
+    </footer>
 
-  <!-- ════ SIDEBAR ════ -->
-  <aside id="sidebar">
-    <div class="sidebar-header">
-      <h2>Integrated Environmental Signals</h2>
-    </div>
-
-    <!-- ── Card 1: Wind ── -->
-    <div class="signal-card">
-      <div class="card-title">
-        <span class="card-num">1</span>
-        Wind Data (NOAA Telemetry)
-      </div>
-      <div class="wind-body">
-        <div class="compass">
-          <span class="card-n">N</span>
-          <span class="card-s">S</span>
-          <span class="card-e">E</span>
-          <span class="card-w">W</span>
-          <div class="needle">
-            <div class="arrow-head"></div>
-            <div class="arrow-tail"></div>
-          </div>
-          <div class="dot"></div>
-        </div>
-        <div class="wind-stats">
-          <div class="wind-stat-row">
-            <div class="wlabel">Wind Direction</div>
-            <div class="wvalue">FROM ENE</div>
-          </div>
-          <div class="wind-stat-row">
-            <div class="wlabel">Wind Speed</div>
-            <div class="wvalue">28 mph</div>
-          </div>
-          <div class="wind-stat-row">
-            <div class="wlabel">Gusts</div>
-            <div class="wvalue gusts">42 mph</div>
-          </div>
-          <div class="wind-source">Source: Station PHHI (Kahului Airport)</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Card 2: Fire Proximity ── -->
-    <div class="signal-card">
-      <div class="card-title">
-        <span class="card-num">2</span>
-        Fire Proximity (NASA MODIS/VIIRS)
-      </div>
-      <div class="fire-badge">Nearest Detection</div>
-      <div class="fire-distance">
-        <div class="dist-main">1.4 mi <span>N</span></div>
-        <div class="dist-sub">of current<br>view</div>
-      </div>
-      <div class="bar-chart-label">
-        <span>Detection Density</span>
-        <span class="density-val">Moderate</span>
-      </div>
-      <div class="bar-chart">
-        <div class="bar hi" ><div class="fill" style="height:50%"></div></div>
-        <div class="bar hi" ><div class="fill" style="height:80%"></div></div>
-        <div class="bar mid"><div class="fill" style="height:95%"></div></div>
-        <div class="bar mid"><div class="fill" style="height:70%"></div></div>
-        <div class="bar hi" ><div class="fill" style="height:60%"></div></div>
-        <div class="bar lo" ><div class="fill" style="height:100%"></div></div>
-        <div class="bar lo" ><div class="fill" style="height:100%"></div></div>
-        <div class="bar lo" ><div class="fill" style="height:100%"></div></div>
-      </div>
-    </div>
-
-    <!-- ── Card 3: Civic Intelligence ── -->
-    <div class="signal-card">
-      <div class="card-title">
-        <span class="card-num">3</span>
-        Civic Intelligence Update
-      </div>
-      <div class="intel-box">
-        <strong>DATA ANALYSIS:</strong> High Wind Gusts + Nearby Detections near Lahaina indicate
-        <span class="highlight">RAPID SPREAD POTENTIAL</span> toward the coast.
-        <span class="route">Honoapi&#699;ilani Hwy</span> is the primary route.
-        Monitor <strong>MEMA</strong> for official orders.
-      </div>
-    </div>
-
-  </aside>
-
-  <!-- ════ FOOTER ════ -->
-  <footer id="footer">
-    <p>
-      <strong>Wildfire-First.</strong>&nbsp; Privacy-First (No tracking).&nbsp;
-      <strong>Failure-Tolerant.</strong>&nbsp;
-      A community-driven mission, strengthening resilience for Hawai&#699;i.
-    </p>
-  </footer>
+  </div><!-- /#map-wrapper -->
 
 </div><!-- /#app -->
 
 <script>
-  /* ════════════════════════════════════════════════════════════
-     Kahu Ola — Civic Hazard Dashboard runtime
-  ════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   KAHU OLA V4.3.1 — MAP ENGINE
+   ───────────────────────────────────────────────────────────────
+   Invariant I   — all data via kahuola.org Worker only
+   Invariant II  — UI renders under all failure conditions
+   Invariant III — fail-closed: ParseException → return []
+   Invariant IV  — Zero PII: no GPS transmitted, on-device only
+   Invariant V   — perimeter official/estimated hard rule (§21)
+   ═══════════════════════════════════════════════════════════════ */
 
-  /* ── Constants ────────────────────────────────────────────── */
-  var MAP_CENTER   = [-156.675, 20.878];   // Lahaina, West Maui
-  var FIRMS_BBOX   = '-156.90,20.65,-156.40,21.10'; // West Maui bounding box
-  var FIRMS_DAYS   = 1;
-  var FIRMS_API    = '/api/firms/hotspots?bbox=' + FIRMS_BBOX +
-                     '&days=' + FIRMS_DAYS +
-                     '&dataset=VIIRS_SNPP_NRT&limit=500';
+"use strict";
 
-  /* ── Utilities ────────────────────────────────────────────── */
-  function hstTime(d) {
+/* ─────────────────────────────────────────────────────────
+   AGGREGATOR BASE — Invariant I
+   Client knows ONLY this Worker origin. Never upstream APIs.
+   ───────────────────────────────────────────────────────── */
+
+const AGGREGATOR_BASE = "https://kahuola.org";
+
+const ENDPOINTS = {
+  fire: `${AGGREGATOR_BASE}/api/firms/hotspots?bbox=-157.2,20.4,-156.1,21.2&days=1`,
+};
+
+/* Reference center — Lahaina · on-device only · never transmitted (Invariant IV) */
+const REF_CENTER = [-156.675, 20.878];
+
+/* §15 Energy rules: 5-minute minimum polling floor */
+const POLL_INTERVAL_MS   = 5 * 60 * 1000;
+const FETCH_TIMEOUT_MS   = 12_000;
+const DEGRADED_THRESHOLD = 3;
+
+/* ─────────────────────────────────────────────────────────
+   DIAGNOSTICS STORE — mirrors Flutter §11 schema
+   ───────────────────────────────────────────────────────── */
+
+const DS = {
+  networkFailures:     0,
+  parseFailures:       0,
+  consecutiveFailures: 0,
+  aggregatorHealth:    "healthy",  // healthy | degraded | unavailable
+  inCooldown:          false,
+  cooldownUntil:       null,
+  isOffline:           false,
+  lastFireFetchAt:     null,
+
+  get isCooldownActive() {
+    return this.inCooldown && this.cooldownUntil && Date.now() < this.cooldownUntil;
+  },
+
+  recordError(domain) {
+    if (domain === "network") {
+      this.networkFailures++;
+      this.consecutiveFailures++;
+    } else if (domain === "parse") {
+      this.parseFailures++;
+      this.consecutiveFailures++;
+    }
+    if (this.consecutiveFailures >= DEGRADED_THRESHOLD) {
+      this.aggregatorHealth = "degraded";
+    }
+    this._syncUI();
+  },
+
+  recordSuccess() {
+    this.consecutiveFailures = 0;
+    this.aggregatorHealth    = "healthy";
+    this.inCooldown          = false;
+    this.isOffline           = false;
+    this.lastFireFetchAt     = new Date();
+    this._syncUI();
+  },
+
+  enterCooldown(seconds = 60) {
+    this.inCooldown    = true;
+    this.cooldownUntil = Date.now() + seconds * 1000;
+    this._syncUI();
+  },
+
+  /* §21 Banner priority: parse > offline > degraded > cooldown */
+  _syncUI() {
+    showBanner("b-parse",    this.parseFailures > 0);
+    showBanner("b-offline",  this.isOffline);
+    showBanner("b-degraded", this.aggregatorHealth === "degraded" && !this.isOffline);
+    showBanner("b-cooldown", this.isCooldownActive);
+
+    setText("d-net",     this.networkFailures);
+    setText("d-parse",   this.parseFailures);
+    setText("d-consec",  this.consecutiveFailures);
+    setText("d-cooldown",this.isCooldownActive ? "true" : "false");
+    setText("d-offline", this.isOffline ? "true" : "false");
+
+    const hEl = document.getElementById("d-health");
+    if (hEl) {
+      hEl.textContent = this.aggregatorHealth;
+      hEl.style.color = { healthy: "var(--green)", degraded: "var(--amber)", unavailable: "var(--red)" }
+        [this.aggregatorHealth] || "var(--muted)";
+    }
+  },
+};
+
+/* ─────────────────────────────────────────────────────────
+   UTILS
+   ───────────────────────────────────────────────────────── */
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = String(val);
+}
+
+function showBanner(id, show) {
+  const el = document.getElementById(id);
+  if (el) show ? el.classList.remove("hidden") : el.classList.add("hidden");
+}
+
+function hstTime(date) {
+  return (date || new Date()).toLocaleTimeString("en-US", {
+    timeZone: "Pacific/Honolulu",
+    hour: "2-digit",
+    minute: "2-digit",
+  }) + " HST";
+}
+
+/* Haversine — on-device only, result never transmitted */
+function distMiles(a, b) {
+  const R    = 3958.8;
+  const dLat = (b[1] - a[1]) * Math.PI / 180;
+  const dLon = (b[0] - a[0]) * Math.PI / 180;
+  const lat1 = a[1] * Math.PI / 180;
+  const lat2 = b[1] * Math.PI / 180;
+  const x    = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+/* §20 Stale Policy — display classification only */
+function freshnessOf(fetchedAt) {
+  if (!fetchedAt) return "unknown";
+  const ageMin = (Date.now() - fetchedAt.getTime()) / 60_000;
+  if (ageMin <= 10) return "fresh";
+  if (ageMin <= 60) return "stale_ok";
+  return "stale_drop";
+}
+
+function applyFreshnessBadge(fetchedAt) {
+  const el = document.getElementById("freshness-badge");
+  if (!el) return;
+  const f = freshnessOf(fetchedAt);
+  const cfg = {
+    fresh:      ["f-fresh",      "✓ FRESH",         "Data freshness: fresh"],
+    stale_ok:   ["f-stale-ok",   "⚠ MAY BE STALE",  "Data freshness: may be stale"],
+    stale_drop: ["f-stale-drop", "✗ OUTDATED",       "Data freshness: outdated"],
+    unknown:    ["f-unknown",    "● UNKNOWN",        "Data freshness: unknown"],
+  };
+  const [cls, label, ariaLabel] = cfg[f];
+  el.className = `freshness ${cls}`;
+  el.textContent = label;
+  el.setAttribute("aria-label", ariaLabel);
+}
+
+/* ─────────────────────────────────────────────────────────
+   STRICT FETCH — Invariant III
+   ParseException → return [] · never partial render
+   ───────────────────────────────────────────────────────── */
+
+async function strictFetch(url) {
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+
+    /* §13 Rate limit */
+    if (res.status === 429) {
+      DS.enterCooldown(60);
+      return [];
+    }
+
+    if (!res.ok) {
+      DS.recordError("network");
+      return [];
+    }
+
+    /* Invariant III: strict JSON parse */
+    let data;
     try {
-      return (d || new Date()).toLocaleTimeString('en-US', {
-        timeZone: 'Pacific/Honolulu',
-        hour: '2-digit', minute: '2-digit', hour12: true
-      });
-    } catch (e) { return new Date().toLocaleTimeString(); }
+      data = JSON.parse(await res.text());
+    } catch {
+      DS.recordError("parse");
+      return [];
+    }
+
+    /* Schema validation — Invariant III: never auto-correct */
+    if (!data || typeof data !== "object") {
+      DS.recordError("parse");
+      return [];
+    }
+
+    const features = Array.isArray(data.features) ? data.features : [];
+    DS.recordSuccess();
+    return features;
+
+  } catch (err) {
+    clearTimeout(timer);
+    if (!navigator.onLine) DS.isOffline = true;
+    DS.recordError("network");
+    return []; /* Invariant II: always return clean empty array */
   }
+}
 
-  /* Haversine distance in miles between two [lng,lat] points */
-  function distMiles(a, b) {
-    var R  = 3958.8;
-    var d1 = (b[1] - a[1]) * Math.PI / 180;
-    var d2 = (b[0] - a[0]) * Math.PI / 180;
-    var s  = Math.sin(d1/2)*Math.sin(d1/2) +
-             Math.cos(a[1]*Math.PI/180) * Math.cos(b[1]*Math.PI/180) *
-             Math.sin(d2/2)*Math.sin(d2/2);
-    return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
-  }
+/* ─────────────────────────────────────────────────────────
+   MAP — style: demotiles (per requirement)
+   Invariant II: error handler prevents crash
+   ───────────────────────────────────────────────────────── */
 
-  /* Cardinal direction from center to a point */
-  function bearing(from, to) {
-    var dLng = (to[0] - from[0]) * Math.PI / 180;
-    var lat1 = from[1] * Math.PI / 180;
-    var lat2 = to[1]   * Math.PI / 180;
-    var x = Math.sin(dLng) * Math.cos(lat2);
-    var y = Math.cos(lat1) * Math.sin(lat2) -
-            Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-    var deg = (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
-    var dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
-                'S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    return dirs[Math.round(deg / 22.5) % 16];
-  }
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://demotiles.maplibre.org/style.json",
+  center: REF_CENTER,
+  zoom: 11,
+  attributionControl: true,
+});
 
-  /* ── Status bar: snapshot time ────────────────────────────── */
-  document.getElementById('snapshot-time').textContent = hstTime();
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
 
-  /* ── Status bar: geolocation (display-only) ──────────────── */
-  (function () {
-    var el = document.getElementById('location-label');
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(function (pos) {
-      var lat = pos.coords.latitude.toFixed(4);
-      var lng = Math.abs(pos.coords.longitude).toFixed(4);
-      el.innerHTML =
-        'Lahaina, Maui' +
-        ' <span class="status-tag">On-Device View</span>' +
-        ' <span style="font-size:11px;color:var(--text-subtle)">' +
-        lat + '&deg;N, ' + lng + '&deg;W</span>';
-    }, function () { /* denied — keep default */ });
-  })();
+/* Invariant II: map style error never crashes the panel */
+map.on("error", () => { /* swallow — metrics panel remains interactive */ });
 
-  /* ── MapLibre GL map (no token, CartoDB dark vector style) ── */
-  var map = new maplibregl.Map({
-    container: 'map',
-    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    center: MAP_CENTER,
-    zoom: 11.5,
-    attributionControl: false
+/* ─────────────────────────────────────────────────────────
+   MARKERS
+   ───────────────────────────────────────────────────────── */
+
+let fireMarkers = [];
+
+function clearMarkers() {
+  fireMarkers.forEach(m => m.remove());
+  fireMarkers = [];
+}
+
+function addFireMarker(coord, severity) {
+  const el = document.createElement("div");
+  el.className = "marker" + (severity === "CRITICAL" ? " critical" : "");
+  el.setAttribute("role", "img");
+  el.setAttribute("aria-label", `Fire detection, severity ${severity}`);
+
+  const popup = new maplibregl.Popup({ closeButton: false, offset: 10 })
+    .setHTML(`
+      <div class="popup-title">🔥 Fire Detection</div>
+      <div class="popup-row">
+        <span>Severity</span>
+        <span>${severity || "UNKNOWN"}</span>
+      </div>
+      <div class="popup-row">
+        <span>Coord</span>
+        <span>${coord[1].toFixed(3)}, ${coord[0].toFixed(3)}</span>
+      </div>
+    `);
+
+  fireMarkers.push(
+    new maplibregl.Marker({ element: el })
+      .setLngLat(coord)
+      .setPopup(popup)
+      .addTo(map)
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   LOAD FIRE SIGNALS
+   Invariant I: routes through Worker /api/firms/*
+   Invariant II: UI always shows something on error
+   Invariant III: invalid features are dropped, never rendered
+   ───────────────────────────────────────────────────────── */
+
+async function loadFireSignals() {
+  const btn = document.getElementById("refresh-btn");
+  if (btn) btn.disabled = true;
+
+  /* Invariant II: loading state, never blank */
+  document.getElementById("fire-count").innerHTML = `<span class="spinner"></span>`;
+
+  const features = await strictFetch(ENDPOINTS.fire);
+
+  clearMarkers();
+
+  let closest       = Infinity;
+  let criticalCount = 0;
+
+  features.forEach(f => {
+    /* Invariant III: strict field validation — drop invalid records */
+    if (!f?.geometry?.coordinates) return;
+    const c = f.geometry.coordinates;
+    if (!Array.isArray(c) || c.length < 2) return;
+    /* GeoJSON coordinate bounds */
+    if (c[0] < -180 || c[0] > 180 || c[1] < -90 || c[1] > 90) return;
+
+    const sev = f.properties?.severity || "UNKNOWN";
+    if (sev === "CRITICAL") criticalCount++;
+
+    addFireMarker(c, sev);
+
+    const d = distMiles(REF_CENTER, c);
+    if (d < closest) closest = d;
   });
 
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
-
-  /* Marker pool for FIRMS dots */
-  var firmsMarkers = [];
-
-  function clearFirmsMarkers() {
-    firmsMarkers.forEach(function (m) { m.remove(); });
-    firmsMarkers = [];
+  /* Update metrics — Invariant II: always populate DOM */
+  const countEl = document.getElementById("fire-count");
+  if (countEl) {
+    countEl.textContent = String(features.length);
+    countEl.className   = `metric-value ${features.length > 0 ? "val-fire" : "val-good"}`;
   }
 
-  function addFirmsMarker(lngLat, frp) {
-    var el = document.createElement('div');
-    el.className = 'firms-dot';
-    /* Scale size slightly by FRP (fire radiative power) */
-    var size = Math.min(16, Math.max(7, 7 + (parseFloat(frp) || 0) / 20));
-    el.style.width  = size + 'px';
-    el.style.height = size + 'px';
-    var marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-      .setLngLat(lngLat)
-      .addTo(map);
-    firmsMarkers.push(marker);
-  }
-
-  /* ── Update Fire Proximity card with real data ────────────── */
-  function updateFireCard(features) {
-    var count = features.length;
-
-    /* Find nearest detection to map center */
-    var nearest = null;
-    var nearestDist = Infinity;
-    features.forEach(function (f) {
-      var coord = f.geometry.coordinates; /* [lng, lat] */
-      var d = distMiles(MAP_CENTER, coord);
-      if (d < nearestDist) { nearestDist = d; nearest = coord; }
-    });
-
-    /* Nearest distance display */
-    var distEl   = document.querySelector('.dist-main');
-    var subEl    = document.querySelector('.dist-sub');
-    var badgeEl  = document.querySelector('.fire-badge');
-    var snapshotEl = document.getElementById('snapshot-time');
-
-    if (nearest && nearestDist < 500) {
-      var dir  = bearing(MAP_CENTER, nearest);
-      var dist = nearestDist < 10
-        ? nearestDist.toFixed(1)
-        : Math.round(nearestDist).toString();
-      distEl.innerHTML = dist + ' mi <span>' + dir + '</span>';
-      subEl.innerHTML  = 'of Lahaina<br>(' + count + ' detections)';
-      badgeEl.textContent = 'Nearest Detection';
-    } else if (count === 0) {
-      distEl.innerHTML = '<span style="color:var(--green);font-size:18px">None</span>';
-      subEl.textContent = 'No active detections';
-      badgeEl.textContent = 'All Clear (last 24h)';
-      badgeEl.style.background = 'var(--green)';
-      badgeEl.style.border = '1px solid var(--green)';
-    }
-
-    /* Detection density bar chart — bucket by distance rings */
-    var rings = [0, 2, 5, 10, 20, 50, 100, 200];
-    var buckets = [0, 0, 0, 0, 0, 0, 0];
-    features.forEach(function (f) {
-      var d = distMiles(MAP_CENTER, f.geometry.coordinates);
-      for (var i = 0; i < rings.length - 1; i++) {
-        if (d >= rings[i] && d < rings[i+1]) { buckets[i]++; break; }
-      }
-    });
-    var maxB = Math.max.apply(null, buckets) || 1;
-    var bars = document.querySelectorAll('.bar-chart .bar');
-    bars.forEach(function (bar, i) {
-      var fill = bar.querySelector('.fill');
-      if (!fill || buckets[i] === undefined) return;
-      var pct = Math.round((buckets[i] / maxB) * 100);
-      fill.style.height = Math.max(4, pct) + '%';
-      /* Color by proximity */
-      bar.className = 'bar ' + (i <= 1 ? 'hi' : i <= 3 ? 'mid' : 'lo');
-    });
-
-    /* Density label */
-    var densityLabel = document.querySelector('.bar-chart-label .density-val');
-    if (densityLabel) {
-      var level = count === 0 ? 'None'
-                : count < 5  ? 'Low'
-                : count < 20 ? 'Moderate'
-                : count < 50 ? 'High'
-                : 'Extreme';
-      densityLabel.textContent = level;
-    }
-
-    /* Update snapshot time with FIRMS acq_date if available */
-    var firstDate = features[0] && features[0].properties && features[0].properties.acq_date;
-    if (firstDate && snapshotEl) {
-      snapshotEl.textContent = firstDate + ' (FIRMS)';
+  const nearEl = document.getElementById("nearest-fire");
+  if (nearEl) {
+    if (features.length === 0) {
+      nearEl.textContent = "None";
+      nearEl.className   = "metric-value val-good";
+    } else {
+      nearEl.textContent = closest < 9999 ? closest.toFixed(1) + " mi" : "—";
+      nearEl.className   = `metric-value ${closest < 5 ? "val-crit" : closest < 20 ? "val-amber" : "val-fire"}`;
     }
   }
 
-  /* ── Fetch real FIRMS data ────────────────────────────────── */
-  function loadFirmsData() {
-    fetch(FIRMS_API)
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        var features = (data && data.features) ? data.features : [];
-        clearFirmsMarkers();
-        features.forEach(function (f) {
-          addFirmsMarker(f.geometry.coordinates, f.properties.frp);
-        });
-        updateFireCard(features);
-      })
-      .catch(function (e) {
-        console.warn('FIRMS API unavailable, using fallback markers:', e.message);
-        /* Graceful fallback: show last-known mock markers so map isn't empty */
-        var fallback = [
-          [-156.692, 20.902], [-156.697, 20.895], [-156.700, 20.888],
-          [-156.694, 20.882], [-156.688, 20.876], [-156.695, 20.871],
-          [-156.701, 20.867], [-156.685, 20.865], [-156.692, 20.860],
-          [-156.703, 20.858]
-        ];
-        clearFirmsMarkers();
-        fallback.forEach(function (c) { addFirmsMarker(c, 0); });
-      });
+  const critEl = document.getElementById("critical-count");
+  if (critEl) {
+    critEl.textContent = criticalCount > 0 ? String(criticalCount) : "None";
+    critEl.className   = `metric-value ${criticalCount > 0 ? "val-crit" : "val-good"}`;
   }
 
-  map.on('load', function () {
-    loadFirmsData();
-  });
+  setText("fetch-time", DS.lastFireFetchAt ? hstTime(DS.lastFireFetchAt) : "—");
+  applyFreshnessBadge(DS.lastFireFetchAt);
 
-  /* Refresh FIRMS data every 5 minutes */
-  setInterval(loadFirmsData, 5 * 60 * 1000);
+  if (DS.isOffline && DS.lastFireFetchAt) {
+    setText("b-offline-text", `Offline — last: ${hstTime(DS.lastFireFetchAt)}`);
+  }
+
+  if (btn) btn.disabled = false;
+}
+
+/* ─────────────────────────────────────────────────────────
+   CONNECTIVITY
+   ───────────────────────────────────────────────────────── */
+
+window.addEventListener("offline", () => {
+  DS.isOffline = true;
+  DS._syncUI();
+});
+
+window.addEventListener("online", () => {
+  DS.isOffline = false;
+  DS._syncUI();
+  loadFireSignals(); /* auto-refresh on reconnect */
+});
+
+/* ─────────────────────────────────────────────────────────
+   DIAGNOSTICS PANEL — §19
+   ───────────────────────────────────────────────────────── */
+
+const diagPanel  = document.getElementById("diag-panel");
+const diagToggle = document.getElementById("diag-toggle-btn");
+
+diagToggle?.addEventListener("click", () => {
+  const open = diagPanel.classList.toggle("open");
+  diagToggle.setAttribute("aria-expanded", String(open));
+  if (open) {
+    diagToggle.style.display = "none";
+    DS._syncUI();
+  }
+});
+
+document.getElementById("diag-header")?.addEventListener("click", () => {
+  diagPanel.classList.remove("open");
+  diagToggle.setAttribute("aria-expanded", "false");
+  if (diagToggle) diagToggle.style.display = "";
+});
+
+/* ─────────────────────────────────────────────────────────
+   REFRESH BUTTON
+   ───────────────────────────────────────────────────────── */
+
+document.getElementById("refresh-btn")?.addEventListener("click", () => {
+  if (DS.isCooldownActive) return;
+  loadFireSignals();
+});
+
+/* ─────────────────────────────────────────────────────────
+   INIT — §10 Bootstrap
+   Invariant II: map.on("load") + graceful fail
+   ───────────────────────────────────────────────────────── */
+
+map.on("load", () => {
+  loadFireSignals();
+});
+
+/* §15 Energy rules: minimum 5-minute polling floor */
+setInterval(() => {
+  if (!DS.isCooldownActive && !DS.isOffline) {
+    loadFireSignals();
+  }
+}, POLL_INTERVAL_MS);
+
+/* ─────────────────────────────────────────────────────────
+   INVARIANT I RUNTIME GUARD
+   Block any direct upstream API calls — architectural fence
+   ───────────────────────────────────────────────────────── */
+
+const _nativeFetch = window.fetch.bind(window);
+
+window.fetch = function kahuOlaFetch(url, ...args) {
+  const u = String(url);
+  const BLOCKED_UPSTREAMS = [
+    "firms.modaps.eosdis.nasa.gov",
+    "airnowapi.org",
+    "hazards.weather.gov",
+    "api.weather.gov",
+    "wfigs.fire.ca.gov",
+    "mesowest.utah.edu",
+  ];
+  for (const domain of BLOCKED_UPSTREAMS) {
+    if (u.includes(domain)) {
+      DS.recordError("network");
+      return Promise.reject(new Error(`KahuOla:InvariantI — upstream call blocked: ${domain}`));
+    }
+  }
+  return _nativeFetch(url, ...args);
+};
+
 </script>
 </body>
 </html>
