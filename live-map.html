@@ -658,17 +658,17 @@
       if (DS.isOffline) {
         summaryText.textContent = "Cached fire signals are being shown while the connection is offline. Treat the map as situational context, not a live emergency directive.";
       } else if (features.length === 0) {
-        summaryText.textContent = "No current FIRMS detections were returned for the Maui region in this snapshot.";
+        summaryText.textContent = "NASA FIRMS returned no current wildfire detections for the Maui region in this snapshot.";
       } else if (criticalCount > 0) {
-        summaryText.textContent = `Critical detections are present near Lahaina. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
+        summaryText.textContent = `NASA FIRMS indicates critical wildfire detections near Lahaina. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
       } else {
-        summaryText.textContent = `${features.length} wildfire detections are present in the Maui region. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
+        summaryText.textContent = 'NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} for the Maui region in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
       }
 
       if (summarySource) {
         summarySource.textContent = IS_LOCAL
           ? "Source: Local test dataset"
-          : "Source: Kahu Ola Worker";
+          : "Source: NASA FIRMS via Kahu Ola Worker";
       }
 
       if (summaryUpdated) {
@@ -865,4 +865,5 @@
     }, POLL_MS);
   </script>
 </body>
+
 </html>
