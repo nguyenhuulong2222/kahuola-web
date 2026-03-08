@@ -33,20 +33,17 @@
   <style>
     :root{
       --bg:#0c0c0c;
-      --surface:#121212;
-      --surface-2:#171717;
-      --panel:rgba(15,15,15,.92);
-      --panel-strong:rgba(10,10,10,.96);
+      --panel:rgba(13,13,13,.94);
+      --panel-strong:rgba(10,10,10,.97);
       --border:rgba(255,255,255,.08);
       --border-hi:rgba(255,255,255,.14);
       --text:#ececec;
-      --text-dim:#b0b0b0;
+      --text-dim:#b5b5b5;
       --muted:#7a7a7a;
       --accent:#ff6a00;
       --crit:#ff1744;
       --green:#4caf50;
       --amber:#ff9800;
-
       --radius:18px;
       --radius-sm:12px;
       --shadow:0 16px 42px rgba(0,0,0,.35);
@@ -59,9 +56,8 @@
       --safe-bottom:env(safe-area-inset-bottom, 0px);
       --safe-left:env(safe-area-inset-left, 0px);
 
-      --header-h:72px;
-      --mobile-actions-h:58px;
-      --sheet-peek:168px;
+      --header-h:64px;
+      --sheet-peek:88px;
     }
 
     *{box-sizing:border-box}
@@ -90,6 +86,7 @@
 
     #app{
       position:relative;
+      width:100%;
       height:100svh;
       height:100dvh;
       overflow:hidden;
@@ -107,15 +104,15 @@
       gap:12px;
       min-height:var(--header-h);
       padding:
-        calc(10px + var(--safe-top))
-        calc(14px + var(--safe-right))
-        10px
-        calc(14px + var(--safe-left));
+        calc(8px + var(--safe-top))
+        calc(12px + var(--safe-right))
+        8px
+        calc(12px + var(--safe-left));
       background:linear-gradient(
         to bottom,
-        rgba(10,10,10,.96),
-        rgba(10,10,10,.78),
-        rgba(10,10,10,.28),
+        rgba(8,8,8,.94),
+        rgba(8,8,8,.72),
+        rgba(8,8,8,.18),
         transparent
       );
       pointer-events:none;
@@ -129,7 +126,7 @@
     .logo{
       font-weight:700;
       font-size:15px;
-      line-height:1.1;
+      line-height:1.05;
       letter-spacing:-.01em;
     }
 
@@ -148,13 +145,12 @@
       margin-left:auto;
       display:flex;
       align-items:center;
-      gap:10px;
+      gap:8px;
       pointer-events:auto;
     }
 
     .menu-links{
       display:flex;
-      align-items:center;
       gap:8px;
     }
 
@@ -165,21 +161,12 @@
       align-items:center;
       border:1px solid var(--border-hi);
       border-radius:999px;
-      background:rgba(18,18,18,.75);
+      background:rgba(18,18,18,.76);
       color:var(--text-dim);
       font-size:11px;
       font-family:var(--font-mono);
-      transition:border-color .2s ease,color .2s ease,background .2s ease;
-      -webkit-tap-highlight-color:transparent;
       backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);
-    }
-
-    .menu-link:hover,
-    .menu-link:focus-visible{
-      border-color:var(--accent);
-      color:var(--text);
-      outline:none;
     }
 
     #banner-stack{
@@ -251,7 +238,7 @@
 
     .desktop-panel{
       position:absolute;
-      top:calc(92px + var(--safe-top));
+      top:calc(84px + var(--safe-top));
       right:calc(16px + var(--safe-right));
       z-index:25;
       width:330px;
@@ -275,7 +262,7 @@
       padding:
         0
         calc(10px + var(--safe-right))
-        calc(10px + var(--safe-bottom) + var(--mobile-actions-h))
+        calc(10px + var(--safe-bottom))
         calc(10px + var(--safe-left));
       pointer-events:none;
     }
@@ -284,11 +271,11 @@
       pointer-events:auto;
       background:var(--panel-strong);
       border:1px solid var(--border-hi);
-      border-radius:24px 24px 18px 18px;
+      border-radius:22px 22px 18px 18px;
       box-shadow:0 -12px 36px rgba(0,0,0,.35);
       overflow:hidden;
       transform:translateY(calc(100% - var(--sheet-peek)));
-      transition:transform .28s ease;
+      transition:transform .26s ease;
       max-height:72svh;
       max-height:72dvh;
       display:flex;
@@ -299,19 +286,37 @@
       transform:translateY(0);
     }
 
+    .sheet-topbar{
+      padding:8px 10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.01);
+    }
+
     .sheet-handle-wrap{
-      padding:10px 0 4px;
       display:flex;
       justify-content:center;
+      padding:0 0 8px;
       cursor:pointer;
       touch-action:manipulation;
     }
 
     .sheet-handle{
-      width:44px;
+      width:42px;
       height:5px;
       border-radius:999px;
       background:rgba(255,255,255,.22);
+    }
+
+    .sheet-quick-actions{
+      display:flex;
+      gap:8px;
+    }
+
+    .sheet-quick-actions .action-btn{
+      flex:1;
+      min-height:38px;
+      border-radius:999px;
+      font-size:10.5px;
     }
 
     .panel-head{
@@ -340,9 +345,7 @@
       border-bottom:1px solid var(--border);
     }
 
-    .metric:last-of-type{
-      border-bottom:none;
-    }
+    .metric:last-of-type{border-bottom:none}
 
     .metric-label{
       font-size:12px;
@@ -466,36 +469,16 @@
       font-weight:600;
       font-family:var(--font-mono);
       letter-spacing:.04em;
-      transition:border-color .2s ease,color .2s ease,background .2s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
       -webkit-tap-highlight-color:transparent;
       touch-action:manipulation;
     }
 
-    .refresh-btn{
-      width:100%;
-    }
-
-    .action-btn{
-      flex:1;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      text-decoration:none;
-    }
-
-    .refresh-btn:hover,
-    .refresh-btn:focus-visible,
-    .action-btn:hover,
-    .action-btn:focus-visible{
-      color:var(--text);
-      border-color:var(--accent);
-      outline:none;
-    }
-
-    .refresh-btn:disabled{
-      opacity:.5;
-      cursor:not-allowed;
-    }
+    .refresh-btn{width:100%}
+    .action-btn{flex:1}
+    .refresh-btn:disabled{opacity:.5;cursor:not-allowed}
 
     .diag-btn{
       position:absolute;
@@ -512,8 +495,6 @@
       font-size:11px;
       font-family:var(--font-mono);
       box-shadow:var(--shadow);
-      -webkit-tap-highlight-color:transparent;
-      touch-action:manipulation;
     }
 
     .diag{
@@ -525,8 +506,6 @@
       background:var(--panel);
       border:1px solid var(--border-hi);
       border-radius:var(--radius);
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
       overflow:hidden;
       box-shadow:var(--shadow);
       display:none;
@@ -559,9 +538,7 @@
       padding:0;
     }
 
-    .diag-body{
-      padding:8px 12px;
-    }
+    .diag-body{padding:8px 12px}
 
     .diag-row{
       display:flex;
@@ -576,52 +553,6 @@
     .diag-row:last-child{border-bottom:none}
     .diag-key{color:var(--muted)}
     .diag-val{font-weight:500}
-
-    .mobile-actions{
-      position:absolute;
-      left:0;
-      right:0;
-      bottom:0;
-      z-index:36;
-      display:none;
-      padding:
-        8px
-        calc(10px + var(--safe-right))
-        calc(8px + var(--safe-bottom))
-        calc(10px + var(--safe-left));
-      background:linear-gradient(
-        to top,
-        rgba(8,8,8,.98),
-        rgba(8,8,8,.86),
-        transparent
-      );
-      gap:8px;
-      pointer-events:none;
-    }
-
-    .mobile-actions > *{
-      pointer-events:auto;
-    }
-
-    .mobile-actions .action-btn{
-      background:rgba(18,18,18,.88);
-      min-height:42px;
-      border-radius:999px;
-      font-size:11px;
-      flex:1;
-    }
-
-    .fab-sheet{
-      min-width:120px;
-      background:rgba(255,106,0,.12);
-      border-color:rgba(255,106,0,.34);
-      color:#ffd2b0;
-    }
-
-    .fab-sheet strong{
-      font-weight:700;
-      margin-left:4px;
-    }
 
     .marker{
       width:12px;
@@ -694,8 +625,8 @@
     }
 
     .maplibregl-ctrl-top-left{
-      top:calc(88px + var(--safe-top));
-      left:16px;
+      top:calc(78px + var(--safe-top));
+      left:12px;
     }
 
     .maplibregl-ctrl-group{
@@ -743,59 +674,34 @@
     }
 
     @media (max-width: 980px){
-      #banner-stack{
-        display:none;
-      }
-
-      .desktop-panel{
-        display:none;
-      }
-
-      .sheet{
-        display:block;
-      }
-
-      .mobile-actions{
-        display:flex;
-      }
-
+      #banner-stack{display:none}
+      .desktop-panel{display:none}
+      .sheet{display:block}
+      .diag-btn,.diag,footer{display:none !important}
       .maplibregl-ctrl-top-left{
-        top:calc(86px + var(--safe-top));
-        left:12px;
-      }
-
-      footer{
-        display:none;
-      }
-
-      .diag-btn,
-      .diag{
-        display:none !important;
+        top:calc(72px + var(--safe-top));
+        left:10px;
       }
     }
 
     @media (max-width: 768px){
       :root{
-        --header-h:76px;
-        --sheet-peek:182px;
+        --header-h:58px;
+        --sheet-peek:82px;
       }
 
       header{
-        align-items:flex-start;
-        padding-top:calc(10px + var(--safe-top));
+        padding-top:calc(6px + var(--safe-top));
+        padding-bottom:6px;
       }
 
       .logo{
-        font-size:16px;
+        font-size:14px;
       }
 
       .logo small{
-        white-space:normal;
-        line-height:1.25;
-      }
-
-      .header-right{
-        gap:8px;
+        font-size:9px;
+        line-height:1.15;
       }
 
       .menu-links{
@@ -803,56 +709,37 @@
       }
 
       .sheet-card{
-        max-height:76svh;
-        max-height:76dvh;
+        max-height:70svh;
+        max-height:70dvh;
       }
 
       .panel-body{
         padding:10px 12px 14px;
       }
 
-      .metric{
-        padding:10px 0;
-      }
-
-      .metric-label,
-      .metric-value{
-        font-size:13px;
-      }
-
-      .summary-text{
-        font-size:14px;
-      }
-
-      .chip{
-        min-height:30px;
-        font-size:11px;
-      }
-
-      .refresh-btn,
-      .action-btn{
-        min-height:46px;
-        font-size:13px;
+      .sheet-quick-actions .action-btn{
+        min-height:36px;
+        font-size:10px;
       }
 
       .maplibregl-ctrl button{
-        width:40px !important;
-        height:40px !important;
+        width:38px !important;
+        height:38px !important;
       }
 
       .maplibregl-ctrl-scale{
-        margin:0 0 calc(78px + var(--safe-bottom)) 10px !important;
+        margin:0 0 calc(98px + var(--safe-bottom)) 10px !important;
       }
 
       .maplibregl-ctrl-bottom-right,
       .maplibregl-ctrl-bottom-left{
-        bottom:calc(var(--safe-bottom) + 58px);
+        bottom:calc(var(--safe-bottom) + 8px);
       }
     }
 
     @media (max-width: 430px){
       :root{
-        --sheet-peek:194px;
+        --sheet-peek:78px;
       }
 
       .summary-text{
@@ -864,9 +751,8 @@
         font-size:12.5px;
       }
 
-      .mobile-actions .action-btn{
-        min-height:40px;
-        font-size:10.5px;
+      .sheet-quick-actions{
+        gap:6px;
       }
     }
   </style>
@@ -914,8 +800,15 @@
 
       <section class="sheet" id="mobile-sheet" aria-label="Mobile fire metrics">
         <div class="sheet-card" id="sheet-card">
-          <div class="sheet-handle-wrap" id="sheet-handle-wrap" aria-hidden="true">
-            <div class="sheet-handle"></div>
+          <div class="sheet-topbar">
+            <div class="sheet-handle-wrap" id="sheet-handle-wrap" aria-hidden="true">
+              <div class="sheet-handle"></div>
+            </div>
+            <div class="sheet-quick-actions">
+              <button class="action-btn" id="sheet-toggle-btn" type="button">Map Details</button>
+              <a class="action-btn" href="/privacy.html">Privacy</a>
+              <a class="action-btn" href="/support.html">Support</a>
+            </div>
           </div>
           <div class="panel-head">Fire Signals · Maui Region</div>
           <div class="panel-body" id="panel-content-mobile"></div>
@@ -939,14 +832,6 @@
           <div class="diag-row"><span class="diag-key">mode</span><span class="diag-val" id="d-mode">—</span></div>
           <div class="diag-row"><span class="diag-key">privacyModel</span><span class="diag-val" style="color:var(--green)">Zero PII</span></div>
         </div>
-      </div>
-
-      <div class="mobile-actions" aria-label="Mobile quick links">
-        <button class="action-btn fab-sheet" id="sheet-toggle-btn" type="button">
-          Map <strong>Details</strong>
-        </button>
-        <a class="action-btn" href="/privacy.html">Privacy</a>
-        <a class="action-btn" href="/support.html">Support</a>
       </div>
 
       <footer id="mode-footer">Kahu Ola civic technology</footer>
@@ -997,11 +882,6 @@
         ↻ REFRESH
       </button>
     </div>
-
-    <div class="panel-actions">
-      <a class="action-btn" href="/privacy.html">Privacy</a>
-      <a class="action-btn" href="/support.html">Support</a>
-    </div>
   </template>
 
   <script>
@@ -1019,7 +899,7 @@
       : "https://kahuola.org/api/firms/hotspots?bbox=-157.2,20.4,-156.1,21.2&days=1";
 
     const REF_CENTER = [-156.675, 20.878];
-    const POLL_MS = 60 * 1000;
+    const POLL_MS = 60000;
     const FETCH_TIMEOUT_MS = 12000;
     const MOBILE_BREAKPOINT = 980;
 
@@ -1027,7 +907,6 @@
     const diag = document.getElementById("diag");
     const diagBtn = document.getElementById("diag-btn");
     const mobileSheet = document.getElementById("mobile-sheet");
-    const sheetCard = document.getElementById("sheet-card");
     const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
     const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
 
@@ -1037,7 +916,6 @@
       const fragment = tpl.content.cloneNode(true);
 
       fragment.querySelectorAll("[id]").forEach((el) => {
-        el.dataset.baseId = el.id;
         el.id = `${el.id}-${suffix}`;
       });
 
@@ -1048,10 +926,12 @@
     mountPanel("panel-content-desktop", "desktop");
     mountPanel("panel-content-mobile", "mobile");
 
-    function ui(idBase) {
-      const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
-      const id = `${idBase}-${isMobile ? "mobile" : "desktop"}`;
-      return document.getElementById(id);
+    function activeSuffix() {
+      return window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop";
+    }
+
+    function ui(baseId) {
+      return document.getElementById(`${baseId}-${activeSuffix()}`);
     }
 
     function setText(baseId, value) {
@@ -1059,15 +939,9 @@
       if (el) el.textContent = String(value);
     }
 
-    function setHTML(baseId, value) {
-      const el = ui(baseId);
-      if (el) el.innerHTML = value;
-    }
-
     function show(id, on) {
       const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.toggle("hidden", !on);
+      if (el) el.classList.toggle("hidden", !on);
     }
 
     if (modeFooter) {
@@ -1247,11 +1121,7 @@
 
         DS.success(nowDate, sourceTime, sourceLabel);
 
-        return {
-          features: json.features,
-          sourceTime,
-          sourceLabel
-        };
+        return { features: json.features, sourceTime, sourceLabel };
       } catch {
         clearTimeout(timer);
         DS.isOffline = true;
@@ -1414,8 +1284,7 @@
     function setSheetOpen(open) {
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       mobileSheet.classList.toggle("open", open);
-      sheetToggleBtn.setAttribute("aria-expanded", String(open));
-      sheetToggleBtn.innerHTML = open ? 'Hide <strong>Details</strong>' : 'Map <strong>Details</strong>';
+      sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
     }
 
     function toggleSheet() {
@@ -1440,8 +1309,8 @@
     sheetHandleWrap?.addEventListener("click", toggleSheet);
 
     window.addEventListener("resize", () => {
-      const open = window.innerWidth > MOBILE_BREAKPOINT ? false : mobileSheet.classList.contains("open");
-      setSheetOpen(open);
+      if (window.innerWidth > MOBILE_BREAKPOINT) return;
+      setSheetOpen(mobileSheet.classList.contains("open"));
     });
 
     window.addEventListener("offline", () => {
