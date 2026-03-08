@@ -409,6 +409,78 @@
       color:#777;
     }
 
+    .smoke-status-card{
+      margin-top:12px;
+      padding:12px;
+      border:1px solid rgba(186,104,200,.24);
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(112,44,140,.16), rgba(255,255,255,.03));
+    }
+
+    .smoke-status-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+
+    .smoke-status-title{
+      color:var(--text-dim);
+      font-size:10px;
+      font-weight:600;
+      font-family:var(--font-mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .status-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      min-height:26px;
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid var(--border-hi);
+      font-size:10px;
+      font-weight:700;
+      font-family:var(--font-mono);
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .status-detected{
+      background:rgba(186,104,200,.16);
+      border-color:rgba(206,147,216,.42);
+      color:#f1def9;
+    }
+
+    .status-none{
+      background:rgba(255,255,255,.06);
+      border-color:rgba(255,255,255,.14);
+      color:#c8c8c8;
+    }
+
+    .status-unavailable{
+      background:rgba(255,152,0,.10);
+      border-color:rgba(255,152,0,.24);
+      color:#ffd29a;
+    }
+
+    .smoke-status-text{
+      font-size:13px;
+      line-height:1.55;
+      color:var(--text);
+    }
+
+    .smoke-status-subtext{
+      margin-top:8px;
+      color:var(--text-dim);
+      font-size:11px;
+      line-height:1.5;
+    }
+
     .summary-card{
       margin-top:12px;
       padding:12px;
@@ -936,7 +1008,7 @@
               <button class="action-btn" id="sheet-toggle-btn" type="button">Map Details</button>
               <button class="action-btn locate-btn" id="locate-btn-mobile" type="button">Use My Location</button>
               <button class="action-btn satellite-btn" id="satellite-btn-mobile" type="button">Satellite</button>
-              <button class="action-btn smoke-btn" id="smoke-btn-mobile" type="button">Smoke: On</button>
+              <button class="action-btn smoke-btn" id="smoke-btn-mobile" type="button">Smoke Layer: On</button>
               <a class="action-btn" href="/support.html">Support</a>
             </div>
           </div>
@@ -985,8 +1057,8 @@
     </div>
 
     <div class="metric">
-      <span class="metric-label">Smoke Regions</span>
-      <span class="metric-value v-dim" id="smoke-count">—</span>
+      <span class="metric-label">Smoke Status</span>
+      <span class="metric-value v-dim" id="smoke-status-text">—</span>
     </div>
 
     <div class="metric">
@@ -1023,6 +1095,15 @@
       </div>
     </div>
 
+    <div class="smoke-status-card" aria-label="Smoke Status">
+      <div class="smoke-status-top">
+        <div class="smoke-status-title">Smoke Layer</div>
+        <div class="status-badge status-none" id="smoke-status-badge">No smoke</div>
+      </div>
+      <div class="smoke-status-text" id="smoke-status-note">Smoke layer is enabled. Waiting for the latest NOAA HMS snapshot.</div>
+      <div class="smoke-status-subtext" id="smoke-status-subnote">When smoke is present, shaded polygons will appear on the map. Turning the layer on does not mean smoke is currently detected.</div>
+    </div>
+
     <div class="panel-actions">
       <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
         ↻ REFRESH
@@ -1032,7 +1113,7 @@
     <div class="panel-actions">
       <button class="action-btn locate-btn" id="locate-btn-panel" type="button">Use My Location</button>
       <button class="action-btn satellite-btn" id="satellite-btn-panel" type="button">Satellite</button>
-      <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke: On</button>
+      <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke Layer: On</button>
       <a class="action-btn" href="/privacy.html">Privacy</a>
       <a class="action-btn" href="/support.html">Support</a>
     </div>
@@ -1300,7 +1381,7 @@
 
         if (!res.ok) {
           DS.error("network");
-          return { features: [], sourceTime: null, sourceLabel: null };
+          return { ok: false, features: [], sourceTime: null, sourceLabel: null };
         }
 
         let json;
@@ -1308,13 +1389,13 @@
           json = JSON.parse(await res.text());
         } catch {
           DS.error("parse");
-          return { features: [], sourceTime: null, sourceLabel: null };
+          return { ok: false, features: [], sourceTime: null, sourceLabel: null };
         }
 
         const featureKey = Array.isArray(json.features) ? "features" : (Array.isArray(json.signals) ? "signals" : null);
         if (!json || typeof json !== "object" || !featureKey) {
           DS.error("parse");
-          return { features: [], sourceTime: null, sourceLabel: null };
+          return { ok: false, features: [], sourceTime: null, sourceLabel: null };
         }
 
         const nowDate = new Date();
@@ -1333,12 +1414,13 @@
 
         DS.success(nowDate, sourceTime, sourceLabel, domain);
 
-        return { features: json[featureKey], sourceTime, sourceLabel };
+        return { ok: true, features: json[featureKey], sourceTime, sourceLabel };
       } catch {
         clearTimeout(timer);
         DS.isOffline = true;
         DS.error("network");
         return {
+          ok: false,
           features: [],
           sourceTime: DS.lastSourceDataTime,
           sourceLabel: DS.lastPayloadSource
@@ -1484,10 +1566,10 @@
             ],
             "fill-opacity": smokeVisible ? [
               "match", ["get", "density"],
-              "heavy", 0.28,
-              "medium", 0.18,
-              "light", 0.10,
-              0.10
+              "heavy", 0.42,
+              "medium", 0.30,
+              "light", 0.18,
+              0.18
             ] : 0
           }
         });
@@ -1508,12 +1590,12 @@
             ],
             "line-width": [
               "match", ["get", "density"],
-              "heavy", 1.4,
-              "medium", 1.1,
-              "light", 0.8,
-              0.8
+              "heavy", 2.4,
+              "medium", 1.8,
+              "light", 1.2,
+              1.2
             ],
-            "line-opacity": smokeVisible ? 0.58 : 0
+            "line-opacity": smokeVisible ? 0.82 : 0
           }
         });
       }
@@ -1546,14 +1628,14 @@
       if (map.getLayer("smoke-fill")) {
         map.setPaintProperty("smoke-fill", "fill-opacity", smokeVisible ? [
           "match", ["get", "density"],
-          "heavy", 0.28,
-          "medium", 0.18,
-          "light", 0.10,
-          0.10
+          "heavy", 0.42,
+          "medium", 0.30,
+          "light", 0.18,
+          0.18
         ] : 0);
       }
       if (map.getLayer("smoke-outline")) {
-        map.setPaintProperty("smoke-outline", "line-opacity", smokeVisible ? 0.58 : 0);
+        map.setPaintProperty("smoke-outline", "line-opacity", smokeVisible ? 0.82 : 0);
       }
       syncSmokeButtons();
     }
@@ -1562,7 +1644,7 @@
       ["smoke-btn-panel-desktop", "smoke-btn-panel-mobile", "smoke-btn-mobile"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
-        el.textContent = smokeVisible ? "Smoke: On" : "Smoke: Off";
+        el.textContent = smokeVisible ? "Smoke Layer: On" : "Smoke Layer: Off";
         el.classList.toggle("active", smokeVisible);
       });
     }
@@ -1570,6 +1652,13 @@
     function toggleSmokeLayer() {
       smokeVisible = !smokeVisible;
       syncSmokeLayerVisibility();
+      if (latestSmokeFeatures.length > 0) {
+        updateSmokeStatusUI("detected", latestSmokeFeatures.length);
+      } else if (DS.lastSmokeFetchAt) {
+        updateSmokeStatusUI("none", 0);
+      } else {
+        updateSmokeStatusUI("unavailable", 0);
+      }
       recalcNearestFromFeatures(latestFeatures);
     }
 
@@ -1623,12 +1712,61 @@
         .addTo(map);
     }
 
+    function updateSmokeStatusUI(state, count = 0) {
+      const badge = ui("smoke-status-badge");
+      const note = ui("smoke-status-note");
+      const subnote = ui("smoke-status-subnote");
+      const metric = ui("smoke-status-text");
+
+      if (badge) badge.className = "status-badge";
+
+      if (state === "detected") {
+        if (badge) {
+          badge.classList.add("status-detected");
+          badge.textContent = count === 1 ? "Smoke detected" : `Smoke detected · ${count}`;
+        }
+        if (metric) metric.textContent = count === 1 ? "Detected (1 region)" : `Detected (${count} regions)`;
+        if (note) note.textContent = count === 1
+          ? "NOAA HMS shows smoke in 1 region in the current snapshot. Purple shaded coverage on the map marks where smoke is currently indicated."
+          : `NOAA HMS shows smoke in ${count} regions in the current snapshot. Purple shaded coverage on the map marks where smoke is currently indicated.`;
+        if (subnote) subnote.textContent = smokeVisible
+          ? "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage."
+          : "Smoke is present in the latest snapshot, but the layer is currently hidden. Turn on Smoke Layer to view the polygons.";
+      } else if (state === "none") {
+        if (badge) {
+          badge.classList.add("status-none");
+          badge.textContent = "No smoke";
+        }
+        if (metric) metric.textContent = "None in snapshot";
+        if (note) note.textContent = "NOAA HMS returned no smoke polygons in the current snapshot for the live map area.";
+        if (subnote) subnote.textContent = "Smoke Layer can stay on for visibility, but no smoke polygons are currently available to draw.";
+      } else {
+        if (badge) {
+          badge.classList.add("status-unavailable");
+          badge.textContent = "Unavailable";
+        }
+        if (metric) metric.textContent = "Data unavailable";
+        if (note) note.textContent = "Smoke data is temporarily unavailable, so the map cannot confirm whether smoke is present right now.";
+        if (subnote) subnote.textContent = "This is different from 'No smoke'. Try refresh again or wait for the next NOAA HMS snapshot.";
+      }
+    }
+
+    updateSmokeStatusUI("unavailable", 0);
+
     async function loadSmokeSignals() {
       const result = await strictFetch(SMOKE_ENDPOINT, "smoke");
       const normalized = normalizeSmokeFeatures(result.features);
       latestSmokeFeatures = normalized;
       updateSmokeSource(normalized);
-      setText("smoke-count", normalized.length ? String(normalized.length) : "None");
+
+      if (!result.ok) {
+        updateSmokeStatusUI("unavailable", 0);
+      } else if (normalized.length > 0) {
+        updateSmokeStatusUI("detected", normalized.length);
+      } else {
+        updateSmokeStatusUI("none", 0);
+      }
+
       recalcNearestFromFeatures(latestFeatures);
     }
 
@@ -1863,7 +2001,6 @@
         }
       }
 
-      setText("smoke-count", latestSmokeFeatures.length ? String(latestSmokeFeatures.length) : "None");
       updateSummary(features, closest, criticalCount);
     }
 
@@ -2128,6 +2265,13 @@
 
     window.addEventListener("resize", () => {
       safeMapResize();
+      if (latestSmokeFeatures.length > 0) {
+        updateSmokeStatusUI("detected", latestSmokeFeatures.length);
+      } else if (DS.lastSmokeFetchAt) {
+        updateSmokeStatusUI("none", 0);
+      } else {
+        updateSmokeStatusUI("unavailable", 0);
+      }
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       setSheetOpen(mobileSheet.classList.contains("open"));
     });
