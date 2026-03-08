@@ -238,6 +238,11 @@
       height:100% !important;
     }
 
+    .maplibregl-canvas{
+      position:absolute;
+      inset:0;
+    }
+
     .desktop-panel{
       position:absolute;
       top:calc(84px + var(--safe-top));
@@ -1062,6 +1067,12 @@
     let currentBasemap = "dark";
     let activePopup = null;
     let pollHandle = null;
+    let styleIsReady = false;
+    let styleReloadInFlight = false;
+    let pendingFireCollection = {
+      type: "FeatureCollection",
+      features: []
+    };
 
     function mountPanel(targetId, suffix) {
       const target = document.getElementById(targetId);
@@ -1313,13 +1324,11 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
 
-    function safeMapResize() {
-      requestAnimationFrame(() => {
+    function safeMapResize(delay = 0) {
+      window.setTimeout(() => {
+        if (!map || !map.getContainer()) return;
         map.resize();
-        requestAnimationFrame(() => {
-          map.resize();
-        });
-      });
+      }, delay);
     }
 
     function fitHawaii(animated = false) {
@@ -1332,11 +1341,17 @@
       setText("view-mode", currentViewMode);
     }
 
-    function toggleBasemap() {
-      currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
-      map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-      syncSatelliteButtons();
+    function setBasemapButtonState(disabled) {
+      const ids = [
+        "satellite-btn-panel-desktop",
+        "satellite-btn-panel-mobile",
+        "satellite-btn-mobile"
+      ];
+
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+      });
     }
 
     function syncSatelliteButtons() {
@@ -1352,6 +1367,34 @@
         el.textContent = currentBasemap === "dark" ? "Satellite" : "Dark Map";
         el.classList.toggle("active", currentBasemap !== "dark");
       });
+    }
+
+    function rehydrateFireOverlays() {
+      if (!styleIsReady) return;
+      ensureFireLayers();
+      updateFireSource(latestFeatures);
+
+      if (userMarker && lastKnownUserCoord) {
+        updateUserMarker(lastKnownUserCoord);
+      }
+
+      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+      syncSatelliteButtons();
+      setBasemapButtonState(false);
+      styleReloadInFlight = false;
+      safeMapResize(30);
+    }
+
+    function toggleBasemap() {
+      if (styleReloadInFlight) return;
+
+      styleReloadInFlight = true;
+      styleIsReady = false;
+      currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
+      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+      setBasemapButtonState(true);
+      syncSatelliteButtons();
+      map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite, { diff: false });
     }
 
     function normalizeFireFeatures(rawFeatures) {
@@ -1391,10 +1434,7 @@
       if (!map.getSource("fires")) {
         map.addSource("fires", {
           type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: []
-          },
+          data: pendingFireCollection,
           cluster: true,
           clusterMaxZoom: 9,
           clusterRadius: 52
@@ -1424,7 +1464,7 @@
             ],
             "circle-opacity": 0.95,
             "circle-stroke-width": 2,
-            "circle-stroke-color": "rgba(255,140,0,0.26)"
+            "circle-stroke-color": "rgba(255,140,0,0.28)"
           }
         });
       }
@@ -1456,17 +1496,17 @@
             "circle-color": [
               "case",
               ["==", ["get", "severity"], "CRITICAL"],
-              "rgba(255,23,68,0.18)",
-              "rgba(255,138,0,0.16)"
+              "rgba(255,23,68,0.22)",
+              "rgba(255,138,0,0.22)"
             ],
             "circle-radius": [
               "interpolate",
               ["linear"],
               ["zoom"],
-              6, 10,
-              9, 14,
-              12, 18,
-              15, 24
+              6, 14,
+              9, 18,
+              12, 24,
+              15, 30
             ],
             "circle-opacity": 1
           }
@@ -1490,14 +1530,14 @@
               "interpolate",
               ["linear"],
               ["zoom"],
-              6, 4,
-              9, 6,
-              12, 8,
-              15, 10
+              6, 5,
+              9, 7,
+              12, 9,
+              15, 11
             ],
-            "circle-opacity": 0.96,
+            "circle-opacity": 0.98,
             "circle-stroke-width": 2,
-            "circle-stroke-color": "rgba(255,255,255,0.08)"
+            "circle-stroke-color": "rgba(255,255,255,0.22)"
           }
         });
       }
@@ -1542,13 +1582,14 @@
     }
 
     function updateFireSource(features) {
-      const source = map.getSource("fires");
-      if (!source) return;
-
-      source.setData({
+      pendingFireCollection = {
         type: "FeatureCollection",
         features
-      });
+      };
+
+      const source = map.getSource("fires");
+      if (!source) return;
+      source.setData(pendingFireCollection);
     }
 
     function updateUserMarker(coord) {
@@ -1666,7 +1707,7 @@
           setText("view-mode", "My Location");
           recalcNearestFromFeatures(latestFeatures);
           setLocationButtonState(false);
-          setTimeout(safeMapResize, 250);
+          safeMapResize(150);
         },
         () => {
           setLocationButtonState(false);
@@ -1702,9 +1743,6 @@
       const googleDirections = lastKnownUserCoord
         ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
         : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-      const appleDirections = lastKnownUserCoord
-        ? `https://maps.apple.com/?saddr=${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}&daddr=${lat},${lng}&dirflg=d`
-        : `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
       const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
 
       map.easeTo({
@@ -1781,6 +1819,7 @@
       const normalized = normalizeFireFeatures(features);
       latestFeatures = normalized;
       updateFireSource(normalized);
+      rehydrateFireOverlays();
 
       let criticalCount = 0;
       for (const f of normalized) {
@@ -1853,7 +1892,7 @@
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       mobileSheet.classList.toggle("open", open);
       sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
-      setTimeout(safeMapResize, 280);
+      safeMapResize(180);
     }
 
     function toggleSheet() {
@@ -1878,17 +1917,17 @@
     sheetHandleWrap?.addEventListener("click", toggleSheet);
 
     window.addEventListener("resize", () => {
-      safeMapResize();
+      safeMapResize(50);
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       setSheetOpen(mobileSheet.classList.contains("open"));
     });
 
     window.addEventListener("orientationchange", () => {
-      setTimeout(safeMapResize, 200);
+      safeMapResize(220);
     });
 
     window.addEventListener("pageshow", () => {
-      setTimeout(safeMapResize, 120);
+      safeMapResize(120);
     });
 
     window.addEventListener("offline", () => {
@@ -1904,19 +1943,12 @@
     });
 
     map.on("style.load", () => {
-      ensureFireLayers();
-      updateFireSource(latestFeatures);
-      syncSatelliteButtons();
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-
-      if (userMarker && lastKnownUserCoord) {
-        updateUserMarker(lastKnownUserCoord);
-      }
-
-      safeMapResize();
+      styleIsReady = true;
+      rehydrateFireOverlays();
     });
 
     map.on("load", () => {
+      styleIsReady = true;
       syncDiag();
       ensureFireLayers();
       fitHawaii(false);
@@ -1926,11 +1958,8 @@
       }
 
       loadFireSignals();
-
-      safeMapResize();
-      setTimeout(safeMapResize, 150);
-      setTimeout(safeMapResize, 500);
-
+      safeMapResize(50);
+      safeMapResize(250);
       syncSatelliteButtons();
 
       if (pollHandle) clearInterval(pollHandle);
