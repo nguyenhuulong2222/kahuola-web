@@ -45,27 +45,30 @@
       --safe-left:env(safe-area-inset-left, 0px);
 
       --header-h:64px;
-      --sheet-peek:98px;
+      --sheet-peek:96px;
       --app-height:100vh;
     }
 
     *{box-sizing:border-box}
     *::before,*::after{box-sizing:border-box}
 
-    html,body{
+    html, body{
       margin:0;
       width:100%;
-      height:var(--app-height);
+      height:100%;
       background:var(--bg);
       color:var(--text);
       font-family:var(--font-body);
+      overflow:hidden;
       -webkit-font-smoothing:antialiased;
       text-rendering:optimizeLegibility;
-      overflow:hidden;
     }
 
     body{
-      min-height:var(--app-height);
+      position:fixed;
+      inset:0;
+      overscroll-behavior:none;
+      -webkit-overflow-scrolling:auto;
     }
 
     a{color:inherit;text-decoration:none}
@@ -73,19 +76,45 @@
     .hidden{display:none !important}
 
     #app{
-      position:relative;
+      position:fixed;
+      inset:0;
       width:100%;
       height:var(--app-height);
       overflow:hidden;
       background:var(--bg);
     }
 
+    #map-wrap{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:var(--app-height);
+      overflow:hidden;
+      background:#000;
+      z-index:1;
+    }
+
+    #map{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:var(--app-height);
+      background:#000;
+    }
+
+    .maplibregl-map,
+    .maplibregl-canvas-container,
+    .maplibregl-canvas{
+      width:100% !important;
+      height:100% !important;
+    }
+
     header{
-      position:absolute;
+      position:fixed;
       top:0;
       left:0;
       right:0;
-      z-index:40;
+      z-index:50;
       display:flex;
       align-items:center;
       gap:12px;
@@ -210,36 +239,11 @@
     .banner-green .dot{background:var(--green)}
     .banner-blue .dot{background:var(--blue)}
 
-    #map-wrap{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:var(--app-height);
-      min-height:var(--app-height);
-      overflow:hidden;
-      background:#000;
-    }
-
-    #map{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:var(--app-height);
-      min-height:var(--app-height);
-    }
-
-    .maplibregl-map,
-    .maplibregl-canvas-container,
-    .maplibregl-canvas{
-      width:100% !important;
-      height:100% !important;
-    }
-
     .desktop-panel{
-      position:absolute;
+      position:fixed;
       top:calc(84px + var(--safe-top));
       right:calc(16px + var(--safe-right));
-      z-index:25;
+      z-index:40;
       width:340px;
       max-width:calc(100vw - 32px);
       background:var(--panel);
@@ -252,11 +256,11 @@
     }
 
     .sheet{
-      position:absolute;
+      position:fixed;
       left:0;
       right:0;
       bottom:0;
-      z-index:35;
+      z-index:45;
       display:none;
       padding:
         0
@@ -274,10 +278,10 @@
       box-shadow:0 -12px 36px rgba(0,0,0,.35);
       overflow:hidden;
       transform:translateY(calc(100% - var(--sheet-peek)));
-      transition:transform .26s ease;
       max-height:calc(var(--app-height) * 0.78);
       display:flex;
       flex-direction:column;
+      will-change:transform;
     }
 
     .sheet.open .sheet-card{
@@ -501,10 +505,10 @@
     }
 
     .diag-btn{
-      position:absolute;
+      position:fixed;
       left:16px;
       bottom:16px;
-      z-index:20;
+      z-index:30;
       min-height:36px;
       padding:0 12px;
       border:1px solid var(--border-hi);
@@ -518,10 +522,10 @@
     }
 
     .diag{
-      position:absolute;
+      position:fixed;
       left:16px;
       bottom:60px;
-      z-index:20;
+      z-index:31;
       width:260px;
       background:var(--panel);
       border:1px solid var(--border-hi);
@@ -765,7 +769,7 @@
     }
 
     footer{
-      position:absolute;
+      position:fixed;
       right:16px;
       bottom:12px;
       z-index:15;
@@ -1047,6 +1051,9 @@
     const mobileSheet = document.getElementById("mobile-sheet");
     const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
     const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
+    const appEl = document.getElementById("app");
+    const mapWrapEl = document.getElementById("map-wrap");
+    const mapEl = document.getElementById("map");
 
     let lastKnownUserCoord = null;
     let userMarker = null;
@@ -1057,11 +1064,25 @@
     let pollHandle = null;
     let pendingStyleRestore = false;
 
-    function setAppHeight() {
-      const h = window.visualViewport
-        ? window.visualViewport.height
-        : window.innerHeight;
-      document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);
+    function setModeFooter() {
+      if (!modeFooter) return;
+      modeFooter.textContent = IS_LOCAL
+        ? "Kahu Ola civic technology · local test mode"
+        : "Kahu Ola civic technology · live production mode";
+    }
+    setModeFooter();
+
+    function forceRealViewportHeight() {
+      const h = Math.round(window.innerHeight || document.documentElement.clientHeight || 0);
+      if (!h) return;
+
+      document.documentElement.style.setProperty("--app-height", `${h}px`);
+      document.documentElement.style.height = `${h}px`;
+      document.body.style.height = `${h}px`;
+
+      if (appEl) appEl.style.height = `${h}px`;
+      if (mapWrapEl) mapWrapEl.style.height = `${h}px`;
+      if (mapEl) mapEl.style.height = `${h}px`;
     }
 
     function mountPanel(targetId, suffix) {
@@ -1096,12 +1117,6 @@
     function show(id, on) {
       const el = document.getElementById(id);
       if (el) el.classList.toggle("hidden", !on);
-    }
-
-    if (modeFooter) {
-      modeFooter.textContent = IS_LOCAL
-        ? "Kahu Ola civic technology · local test mode"
-        : "Kahu Ola civic technology · live production mode";
     }
 
     const DS = {
@@ -1316,12 +1331,17 @@
 
     function safeMapResize(delay = 0) {
       const run = () => {
-        setAppHeight();
+        forceRealViewportHeight();
         requestAnimationFrame(() => {
           map.resize();
           requestAnimationFrame(() => {
+            forceRealViewportHeight();
             map.resize();
           });
+          setTimeout(() => {
+            forceRealViewportHeight();
+            map.resize();
+          }, 120);
         });
       };
 
@@ -1330,6 +1350,24 @@
       } else {
         run();
       }
+    }
+
+    function safariHardRelayout() {
+      forceRealViewportHeight();
+
+      if (mapWrapEl) {
+        mapWrapEl.style.display = "none";
+        mapWrapEl.offsetHeight;
+        mapWrapEl.style.display = "";
+      }
+
+      if (mapEl) {
+        mapEl.style.transform = "translateZ(0)";
+      }
+
+      safeMapResize(0);
+      safeMapResize(120);
+      safeMapResize(300);
     }
 
     function fitHawaii(animated = false) {
@@ -1713,7 +1751,6 @@
         : "Enable location";
 
       const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
       const googleDirections = lastKnownUserCoord
         ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
         : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
@@ -1882,7 +1919,7 @@
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       mobileSheet.classList.toggle("open", open);
       sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
-      safeMapResize(280);
+      safariHardRelayout();
     }
 
     function toggleSheet() {
@@ -1906,27 +1943,29 @@
     sheetToggleBtn?.addEventListener("click", toggleSheet);
     sheetHandleWrap?.addEventListener("click", toggleSheet);
 
-    setAppHeight();
+    forceRealViewportHeight();
 
     window.addEventListener("resize", () => {
-      safeMapResize(0);
+      safariHardRelayout();
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       setSheetOpen(mobileSheet.classList.contains("open"));
     });
 
     window.addEventListener("orientationchange", () => {
-      safeMapResize(150);
-      safeMapResize(400);
+      safariHardRelayout();
+      setTimeout(safariHardRelayout, 250);
+      setTimeout(safariHardRelayout, 700);
     });
 
     window.addEventListener("pageshow", () => {
-      safeMapResize(120);
-      safeMapResize(320);
+      safariHardRelayout();
+      setTimeout(safariHardRelayout, 180);
+      setTimeout(safariHardRelayout, 500);
     });
 
-    window.addEventListener("scroll", () => {
-      safeMapResize(0);
-    }, { passive: true });
+    window.addEventListener("focus", () => {
+      safariHardRelayout();
+    });
 
     window.addEventListener("touchend", () => {
       safeMapResize(80);
@@ -1934,14 +1973,14 @@
 
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
-        safeMapResize(80);
-        safeMapResize(260);
+        safariHardRelayout();
+        setTimeout(safariHardRelayout, 250);
       }
     });
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", () => {
-        safeMapResize(0);
+        safariHardRelayout();
       });
 
       window.visualViewport.addEventListener("scroll", () => {
@@ -1971,6 +2010,7 @@
     });
 
     map.on("load", () => {
+      forceRealViewportHeight();
       syncDiag();
       ensureFireLayers();
       fitHawaii(false);
@@ -1981,10 +2021,10 @@
 
       loadFireSignals();
 
-      safeMapResize(0);
-      safeMapResize(120);
-      safeMapResize(300);
-      safeMapResize(600);
+      safariHardRelayout();
+      setTimeout(safariHardRelayout, 180);
+      setTimeout(safariHardRelayout, 500);
+      setTimeout(safariHardRelayout, 1000);
 
       syncSatelliteButtons();
 
