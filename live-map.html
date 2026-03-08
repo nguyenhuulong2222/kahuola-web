@@ -588,18 +588,106 @@
       box-shadow:0 0 0 10px rgba(77,163,255,.18);
     }
 
+    .popup-card{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .popup-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .popup-title{
+      font-weight:700;
+      font-size:14px;
+      line-height:1.2;
+    }
+
+    .popup-severity{
+      display:inline-flex;
+      align-items:center;
+      min-height:24px;
+      padding:0 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      font-size:10px;
+      font-family:var(--font-mono);
+      white-space:nowrap;
+    }
+
+    .popup-severity.critical{
+      color:#ff9cb0;
+      border-color:rgba(255,23,68,.25);
+      background:rgba(255,23,68,.10);
+    }
+
+    .popup-severity.normal{
+      color:#ffd2a3;
+      border-color:rgba(255,138,0,.22);
+      background:rgba(255,138,0,.10);
+    }
+
+    .popup-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+
+    .popup-metric{
+      padding:8px 9px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      background:rgba(255,255,255,.03);
+    }
+
+    .popup-metric-label{
+      font-size:10px;
+      font-family:var(--font-mono);
+      color:#9d9d9d;
+      margin-bottom:4px;
+      letter-spacing:.03em;
+    }
+
+    .popup-metric-value{
+      font-size:12px;
+      font-weight:600;
+      color:#f1f1f1;
+      line-height:1.3;
+      word-break:break-word;
+    }
+
+    .popup-coords{
+      color:#aaa;
+      font-family:var(--font-mono);
+      font-size:11px;
+    }
+
+    .popup-note{
+      color:#9bc4ff;
+      font-size:11px;
+      line-height:1.4;
+      padding:8px 9px;
+      border:1px solid rgba(77,163,255,.16);
+      border-radius:12px;
+      background:rgba(77,163,255,.05);
+    }
+
     .popup-actions{
       display:flex;
       gap:8px;
       flex-wrap:wrap;
-      margin-top:8px;
     }
 
     .popup-btn{
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      min-height:30px;
+      min-height:32px;
       padding:0 10px;
       border:1px solid rgba(255,255,255,.12);
       border-radius:999px;
@@ -608,6 +696,7 @@
       font-size:11px;
       font-family:var(--font-mono);
       text-decoration:none;
+      flex:1 1 120px;
     }
 
     .spinner{
@@ -630,12 +719,12 @@
       background:#111 !important;
       color:var(--text) !important;
       border:1px solid rgba(255,255,255,.10) !important;
-      border-radius:12px !important;
+      border-radius:14px !important;
       font-family:var(--font-body) !important;
       font-size:12px !important;
-      padding:10px 12px !important;
+      padding:12px !important;
       box-shadow:0 10px 24px rgba(0,0,0,.32) !important;
-      max-width:280px !important;
+      max-width:320px !important;
     }
 
     .maplibregl-popup-tip{
@@ -753,6 +842,10 @@
       .maplibregl-ctrl-bottom-right,
       .maplibregl-ctrl-bottom-left{
         bottom:calc(var(--safe-bottom) + 8px);
+      }
+
+      .popup-grid{
+        grid-template-columns:1fr;
       }
     }
 
@@ -1528,6 +1621,23 @@
       updateSummary(features, closest, criticalCount);
     }
 
+    function formatDetectedTime(acqDate, acqTime) {
+      if (!acqDate && !acqTime) return "Unavailable";
+      const timeStr = acqTime ? String(acqTime).padStart(4, "0") : "";
+      const hh = timeStr ? timeStr.slice(0, 2) : "--";
+      const mm = timeStr ? timeStr.slice(2, 4) : "--";
+      return `${acqDate || "—"} ${timeStr ? `${hh}:${mm} UTC` : ""}`.trim();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
     function useMyLocation() {
       if (!("geolocation" in navigator)) {
         alert("Location is not available on this device.");
@@ -1577,6 +1687,26 @@
       const lat = coords[1];
       const lng = coords[0];
 
+      const severity = p.severity || "UNKNOWN";
+      const severityClass = severity === "CRITICAL" ? "critical" : "normal";
+      const detectedTime = formatDetectedTime(p.acq_date, p.acq_time);
+      const frp = p.frp ?? "—";
+      const confidence = p.confidence ?? "—";
+
+      const milesFromYou = lastKnownUserCoord
+        ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi"
+        : "Enable location";
+
+      const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
+      const googleDirections = lastKnownUserCoord
+        ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      const appleDirections = lastKnownUserCoord
+        ? `https://maps.apple.com/?saddr=${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}&daddr=${lat},${lng}&dirflg=d`
+        : `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
+      const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
+
       map.easeTo({
         center: coords,
         zoom: Math.max(map.getZoom(), 11.5),
@@ -1585,36 +1715,56 @@
 
       if (activePopup) activePopup.remove();
 
-      const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
-      const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
+      const html = `
+        <div class="popup-card">
+          <div class="popup-top">
+            <div>
+              <div class="popup-title">🔥 Fire Detection</div>
+              <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+            </div>
+            <div class="popup-severity ${severityClass}">${escapeHtml(severity)}</div>
+          </div>
 
-      const acqDate = p.acq_date || "—";
-      const acqTime = p.acq_time || "—";
-      const severity = p.severity || "UNKNOWN";
-      const frp = p.frp ?? "—";
-      const confidence = p.confidence ?? "—";
+          <div class="popup-grid">
+            <div class="popup-metric">
+              <div class="popup-metric-label">Detected Time</div>
+              <div class="popup-metric-value">${escapeHtml(detectedTime)}</div>
+            </div>
+            <div class="popup-metric">
+              <div class="popup-metric-label">Distance From You</div>
+              <div class="popup-metric-value">${escapeHtml(milesFromYou)}</div>
+            </div>
+            <div class="popup-metric">
+              <div class="popup-metric-label">FRP</div>
+              <div class="popup-metric-value">${escapeHtml(frp)}</div>
+            </div>
+            <div class="popup-metric">
+              <div class="popup-metric-label">Confidence</div>
+              <div class="popup-metric-value">${escapeHtml(confidence)}</div>
+            </div>
+          </div>
+
+          <div class="popup-note">
+            Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.
+          </div>
+
+          <div class="popup-actions">
+            <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
+            <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+            <a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a>
+            <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
+          </div>
+        </div>
+      `;
 
       activePopup = new maplibregl.Popup({
         closeButton: true,
         closeOnMove: false,
         offset: 14,
-        maxWidth: "290px"
+        maxWidth: "320px"
       })
         .setLngLat(coords)
-        .setHTML(
-          `<div style="font-weight:700;margin-bottom:6px">🔥 Fire Detection</div>
-           <div><strong>Severity:</strong> ${severity}</div>
-           <div><strong>FRP:</strong> ${frp}</div>
-           <div><strong>Confidence:</strong> ${confidence}</div>
-           <div><strong>Detected:</strong> ${acqDate} ${acqTime}</div>
-           <div style="margin-top:6px;color:#aaa;font-family:'DM Mono',monospace">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
-           <div class="popup-actions">
-             <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
-             <a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a>
-             <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
-           </div>`
-        )
+        .setHTML(html)
         .addTo(map);
     }
 
