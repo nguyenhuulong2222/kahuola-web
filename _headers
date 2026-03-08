@@ -5,17 +5,23 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://api.maptiler.com https://*.tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; connect-src 'self' https://api.maptiler.com https://kahuola.org; worker-src 'self' blob:; child-src 'self' blob:;
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.maptiler.com https://*.tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; connect-src 'self' https://kahuola.org https://api.maptiler.com; worker-src 'self' blob:; child-src 'self' blob:;
   Cache-Control: public, max-age=60
+
+/live-map
+  Cache-Control: public, max-age=30, must-revalidate
+
+/live-map.html
+  Cache-Control: public, max-age=30, must-revalidate
 
 /index.html
-  Cache-Control: public, max-age=60
+  Cache-Control: public, max-age=60, must-revalidate
 
 /portal
-  Cache-Control: public, max-age=60
+  Cache-Control: public, max-age=300, must-revalidate
 
 /portal.html
-  Cache-Control: public, max-age=60
+  Cache-Control: public, max-age=300, must-revalidate
 
 /privacy
   Cache-Control: public, max-age=3600
@@ -33,7 +39,7 @@
   Cache-Control: public, max-age=31536000, immutable
 
 /layers.config.js
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=300, must-revalidate
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
