@@ -662,7 +662,7 @@
       } else if (criticalCount > 0) {
         summaryText.textContent = `NASA FIRMS indicates critical wildfire detections near Lahaina. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
       } else {
-        summaryText.textContent = 'NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} for the Maui region in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
+        summaryText.textContent = `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} for the Maui region in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
       }
 
       if (summarySource) {
@@ -867,3 +867,4 @@
 </body>
 
 </html>
+
