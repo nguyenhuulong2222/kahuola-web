@@ -46,7 +46,6 @@
 
       --header-h:64px;
       --sheet-peek:96px;
-      --app-height:100vh;
     }
 
     *{box-sizing:border-box}
@@ -56,6 +55,7 @@
       margin:0;
       width:100%;
       height:100%;
+      min-height:-webkit-fill-available;
       background:var(--bg);
       color:var(--text);
       font-family:var(--font-body);
@@ -65,10 +65,7 @@
     }
 
     body{
-      position:fixed;
-      inset:0;
-      overscroll-behavior:none;
-      -webkit-overflow-scrolling:auto;
+      min-height:-webkit-fill-available;
     }
 
     a{color:inherit;text-decoration:none}
@@ -76,29 +73,28 @@
     .hidden{display:none !important}
 
     #app{
-      position:fixed;
-      inset:0;
+      position:relative;
       width:100%;
-      height:var(--app-height);
+      height:100dvh;
+      min-height:-webkit-fill-available;
       overflow:hidden;
       background:var(--bg);
     }
 
     #map-wrap{
-      position:fixed;
+      position:absolute;
       inset:0;
       width:100%;
-      height:var(--app-height);
+      height:100%;
       overflow:hidden;
       background:#000;
-      z-index:1;
     }
 
     #map{
-      position:fixed;
+      position:absolute;
       inset:0;
       width:100%;
-      height:var(--app-height);
+      height:100%;
       background:#000;
     }
 
@@ -110,7 +106,7 @@
     }
 
     header{
-      position:fixed;
+      position:absolute;
       top:0;
       left:0;
       right:0;
@@ -179,68 +175,8 @@
       -webkit-backdrop-filter:blur(10px);
     }
 
-    #banner-stack{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      justify-content:flex-end;
-      max-width:460px;
-    }
-
-    .banner{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      min-height:28px;
-      padding:4px 10px;
-      border-radius:999px;
-      font-size:11px;
-      font-weight:500;
-      font-family:var(--font-mono);
-      letter-spacing:.02em;
-      white-space:nowrap;
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-    }
-
-    .banner-amber{
-      background:rgba(255,152,0,.14);
-      border:1px solid rgba(255,152,0,.30);
-      color:#ffcc80;
-    }
-
-    .banner-red{
-      background:rgba(255,23,68,.14);
-      border:1px solid rgba(255,23,68,.30);
-      color:#ff9cb0;
-    }
-
-    .banner-green{
-      background:rgba(76,175,80,.14);
-      border:1px solid rgba(76,175,80,.30);
-      color:#a5d6a7;
-    }
-
-    .banner-blue{
-      background:rgba(77,163,255,.14);
-      border:1px solid rgba(77,163,255,.28);
-      color:#b9d8ff;
-    }
-
-    .dot{
-      width:6px;
-      height:6px;
-      border-radius:50%;
-      flex:0 0 auto;
-    }
-
-    .banner-amber .dot{background:var(--amber)}
-    .banner-red .dot{background:var(--crit)}
-    .banner-green .dot{background:var(--green)}
-    .banner-blue .dot{background:var(--blue)}
-
     .desktop-panel{
-      position:fixed;
+      position:absolute;
       top:calc(84px + var(--safe-top));
       right:calc(16px + var(--safe-right));
       z-index:40;
@@ -256,7 +192,7 @@
     }
 
     .sheet{
-      position:fixed;
+      position:absolute;
       left:0;
       right:0;
       bottom:0;
@@ -278,10 +214,10 @@
       box-shadow:0 -12px 36px rgba(0,0,0,.35);
       overflow:hidden;
       transform:translateY(calc(100% - var(--sheet-peek)));
-      max-height:calc(var(--app-height) * 0.78);
+      transition:transform .26s ease;
+      max-height:78dvh;
       display:flex;
       flex-direction:column;
-      will-change:transform;
     }
 
     .sheet.open .sheet-card{
@@ -504,89 +440,6 @@
       cursor:not-allowed;
     }
 
-    .diag-btn{
-      position:fixed;
-      left:16px;
-      bottom:16px;
-      z-index:30;
-      min-height:36px;
-      padding:0 12px;
-      border:1px solid var(--border-hi);
-      border-radius:12px;
-      background:var(--panel);
-      color:var(--text-dim);
-      cursor:pointer;
-      font-size:11px;
-      font-family:var(--font-mono);
-      box-shadow:var(--shadow);
-    }
-
-    .diag{
-      position:fixed;
-      left:16px;
-      bottom:60px;
-      z-index:31;
-      width:260px;
-      background:var(--panel);
-      border:1px solid var(--border-hi);
-      border-radius:var(--radius);
-      overflow:hidden;
-      box-shadow:var(--shadow);
-      display:none;
-    }
-
-    .diag.open{display:block}
-
-    .diag-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 12px;
-      border-bottom:1px solid var(--border);
-      font-size:10px;
-      font-weight:600;
-      font-family:var(--font-mono);
-      letter-spacing:.08em;
-      color:var(--muted);
-      text-transform:uppercase;
-    }
-
-    .diag-close{
-      appearance:none;
-      background:none;
-      border:none;
-      color:var(--muted);
-      cursor:pointer;
-      font-size:16px;
-      line-height:1;
-      padding:0;
-    }
-
-    .diag-body{padding:8px 12px}
-
-    .diag-row{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      padding:6px 0;
-      border-bottom:1px solid var(--border);
-      font-size:11px;
-      font-family:var(--font-mono);
-    }
-
-    .diag-row:last-child{border-bottom:none}
-    .diag-key{color:var(--muted)}
-    .diag-val{font-weight:500}
-
-    .user-marker{
-      width:16px;
-      height:16px;
-      border-radius:50%;
-      background:var(--blue);
-      border:3px solid rgba(255,255,255,.95);
-      box-shadow:0 0 0 10px rgba(77,163,255,.18);
-    }
-
     .popup-card{
       display:flex;
       flex-direction:column;
@@ -698,6 +551,15 @@
       flex:1 1 120px;
     }
 
+    .user-marker{
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      background:var(--blue);
+      border:3px solid rgba(255,255,255,.95);
+      box-shadow:0 0 0 10px rgba(77,163,255,.18);
+    }
+
     .spinner{
       display:inline-block;
       width:10px;
@@ -758,47 +620,16 @@
       font-size:10px !important;
     }
 
-    .maplibregl-ctrl-attrib{
-      background:rgba(0,0,0,.55) !important;
-      color:var(--muted) !important;
-      font-size:10px !important;
-    }
-
-    .maplibregl-ctrl-attrib a{
-      color:var(--text-dim) !important;
-    }
-
-    footer{
-      position:fixed;
-      right:16px;
-      bottom:12px;
-      z-index:15;
-      color:var(--muted);
-      font-size:10px;
-      font-family:var(--font-mono);
-      pointer-events:none;
-    }
-
     @media (max-width:980px){
-      #banner-stack{display:none}
       .desktop-panel{display:none}
       .sheet{display:block}
-      .diag-btn,.diag,footer{display:none !important}
-      .maplibregl-ctrl-top-left{
-        top:calc(72px + var(--safe-top));
-        left:10px;
-      }
+      .menu-links{display:none}
     }
 
     @media (max-width:768px){
       :root{
         --header-h:58px;
         --sheet-peek:96px;
-      }
-
-      header{
-        padding-top:calc(6px + var(--safe-top));
-        padding-bottom:6px;
       }
 
       .logo{
@@ -810,58 +641,12 @@
         line-height:1.15;
       }
 
-      .menu-links{
-        display:none;
-      }
-
       .sheet-card{
-        max-height:calc(var(--app-height) * 0.78);
-      }
-
-      .panel-body{
-        padding:10px 12px 14px;
-      }
-
-      .sheet-quick-actions .action-btn{
-        min-height:36px;
-        font-size:9.5px;
-      }
-
-      .maplibregl-ctrl button{
-        width:38px !important;
-        height:38px !important;
-      }
-
-      .maplibregl-ctrl-scale{
-        margin:0 0 calc(112px + var(--safe-bottom)) 10px !important;
-      }
-
-      .maplibregl-ctrl-bottom-right,
-      .maplibregl-ctrl-bottom-left{
-        bottom:calc(var(--safe-bottom) + 8px);
+        max-height:78dvh;
       }
 
       .popup-grid{
         grid-template-columns:1fr;
-      }
-    }
-
-    @media (max-width:430px){
-      :root{
-        --sheet-peek:90px;
-      }
-
-      .summary-text{
-        font-size:13.5px;
-      }
-
-      .metric-label,
-      .metric-value{
-        font-size:12.5px;
-      }
-
-      .sheet-quick-actions{
-        gap:6px;
       }
     }
   </style>
@@ -881,39 +666,21 @@
           <a class="menu-link" href="/privacy.html">Privacy</a>
           <a class="menu-link" href="/support.html">Support</a>
         </nav>
-
-        <div id="banner-stack" role="status" aria-live="polite">
-          <div id="b-local" class="banner banner-green hidden">
-            <span class="dot"></span>Local test mode
-          </div>
-          <div id="b-offline" class="banner banner-amber hidden">
-            <span class="dot"></span><span id="b-offline-text">Offline — showing cached data</span>
-          </div>
-          <div id="b-degraded" class="banner banner-amber hidden">
-            <span class="dot"></span>Source degraded
-          </div>
-          <div id="b-parse" class="banner banner-red hidden">
-            <span class="dot"></span>Data format error
-          </div>
-          <div id="b-loc" class="banner banner-blue hidden">
-            <span class="dot"></span><span id="b-loc-text">Location used only on this device</span>
-          </div>
-        </div>
       </div>
     </header>
 
     <div id="map-wrap">
-      <div id="map" role="main" aria-label="Hawaiʻi wildfire detection map"></div>
+      <div id="map"></div>
 
-      <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
+      <aside class="desktop-panel">
         <div class="panel-head">Fire Signals · Hawaiʻi</div>
         <div class="panel-body" id="panel-content-desktop"></div>
       </aside>
 
-      <section class="sheet" id="mobile-sheet" aria-label="Mobile fire metrics">
-        <div class="sheet-card" id="sheet-card">
+      <section class="sheet" id="mobile-sheet">
+        <div class="sheet-card">
           <div class="sheet-topbar">
-            <div class="sheet-handle-wrap" id="sheet-handle-wrap" aria-hidden="true">
+            <div class="sheet-handle-wrap" id="sheet-handle-wrap">
               <div class="sheet-handle"></div>
             </div>
             <div class="sheet-quick-actions">
@@ -927,27 +694,6 @@
           <div class="panel-body" id="panel-content-mobile"></div>
         </div>
       </section>
-
-      <button class="diag-btn" id="diag-btn" aria-expanded="false" aria-controls="diag">
-        ⚙ SYSTEM
-      </button>
-
-      <div class="diag" id="diag" role="region" aria-label="System diagnostics">
-        <div class="diag-head">
-          <span>§19 Diagnostics</span>
-          <button class="diag-close" id="diag-close" aria-label="Close diagnostics">✕</button>
-        </div>
-        <div class="diag-body">
-          <div class="diag-row"><span class="diag-key">networkFailures</span><span class="diag-val" id="d-net">0</span></div>
-          <div class="diag-row"><span class="diag-key">parseFailures</span><span class="diag-val" id="d-parse">0</span></div>
-          <div class="diag-row"><span class="diag-key">consecutiveFailures</span><span class="diag-val" id="d-consec">0</span></div>
-          <div class="diag-row"><span class="diag-key">offline</span><span class="diag-val" id="d-offline">false</span></div>
-          <div class="diag-row"><span class="diag-key">mode</span><span class="diag-val" id="d-mode">—</span></div>
-          <div class="diag-row"><span class="diag-key">privacyModel</span><span class="diag-val" style="color:var(--green)">Zero PII</span></div>
-        </div>
-      </div>
-
-      <footer id="mode-footer">Kahu Ola civic technology</footer>
     </div>
   </div>
 
@@ -989,11 +735,9 @@
 
     <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
 
-    <div class="summary-card" aria-label="Civic Intelligence">
+    <div class="summary-card">
       <div class="summary-title">Civic Intelligence</div>
-      <div class="summary-text" id="summary-text">
-        Waiting for the latest wildfire signal summary.
-      </div>
+      <div class="summary-text" id="summary-text">Waiting for the latest wildfire signal summary.</div>
       <div class="summary-meta">
         <span class="chip" id="summary-source">Source: Kahu Ola</span>
         <span class="chip" id="summary-updated">Updated: —</span>
@@ -1002,9 +746,7 @@
     </div>
 
     <div class="panel-actions">
-      <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
-        ↻ REFRESH
-      </button>
+      <button class="refresh-btn" id="refresh-btn" type="button">↻ REFRESH</button>
     </div>
 
     <div class="panel-actions">
@@ -1019,7 +761,6 @@
     "use strict";
 
     const MAPTILER_KEY = "gZAlLuBvEe2xMGBVun5D";
-
     const STYLES = {
       dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
       satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`
@@ -1034,66 +775,29 @@
       ? "./fires-test.json"
       : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1";
 
-    const HAWAII_BOUNDS = [
-      [-160.9, 18.8],
-      [-154.7, 22.5]
-    ];
-
+    const HAWAII_BOUNDS = [[-160.9, 18.8], [-154.7, 22.5]];
     const HAWAII_CENTER = [-157.9, 20.5];
     const REF_CENTER = [-156.675, 20.878];
-    const POLL_MS = 60000;
-    const FETCH_TIMEOUT_MS = 12000;
     const MOBILE_BREAKPOINT = 980;
+    const FETCH_TIMEOUT_MS = 12000;
 
-    const modeFooter = document.getElementById("mode-footer");
-    const diag = document.getElementById("diag");
-    const diagBtn = document.getElementById("diag-btn");
     const mobileSheet = document.getElementById("mobile-sheet");
     const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
     const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
-    const appEl = document.getElementById("app");
-    const mapWrapEl = document.getElementById("map-wrap");
-    const mapEl = document.getElementById("map");
 
     let lastKnownUserCoord = null;
     let userMarker = null;
     let currentViewMode = "Statewide";
     let latestFeatures = [];
     let currentBasemap = "dark";
-    let activePopup = null;
-    let pollHandle = null;
-    let pendingStyleRestore = false;
-
-    function setModeFooter() {
-      if (!modeFooter) return;
-      modeFooter.textContent = IS_LOCAL
-        ? "Kahu Ola civic technology · local test mode"
-        : "Kahu Ola civic technology · live production mode";
-    }
-    setModeFooter();
-
-    function forceRealViewportHeight() {
-      const h = Math.round(window.innerHeight || document.documentElement.clientHeight || 0);
-      if (!h) return;
-
-      document.documentElement.style.setProperty("--app-height", `${h}px`);
-      document.documentElement.style.height = `${h}px`;
-      document.body.style.height = `${h}px`;
-
-      if (appEl) appEl.style.height = `${h}px`;
-      if (mapWrapEl) mapWrapEl.style.height = `${h}px`;
-      if (mapEl) mapEl.style.height = `${h}px`;
-    }
 
     function mountPanel(targetId, suffix) {
       const target = document.getElementById(targetId);
       const tpl = document.getElementById("panel-template");
       const fragment = tpl.content.cloneNode(true);
-
       fragment.querySelectorAll("[id]").forEach((el) => {
         el.id = `${el.id}-${suffix}`;
       });
-
       target.innerHTML = "";
       target.appendChild(fragment);
     }
@@ -1114,65 +818,23 @@
       if (el) el.textContent = String(value);
     }
 
-    function show(id, on) {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle("hidden", !on);
+    function safeResize() {
+      map.resize();
     }
 
-    const DS = {
-      networkFailures: 0,
-      parseFailures: 0,
-      consecutiveFailures: 0,
-      isOffline: false,
-      lastFireFetchAt: null,
-      lastSourceDataTime: null,
-      lastPayloadSource: null,
-      get degraded() {
-        return this.consecutiveFailures >= 3;
-      },
-      success(nowDate, sourceDataTime, sourceLabel) {
-        this.consecutiveFailures = 0;
-        this.isOffline = false;
-        this.lastFireFetchAt = nowDate || new Date();
-        this.lastSourceDataTime = sourceDataTime || this.lastFireFetchAt;
-        this.lastPayloadSource = sourceLabel || null;
-        syncDiag();
-      },
-      error(type) {
-        if (type === "network") this.networkFailures++;
-        if (type === "parse") this.parseFailures++;
-        this.consecutiveFailures++;
-        syncDiag();
-      }
-    };
-
-    function syncDiag() {
-      document.getElementById("d-net").textContent = DS.networkFailures;
-      document.getElementById("d-parse").textContent = DS.parseFailures;
-      document.getElementById("d-consec").textContent = DS.consecutiveFailures;
-      document.getElementById("d-offline").textContent = DS.isOffline ? "true" : "false";
-      document.getElementById("d-mode").textContent = IS_LOCAL ? "local" : "production";
-
-      show("b-local", IS_LOCAL);
-      show("b-offline", DS.isOffline);
-      show("b-parse", DS.parseFailures > 0);
-      show("b-degraded", DS.degraded && !DS.isOffline);
-      show("b-loc", !!lastKnownUserCoord);
+    function setSheetOpen(open) {
+      if (window.innerWidth > MOBILE_BREAKPOINT) return;
+      mobileSheet.classList.toggle("open", open);
+      sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
+      setTimeout(safeResize, 200);
     }
 
-    function hstTime(date) {
-      if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "—";
-      return date.toLocaleTimeString("en-US", {
-        timeZone: "Pacific/Honolulu",
-        hour: "2-digit",
-        minute: "2-digit"
-      }) + " HST";
-    }
-
-    function parseDateMaybe(value) {
-      if (!value) return null;
-      const d = new Date(value);
-      return Number.isNaN(d.getTime()) ? null : d;
+    function formatDetectedTime(acqDate, acqTime) {
+      if (!acqDate && !acqTime) return "Unavailable";
+      const timeStr = acqTime ? String(acqTime).padStart(4, "0") : "";
+      const hh = timeStr ? timeStr.slice(0, 2) : "--";
+      const mm = timeStr ? timeStr.slice(2, 4) : "--";
+      return `${acqDate || "—"} ${timeStr ? `${hh}:${mm} UTC` : ""}`.trim();
     }
 
     function distMiles(a, b) {
@@ -1187,133 +849,27 @@
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     }
 
-    function applyFreshness(date) {
-      const el = ui("freshness-badge");
-      if (!el) return;
+    function normalizeFireFeatures(rawFeatures) {
+      return rawFeatures
+        .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates))
+        .map((f) => {
+          const lng = Number(f.geometry.coordinates[0]);
+          const lat = Number(f.geometry.coordinates[1]);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
 
-      if (!date) {
-        el.className = "freshness f-unknown";
-        el.textContent = "● UNKNOWN";
-        return;
-      }
-
-      const ageMin = (Date.now() - date.getTime()) / 60000;
-
-      if (ageMin <= 10) {
-        el.className = "freshness f-fresh";
-        el.textContent = "✓ FRESH";
-      } else if (ageMin <= 60) {
-        el.className = "freshness f-stale";
-        el.textContent = "⚠ MAY BE STALE";
-      } else {
-        el.className = "freshness f-old";
-        el.textContent = "✗ OUTDATED";
-      }
-    }
-
-    function updateSummary(features, nearest, criticalCount) {
-      const summaryText = ui("summary-text");
-      const summarySource = ui("summary-source");
-      const summaryUpdated = ui("summary-updated");
-      const summaryPrivacy = ui("summary-privacy");
-
-      if (!summaryText) return;
-
-      const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
-
-      if (DS.isOffline) {
-        summaryText.textContent =
-          "Cached fire signals are being shown while the connection is offline. Treat the map as situational context, not a live emergency directive.";
-      } else if (features.length === 0) {
-        summaryText.textContent =
-          "NASA FIRMS returned no current wildfire detections across Hawaiʻi in this snapshot.";
-      } else if (criticalCount > 0 && Number.isFinite(nearest)) {
-        summaryText.textContent =
-          `NASA FIRMS indicates critical wildfire detections in Hawaiʻi. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      } else if (Number.isFinite(nearest)) {
-        summaryText.textContent =
-          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      } else {
-        summaryText.textContent =
-          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot.`;
-      }
-
-      if (summarySource) {
-        summarySource.textContent = IS_LOCAL
-          ? "Source: Local test dataset"
-          : `Source: ${DS.lastPayloadSource || "NASA FIRMS · Kahu Ola Worker"}`;
-      }
-
-      if (summaryUpdated) {
-        summaryUpdated.textContent =
-          `Updated: ${DS.lastSourceDataTime ? hstTime(DS.lastSourceDataTime) : "—"}`;
-      }
-
-      if (summaryPrivacy) {
-        summaryPrivacy.textContent = lastKnownUserCoord
-          ? "Location stays on device"
-          : "No device location used";
-      }
-
-      setText("view-mode", currentViewMode);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-    }
-
-    async function strictFetch(url) {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-
-      try {
-        const res = await fetch(url, {
-          signal: ctrl.signal,
-          cache: "no-store"
-        });
-
-        clearTimeout(timer);
-
-        if (!res.ok) {
-          DS.error("network");
-          return { features: [], sourceTime: null, sourceLabel: null };
-        }
-
-        let json;
-        try {
-          json = JSON.parse(await res.text());
-        } catch {
-          DS.error("parse");
-          return { features: [], sourceTime: null, sourceLabel: null };
-        }
-
-        if (!json || typeof json !== "object" || !Array.isArray(json.features)) {
-          DS.error("parse");
-          return { features: [], sourceTime: null, sourceLabel: null };
-        }
-
-        const nowDate = new Date();
-        const sourceTime =
-          parseDateMaybe(json.newest_acq_at) ||
-          parseDateMaybe(json.generated_at) ||
-          parseDateMaybe(json.fetched_at) ||
-          nowDate;
-
-        const sourceLabel =
-          json.source ||
-          json.provider ||
-          (IS_LOCAL ? "Local test dataset" : "NASA FIRMS · Kahu Ola Worker");
-
-        DS.success(nowDate, sourceTime, sourceLabel);
-
-        return { features: json.features, sourceTime, sourceLabel };
-      } catch {
-        clearTimeout(timer);
-        DS.isOffline = true;
-        DS.error("network");
-        return {
-          features: [],
-          sourceTime: DS.lastSourceDataTime,
-          sourceLabel: DS.lastPayloadSource
-        };
-      }
+          return {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [lng, lat] },
+            properties: {
+              severity: f.properties?.severity || "UNKNOWN",
+              frp: f.properties?.frp || null,
+              confidence: f.properties?.confidence || null,
+              acq_date: f.properties?.acq_date || null,
+              acq_time: f.properties?.acq_time || null
+            }
+          };
+        })
+        .filter(Boolean);
     }
 
     const map = new maplibregl.Map({
@@ -1329,125 +885,11 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
 
-    function safeMapResize(delay = 0) {
-      const run = () => {
-        forceRealViewportHeight();
-        requestAnimationFrame(() => {
-          map.resize();
-          requestAnimationFrame(() => {
-            forceRealViewportHeight();
-            map.resize();
-          });
-          setTimeout(() => {
-            forceRealViewportHeight();
-            map.resize();
-          }, 120);
-        });
-      };
-
-      if (delay > 0) {
-        setTimeout(run, delay);
-      } else {
-        run();
-      }
-    }
-
-    function safariHardRelayout() {
-      forceRealViewportHeight();
-
-      if (mapWrapEl) {
-        mapWrapEl.style.display = "none";
-        mapWrapEl.offsetHeight;
-        mapWrapEl.style.display = "";
-      }
-
-      if (mapEl) {
-        mapEl.style.transform = "translateZ(0)";
-      }
-
-      safeMapResize(0);
-      safeMapResize(120);
-      safeMapResize(300);
-    }
-
-    function fitHawaii(animated = false) {
-      map.fitBounds(HAWAII_BOUNDS, {
-        padding: { top: 96, right: 24, bottom: 120, left: 24 },
-        duration: animated ? 700 : 0,
-        maxZoom: 8
-      });
-      currentViewMode = lastKnownUserCoord ? "My Location" : "Statewide";
-      setText("view-mode", currentViewMode);
-    }
-
-    function toggleBasemap() {
-      currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
-      pendingStyleRestore = true;
-
-      if (activePopup) {
-        activePopup.remove();
-        activePopup = null;
-      }
-
-      map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
-    }
-
-    function syncSatelliteButtons() {
-      const ids = [
-        "satellite-btn-panel-desktop",
-        "satellite-btn-panel-mobile",
-        "satellite-btn-mobile"
-      ];
-
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.textContent = currentBasemap === "dark" ? "Satellite" : "Dark Map";
-        el.classList.toggle("active", currentBasemap !== "dark");
-      });
-    }
-
-    function normalizeFireFeatures(rawFeatures) {
-      return rawFeatures
-        .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates))
-        .map((f) => {
-          const lng = Number(f.geometry.coordinates[0]);
-          const lat = Number(f.geometry.coordinates[1]);
-
-          if (
-            !Number.isFinite(lng) ||
-            !Number.isFinite(lat) ||
-            lng < -180 || lng > 180 ||
-            lat < -90 || lat > 90
-          ) return null;
-
-          return {
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              coordinates: [lng, lat]
-            },
-            properties: {
-              severity: f.properties?.severity || "UNKNOWN",
-              brightness: f.properties?.brightness || null,
-              confidence: f.properties?.confidence || null,
-              frp: f.properties?.frp || null,
-              acq_date: f.properties?.acq_date || null,
-              acq_time: f.properties?.acq_time || null
-            }
-          };
-        })
-        .filter(Boolean);
-    }
-
     function ensureFireLayers() {
       if (!map.getSource("fires")) {
         map.addSource("fires", {
           type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: []
-          },
+          data: { type: "FeatureCollection", features: [] },
           cluster: true,
           clusterMaxZoom: 9,
           clusterRadius: 52
@@ -1461,20 +903,8 @@
           source: "fires",
           filter: ["has", "point_count"],
           paint: {
-            "circle-color": [
-              "step",
-              ["get", "point_count"],
-              "#ff8a00", 8,
-              "#ff6a00", 20,
-              "#ff3d00"
-            ],
-            "circle-radius": [
-              "step",
-              ["get", "point_count"],
-              16, 8,
-              22, 20,
-              28
-            ],
+            "circle-color": ["step", ["get", "point_count"], "#ff8a00", 8, "#ff6a00", 20, "#ff3d00"],
+            "circle-radius": ["step", ["get", "point_count"], 16, 8, 22, 20, 28],
             "circle-opacity": 0.95,
             "circle-stroke-width": 2,
             "circle-stroke-color": "rgba(255,140,0,0.26)"
@@ -1493,9 +923,7 @@
             "text-font": ["Open Sans Bold"],
             "text-size": 12
           },
-          paint: {
-            "text-color": "#ffffff"
-          }
+          paint: { "text-color": "#ffffff" }
         });
       }
 
@@ -1506,21 +934,8 @@
           source: "fires",
           filter: ["!", ["has", "point_count"]],
           paint: {
-            "circle-color": [
-              "case",
-              ["==", ["get", "severity"], "CRITICAL"],
-              "rgba(255,23,68,0.18)",
-              "rgba(255,138,0,0.16)"
-            ],
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              6, 10,
-              9, 14,
-              12, 18,
-              15, 24
-            ],
+            "circle-color": ["case", ["==", ["get", "severity"], "CRITICAL"], "rgba(255,23,68,0.18)", "rgba(255,138,0,0.16)"],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 10, 9, 14, 12, 18, 15, 24],
             "circle-opacity": 1
           }
         });
@@ -1533,21 +948,8 @@
           source: "fires",
           filter: ["!", ["has", "point_count"]],
           paint: {
-            "circle-color": [
-              "case",
-              ["==", ["get", "severity"], "CRITICAL"],
-              "#ff1744",
-              "#ff8a00"
-            ],
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              6, 4,
-              9, 6,
-              12, 8,
-              15, 10
-            ],
+            "circle-color": ["case", ["==", ["get", "severity"], "CRITICAL"], "#ff1744", "#ff8a00"],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 4, 9, 6, 12, 8, 15, 10],
             "circle-opacity": 0.96,
             "circle-stroke-width": 2,
             "circle-stroke-color": "rgba(255,255,255,0.08)"
@@ -1561,15 +963,10 @@
         map.on("click", "clusters", (e) => {
           const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
           if (!features.length) return;
-
           const clusterId = features[0].properties.cluster_id;
           map.getSource("fires").getClusterExpansionZoom(clusterId, (err, zoom) => {
             if (err) return;
-            map.easeTo({
-              center: features[0].geometry.coordinates,
-              zoom,
-              duration: 500
-            });
+            map.easeTo({ center: features[0].geometry.coordinates, zoom, duration: 500 });
           });
         });
 
@@ -1578,160 +975,34 @@
           if (!feature) return;
           openFirePopup(feature);
         });
-
-        map.on("mouseenter", "clusters", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "clusters", () => {
-          map.getCanvas().style.cursor = "";
-        });
-        map.on("mouseenter", "unclustered-fires", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "unclustered-fires", () => {
-          map.getCanvas().style.cursor = "";
-        });
       }
     }
 
     function updateFireSource(features) {
       const source = map.getSource("fires");
       if (!source) return;
-
-      source.setData({
-        type: "FeatureCollection",
-        features
-      });
+      source.setData({ type: "FeatureCollection", features });
     }
 
     function updateUserMarker(coord) {
       if (!coord) return;
-
       if (userMarker) userMarker.remove();
 
       const el = document.createElement("div");
       el.className = "user-marker";
 
-      const popup = new maplibregl.Popup({
-        closeButton: false,
-        offset: 14
-      }).setHTML(
-        `<div style="font-weight:600;margin-bottom:4px">📍 Your Location</div>
-         <div style="color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}</div>
-         <div style="margin-top:6px;color:#9bc4ff">Used only on this device</div>`
-      );
-
       userMarker = new maplibregl.Marker({ element: el })
         .setLngLat(coord)
-        .setPopup(popup)
         .addTo(map);
     }
 
     function setLocationButtonState(loading) {
-      const ids = [
-        "locate-btn-panel-desktop",
-        "locate-btn-panel-mobile",
-        "locate-btn-mobile"
-      ];
-
-      ids.forEach((id) => {
+      ["locate-btn-panel-desktop", "locate-btn-panel-mobile", "locate-btn-mobile"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.disabled = loading;
         el.textContent = loading ? "Locating..." : "Use My Location";
       });
-    }
-
-    function recalcNearestFromFeatures(features) {
-      const refPoint = lastKnownUserCoord || REF_CENTER;
-      let closest = Infinity;
-      let criticalCount = 0;
-
-      for (const f of features) {
-        if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
-        const c = f.geometry.coordinates;
-        const severity = f.properties?.severity || "UNKNOWN";
-
-        if (severity === "CRITICAL") criticalCount++;
-
-        const d = distMiles(refPoint, c);
-        if (d < closest) closest = d;
-      }
-
-      const nearEl = ui("nearest-fire");
-      if (nearEl) {
-        if (features.length === 0 || !Number.isFinite(closest)) {
-          nearEl.textContent = "None";
-          nearEl.className = "metric-value v-good";
-        } else {
-          nearEl.textContent = closest.toFixed(1) + " mi";
-          nearEl.className =
-            "metric-value " +
-            (closest < 5 ? "v-crit" : closest < 20 ? "v-warn" : "v-fire");
-        }
-      }
-
-      updateSummary(features, closest, criticalCount);
-    }
-
-    function formatDetectedTime(acqDate, acqTime) {
-      if (!acqDate && !acqTime) return "Unavailable";
-      const timeStr = acqTime ? String(acqTime).padStart(4, "0") : "";
-      const hh = timeStr ? timeStr.slice(0, 2) : "--";
-      const mm = timeStr ? timeStr.slice(2, 4) : "--";
-      return `${acqDate || "—"} ${timeStr ? `${hh}:${mm} UTC` : ""}`.trim();
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    function useMyLocation() {
-      if (!("geolocation" in navigator)) {
-        alert("Location is not available on this device.");
-        return;
-      }
-
-      setLocationButtonState(true);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coord = [pos.coords.longitude, pos.coords.latitude];
-          lastKnownUserCoord = coord;
-          currentViewMode = "My Location";
-
-          updateUserMarker(coord);
-
-          map.flyTo({
-            center: coord,
-            zoom: Math.max(map.getZoom(), 9),
-            speed: 0.8,
-            essential: true
-          });
-
-          document.getElementById("b-loc-text").textContent = "Location used only on this device";
-          show("b-loc", true);
-          setText("view-mode", "My Location");
-          recalcNearestFromFeatures(latestFeatures);
-          setLocationButtonState(false);
-          safeMapResize(250);
-        },
-        () => {
-          setLocationButtonState(false);
-          document.getElementById("b-loc-text").textContent = "Location permission not granted";
-          show("b-loc", true);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000
-        }
-      );
     }
 
     function openFirePopup(feature) {
@@ -1759,277 +1030,210 @@
         : `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
       const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
 
-      map.easeTo({
-        center: coords,
-        zoom: Math.max(map.getZoom(), 11.5),
-        duration: 500
-      });
-
-      if (activePopup) activePopup.remove();
-
-      const html = `
-        <div class="popup-card">
-          <div class="popup-top">
-            <div>
-              <div class="popup-title">🔥 Fire Detection</div>
-              <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
-            </div>
-            <div class="popup-severity ${severityClass}">${escapeHtml(severity)}</div>
-          </div>
-
-          <div class="popup-grid">
-            <div class="popup-metric">
-              <div class="popup-metric-label">Detected Time</div>
-              <div class="popup-metric-value">${escapeHtml(detectedTime)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Distance From You</div>
-              <div class="popup-metric-value">${escapeHtml(milesFromYou)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">FRP</div>
-              <div class="popup-metric-value">${escapeHtml(frp)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Confidence</div>
-              <div class="popup-metric-value">${escapeHtml(confidence)}</div>
-            </div>
-          </div>
-
-          <div class="popup-note">
-            Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.
-          </div>
-
-          <div class="popup-actions">
-            <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
-            <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
-            <a class="popup-btn" href="${appleDirections}" target="_blank" rel="noopener noreferrer">Apple Directions</a>
-            <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
-          </div>
-        </div>
-      `;
-
-      activePopup = new maplibregl.Popup({
-        closeButton: true,
-        closeOnMove: false,
-        offset: 14,
-        maxWidth: "320px"
-      })
+      new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
         .setLngLat(coords)
-        .setHTML(html)
+        .setHTML(`
+          <div class="popup-card">
+            <div class="popup-top">
+              <div>
+                <div class="popup-title">🔥 Fire Detection</div>
+                <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+              </div>
+              <div class="popup-severity ${severityClass}">${severity}</div>
+            </div>
+
+            <div class="popup-grid">
+              <div class="popup-metric">
+                <div class="popup-metric-label">Detected Time</div>
+                <div class="popup-metric-value">${detectedTime}</div>
+              </div>
+              <div class="popup-metric">
+                <div class="popup-metric-label">Distance From You</div>
+                <div class="popup-metric-value">${milesFromYou}</div>
+              </div>
+              <div class="popup-metric">
+                <div class="popup-metric-label">FRP</div>
+                <div class="popup-metric-value">${frp}</div>
+              </div>
+              <div class="popup-metric">
+                <div class="popup-metric-label">Confidence</div>
+                <div class="popup-metric-value">${confidence}</div>
+              </div>
+            </div>
+
+            <div class="popup-note">
+              Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.
+            </div>
+
+            <div class="popup-actions">
+              <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
+              <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+              <a class="popup-btn" href="${appleDirections}" target="_blank" rel="noopener noreferrer">Apple Directions</a>
+              <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
+            </div>
+          </div>
+        `)
         .addTo(map);
+
+      map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
     }
 
     async function loadFireSignals() {
-      setRefreshingUI(true);
-
-      const result = await strictFetch(FIRE_ENDPOINT);
-      let features = Array.isArray(result.features) ? result.features : [];
-
-      if (features.length > 1000) {
-        features = features.slice(0, 1000);
+      const refresh = ui("refresh-btn");
+      if (refresh) {
+        refresh.disabled = true;
+        refresh.innerHTML = '<span class="spinner"></span>REFRESHING';
       }
 
-      const normalized = normalizeFireFeatures(features);
-      latestFeatures = normalized;
-      updateFireSource(normalized);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
 
-      let criticalCount = 0;
-      for (const f of normalized) {
-        if (f.properties?.severity === "CRITICAL") criticalCount++;
-      }
+      try {
+        const res = await fetch(FIRE_ENDPOINT, { signal: ctrl.signal, cache: "no-store" });
+        clearTimeout(timer);
 
-      const countEl = ui("fire-count");
-      if (countEl) {
-        countEl.textContent = String(normalized.length);
-        countEl.className = "metric-value " + (normalized.length > 0 ? "v-fire" : "v-good");
-      }
+        if (!res.ok) throw new Error("Bad response");
 
-      const critEl = ui("critical-count");
-      if (critEl) {
-        if (criticalCount > 0) {
-          critEl.textContent = String(criticalCount);
-          critEl.className = "metric-value v-crit";
-        } else {
-          critEl.textContent = "None";
-          critEl.className = "metric-value v-good";
+        const json = await res.json();
+        const normalized = normalizeFireFeatures(Array.isArray(json.features) ? json.features : []);
+        latestFeatures = normalized;
+        updateFireSource(normalized);
+
+        setText("fire-count", normalized.length);
+
+        let criticalCount = 0;
+        let closest = Infinity;
+        const ref = lastKnownUserCoord || REF_CENTER;
+
+        normalized.forEach((f) => {
+          if (f.properties?.severity === "CRITICAL") criticalCount++;
+          const d = distMiles(ref, f.geometry.coordinates);
+          if (d < closest) closest = d;
+        });
+
+        setText("critical-count", criticalCount > 0 ? criticalCount : "None");
+        setText("nearest-fire", normalized.length ? `${closest.toFixed(1)} mi` : "None");
+        setText("fetch-time", new Date().toLocaleTimeString("en-US", {
+          timeZone: "Pacific/Honolulu",
+          hour: "2-digit",
+          minute: "2-digit"
+        }) + " HST");
+        setText("data-source", "NASA FIRMS · Kahu Ola Worker");
+        setText("view-mode", currentViewMode);
+        setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+
+        const freshness = ui("freshness-badge");
+        if (freshness) {
+          freshness.className = "freshness f-fresh";
+          freshness.textContent = "✓ FRESH";
+        }
+
+        const summary = ui("summary-text");
+        if (summary) {
+          summary.textContent = normalized.length
+            ? `NASA FIRMS returned ${normalized.length} wildfire detection${normalized.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot.`
+            : "NASA FIRMS returned no current wildfire detections across Hawaiʻi in this snapshot.";
+        }
+
+        setText("summary-source", "Source: NASA FIRMS · Kahu Ola Worker");
+        setText("summary-updated", "Updated: " + new Date().toLocaleTimeString("en-US", {
+          timeZone: "Pacific/Honolulu",
+          hour: "2-digit",
+          minute: "2-digit"
+        }) + " HST");
+        setText("summary-privacy", lastKnownUserCoord ? "Location stays on device" : "No device location used");
+      } catch (e) {
+        const summary = ui("summary-text");
+        if (summary) {
+          summary.textContent = "Unable to refresh fire signals right now.";
+        }
+      } finally {
+        if (refresh) {
+          refresh.disabled = false;
+          refresh.innerHTML = "↻ REFRESH";
         }
       }
-
-      setText("fetch-time", DS.lastSourceDataTime ? hstTime(DS.lastSourceDataTime) : "—");
-      setText("data-source", IS_LOCAL ? "fires-test.json" : (DS.lastPayloadSource || "Worker API"));
-      setText("view-mode", currentViewMode);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-      applyFreshness(DS.lastSourceDataTime);
-      recalcNearestFromFeatures(normalized);
-
-      if (DS.isOffline && DS.lastSourceDataTime) {
-        document.getElementById("b-offline-text").textContent =
-          `Offline — last: ${hstTime(DS.lastSourceDataTime)}`;
-      }
-
-      setRefreshingUI(false);
     }
 
-    function setRefreshingUI(isRefreshing) {
-      const refresh = ui("refresh-btn");
-      const fireCount = ui("fire-count");
-
-      if (refresh) {
-        refresh.disabled = isRefreshing;
-        refresh.innerHTML = isRefreshing
-          ? '<span class="spinner"></span>REFRESHING'
-          : '↻ REFRESH';
-      }
-
-      if (isRefreshing && fireCount) {
-        fireCount.className = "metric-value v-fire";
-        fireCount.innerHTML = '<span class="spinner"></span>';
-      }
+    function toggleBasemap() {
+      currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
+      map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
     }
 
-    function rebuildMapOverlays() {
-      ensureFireLayers();
-      updateFireSource(latestFeatures);
-      syncSatelliteButtons();
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+    function useMyLocation() {
+      if (!("geolocation" in navigator)) return;
 
-      if (lastKnownUserCoord) {
-        updateUserMarker(lastKnownUserCoord);
-      }
+      setLocationButtonState(true);
 
-      safeMapResize(50);
-      safeMapResize(180);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          lastKnownUserCoord = [pos.coords.longitude, pos.coords.latitude];
+          currentViewMode = "My Location";
+          updateUserMarker(lastKnownUserCoord);
+          map.flyTo({
+            center: lastKnownUserCoord,
+            zoom: Math.max(map.getZoom(), 9),
+            speed: 0.8,
+            essential: true
+          });
+          setLocationButtonState(false);
+          loadFireSignals();
+        },
+        () => setLocationButtonState(false),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
     }
 
-    function bindButtons() {
-      document.getElementById("refresh-btn-desktop")?.addEventListener("click", loadFireSignals);
-      document.getElementById("refresh-btn-mobile")?.addEventListener("click", loadFireSignals);
+    document.getElementById("refresh-btn-desktop")?.addEventListener("click", loadFireSignals);
+    document.getElementById("refresh-btn-mobile")?.addEventListener("click", loadFireSignals);
 
-      document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
-      document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
-      document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
+    document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
+    document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
+    document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
 
-      document.getElementById("satellite-btn-panel-desktop")?.addEventListener("click", toggleBasemap);
-      document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
-      document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
-    }
+    document.getElementById("satellite-btn-panel-desktop")?.addEventListener("click", toggleBasemap);
+    document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
+    document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
 
-    function setSheetOpen(open) {
-      if (window.innerWidth > MOBILE_BREAKPOINT) return;
-      mobileSheet.classList.toggle("open", open);
-      sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
-      safariHardRelayout();
-    }
-
-    function toggleSheet() {
+    sheetToggleBtn?.addEventListener("click", () => {
       setSheetOpen(!mobileSheet.classList.contains("open"));
-    }
-
-    bindButtons();
-
-    diagBtn?.addEventListener("click", () => {
-      const open = diag.classList.toggle("open");
-      diagBtn.setAttribute("aria-expanded", String(open));
-      if (open) diagBtn.style.display = "none";
     });
 
-    document.getElementById("diag-close")?.addEventListener("click", () => {
-      diag.classList.remove("open");
-      diagBtn.setAttribute("aria-expanded", "false");
-      diagBtn.style.display = "";
-    });
-
-    sheetToggleBtn?.addEventListener("click", toggleSheet);
-    sheetHandleWrap?.addEventListener("click", toggleSheet);
-
-    forceRealViewportHeight();
-
-    window.addEventListener("resize", () => {
-      safariHardRelayout();
-      if (window.innerWidth > MOBILE_BREAKPOINT) return;
-      setSheetOpen(mobileSheet.classList.contains("open"));
-    });
-
-    window.addEventListener("orientationchange", () => {
-      safariHardRelayout();
-      setTimeout(safariHardRelayout, 250);
-      setTimeout(safariHardRelayout, 700);
-    });
-
-    window.addEventListener("pageshow", () => {
-      safariHardRelayout();
-      setTimeout(safariHardRelayout, 180);
-      setTimeout(safariHardRelayout, 500);
-    });
-
-    window.addEventListener("focus", () => {
-      safariHardRelayout();
-    });
-
-    window.addEventListener("touchend", () => {
-      safeMapResize(80);
-    }, { passive: true });
-
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) {
-        safariHardRelayout();
-        setTimeout(safariHardRelayout, 250);
-      }
-    });
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", () => {
-        safariHardRelayout();
-      });
-
-      window.visualViewport.addEventListener("scroll", () => {
-        safeMapResize(0);
-      });
-    }
-
-    window.addEventListener("offline", () => {
-      DS.isOffline = true;
-      syncDiag();
-      updateSummary([], Infinity, 0);
-    });
-
-    window.addEventListener("online", () => {
-      DS.isOffline = false;
-      syncDiag();
-      loadFireSignals();
-    });
-
-    map.on("style.load", () => {
-      rebuildMapOverlays();
-
-      if (pendingStyleRestore) {
-        pendingStyleRestore = false;
-        recalcNearestFromFeatures(latestFeatures);
-      }
+    sheetHandleWrap?.addEventListener("click", () => {
+      setSheetOpen(!mobileSheet.classList.contains("open"));
     });
 
     map.on("load", () => {
-      forceRealViewportHeight();
-      syncDiag();
       ensureFireLayers();
-      fitHawaii(false);
+      map.fitBounds(HAWAII_BOUNDS, {
+        padding: { top: 96, right: 24, bottom: 120, left: 24 },
+        duration: 0,
+        maxZoom: 8
+      });
 
       if (window.innerWidth <= MOBILE_BREAKPOINT) {
         setSheetOpen(false);
       }
 
       loadFireSignals();
+      setTimeout(safeResize, 100);
+      setTimeout(safeResize, 300);
+    });
 
-      safariHardRelayout();
-      setTimeout(safariHardRelayout, 180);
-      setTimeout(safariHardRelayout, 500);
-      setTimeout(safariHardRelayout, 1000);
+    map.on("style.load", () => {
+      ensureFireLayers();
+      loadFireSignals();
+      setTimeout(safeResize, 100);
+      setTimeout(safeResize, 300);
+    });
 
-      syncSatelliteButtons();
+    window.addEventListener("resize", () => {
+      setTimeout(safeResize, 100);
+    });
 
-      if (pollHandle) clearInterval(pollHandle);
-      pollHandle = setInterval(loadFireSignals, POLL_MS);
+    window.addEventListener("orientationchange", () => {
+      setTimeout(safeResize, 150);
+      setTimeout(safeResize, 450);
     });
   </script>
 </body>
