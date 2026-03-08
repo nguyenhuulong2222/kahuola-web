@@ -55,7 +55,6 @@
       margin:0;
       width:100%;
       height:100%;
-      min-height:-webkit-fill-available;
       background:var(--bg);
       color:var(--text);
       font-family:var(--font-body);
@@ -65,7 +64,12 @@
     }
 
     body{
-      min-height:-webkit-fill-available;
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
+      overscroll-behavior:none;
     }
 
     a{color:inherit;text-decoration:none}
@@ -73,28 +77,34 @@
     .hidden{display:none !important}
 
     #app{
-      position:relative;
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
       width:100%;
-      height:100dvh;
-      min-height:-webkit-fill-available;
+      height:100%;
       overflow:hidden;
       background:var(--bg);
     }
 
     #map-wrap{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
       overflow:hidden;
       background:#000;
+      z-index:1;
     }
 
     #map{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      bottom:0;
       background:#000;
     }
 
@@ -106,7 +116,7 @@
     }
 
     header{
-      position:absolute;
+      position:fixed;
       top:0;
       left:0;
       right:0;
@@ -176,7 +186,7 @@
     }
 
     .desktop-panel{
-      position:absolute;
+      position:fixed;
       top:calc(84px + var(--safe-top));
       right:calc(16px + var(--safe-right));
       z-index:40;
@@ -192,7 +202,7 @@
     }
 
     .sheet{
-      position:absolute;
+      position:fixed;
       left:0;
       right:0;
       bottom:0;
@@ -214,8 +224,8 @@
       box-shadow:0 -12px 36px rgba(0,0,0,.35);
       overflow:hidden;
       transform:translateY(calc(100% - var(--sheet-peek)));
-      transition:transform .26s ease;
-      max-height:78dvh;
+      transition:transform .24s ease;
+      max-height:78vh;
       display:flex;
       flex-direction:column;
     }
@@ -434,12 +444,6 @@
       color:#ffd6ab;
     }
 
-    .refresh-btn:disabled,
-    .action-btn:disabled{
-      opacity:.55;
-      cursor:not-allowed;
-    }
-
     .popup-card{
       display:flex;
       flex-direction:column;
@@ -602,22 +606,6 @@
       background:rgba(20,20,20,.90) !important;
       border:1px solid var(--border-hi) !important;
       border-radius:12px !important;
-      box-shadow:0 8px 22px rgba(0,0,0,.26);
-    }
-
-    .maplibregl-ctrl button{
-      width:36px !important;
-      height:36px !important;
-    }
-
-    .maplibregl-ctrl-scale{
-      margin:0 0 16px 16px !important;
-      background:rgba(0,0,0,.54) !important;
-      color:var(--text-dim) !important;
-      border-color:var(--border-hi) !important;
-      border-radius:8px !important;
-      font-family:var(--font-mono) !important;
-      font-size:10px !important;
     }
 
     @media (max-width:980px){
@@ -639,10 +627,6 @@
       .logo small{
         font-size:9px;
         line-height:1.15;
-      }
-
-      .sheet-card{
-        max-height:78dvh;
       }
 
       .popup-grid{
@@ -790,6 +774,7 @@
     let currentViewMode = "Statewide";
     let latestFeatures = [];
     let currentBasemap = "dark";
+    let activePopup = null;
 
     function mountPanel(targetId, suffix) {
       const target = document.getElementById(targetId);
@@ -826,7 +811,7 @@
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       mobileSheet.classList.toggle("open", open);
       sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
-      setTimeout(safeResize, 200);
+      setTimeout(safeResize, 100);
     }
 
     function formatDetectedTime(acqDate, acqTime) {
@@ -1030,7 +1015,9 @@
         : `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
       const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
 
-      new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
+      if (activePopup) activePopup.remove();
+
+      activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
         .setLngLat(coords)
         .setHTML(`
           <div class="popup-card">
@@ -1091,15 +1078,12 @@
       try {
         const res = await fetch(FIRE_ENDPOINT, { signal: ctrl.signal, cache: "no-store" });
         clearTimeout(timer);
-
         if (!res.ok) throw new Error("Bad response");
 
         const json = await res.json();
         const normalized = normalizeFireFeatures(Array.isArray(json.features) ? json.features : []);
         latestFeatures = normalized;
         updateFireSource(normalized);
-
-        setText("fire-count", normalized.length);
 
         let criticalCount = 0;
         let closest = Infinity;
@@ -1111,6 +1095,7 @@
           if (d < closest) closest = d;
         });
 
+        setText("fire-count", normalized.length);
         setText("critical-count", criticalCount > 0 ? criticalCount : "None");
         setText("nearest-fire", normalized.length ? `${closest.toFixed(1)} mi` : "None");
         setText("fetch-time", new Date().toLocaleTimeString("en-US", {
@@ -1144,9 +1129,7 @@
         setText("summary-privacy", lastKnownUserCoord ? "Location stays on device" : "No device location used");
       } catch (e) {
         const summary = ui("summary-text");
-        if (summary) {
-          summary.textContent = "Unable to refresh fire signals right now.";
-        }
+        if (summary) summary.textContent = "Unable to refresh fire signals right now.";
       } finally {
         if (refresh) {
           refresh.disabled = false;
@@ -1158,6 +1141,13 @@
     function toggleBasemap() {
       currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
       map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
+      ["satellite-btn-panel-desktop", "satellite-btn-panel-mobile", "satellite-btn-mobile"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = currentBasemap === "dark" ? "Satellite" : "Dark Map";
+          el.classList.toggle("active", currentBasemap !== "dark");
+        }
+      });
     }
 
     function useMyLocation() {
@@ -1222,9 +1212,9 @@
 
     map.on("style.load", () => {
       ensureFireLayers();
+      if (latestFeatures.length) updateFireSource(latestFeatures);
       loadFireSignals();
       setTimeout(safeResize, 100);
-      setTimeout(safeResize, 300);
     });
 
     window.addEventListener("resize", () => {
