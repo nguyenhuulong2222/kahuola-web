@@ -45,7 +45,7 @@
       --safe-left:env(safe-area-inset-left, 0px);
 
       --header-h:64px;
-      --sheet-peek:98px;
+      --sheet-peek:84px;
     }
 
     *{box-sizing:border-box}
@@ -697,91 +697,232 @@
       font-family:var(--font-mono);
       text-decoration:none;
       flex:1 1 120px;
+      transition:transform .18s ease, border-color .18s ease, background .18s ease;
     }
 
-
+    .popup-btn:hover{
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,.18);
+      background:rgba(255,255,255,.07);
+    }
 
     .selected-fire-marker{
-      width:20px;
-      height:20px;
+      position:relative;
+      width:18px;
+      height:18px;
       border-radius:50%;
-      background:radial-gradient(circle, rgba(255,196,0,.95) 0 28%, rgba(255,106,0,.95) 29% 58%, rgba(255,23,68,.92) 59% 100%);
-      border:2px solid rgba(255,255,255,.94);
-      box-shadow:0 0 0 10px rgba(255,152,0,.16), 0 0 28px rgba(255,106,0,.34);
+      background:radial-gradient(circle at 35% 35%, #ffd76b 0 28%, #ff8a00 34%, #ff4d00 68%, #911400 100%);
+      border:2px solid rgba(255,255,255,.92);
+      box-shadow:0 0 0 5px rgba(255,106,0,.18), 0 10px 26px rgba(0,0,0,.34);
+    }
+
+    .selected-fire-marker::before,
+    .selected-fire-marker::after{
+      content:"";
+      position:absolute;
+      inset:-8px;
+      border-radius:999px;
+      border:1px solid rgba(255,166,77,.45);
       animation:selectedPulse 1.8s ease-out infinite;
     }
 
+    .selected-fire-marker::after{
+      animation-delay:.9s;
+    }
+
     @keyframes selectedPulse{
-      0%{transform:scale(.92); box-shadow:0 0 0 0 rgba(255,152,0,.28), 0 0 12px rgba(255,106,0,.30)}
-      65%{transform:scale(1.08); box-shadow:0 0 0 16px rgba(255,152,0,0), 0 0 34px rgba(255,106,0,.42)}
-      100%{transform:scale(.92); box-shadow:0 0 0 0 rgba(255,152,0,0), 0 0 12px rgba(255,106,0,.30)}
+      0%{transform:scale(.68);opacity:.9}
+      100%{transform:scale(1.34);opacity:0}
     }
 
-    .fire-sheet{
+    .fire-detail-backdrop{
       position:absolute;
       inset:0;
-      z-index:46;
-      pointer-events:none;
-    }
-
-    .fire-sheet-backdrop{
-      position:absolute;
-      inset:0;
-      background:linear-gradient(to top, rgba(0,0,0,.56), rgba(0,0,0,.20) 42%, rgba(0,0,0,0));
+      z-index:34;
+      background:linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,.08) 36%, transparent 60%);
       opacity:0;
-      transition:opacity .26s ease;
       pointer-events:none;
+      transition:opacity .22s ease;
     }
 
-    .fire-sheet-card{
+    .fire-detail-backdrop.open{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .fire-detail-sheet{
       position:absolute;
       left:max(10px, calc(10px + var(--safe-left)));
       right:max(10px, calc(10px + var(--safe-right)));
-      bottom:calc(10px + var(--safe-bottom));
-      display:flex;
-      flex-direction:column;
-      max-height:min(74vh, 740px);
-      background:rgba(8,8,8,.97);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:24px;
-      box-shadow:0 -14px 42px rgba(0,0,0,.44);
-      overflow:hidden;
-      transform:translateY(calc(100% + 24px));
-      transition:transform .34s cubic-bezier(.22,.9,.25,1);
+      bottom:max(10px, calc(10px + var(--safe-bottom)));
+      z-index:35;
+      pointer-events:none;
+    }
+
+    .fire-detail-card{
       pointer-events:auto;
-      will-change:transform;
-      backdrop-filter:blur(16px);
-      -webkit-backdrop-filter:blur(16px);
+      background:linear-gradient(180deg, rgba(11,11,11,.98), rgba(16,16,16,.98));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:26px;
+      box-shadow:0 24px 60px rgba(0,0,0,.42);
+      overflow:hidden;
+      transform:translateY(calc(100% + 20px));
+      transition:transform .28s cubic-bezier(.22,.9,.24,1), opacity .22s ease;
+      opacity:0;
+      will-change:transform, opacity;
     }
 
-    .fire-sheet.open{pointer-events:auto}
-    .fire-sheet.open .fire-sheet-backdrop{opacity:1; pointer-events:auto}
-    .fire-sheet.open .fire-sheet-card{transform:translateY(0)}
-
-    .fire-sheet-handle-wrap{
-      display:flex;
-      justify-content:center;
-      padding:10px 0 8px;
+    .fire-detail-sheet.open .fire-detail-card{
+      transform:translateY(0);
+      opacity:1;
     }
 
-    .fire-sheet-handle{
-      width:44px;
-      height:5px;
-      border-radius:999px;
-      background:rgba(255,255,255,.22);
-    }
-
-    .fire-sheet-head{
+    .fire-detail-head{
       display:flex;
       align-items:flex-start;
-      gap:10px;
-      justify-content:space-between;
-      padding:0 16px 12px;
-      border-bottom:1px solid rgba(255,255,255,.06);
+      gap:12px;
+      padding:16px 16px 12px;
+      background:linear-gradient(180deg, rgba(255,106,0,.10), rgba(255,106,0,0));
     }
 
-    .fire-sheet-kicker{
-      color:#ffb36b;
+    .fire-detail-icon{
+      flex:0 0 auto;
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      background:radial-gradient(circle at 30% 30%, rgba(255,211,104,.28), rgba(255,106,0,.18) 45%, rgba(255,86,14,.10));
+      border:1px solid rgba(255,161,72,.22);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+      font-size:20px;
+    }
+
+    .fire-detail-copy{min-width:0; flex:1 1 auto}
+
+    .fire-detail-eyebrow{
+      color:#ffcb9d;
+      font-size:10px;
+      font-family:var(--font-mono);
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      margin-bottom:5px;
+    }
+
+    .fire-detail-title{
+      font-size:20px;
+      line-height:1.08;
+      font-weight:700;
+      letter-spacing:-.02em;
+    }
+
+    .fire-detail-sub{
+      margin-top:4px;
+      color:#9e9e9e;
+      font-size:12px;
+      font-family:var(--font-mono);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .fire-detail-top-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-left:auto;
+      flex:0 0 auto;
+    }
+
+    .fire-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:32px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      font-size:11px;
+      font-family:var(--font-mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      white-space:nowrap;
+      background:rgba(255,255,255,.05);
+      color:#f0d3b5;
+    }
+
+    .fire-badge.badge-critical{
+      background:linear-gradient(180deg, rgba(255,59,92,.18), rgba(255,59,92,.08));
+      border-color:rgba(255,73,110,.30);
+      color:#ffc0cc;
+      box-shadow:0 0 0 1px rgba(255,59,92,.08) inset;
+    }
+
+    .fire-badge.badge-elevated{
+      background:linear-gradient(180deg, rgba(255,143,34,.18), rgba(255,143,34,.08));
+      border-color:rgba(255,143,34,.28);
+      color:#ffd9ad;
+    }
+
+    .fire-badge.badge-unknown{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(255,255,255,.10);
+      color:#dfc8ae;
+    }
+
+    .fire-detail-close{
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      color:#dadada;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      padding:0;
+    }
+
+    .fire-detail-body{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      padding:0 16px 16px;
+    }
+
+    .fire-hero-row{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:10px;
+    }
+
+    .fire-hero-card, .fire-stat-card, .fire-callout{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    .fire-hero-card{
+      padding:14px 14px 13px;
+      min-width:0;
+    }
+
+    .fire-stat-stack{
+      display:grid;
+      gap:10px;
+    }
+
+    .fire-stat-card{
+      padding:12px 13px;
+      min-height:74px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .fire-stat-label{
+      color:#8f8f8f;
       font-size:10px;
       font-family:var(--font-mono);
       letter-spacing:.08em;
@@ -789,136 +930,104 @@
       margin-bottom:6px;
     }
 
-    .fire-sheet-title{
-      font-size:28px;
-      line-height:1;
-      letter-spacing:-.03em;
-      font-weight:700;
-    }
-
-    .fire-sheet-subtitle{
-      margin-top:6px;
-      color:var(--text-dim);
-      font-size:12px;
-      font-family:var(--font-mono);
-      line-height:1.4;
-      word-break:break-word;
-    }
-
-    .fire-sheet-head-actions{
+    .fire-hero-distance{
       display:flex;
-      align-items:center;
-      gap:8px;
-      flex:0 0 auto;
+      align-items:baseline;
+      gap:6px;
+      font-weight:700;
+      letter-spacing:-.03em;
+      margin-bottom:4px;
     }
 
-    .fire-sheet-severity{
-      display:inline-flex;
-      align-items:center;
-      min-height:34px;
-      padding:0 12px;
-      border-radius:999px;
-      font-size:11px;
-      font-family:var(--font-mono);
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.05);
-      color:#ffd2a3;
-    }
-
-    .fire-sheet-severity.critical{
-      color:#ffb0c1;
-      border-color:rgba(255,23,68,.26);
-      background:rgba(255,23,68,.10);
-    }
-
-    .fire-sheet-close{
-      width:34px;
-      height:34px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.05);
-      color:var(--text);
-      font-size:18px;
+    .fire-hero-distance strong{
+      font-size:30px;
       line-height:1;
     }
 
-    .fire-sheet-body{
-      padding:14px 16px 16px;
-      overflow:auto;
-      -webkit-overflow-scrolling:touch;
-    }
-
-    .fire-sheet-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-
-    .fire-sheet-metric{
-      padding:14px 14px 13px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      min-height:88px;
-    }
-
-    .fire-sheet-metric.full{grid-column:1 / -1; min-height:auto}
-
-    .fire-sheet-label{
-      color:#9d9d9d;
-      font-size:10px;
+    .fire-hero-distance span{
+      font-size:12px;
+      color:#b9b9b9;
       font-family:var(--font-mono);
-      letter-spacing:.06em;
       text-transform:uppercase;
-      margin-bottom:8px;
+      letter-spacing:.08em;
     }
 
-    .fire-sheet-value{
-      font-size:15px;
+    .fire-hero-caption{
+      color:#d5d5d5;
+      font-size:13px;
+      line-height:1.4;
+    }
+
+    .fire-stat-value{
+      font-size:21px;
+      line-height:1.05;
       font-weight:700;
-      line-height:1.35;
+      letter-spacing:-.02em;
       color:#f2f2f2;
       word-break:break-word;
     }
 
-    .fire-sheet-note{
-      margin-top:10px;
+    .fire-stat-value.small{font-size:16px; line-height:1.2}
+    .fire-stat-value.warn{color:#ffd09a}
+    .fire-stat-value.critical{color:#ffc0cc}
+    .fire-stat-value.good{color:#aee6ff}
+
+    .fire-callout{
       padding:13px 14px;
-      border-radius:18px;
-      border:1px solid rgba(77,163,255,.18);
-      background:rgba(77,163,255,.06);
-      color:#b9d8ff;
-      font-size:12px;
-      line-height:1.5;
+      background:linear-gradient(180deg, rgba(77,163,255,.09), rgba(77,163,255,.03));
+      border-color:rgba(77,163,255,.18);
     }
 
-    .fire-sheet-actions{
-      margin-top:12px;
+    .fire-callout-title{
+      font-size:10px;
+      font-family:var(--font-mono);
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:#9bc4ff;
+      margin-bottom:6px;
+    }
+
+    .fire-callout-body{
+      color:#dce8ff;
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .fire-detail-actions{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1.35fr .95fr .95fr;
       gap:10px;
     }
 
-    .fire-sheet-btn{
+    .fire-cta, .fire-secondary{
+      min-height:48px;
+      border-radius:16px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      min-height:46px;
-      padding:0 14px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.04);
-      color:#f0f0f0;
       text-decoration:none;
-      font-size:12px;
-      font-family:var(--font-mono);
-      letter-spacing:.02em;
+      font-weight:600;
+      transition:transform .18s ease, filter .18s ease, border-color .18s ease, background .18s ease;
     }
 
-    .fire-sheet-btn.primary{
-      border-color:rgba(255,138,0,.32);
-      background:linear-gradient(180deg, rgba(255,138,0,.20), rgba(255,106,0,.12));
-      color:#ffd6ae;
+    .fire-cta:active, .fire-secondary:active{transform:scale(.985)}
+
+    .fire-cta{
+      background:linear-gradient(180deg, #ff9e2c, #ff6a00);
+      color:#111;
+      border:1px solid rgba(255,188,100,.45);
+      box-shadow:0 10px 28px rgba(255,106,0,.24);
+    }
+
+    .fire-secondary{
+      background:rgba(255,255,255,.04);
+      color:#f1f1f1;
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    .fire-cta:hover, .fire-secondary:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.03);
     }
 
     .spinner{
@@ -1016,7 +1125,7 @@
     @media (max-width:768px){
       :root{
         --header-h:58px;
-        --sheet-peek:96px;
+        --sheet-peek:80px;
       }
 
       header{
@@ -1069,37 +1178,60 @@
       .popup-grid{
         grid-template-columns:1fr;
       }
+
+      .fire-detail-sheet{
+        left:max(8px, calc(8px + var(--safe-left)));
+        right:max(8px, calc(8px + var(--safe-right)));
+        bottom:max(8px, calc(8px + var(--safe-bottom)));
+      }
+
+      .fire-detail-head{
+        padding:14px 14px 10px;
+      }
+
+      .fire-detail-body{
+        gap:10px;
+        padding:0 14px 14px;
+      }
+
+      .fire-detail-title{font-size:18px}
+      .fire-hero-row{grid-template-columns:1fr}
+      .fire-detail-actions{grid-template-columns:1fr 1fr}
+      .fire-cta{grid-column:1 / -1}
     }
 
     @media (max-width:430px){
       :root{
-        --sheet-peek:90px;
+        --sheet-peek:72px;
       }
 
       .summary-text{
-        font-size:13.5px;
+        font-size:13px;
       }
 
       .metric-label,
       .metric-value{
-        font-size:12.5px;
+        font-size:12px;
       }
 
       .sheet-quick-actions{
         gap:6px;
       }
 
-      .fire-sheet-head{
-        padding:0 14px 10px;
+      .sheet-quick-actions .action-btn{
+        min-height:34px;
+        font-size:9px;
       }
 
-      .fire-sheet-title{font-size:22px}
-      .fire-sheet-subtitle{font-size:11px}
-      .fire-sheet-body{padding:12px 14px 14px}
-      .fire-sheet-grid,
-      .fire-sheet-actions{grid-template-columns:1fr}
-      .fire-sheet-metric{min-height:auto}
-      .fire-sheet-btn{min-height:44px}
+      .fire-detail-icon{width:38px;height:38px;border-radius:12px;font-size:18px}
+      .fire-detail-title{font-size:17px}
+      .fire-detail-sub{font-size:11px}
+      .fire-hero-card{padding:12px 12px 11px}
+      .fire-stat-card{min-height:68px;padding:11px 12px}
+      .fire-hero-distance strong{font-size:28px}
+      .fire-callout-body{font-size:12.5px}
+      .fire-detail-actions{gap:8px}
+      .fire-cta,.fire-secondary{min-height:44px;border-radius:14px;font-size:13px}
     }
   </style>
 </head>
@@ -1165,61 +1297,12 @@
         </div>
       </section>
 
-
-
-      <section class="fire-sheet" id="fire-sheet" aria-label="Selected fire details" aria-hidden="true">
-        <div class="fire-sheet-backdrop" id="fire-sheet-backdrop"></div>
-        <div class="fire-sheet-card" role="dialog" aria-modal="false" aria-labelledby="fire-sheet-title">
-          <div class="fire-sheet-handle-wrap" id="fire-sheet-handle-wrap" aria-hidden="true">
-            <div class="fire-sheet-handle"></div>
-          </div>
-          <div class="fire-sheet-head">
-            <div>
-              <div class="fire-sheet-kicker">Live detection</div>
-              <div class="fire-sheet-title" id="fire-sheet-title">Fire Detection</div>
-              <div class="fire-sheet-subtitle" id="fire-sheet-subtitle">—</div>
-            </div>
-            <div class="fire-sheet-head-actions">
-              <div class="fire-sheet-severity" id="fire-sheet-severity">UNKNOWN</div>
-              <button class="fire-sheet-close" id="fire-sheet-close" type="button" aria-label="Close fire details">×</button>
-            </div>
-          </div>
-          <div class="fire-sheet-body">
-            <div class="fire-sheet-grid">
-              <div class="fire-sheet-metric full">
-                <div class="fire-sheet-label">Detected Time</div>
-                <div class="fire-sheet-value" id="fire-sheet-time">—</div>
-              </div>
-              <div class="fire-sheet-metric">
-                <div class="fire-sheet-label">Distance From You</div>
-                <div class="fire-sheet-value" id="fire-sheet-distance">—</div>
-              </div>
-              <div class="fire-sheet-metric">
-                <div class="fire-sheet-label">FRP</div>
-                <div class="fire-sheet-value" id="fire-sheet-frp">—</div>
-              </div>
-              <div class="fire-sheet-metric">
-                <div class="fire-sheet-label">Confidence</div>
-                <div class="fire-sheet-value" id="fire-sheet-confidence">—</div>
-              </div>
-              <div class="fire-sheet-metric">
-                <div class="fire-sheet-label">Coordinates</div>
-                <div class="fire-sheet-value" id="fire-sheet-coords">—</div>
-              </div>
-            </div>
-            <div class="fire-sheet-note">
-              Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.
-            </div>
-            <div class="fire-sheet-actions">
-              <a class="fire-sheet-btn primary" id="fire-sheet-directions" href="#" target="_blank" rel="noopener noreferrer">Open Directions</a>
-              <a class="fire-sheet-btn" id="fire-sheet-google" href="#" target="_blank" rel="noopener noreferrer">Google Maps</a>
-              <a class="fire-sheet-btn" id="fire-sheet-apple" href="#" target="_blank" rel="noopener noreferrer">Apple Maps</a>
-              <a class="fire-sheet-btn" id="fire-sheet-satellite" href="#" target="_blank" rel="noopener noreferrer">Satellite View</a>
-            </div>
-          </div>
+      <div class="fire-detail-backdrop" id="fire-detail-backdrop" hidden></div>
+      <section class="fire-detail-sheet" id="fire-detail-sheet" aria-label="Selected fire details" hidden>
+        <div class="fire-detail-card" id="fire-detail-card">
+          <div id="fire-detail-content"></div>
         </div>
       </section>
-
 
       <button class="diag-btn" id="diag-btn" aria-expanded="false" aria-controls="diag">
         ⚙ SYSTEM
@@ -1344,20 +1427,19 @@
     const mobileSheet = document.getElementById("mobile-sheet");
     const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
     const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
-    const fireSheet = document.getElementById("fire-sheet");
-    const fireSheetBackdrop = document.getElementById("fire-sheet-backdrop");
-    const fireSheetCloseBtn = document.getElementById("fire-sheet-close");
-    const fireSheetHandleWrap = document.getElementById("fire-sheet-handle-wrap");
+    const fireDetailBackdrop = document.getElementById("fire-detail-backdrop");
+    const fireDetailSheet = document.getElementById("fire-detail-sheet");
+    const fireDetailContent = document.getElementById("fire-detail-content");
 
     let lastKnownUserCoord = null;
     let userMarker = null;
+    let selectedFireMarker = null;
+    let selectedFireKey = null;
     let currentViewMode = "Statewide";
     let latestFeatures = [];
     let currentBasemap = "dark";
     let activePopup = null;
     let pollHandle = null;
-    let selectedFireMarker = null;
-    let lastSelectedFire = null;
 
     function mountPanel(targetId, suffix) {
       const target = document.getElementById(targetId);
@@ -1847,86 +1929,67 @@
       });
     }
 
-    function setSelectedFireMarker(coord) {
-      if (!coord) return;
+    function isMobileLayout() {
+      return window.innerWidth <= MOBILE_BREAKPOINT;
+    }
 
+    function featureKey(feature) {
+      const c = feature?.geometry?.coordinates || [];
+      const p = feature?.properties || {};
+      return [c[0], c[1], p.acq_date, p.acq_time, p.frp].join("|");
+    }
+
+    function setSelectedFireMarker(coords) {
+      if (!coords) return;
       if (selectedFireMarker) selectedFireMarker.remove();
 
       const el = document.createElement("div");
       el.className = "selected-fire-marker";
 
       selectedFireMarker = new maplibregl.Marker({ element: el, anchor: "center" })
-        .setLngLat(coord)
+        .setLngLat(coords)
         .addTo(map);
     }
 
-    function clearSelectedFireVisual() {
+    function clearSelectedFireMarker() {
       if (selectedFireMarker) {
         selectedFireMarker.remove();
         selectedFireMarker = null;
       }
-      if (activePopup) {
-        activePopup.remove();
-        activePopup = null;
-      }
-      lastSelectedFire = null;
-      fireSheet?.classList.remove("open");
-      fireSheet?.setAttribute("aria-hidden", "true");
+      selectedFireKey = null;
     }
 
-    function setFireSheetField(id, value) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = String(value);
+    function closeFireDetailSheet() {
+      fireDetailSheet.hidden = true;
+      fireDetailBackdrop.hidden = true;
+      fireDetailSheet.classList.remove("open");
+      fireDetailBackdrop.classList.remove("open");
+      fireDetailContent.innerHTML = "";
     }
 
-    function setFireSheetLink(id, href) {
-      const el = document.getElementById(id);
-      if (el) el.href = href;
+    function badgeClass(severity) {
+      if (severity === "CRITICAL") return "badge-critical";
+      if (severity === "ELEVATED" || severity === "HIGH" || severity === "MODERATE") return "badge-elevated";
+      return "badge-unknown";
     }
 
-    function openFireSheet(feature) {
-      const coords = feature.geometry.coordinates.slice();
-      const p = feature.properties || {};
-      const lat = coords[1];
-      const lng = coords[0];
-      const severity = p.severity || "UNKNOWN";
-      const detectedTime = formatDetectedTime(p.acq_date, p.acq_time);
-      const frp = p.frp ?? "—";
-      const confidence = p.confidence ?? "—";
-      const milesFromYou = lastKnownUserCoord
-        ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi"
-        : "Enable location";
+    function distanceTone(milesText) {
+      const miles = parseFloat(milesText);
+      if (!Number.isFinite(miles)) return "good";
+      if (miles < 5) return "critical";
+      if (miles < 20) return "warn";
+      return "good";
+    }
 
-      const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
-      const googleDirections = lastKnownUserCoord
-        ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
-        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-      const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
-
-      setSelectedFireMarker(coords);
-      lastSelectedFire = feature;
-
-      setFireSheetField("fire-sheet-title", "Fire Detection");
-      setFireSheetField("fire-sheet-subtitle", `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      setFireSheetField("fire-sheet-time", detectedTime);
-      setFireSheetField("fire-sheet-distance", milesFromYou);
-      setFireSheetField("fire-sheet-frp", frp);
-      setFireSheetField("fire-sheet-confidence", confidence);
-      setFireSheetField("fire-sheet-coords", `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      setFireSheetLink("fire-sheet-directions", googleDirections);
-      setFireSheetLink("fire-sheet-google", googleMaps);
-      setFireSheetLink("fire-sheet-apple", appleMaps);
-      setFireSheetLink("fire-sheet-satellite", satelliteFocus);
-
-      const sevEl = document.getElementById("fire-sheet-severity");
-      if (sevEl) {
-        sevEl.textContent = severity;
-        sevEl.classList.toggle("critical", severity === "CRITICAL");
-      }
-
-      fireSheet?.classList.add("open");
-      fireSheet?.setAttribute("aria-hidden", "false");
+    function openFireDetailSheet(html) {
+      fireDetailContent.innerHTML = html;
+      fireDetailSheet.hidden = false;
+      fireDetailBackdrop.hidden = false;
+      requestAnimationFrame(() => {
+        fireDetailSheet.classList.add("open");
+        fireDetailBackdrop.classList.add("open");
+      });
+      fireDetailContent.querySelector("[data-close-fire-sheet]")?.addEventListener("click", closeFireDetailSheet);
     }
 
     function updateUserMarker(coord) {
@@ -2064,6 +2127,7 @@
       const p = feature.properties || {};
       const lat = coords[1];
       const lng = coords[0];
+
       const severity = p.severity || "UNKNOWN";
       const severityClass = severity === "CRITICAL" ? "critical" : "normal";
       const detectedTime = formatDetectedTime(p.acq_date, p.acq_time);
@@ -2072,6 +2136,7 @@
       const milesFromYou = lastKnownUserCoord
         ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi"
         : "Enable location";
+      const distanceClass = distanceTone(milesFromYou);
 
       const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
       const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
@@ -2080,33 +2145,18 @@
         : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
       const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
 
-      const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+      selectedFireKey = featureKey(feature);
       setSelectedFireMarker(coords);
 
       map.easeTo({
         center: coords,
-        zoom: Math.max(map.getZoom(), isMobile ? 12.4 : 11.8),
-        duration: isMobile ? 650 : 500,
-        offset: isMobile ? [0, -Math.round(window.innerHeight * 0.18)] : [0, 0],
+        zoom: Math.max(map.getZoom(), isMobileLayout() ? 11.2 : 11.5),
+        duration: isMobileLayout() ? 620 : 500,
+        offset: isMobileLayout() ? [0, -110] : [0, 0],
         essential: true
       });
 
-      if (isMobile) {
-        if (activePopup) {
-          activePopup.remove();
-          activePopup = null;
-        }
-        openFireSheet(feature);
-        return;
-      }
-
-      fireSheet?.classList.remove("open");
-      fireSheet?.setAttribute("aria-hidden", "true");
-      lastSelectedFire = feature;
-
-      if (activePopup) activePopup.remove();
-
-      const html = `
+      const popupHtml = `
         <div class="popup-card">
           <div class="popup-top">
             <div>
@@ -2148,6 +2198,70 @@
         </div>
       `;
 
+      const sheetHtml = `
+        <div class="fire-detail-head">
+          <div class="fire-detail-icon">🔥</div>
+          <div class="fire-detail-copy">
+            <div class="fire-detail-eyebrow">Satellite Fire Signal</div>
+            <div class="fire-detail-title">Fire Detection</div>
+            <div class="fire-detail-sub">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+          </div>
+          <div class="fire-detail-top-actions">
+            <div class="fire-badge ${badgeClass(severity)}">${escapeHtml(severity)}</div>
+            <button class="fire-detail-close" type="button" aria-label="Close fire details" data-close-fire-sheet>✕</button>
+          </div>
+        </div>
+        <div class="fire-detail-body">
+          <div class="fire-hero-row">
+            <div class="fire-hero-card">
+              <div class="fire-stat-label">Distance From You</div>
+              <div class="fire-hero-distance">
+                <strong class="${distanceClass}">${escapeHtml(lastKnownUserCoord ? milesFromYou.replace(" mi", "") : "—")}</strong>
+                <span>${lastKnownUserCoord ? "miles" : "enable location"}</span>
+              </div>
+              <div class="fire-hero-caption">${lastKnownUserCoord ? "On-device proximity only. Your location stays on this device." : "Use My Location to estimate your distance without sending GPS to the server."}</div>
+            </div>
+            <div class="fire-stat-stack">
+              <div class="fire-stat-card">
+                <div class="fire-stat-label">FRP</div>
+                <div class="fire-stat-value warn">${escapeHtml(String(frp))}</div>
+              </div>
+              <div class="fire-stat-card">
+                <div class="fire-stat-label">Confidence</div>
+                <div class="fire-stat-value small ${severity === "CRITICAL" ? "critical" : "good"}">${escapeHtml(String(confidence))}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fire-stat-card">
+            <div class="fire-stat-label">Detected Time</div>
+            <div class="fire-stat-value small">${escapeHtml(detectedTime)}</div>
+          </div>
+
+          <div class="fire-callout">
+            <div class="fire-callout-title">Field Context</div>
+            <div class="fire-callout-body">This marker represents a satellite fire detection signal. Use directions only for ground context and always follow official emergency instructions first.</div>
+          </div>
+
+          <div class="fire-detail-actions">
+            <a class="fire-cta" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
+            <a class="fire-secondary" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+            <a class="fire-secondary" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
+          </div>
+        </div>
+      `;
+
+      if (isMobileLayout()) {
+        if (activePopup) {
+          activePopup.remove();
+          activePopup = null;
+        }
+        openFireDetailSheet(sheetHtml);
+        return;
+      }
+
+      closeFireDetailSheet();
+      if (activePopup) activePopup.remove();
       activePopup = new maplibregl.Popup({
         closeButton: true,
         closeOnMove: false,
@@ -2155,11 +2269,12 @@
         maxWidth: "320px"
       })
         .setLngLat(coords)
-        .setHTML(html)
+        .setHTML(popupHtml)
         .addTo(map);
 
       activePopup.on("close", () => {
-        if (window.innerWidth > MOBILE_BREAKPOINT) clearSelectedFireVisual();
+        clearSelectedFireMarker();
+        activePopup = null;
       });
     }
 
@@ -2176,6 +2291,20 @@
       const normalized = normalizeFireFeatures(features);
       latestFeatures = normalized;
       updateFireSource(normalized);
+
+      if (selectedFireKey) {
+        const selected = normalized.find((f) => featureKey(f) === selectedFireKey);
+        if (selected) {
+          setSelectedFireMarker(selected.geometry.coordinates);
+        } else {
+          clearSelectedFireMarker();
+          closeFireDetailSheet();
+          if (activePopup) {
+            activePopup.remove();
+            activePopup = null;
+          }
+        }
+      }
 
       let criticalCount = 0;
       for (const f of normalized) {
@@ -2247,7 +2376,7 @@
     function setSheetOpen(open) {
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       mobileSheet.classList.toggle("open", open);
-      sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
+      sheetToggleBtn.textContent = open ? "Hide Panel" : "Map Details";
       setTimeout(safeMapResize, 280);
     }
 
@@ -2271,21 +2400,16 @@
 
     sheetToggleBtn?.addEventListener("click", toggleSheet);
     sheetHandleWrap?.addEventListener("click", toggleSheet);
+    fireDetailBackdrop?.addEventListener("click", closeFireDetailSheet);
 
     window.addEventListener("resize", () => {
       safeMapResize();
       if (window.innerWidth > MOBILE_BREAKPOINT) {
-        fireSheet?.classList.remove("open");
-        fireSheet?.setAttribute("aria-hidden", "true");
-        if (activePopup) activePopup.remove();
+        closeFireDetailSheet();
         return;
       }
       setSheetOpen(mobileSheet.classList.contains("open"));
     });
-
-    fireSheetBackdrop?.addEventListener("click", clearSelectedFireVisual);
-    fireSheetCloseBtn?.addEventListener("click", clearSelectedFireVisual);
-    fireSheetHandleWrap?.addEventListener("click", clearSelectedFireVisual);
 
     window.addEventListener("orientationchange", () => {
       setTimeout(safeMapResize, 200);
