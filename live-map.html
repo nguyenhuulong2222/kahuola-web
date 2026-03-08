@@ -33,30 +33,35 @@
   <style>
     :root{
       --bg:#0c0c0c;
-      --surface:#151515;
-      --panel:rgba(16,16,16,.88);
-      --panel-strong:rgba(12,12,12,.94);
+      --surface:#121212;
+      --surface-2:#171717;
+      --panel:rgba(15,15,15,.92);
+      --panel-strong:rgba(10,10,10,.96);
       --border:rgba(255,255,255,.08);
       --border-hi:rgba(255,255,255,.14);
-      --text:#e8e8e8;
-      --text-dim:#a7a7a7;
-      --muted:#6f6f6f;
+      --text:#ececec;
+      --text-dim:#b0b0b0;
+      --muted:#7a7a7a;
       --accent:#ff6a00;
       --crit:#ff1744;
       --green:#4caf50;
       --amber:#ff9800;
-      --radius:14px;
-      --radius-sm:10px;
-      --shadow:0 12px 32px rgba(0,0,0,.34);
+
+      --radius:18px;
+      --radius-sm:12px;
+      --shadow:0 16px 42px rgba(0,0,0,.35);
 
       --font-body:"DM Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       --font-mono:"DM Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 
-      --header-h:64px;
       --safe-top:env(safe-area-inset-top, 0px);
       --safe-right:env(safe-area-inset-right, 0px);
       --safe-bottom:env(safe-area-inset-bottom, 0px);
       --safe-left:env(safe-area-inset-left, 0px);
+
+      --header-h:72px;
+      --mobile-actions-h:58px;
+      --sheet-peek:168px;
     }
 
     *{box-sizing:border-box}
@@ -65,12 +70,10 @@
     html,body{
       margin:0;
       width:100%;
-      max-width:100%;
-      min-height:100%;
+      height:100%;
       background:var(--bg);
       color:var(--text);
       font-family:var(--font-body);
-      font-size:14px;
       -webkit-font-smoothing:antialiased;
       text-rendering:optimizeLegibility;
       overflow:hidden;
@@ -81,44 +84,49 @@
       min-height:100dvh;
     }
 
-    button,
-    input,
-    select,
-    textarea{
-      font:inherit;
-    }
-
+    a{color:inherit;text-decoration:none}
+    button,input,select,textarea{font:inherit}
     .hidden{display:none !important}
 
     #app{
       position:relative;
-      display:grid;
-      grid-template-rows:var(--header-h) 1fr;
       height:100svh;
       height:100dvh;
       overflow:hidden;
+      background:var(--bg);
     }
 
     header{
-      position:relative;
-      z-index:30;
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
+      z-index:40;
       display:flex;
       align-items:center;
       gap:12px;
       min-height:var(--header-h);
       padding:
         calc(10px + var(--safe-top))
-        calc(16px + var(--safe-right))
+        calc(14px + var(--safe-right))
         10px
-        calc(16px + var(--safe-left));
-      background:rgba(21,21,21,.96);
-      border-bottom:1px solid var(--border);
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
+        calc(14px + var(--safe-left));
+      background:linear-gradient(
+        to bottom,
+        rgba(10,10,10,.96),
+        rgba(10,10,10,.78),
+        rgba(10,10,10,.28),
+        transparent
+      );
+      pointer-events:none;
+    }
+
+    .brand{
+      min-width:0;
+      pointer-events:auto;
     }
 
     .logo{
-      min-width:0;
       font-weight:700;
       font-size:15px;
       line-height:1.1;
@@ -128,7 +136,7 @@
     .logo small{
       display:block;
       margin-top:3px;
-      color:var(--muted);
+      color:var(--text-dim);
       font-size:10px;
       font-weight:500;
       font-family:var(--font-mono);
@@ -136,12 +144,50 @@
       white-space:nowrap;
     }
 
-    #banner-stack{
+    .header-right{
       margin-left:auto;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      pointer-events:auto;
+    }
+
+    .menu-links{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .menu-link{
+      min-height:34px;
+      padding:0 12px;
+      display:inline-flex;
+      align-items:center;
+      border:1px solid var(--border-hi);
+      border-radius:999px;
+      background:rgba(18,18,18,.75);
+      color:var(--text-dim);
+      font-size:11px;
+      font-family:var(--font-mono);
+      transition:border-color .2s ease,color .2s ease,background .2s ease;
+      -webkit-tap-highlight-color:transparent;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+    }
+
+    .menu-link:hover,
+    .menu-link:focus-visible{
+      border-color:var(--accent);
+      color:var(--text);
+      outline:none;
+    }
+
+    #banner-stack{
       display:flex;
       flex-wrap:wrap;
       gap:6px;
       justify-content:flex-end;
+      max-width:360px;
     }
 
     .banner{
@@ -156,22 +202,24 @@
       font-family:var(--font-mono);
       letter-spacing:.02em;
       white-space:nowrap;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
     }
 
     .banner-amber{
-      background:rgba(255,152,0,.12);
+      background:rgba(255,152,0,.14);
       border:1px solid rgba(255,152,0,.30);
       color:#ffcc80;
     }
 
     .banner-red{
-      background:rgba(255,23,68,.12);
+      background:rgba(255,23,68,.14);
       border:1px solid rgba(255,23,68,.30);
       color:#ff9cb0;
     }
 
     .banner-green{
-      background:rgba(76,175,80,.12);
+      background:rgba(76,175,80,.14);
       border:1px solid rgba(76,175,80,.30);
       color:#a5d6a7;
     }
@@ -188,7 +236,8 @@
     .banner-green .dot{background:var(--green)}
 
     #map-wrap{
-      position:relative;
+      position:absolute;
+      inset:0;
       overflow:hidden;
       background:#000;
     }
@@ -200,20 +249,69 @@
       height:100%;
     }
 
-    .panel{
+    .desktop-panel{
       position:absolute;
-      top:16px;
-      right:16px;
-      z-index:20;
-      width:320px;
-      max-width:calc(100vw - 32px - var(--safe-left) - var(--safe-right));
+      top:calc(92px + var(--safe-top));
+      right:calc(16px + var(--safe-right));
+      z-index:25;
+      width:330px;
+      max-width:calc(100vw - 32px);
       background:var(--panel);
       border:1px solid var(--border-hi);
       border-radius:var(--radius);
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
+      backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
       overflow:hidden;
       box-shadow:var(--shadow);
+    }
+
+    .sheet{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:35;
+      display:none;
+      padding:
+        0
+        calc(10px + var(--safe-right))
+        calc(10px + var(--safe-bottom) + var(--mobile-actions-h))
+        calc(10px + var(--safe-left));
+      pointer-events:none;
+    }
+
+    .sheet-card{
+      pointer-events:auto;
+      background:var(--panel-strong);
+      border:1px solid var(--border-hi);
+      border-radius:24px 24px 18px 18px;
+      box-shadow:0 -12px 36px rgba(0,0,0,.35);
+      overflow:hidden;
+      transform:translateY(calc(100% - var(--sheet-peek)));
+      transition:transform .28s ease;
+      max-height:72svh;
+      max-height:72dvh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .sheet.open .sheet-card{
+      transform:translateY(0);
+    }
+
+    .sheet-handle-wrap{
+      padding:10px 0 4px;
+      display:flex;
+      justify-content:center;
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+
+    .sheet-handle{
+      width:44px;
+      height:5px;
+      border-radius:999px;
+      background:rgba(255,255,255,.22);
     }
 
     .panel-head{
@@ -222,13 +320,15 @@
       font-size:10px;
       font-weight:600;
       font-family:var(--font-mono);
-      color:var(--muted);
+      color:var(--text-dim);
       letter-spacing:.08em;
       text-transform:uppercase;
     }
 
     .panel-body{
       padding:10px 14px 14px;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
     }
 
     .metric{
@@ -236,7 +336,7 @@
       align-items:baseline;
       justify-content:space-between;
       gap:10px;
-      padding:8px 0;
+      padding:9px 0;
       border-bottom:1px solid var(--border);
     }
 
@@ -267,7 +367,7 @@
       align-items:center;
       gap:5px;
       margin-top:10px;
-      padding:3px 8px;
+      padding:4px 9px;
       border-radius:999px;
       font-size:10px;
       font-weight:600;
@@ -291,7 +391,7 @@
     .f-old{
       background:rgba(255,255,255,.08);
       border:1px solid rgba(255,255,255,.16);
-      color:#9a9a9a;
+      color:#999;
     }
 
     .f-unknown{
@@ -304,13 +404,13 @@
       margin-top:12px;
       padding:12px;
       border:1px solid var(--border);
-      border-radius:var(--radius-sm);
+      border-radius:14px;
       background:rgba(255,255,255,.03);
     }
 
     .summary-title{
       margin-bottom:8px;
-      color:var(--muted);
+      color:var(--text-dim);
       font-size:10px;
       font-weight:600;
       font-family:var(--font-mono);
@@ -334,9 +434,9 @@
     .chip{
       display:inline-flex;
       align-items:center;
-      min-height:26px;
+      min-height:28px;
       max-width:100%;
-      padding:0 9px;
+      padding:4px 10px;
       border-radius:999px;
       border:1px solid var(--border-hi);
       background:rgba(255,255,255,.03);
@@ -348,12 +448,17 @@
       overflow-wrap:anywhere;
     }
 
-    .refresh-btn{
-      width:100%;
+    .panel-actions{
+      display:flex;
+      gap:8px;
       margin-top:12px;
-      min-height:40px;
+    }
+
+    .refresh-btn,
+    .action-btn{
+      min-height:42px;
       border:1px solid var(--border-hi);
-      border-radius:12px;
+      border-radius:14px;
       background:transparent;
       color:var(--text-dim);
       cursor:pointer;
@@ -366,9 +471,23 @@
       touch-action:manipulation;
     }
 
+    .refresh-btn{
+      width:100%;
+    }
+
+    .action-btn{
+      flex:1;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+    }
+
     .refresh-btn:hover,
-    .refresh-btn:focus-visible{
-      color:var(--accent);
+    .refresh-btn:focus-visible,
+    .action-btn:hover,
+    .action-btn:focus-visible{
+      color:var(--text);
       border-color:var(--accent);
       outline:none;
     }
@@ -458,6 +577,52 @@
     .diag-key{color:var(--muted)}
     .diag-val{font-weight:500}
 
+    .mobile-actions{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:36;
+      display:none;
+      padding:
+        8px
+        calc(10px + var(--safe-right))
+        calc(8px + var(--safe-bottom))
+        calc(10px + var(--safe-left));
+      background:linear-gradient(
+        to top,
+        rgba(8,8,8,.98),
+        rgba(8,8,8,.86),
+        transparent
+      );
+      gap:8px;
+      pointer-events:none;
+    }
+
+    .mobile-actions > *{
+      pointer-events:auto;
+    }
+
+    .mobile-actions .action-btn{
+      background:rgba(18,18,18,.88);
+      min-height:42px;
+      border-radius:999px;
+      font-size:11px;
+      flex:1;
+    }
+
+    .fab-sheet{
+      min-width:120px;
+      background:rgba(255,106,0,.12);
+      border-color:rgba(255,106,0,.34);
+      color:#ffd2b0;
+    }
+
+    .fab-sheet strong{
+      font-weight:700;
+      margin-left:4px;
+    }
+
     .marker{
       width:12px;
       height:12px;
@@ -529,7 +694,7 @@
     }
 
     .maplibregl-ctrl-top-left{
-      top:16px;
+      top:calc(88px + var(--safe-top));
       left:16px;
     }
 
@@ -542,8 +707,8 @@
     }
 
     .maplibregl-ctrl button{
-      width:34px !important;
-      height:34px !important;
+      width:36px !important;
+      height:36px !important;
     }
 
     .maplibregl-ctrl-scale{
@@ -581,45 +746,69 @@
       #banner-stack{
         display:none;
       }
+
+      .desktop-panel{
+        display:none;
+      }
+
+      .sheet{
+        display:block;
+      }
+
+      .mobile-actions{
+        display:flex;
+      }
+
+      .maplibregl-ctrl-top-left{
+        top:calc(86px + var(--safe-top));
+        left:12px;
+      }
+
+      footer{
+        display:none;
+      }
+
+      .diag-btn,
+      .diag{
+        display:none !important;
+      }
     }
 
     @media (max-width: 768px){
       :root{
-        --header-h:72px;
+        --header-h:76px;
+        --sheet-peek:182px;
       }
 
       header{
-        gap:10px;
         align-items:flex-start;
-        padding:
-          calc(10px + var(--safe-top))
-          calc(12px + var(--safe-right))
-          10px
-          calc(12px + var(--safe-left));
+        padding-top:calc(10px + var(--safe-top));
       }
 
       .logo{
         font-size:16px;
-        line-height:1.15;
       }
 
       .logo small{
-        font-size:10px;
-        line-height:1.25;
         white-space:normal;
+        line-height:1.25;
       }
 
-      .panel{
-        top:12px;
-        right:calc(10px + var(--safe-right));
-        width:min(320px, calc(100vw - 20px - var(--safe-left) - var(--safe-right)));
-        max-height:calc(100dvh - var(--header-h) - 26px - var(--safe-top) - var(--safe-bottom));
-        overflow:auto;
-        overscroll-behavior:contain;
+      .header-right{
+        gap:8px;
+      }
+
+      .menu-links{
+        display:none;
+      }
+
+      .sheet-card{
+        max-height:76svh;
+        max-height:76dvh;
       }
 
       .panel-body{
-        padding:10px 12px 12px;
+        padding:10px 12px 14px;
       }
 
       .metric{
@@ -631,38 +820,19 @@
         font-size:13px;
       }
 
-      .summary-card{
-        margin-top:12px;
-        padding:12px;
-        border-radius:14px;
-      }
-
       .summary-text{
         font-size:14px;
-        line-height:1.52;
       }
 
       .chip{
         min-height:30px;
-        padding:5px 10px;
         font-size:11px;
       }
 
-      .refresh-btn{
+      .refresh-btn,
+      .action-btn{
         min-height:46px;
-        font-size:14px;
-        border-radius:14px;
-      }
-
-      .diag-btn,
-      .diag,
-      footer{
-        display:none !important;
-      }
-
-      .maplibregl-ctrl-top-left{
-        top:12px;
-        left:12px;
+        font-size:13px;
       }
 
       .maplibregl-ctrl button{
@@ -671,27 +841,18 @@
       }
 
       .maplibregl-ctrl-scale{
-        margin:0 0 calc(10px + var(--safe-bottom)) 10px !important;
-        transform:scale(.95);
-        transform-origin:left bottom;
+        margin:0 0 calc(78px + var(--safe-bottom)) 10px !important;
       }
 
       .maplibregl-ctrl-bottom-right,
       .maplibregl-ctrl-bottom-left{
-        bottom:calc(var(--safe-bottom) + 4px);
+        bottom:calc(var(--safe-bottom) + 58px);
       }
     }
 
     @media (max-width: 430px){
-      .panel{
-        top:10px;
-        right:calc(9px + var(--safe-right));
-        width:calc(100vw - 18px - var(--safe-left) - var(--safe-right));
-        max-width:calc(100vw - 18px - var(--safe-left) - var(--safe-right));
-      }
-
-      .panel-head{
-        padding:11px 12px 9px;
+      :root{
+        --sheet-peek:194px;
       }
 
       .summary-text{
@@ -702,29 +863,43 @@
       .metric-value{
         font-size:12.5px;
       }
+
+      .mobile-actions .action-btn{
+        min-height:40px;
+        font-size:10.5px;
+      }
     }
   </style>
 </head>
 <body>
   <div id="app">
     <header role="banner">
-      <div class="logo" aria-label="Kahu Ola — Civic Fire Detection Map">
-        🔥 Kahu Ola
-        <small>V4.4 · PRODUCTION FIRE DETECTION MAP</small>
+      <div class="brand" aria-label="Kahu Ola — Civic Fire Detection Map">
+        <div class="logo">
+          🔥 Kahu Ola
+          <small>V4.4 · PRODUCTION FIRE DETECTION MAP</small>
+        </div>
       </div>
 
-      <div id="banner-stack" role="status" aria-live="polite">
-        <div id="b-local" class="banner banner-green hidden">
-          <span class="dot"></span>Local test mode
-        </div>
-        <div id="b-offline" class="banner banner-amber hidden">
-          <span class="dot"></span><span id="b-offline-text">Offline — showing cached data</span>
-        </div>
-        <div id="b-degraded" class="banner banner-amber hidden">
-          <span class="dot"></span>Source degraded
-        </div>
-        <div id="b-parse" class="banner banner-red hidden">
-          <span class="dot"></span>Data format error
+      <div class="header-right">
+        <nav class="menu-links" aria-label="Site links">
+          <a class="menu-link" href="/privacy.html">Privacy</a>
+          <a class="menu-link" href="/support.html">Support</a>
+        </nav>
+
+        <div id="banner-stack" role="status" aria-live="polite">
+          <div id="b-local" class="banner banner-green hidden">
+            <span class="dot"></span>Local test mode
+          </div>
+          <div id="b-offline" class="banner banner-amber hidden">
+            <span class="dot"></span><span id="b-offline-text">Offline — showing cached data</span>
+          </div>
+          <div id="b-degraded" class="banner banner-amber hidden">
+            <span class="dot"></span>Source degraded
+          </div>
+          <div id="b-parse" class="banner banner-red hidden">
+            <span class="dot"></span>Data format error
+          </div>
         </div>
       </div>
     </header>
@@ -732,53 +907,20 @@
     <div id="map-wrap">
       <div id="map" role="main" aria-label="Hawaiʻi wildfire detection map"></div>
 
-      <div class="panel" role="complementary" aria-label="Fire hazard metrics">
+      <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
         <div class="panel-head">Fire Signals · Maui Region</div>
+        <div class="panel-body" id="panel-content-desktop"></div>
+      </aside>
 
-        <div class="panel-body">
-          <div class="metric">
-            <span class="metric-label">Detections</span>
-            <span class="metric-value v-fire" id="fire-count"><span class="spinner"></span></span>
+      <section class="sheet" id="mobile-sheet" aria-label="Mobile fire metrics">
+        <div class="sheet-card" id="sheet-card">
+          <div class="sheet-handle-wrap" id="sheet-handle-wrap" aria-hidden="true">
+            <div class="sheet-handle"></div>
           </div>
-
-          <div class="metric">
-            <span class="metric-label">Nearest</span>
-            <span class="metric-value" id="nearest-fire">—</span>
-          </div>
-
-          <div class="metric">
-            <span class="metric-label">Critical</span>
-            <span class="metric-value" id="critical-count">—</span>
-          </div>
-
-          <div class="metric">
-            <span class="metric-label">Fetched</span>
-            <span class="metric-value v-dim" id="fetch-time">—</span>
-          </div>
-
-          <div class="metric">
-            <span class="metric-label">Source</span>
-            <span class="metric-value v-dim" id="data-source">—</span>
-          </div>
-
-          <div id="freshness-badge" class="freshness f-unknown">● UNKNOWN</div>
-
-          <div class="summary-card" aria-label="Civic Intelligence">
-            <div class="summary-title">Civic Intelligence</div>
-            <div class="summary-text" id="summary-text">
-              Waiting for the latest wildfire signal summary.
-            </div>
-            <div class="summary-meta">
-              <span class="chip" id="summary-source">Source: Kahu Ola</span>
-              <span class="chip" id="summary-updated">Updated: —</span>
-            </div>
-          </div>
-
-          <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
-            ↻ REFRESH
-          </button>
+          <div class="panel-head">Fire Signals · Maui Region</div>
+          <div class="panel-body" id="panel-content-mobile"></div>
         </div>
-      </div>
+      </section>
 
       <button class="diag-btn" id="diag-btn" aria-expanded="false" aria-controls="diag">
         ⚙ SYSTEM
@@ -799,9 +941,68 @@
         </div>
       </div>
 
+      <div class="mobile-actions" aria-label="Mobile quick links">
+        <button class="action-btn fab-sheet" id="sheet-toggle-btn" type="button">
+          Map <strong>Details</strong>
+        </button>
+        <a class="action-btn" href="/privacy.html">Privacy</a>
+        <a class="action-btn" href="/support.html">Support</a>
+      </div>
+
       <footer id="mode-footer">Kahu Ola civic technology</footer>
     </div>
   </div>
+
+  <template id="panel-template">
+    <div class="metric">
+      <span class="metric-label">Detections</span>
+      <span class="metric-value v-fire" id="fire-count"><span class="spinner"></span></span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-label">Nearest</span>
+      <span class="metric-value" id="nearest-fire">—</span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-label">Critical</span>
+      <span class="metric-value" id="critical-count">—</span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-label">Fetched</span>
+      <span class="metric-value v-dim" id="fetch-time">—</span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-label">Source</span>
+      <span class="metric-value v-dim" id="data-source">—</span>
+    </div>
+
+    <div id="freshness-badge" class="freshness f-unknown">● UNKNOWN</div>
+
+    <div class="summary-card" aria-label="Civic Intelligence">
+      <div class="summary-title">Civic Intelligence</div>
+      <div class="summary-text" id="summary-text">
+        Waiting for the latest wildfire signal summary.
+      </div>
+      <div class="summary-meta">
+        <span class="chip" id="summary-source">Source: Kahu Ola</span>
+        <span class="chip" id="summary-updated">Updated: —</span>
+      </div>
+    </div>
+
+    <div class="panel-actions">
+      <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
+        ↻ REFRESH
+      </button>
+    </div>
+
+    <div class="panel-actions">
+      <a class="action-btn" href="/privacy.html">Privacy</a>
+      <a class="action-btn" href="/support.html">Support</a>
+    </div>
+  </template>
 
   <script>
     "use strict";
@@ -820,11 +1021,54 @@
     const REF_CENTER = [-156.675, 20.878];
     const POLL_MS = 60 * 1000;
     const FETCH_TIMEOUT_MS = 12000;
+    const MOBILE_BREAKPOINT = 980;
 
     const modeFooter = document.getElementById("mode-footer");
-    const refreshBtn = document.getElementById("refresh-btn");
     const diag = document.getElementById("diag");
     const diagBtn = document.getElementById("diag-btn");
+    const mobileSheet = document.getElementById("mobile-sheet");
+    const sheetCard = document.getElementById("sheet-card");
+    const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
+    const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
+
+    function mountPanel(targetId, suffix) {
+      const target = document.getElementById(targetId);
+      const tpl = document.getElementById("panel-template");
+      const fragment = tpl.content.cloneNode(true);
+
+      fragment.querySelectorAll("[id]").forEach((el) => {
+        el.dataset.baseId = el.id;
+        el.id = `${el.id}-${suffix}`;
+      });
+
+      target.innerHTML = "";
+      target.appendChild(fragment);
+    }
+
+    mountPanel("panel-content-desktop", "desktop");
+    mountPanel("panel-content-mobile", "mobile");
+
+    function ui(idBase) {
+      const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+      const id = `${idBase}-${isMobile ? "mobile" : "desktop"}`;
+      return document.getElementById(id);
+    }
+
+    function setText(baseId, value) {
+      const el = ui(baseId);
+      if (el) el.textContent = String(value);
+    }
+
+    function setHTML(baseId, value) {
+      const el = ui(baseId);
+      if (el) el.innerHTML = value;
+    }
+
+    function show(id, on) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("hidden", !on);
+    }
 
     if (modeFooter) {
       modeFooter.textContent = IS_LOCAL
@@ -859,23 +1103,12 @@
       }
     };
 
-    function setText(id, value) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = String(value);
-    }
-
-    function show(id, on) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.classList.toggle("hidden", !on);
-    }
-
     function syncDiag() {
-      setText("d-net", DS.networkFailures);
-      setText("d-parse", DS.parseFailures);
-      setText("d-consec", DS.consecutiveFailures);
-      setText("d-offline", DS.isOffline ? "true" : "false");
-      setText("d-mode", IS_LOCAL ? "local" : "production");
+      document.getElementById("d-net").textContent = DS.networkFailures;
+      document.getElementById("d-parse").textContent = DS.parseFailures;
+      document.getElementById("d-consec").textContent = DS.consecutiveFailures;
+      document.getElementById("d-offline").textContent = DS.isOffline ? "true" : "false";
+      document.getElementById("d-mode").textContent = IS_LOCAL ? "local" : "production";
 
       show("b-local", IS_LOCAL);
       show("b-offline", DS.isOffline);
@@ -911,7 +1144,7 @@
     }
 
     function applyFreshness(date) {
-      const el = document.getElementById("freshness-badge");
+      const el = ui("freshness-badge");
       if (!el) return;
 
       if (!date) {
@@ -935,9 +1168,9 @@
     }
 
     function updateSummary(features, nearest, criticalCount) {
-      const summaryText = document.getElementById("summary-text");
-      const summarySource = document.getElementById("summary-source");
-      const summaryUpdated = document.getElementById("summary-updated");
+      const summaryText = ui("summary-text");
+      const summarySource = ui("summary-source");
+      const summaryUpdated = ui("summary-updated");
 
       if (!summaryText) return;
 
@@ -984,11 +1217,7 @@
 
         if (!res.ok) {
           DS.error("network");
-          return {
-            features: [],
-            sourceTime: null,
-            sourceLabel: null
-          };
+          return { features: [], sourceTime: null, sourceLabel: null };
         }
 
         let json;
@@ -996,20 +1225,12 @@
           json = JSON.parse(await res.text());
         } catch {
           DS.error("parse");
-          return {
-            features: [],
-            sourceTime: null,
-            sourceLabel: null
-          };
+          return { features: [], sourceTime: null, sourceLabel: null };
         }
 
         if (!json || typeof json !== "object" || !Array.isArray(json.features)) {
           DS.error("parse");
-          return {
-            features: [],
-            sourceTime: null,
-            sourceLabel: null
-          };
+          return { features: [], sourceTime: null, sourceLabel: null };
         }
 
         const nowDate = new Date();
@@ -1093,17 +1314,25 @@
       markers.push(marker);
     }
 
-    async function loadFireSignals() {
-      if (refreshBtn) {
-        refreshBtn.disabled = true;
-        refreshBtn.innerHTML = '<span class="spinner"></span>REFRESHING';
+    function setRefreshingUI(isRefreshing) {
+      const refresh = ui("refresh-btn");
+      const fireCount = ui("fire-count");
+
+      if (refresh) {
+        refresh.disabled = isRefreshing;
+        refresh.innerHTML = isRefreshing
+          ? '<span class="spinner"></span>REFRESHING'
+          : '↻ REFRESH';
       }
 
-      const countEl = document.getElementById("fire-count");
-      if (countEl) {
-        countEl.className = "metric-value v-fire";
-        countEl.innerHTML = '<span class="spinner"></span>';
+      if (isRefreshing && fireCount) {
+        fireCount.className = "metric-value v-fire";
+        fireCount.innerHTML = '<span class="spinner"></span>';
       }
+    }
+
+    async function loadFireSignals() {
+      setRefreshingUI(true);
 
       const result = await strictFetch(FIRE_ENDPOINT);
       let features = Array.isArray(result.features) ? result.features : [];
@@ -1134,12 +1363,13 @@
         if (d < closest) closest = d;
       }
 
+      const countEl = ui("fire-count");
       if (countEl) {
         countEl.textContent = String(features.length);
         countEl.className = "metric-value " + (features.length > 0 ? "v-fire" : "v-good");
       }
 
-      const nearEl = document.getElementById("nearest-fire");
+      const nearEl = ui("nearest-fire");
       if (nearEl) {
         if (features.length === 0 || !Number.isFinite(closest)) {
           nearEl.textContent = "None";
@@ -1152,7 +1382,7 @@
         }
       }
 
-      const critEl = document.getElementById("critical-count");
+      const critEl = ui("critical-count");
       if (critEl) {
         if (criticalCount > 0) {
           critEl.textContent = String(criticalCount);
@@ -1169,16 +1399,30 @@
       updateSummary(features, closest, criticalCount);
 
       if (DS.isOffline && DS.lastSourceDataTime) {
-        setText("b-offline-text", `Offline — last: ${hstTime(DS.lastSourceDataTime)}`);
+        document.getElementById("b-offline-text").textContent =
+          `Offline — last: ${hstTime(DS.lastSourceDataTime)}`;
       }
 
-      if (refreshBtn) {
-        refreshBtn.disabled = false;
-        refreshBtn.textContent = "↻ REFRESH";
-      }
+      setRefreshingUI(false);
     }
 
-    refreshBtn?.addEventListener("click", loadFireSignals);
+    function bindRefreshButtons() {
+      document.getElementById("refresh-btn-desktop")?.addEventListener("click", loadFireSignals);
+      document.getElementById("refresh-btn-mobile")?.addEventListener("click", loadFireSignals);
+    }
+
+    function setSheetOpen(open) {
+      if (window.innerWidth > MOBILE_BREAKPOINT) return;
+      mobileSheet.classList.toggle("open", open);
+      sheetToggleBtn.setAttribute("aria-expanded", String(open));
+      sheetToggleBtn.innerHTML = open ? 'Hide <strong>Details</strong>' : 'Map <strong>Details</strong>';
+    }
+
+    function toggleSheet() {
+      setSheetOpen(!mobileSheet.classList.contains("open"));
+    }
+
+    bindRefreshButtons();
 
     diagBtn?.addEventListener("click", () => {
       const open = diag.classList.toggle("open");
@@ -1190,6 +1434,14 @@
       diag.classList.remove("open");
       diagBtn.setAttribute("aria-expanded", "false");
       diagBtn.style.display = "";
+    });
+
+    sheetToggleBtn?.addEventListener("click", toggleSheet);
+    sheetHandleWrap?.addEventListener("click", toggleSheet);
+
+    window.addEventListener("resize", () => {
+      const open = window.innerWidth > MOBILE_BREAKPOINT ? false : mobileSheet.classList.contains("open");
+      setSheetOpen(open);
     });
 
     window.addEventListener("offline", () => {
@@ -1206,6 +1458,9 @@
 
     map.on("load", () => {
       syncDiag();
+      if (window.innerWidth <= MOBILE_BREAKPOINT) {
+        setSheetOpen(false);
+      }
       loadFireSignals();
 
       if (pollHandle) clearInterval(pollHandle);
