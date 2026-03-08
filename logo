@@ -23,17 +23,17 @@
     <header class="site-header">
       <div class="container">
         <nav class="site-nav" aria-label="Primary">
-          <a href="./index.html" class="brand-logo" aria-label="Kahu Ola — Guardian of Life" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.5rem;" aria-hidden="true">🌺</span>
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 800; font-size: 1.25rem; color: #0f172a; line-height: 1;">Kahu Ola</span>
-              <span style="font-weight: 500; font-size: 0.75rem; color: #64748b; line-height: 1; margin-top: 2px;">Guardian of Life</span>
-            </div>
+          <a class="brand" href="./index.html" aria-label="Kahu Ola - Guardian of Life">
+            <span class="brand-mark" aria-hidden="true">KO</span>
+            <span class="brand-copy">
+              <strong>Kahu Ola</strong>
+              <span>Guardian of Life</span>
+            </span>
           </a>
           <div class="nav-stack">
             <ul class="nav-links">
               <li><a href="./index.html">Home</a></li>
-              <li><a href="./live-map.html">Live Map</a></li>
+              <li><a href="./portal.html">Live Map</a></li>
             </ul>
             <ul class="nav-utilities">
               <li><a href="./privacy.html" aria-current="page">Privacy</a></li>
@@ -134,7 +134,7 @@
         </div>
         <div class="footer-links">
           <a href="./index.html">Home</a>
-          <a href="./live-map.html">Live Map</a>
+          <a href="./portal.html">Live Map</a>
           <a href="./privacy.html" aria-current="page">Privacy</a>
           <a href="./support.html">Support</a>
         </div>

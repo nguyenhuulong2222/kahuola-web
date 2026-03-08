@@ -1,110 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Transparency Portal | Kahu Ola</title>
-  <meta name="description" content="Kahu Ola transparency portal for operational map access, source links, and civic infrastructure notes.">
-  <link rel="icon" href="./assets/brand/exports/favicons/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="./assets/brand/exports/favicons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./assets/brand/exports/favicons/favicon-16.png">
-  <link rel="apple-touch-icon" href="./assets/brand/exports/favicons/apple-touch-icon.png">
-  <meta property="og:title" content="Kahu Ola - Guardian of Life">
-  <meta property="og:description" content="Independent civic hazard intelligence platform for Hawai'i.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://kahuola.org/portal.html">
-  <meta property="og:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png">
-  <link rel="stylesheet" href="./styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kahu Ola — Live Map (Moved)</title>
+
+  <!-- Canonical points to the true destination; noindex so /portal doesn't compete -->
+  <link rel="canonical" href="https://kahuola.org/live-map.html" />
+  <meta name="robots" content="noindex, follow" />
+
+  <!-- Meta refresh — fastest fallback for browsers without JS -->
+  <meta http-equiv="refresh" content="0; url=./live-map.html" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #f5f7fa;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .msg { text-align: center; max-width: 360px; }
+    .msg p { font-size: 16px; color: #4b5563; margin: 8px 0 20px; }
+    .msg a {
+      display: inline-block;
+      padding: 12px 28px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 999px;
+      text-decoration: none;
+    }
+    .msg a:hover { background: #1d4ed8; }
+  </style>
 </head>
-<body class="page-portal">
-  <div class="site-shell">
-    <header class="site-header">
-      <div class="container">
-        <nav class="site-nav" aria-label="Primary">
-          <a class="brand" href="./index.html" aria-label="Kahu Ola - Guardian of Life">
-            <span class="brand-mark" aria-hidden="true">KO</span>
-            <span class="brand-copy">
-              <strong>Kahu Ola</strong>
-              <span>Guardian of Life</span>
-            </span>
-          </a>
-          <div class="nav-stack">
-            <ul class="nav-links">
-              <li><a href="./index.html">Home</a></li>
-              <li><a href="./portal.html" aria-current="page">Live Map</a></li>
-            </ul>
-            <ul class="nav-utilities">
-              <li><a href="./privacy.html">Privacy</a></li>
-              <li><a href="./support.html">Support</a></li>
-            </ul>
-          </div>
-        </nav>
-      </div>
-    </header>
-
-    <main class="portal-shell">
-      <div class="container portal-grid">
-        <section class="portal-hero glass">
-          <p class="section-label">Transparency Portal</p>
-          <h1 class="document-title">Operational map and source transparency</h1>
-          <p class="lead">
-            Use the live map for active layer checks and source verification. This page keeps portal access calm,
-            direct, and review-friendly without homepage-style brand hero treatment.
-          </p>
-          <div class="meta-row document-meta">
-            <span class="chip">Public route: /portal.html</span>
-            <span class="chip">Live map route: /live-map.html</span>
-          </div>
-          <div class="doc-actions">
-            <a class="btn btn--primary" href="./live-map.html">Open Live Map</a>
-            <a class="btn btn--secondary" href="./privacy.html">Privacy</a>
-            <a class="btn btn--ghost" href="./support.html">Support</a>
-          </div>
-        </section>
-
-        <div class="policy-stack">
-          <section class="policy-block">
-            <h2>Map Operations</h2>
-            <p>The map runtime is isolated to <code>live-map.html</code> so this portal page stays stable and lightweight for reviewers and residents.</p>
-          </section>
-
-          <section class="policy-block">
-            <h2>Data Source Policy</h2>
-            <p>Kahu Ola aggregates publicly available government data and does not claim government affiliation or official directive authority.</p>
-            <ul class="official-links">
-              <li><a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a></li>
-              <li><a href="https://www.weather.gov/">NWS</a></li>
-              <li><a href="https://www.airnow.gov/">EPA AirNow</a></li>
-              <li><a href="https://earthquake.usgs.gov/">USGS</a></li>
-            </ul>
-          </section>
-
-          <section class="policy-block disclaimer-block">
-            <h2>Independent Civic Technology</h2>
-            <p>Kahu Ola is an independent civic technology platform and must be treated as supplemental information only. Always follow official county, state, and federal guidance.</p>
-          </section>
-        </div>
-      </div>
-    </main>
-
-    <footer class="footer">
-      <div class="container footer-inner">
-        <div class="footer-copy">
-          <strong>Kahu Ola</strong>
-          <span>Guardian of Life</span>
-          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
-        </div>
-        <div class="footer-links">
-          <a href="./index.html">Home</a>
-          <a href="./portal.html" aria-current="page">Live Map</a>
-          <a href="./privacy.html">Privacy</a>
-          <a href="./support.html">Support</a>
-        </div>
-        <p class="footer-legal">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
-      </div>
-    </footer>
+<body>
+  <div class="msg">
+    <p>Redirecting to the Live Map&hellip;</p>
+    <a href="./live-map.html">Open Live Map</a>
   </div>
+
+  <!-- JS redirect fires before paint in all modern browsers -->
+  <script>window.location.replace('./live-map.html');</script>
 </body>
 </html>
