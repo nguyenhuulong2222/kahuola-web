@@ -46,6 +46,7 @@
 
       --header-h:64px;
       --sheet-peek:98px;
+      --app-height:100vh;
     }
 
     *{box-sizing:border-box}
@@ -54,7 +55,7 @@
     html,body{
       margin:0;
       width:100%;
-      height:100%;
+      height:var(--app-height);
       background:var(--bg);
       color:var(--text);
       font-family:var(--font-body);
@@ -64,9 +65,7 @@
     }
 
     body{
-      min-height:100vh;
-      min-height:100svh;
-      min-height:100dvh;
+      min-height:var(--app-height);
     }
 
     a{color:inherit;text-decoration:none}
@@ -76,9 +75,7 @@
     #app{
       position:relative;
       width:100%;
-      height:100vh;
-      height:100svh;
-      height:100dvh;
+      height:var(--app-height);
       overflow:hidden;
       background:var(--bg);
     }
@@ -158,7 +155,7 @@
       flex-wrap:wrap;
       gap:6px;
       justify-content:flex-end;
-      max-width:420px;
+      max-width:460px;
     }
 
     .banner{
@@ -217,8 +214,8 @@
       position:absolute;
       inset:0;
       width:100%;
-      height:100%;
-      min-height:100%;
+      height:var(--app-height);
+      min-height:var(--app-height);
       overflow:hidden;
       background:#000;
     }
@@ -227,8 +224,8 @@
       position:absolute;
       inset:0;
       width:100%;
-      height:100%;
-      min-height:100%;
+      height:var(--app-height);
+      min-height:var(--app-height);
     }
 
     .maplibregl-map,
@@ -278,9 +275,7 @@
       overflow:hidden;
       transform:translateY(calc(100% - var(--sheet-peek)));
       transition:transform .26s ease;
-      max-height:76vh;
-      max-height:76svh;
-      max-height:76dvh;
+      max-height:calc(var(--app-height) * 0.78);
       display:flex;
       flex-direction:column;
     }
@@ -816,9 +811,7 @@
       }
 
       .sheet-card{
-        max-height:78vh;
-        max-height:78svh;
-        max-height:78dvh;
+        max-height:calc(var(--app-height) * 0.78);
       }
 
       .panel-body{
@@ -1062,6 +1055,14 @@
     let currentBasemap = "dark";
     let activePopup = null;
     let pollHandle = null;
+    let pendingStyleRestore = false;
+
+    function setAppHeight() {
+      const h = window.visualViewport
+        ? window.visualViewport.height
+        : window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${Math.round(h)}px`);
+    }
 
     function mountPanel(targetId, suffix) {
       const target = document.getElementById(targetId);
@@ -1313,13 +1314,22 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
 
-    function safeMapResize() {
-      requestAnimationFrame(() => {
-        map.resize();
+    function safeMapResize(delay = 0) {
+      const run = () => {
+        setAppHeight();
         requestAnimationFrame(() => {
           map.resize();
+          requestAnimationFrame(() => {
+            map.resize();
+          });
         });
-      });
+      };
+
+      if (delay > 0) {
+        setTimeout(run, delay);
+      } else {
+        run();
+      }
     }
 
     function fitHawaii(animated = false) {
@@ -1334,9 +1344,14 @@
 
     function toggleBasemap() {
       currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
+      pendingStyleRestore = true;
+
+      if (activePopup) {
+        activePopup.remove();
+        activePopup = null;
+      }
+
       map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-      syncSatelliteButtons();
     }
 
     function syncSatelliteButtons() {
@@ -1666,7 +1681,7 @@
           setText("view-mode", "My Location");
           recalcNearestFromFeatures(latestFeatures);
           setLocationButtonState(false);
-          setTimeout(safeMapResize, 250);
+          safeMapResize(250);
         },
         () => {
           setLocationButtonState(false);
@@ -1751,7 +1766,7 @@
           <div class="popup-actions">
             <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
             <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
-            <a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a>
+            <a class="popup-btn" href="${appleDirections}" target="_blank" rel="noopener noreferrer">Apple Directions</a>
             <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
           </div>
         </div>
@@ -1836,6 +1851,20 @@
       }
     }
 
+    function rebuildMapOverlays() {
+      ensureFireLayers();
+      updateFireSource(latestFeatures);
+      syncSatelliteButtons();
+      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+
+      if (lastKnownUserCoord) {
+        updateUserMarker(lastKnownUserCoord);
+      }
+
+      safeMapResize(50);
+      safeMapResize(180);
+    }
+
     function bindButtons() {
       document.getElementById("refresh-btn-desktop")?.addEventListener("click", loadFireSignals);
       document.getElementById("refresh-btn-mobile")?.addEventListener("click", loadFireSignals);
@@ -1853,7 +1882,7 @@
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       mobileSheet.classList.toggle("open", open);
       sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
-      setTimeout(safeMapResize, 280);
+      safeMapResize(280);
     }
 
     function toggleSheet() {
@@ -1877,19 +1906,48 @@
     sheetToggleBtn?.addEventListener("click", toggleSheet);
     sheetHandleWrap?.addEventListener("click", toggleSheet);
 
+    setAppHeight();
+
     window.addEventListener("resize", () => {
-      safeMapResize();
+      safeMapResize(0);
       if (window.innerWidth > MOBILE_BREAKPOINT) return;
       setSheetOpen(mobileSheet.classList.contains("open"));
     });
 
     window.addEventListener("orientationchange", () => {
-      setTimeout(safeMapResize, 200);
+      safeMapResize(150);
+      safeMapResize(400);
     });
 
     window.addEventListener("pageshow", () => {
-      setTimeout(safeMapResize, 120);
+      safeMapResize(120);
+      safeMapResize(320);
     });
+
+    window.addEventListener("scroll", () => {
+      safeMapResize(0);
+    }, { passive: true });
+
+    window.addEventListener("touchend", () => {
+      safeMapResize(80);
+    }, { passive: true });
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        safeMapResize(80);
+        safeMapResize(260);
+      }
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => {
+        safeMapResize(0);
+      });
+
+      window.visualViewport.addEventListener("scroll", () => {
+        safeMapResize(0);
+      });
+    }
 
     window.addEventListener("offline", () => {
       DS.isOffline = true;
@@ -1904,16 +1962,12 @@
     });
 
     map.on("style.load", () => {
-      ensureFireLayers();
-      updateFireSource(latestFeatures);
-      syncSatelliteButtons();
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+      rebuildMapOverlays();
 
-      if (userMarker && lastKnownUserCoord) {
-        updateUserMarker(lastKnownUserCoord);
+      if (pendingStyleRestore) {
+        pendingStyleRestore = false;
+        recalcNearestFromFeatures(latestFeatures);
       }
-
-      safeMapResize();
     });
 
     map.on("load", () => {
@@ -1927,9 +1981,10 @@
 
       loadFireSignals();
 
-      safeMapResize();
-      setTimeout(safeMapResize, 150);
-      setTimeout(safeMapResize, 500);
+      safeMapResize(0);
+      safeMapResize(120);
+      safeMapResize(300);
+      safeMapResize(600);
 
       syncSatelliteButtons();
 
