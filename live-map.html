@@ -32,6 +32,7 @@
       --crit:#ff1744;
       --green:#4caf50;
       --amber:#ff9800;
+      --blue:#4da3ff;
       --radius:18px;
       --radius-sm:12px;
       --shadow:0 16px 42px rgba(0,0,0,.35);
@@ -45,7 +46,7 @@
       --safe-left:env(safe-area-inset-left, 0px);
 
       --header-h:64px;
-      --sheet-peek:64px;
+      --sheet-peek:96px;
     }
 
     *{box-sizing:border-box}
@@ -98,13 +99,7 @@
         calc(12px + var(--safe-right))
         8px
         calc(12px + var(--safe-left));
-      background:linear-gradient(
-        to bottom,
-        rgba(8,8,8,.94),
-        rgba(8,8,8,.72),
-        rgba(8,8,8,.18),
-        transparent
-      );
+      background:linear-gradient(to bottom, rgba(8,8,8,.94), rgba(8,8,8,.72), rgba(8,8,8,.18), transparent);
       pointer-events:none;
     }
 
@@ -164,7 +159,7 @@
       flex-wrap:wrap;
       gap:6px;
       justify-content:flex-end;
-      max-width:360px;
+      max-width:420px;
     }
 
     .banner{
@@ -201,6 +196,12 @@
       color:#a5d6a7;
     }
 
+    .banner-blue{
+      background:rgba(77,163,255,.14);
+      border:1px solid rgba(77,163,255,.28);
+      color:#b9d8ff;
+    }
+
     .dot{
       width:6px;
       height:6px;
@@ -211,6 +212,7 @@
     .banner-amber .dot{background:var(--amber)}
     .banner-red .dot{background:var(--crit)}
     .banner-green .dot{background:var(--green)}
+    .banner-blue .dot{background:var(--blue)}
 
     #map-wrap{
       position:absolute;
@@ -242,7 +244,7 @@
       top:calc(84px + var(--safe-top));
       right:calc(16px + var(--safe-right));
       z-index:25;
-      width:330px;
+      width:340px;
       max-width:calc(100vw - 32px);
       background:var(--panel);
       border:1px solid var(--border-hi);
@@ -277,9 +279,9 @@
       overflow:hidden;
       transform:translateY(calc(100% - var(--sheet-peek)));
       transition:transform .26s ease;
-      max-height:72vh;
-      max-height:72svh;
-      max-height:72dvh;
+      max-height:76vh;
+      max-height:76svh;
+      max-height:76dvh;
       display:flex;
       flex-direction:column;
     }
@@ -318,7 +320,8 @@
       flex:1;
       min-height:38px;
       border-radius:999px;
-      font-size:10.5px;
+      font-size:10px;
+      padding:0 10px;
     }
 
     .panel-head{
@@ -366,6 +369,7 @@
     .v-warn{color:var(--amber)}
     .v-crit{color:var(--crit)}
     .v-dim{color:var(--muted)}
+    .v-blue{color:var(--blue)}
 
     .freshness{
       display:inline-flex;
@@ -457,6 +461,7 @@
       display:flex;
       gap:8px;
       margin-top:12px;
+      flex-wrap:wrap;
     }
 
     .refresh-btn,
@@ -480,7 +485,16 @@
 
     .refresh-btn{width:100%}
     .action-btn{flex:1}
-    .refresh-btn:disabled{opacity:.5;cursor:not-allowed}
+    .action-btn.locate-btn{
+      background:rgba(77,163,255,.08);
+      border-color:rgba(77,163,255,.24);
+      color:#c6e0ff;
+    }
+    .refresh-btn:disabled,
+    .action-btn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
 
     .diag-btn{
       position:absolute;
@@ -583,6 +597,15 @@
     .marker.critical::after{
       border-color:rgba(255,23,68,.38);
       animation:fire-ring-critical 1.1s ease-out infinite;
+    }
+
+    .user-marker{
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      background:var(--blue);
+      border:3px solid rgba(255,255,255,.95);
+      box-shadow:0 0 0 10px rgba(77,163,255,.18);
     }
 
     @keyframes fire-ring{
@@ -689,7 +712,7 @@
     @media (max-width:768px){
       :root{
         --header-h:58px;
-        --sheet-peek:82px;
+        --sheet-peek:92px;
       }
 
       header{
@@ -711,9 +734,9 @@
       }
 
       .sheet-card{
-        max-height:70vh;
-        max-height:70svh;
-        max-height:70dvh;
+        max-height:76vh;
+        max-height:76svh;
+        max-height:76dvh;
       }
 
       .panel-body{
@@ -722,7 +745,7 @@
 
       .sheet-quick-actions .action-btn{
         min-height:36px;
-        font-size:10px;
+        font-size:9.5px;
       }
 
       .maplibregl-ctrl button{
@@ -731,7 +754,7 @@
       }
 
       .maplibregl-ctrl-scale{
-        margin:0 0 calc(98px + var(--safe-bottom)) 10px !important;
+        margin:0 0 calc(112px + var(--safe-bottom)) 10px !important;
       }
 
       .maplibregl-ctrl-bottom-right,
@@ -742,7 +765,7 @@
 
     @media (max-width:430px){
       :root{
-        --sheet-peek:78px;
+        --sheet-peek:88px;
       }
 
       .summary-text{
@@ -766,7 +789,7 @@
       <div class="brand" aria-label="Kahu Ola — Civic Fire Detection Map">
         <div class="logo">
           🔥 Kahu Ola
-          <small>V4.4 · PRODUCTION FIRE DETECTION MAP</small>
+          <small>V4.4 · HAWAIʻI FIRE DETECTION MAP</small>
         </div>
       </div>
 
@@ -789,6 +812,9 @@
           <div id="b-parse" class="banner banner-red hidden">
             <span class="dot"></span>Data format error
           </div>
+          <div id="b-loc" class="banner banner-blue hidden">
+            <span class="dot"></span><span id="b-loc-text">Location used only on this device</span>
+          </div>
         </div>
       </div>
     </header>
@@ -797,7 +823,7 @@
       <div id="map" role="main" aria-label="Hawaiʻi wildfire detection map"></div>
 
       <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
-        <div class="panel-head">Fire Signals · Maui Region</div>
+        <div class="panel-head">Fire Signals · Hawaiʻi</div>
         <div class="panel-body" id="panel-content-desktop"></div>
       </aside>
 
@@ -809,11 +835,11 @@
             </div>
             <div class="sheet-quick-actions">
               <button class="action-btn" id="sheet-toggle-btn" type="button">Map Details</button>
-              <a class="action-btn" href="/privacy.html">Privacy</a>
+              <button class="action-btn locate-btn" id="locate-btn-mobile" type="button">Use My Location</button>
               <a class="action-btn" href="/support.html">Support</a>
             </div>
           </div>
-          <div class="panel-head">Fire Signals · Maui Region</div>
+          <div class="panel-head">Fire Signals · Hawaiʻi</div>
           <div class="panel-body" id="panel-content-mobile"></div>
         </div>
       </section>
@@ -867,7 +893,12 @@
       <span class="metric-value v-dim" id="data-source">—</span>
     </div>
 
-    <div id="freshness-badge" class="freshness f-unknown">● UNKNOWN</div>
+    <div class="metric">
+      <span class="metric-label">View</span>
+      <span class="metric-value v-blue" id="view-mode">Statewide</span>
+    </div>
+
+    <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
 
     <div class="summary-card" aria-label="Civic Intelligence">
       <div class="summary-title">Civic Intelligence</div>
@@ -877,6 +908,7 @@
       <div class="summary-meta">
         <span class="chip" id="summary-source">Source: Kahu Ola</span>
         <span class="chip" id="summary-updated">Updated: —</span>
+        <span class="chip" id="summary-privacy">Location stays on device</span>
       </div>
     </div>
 
@@ -884,6 +916,12 @@
       <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
         ↻ REFRESH
       </button>
+    </div>
+
+    <div class="panel-actions">
+      <button class="action-btn locate-btn" id="locate-btn-panel" type="button">Use My Location</button>
+      <a class="action-btn" href="/privacy.html">Privacy</a>
+      <a class="action-btn" href="/support.html">Support</a>
     </div>
   </template>
 
@@ -899,8 +937,14 @@
 
     const FIRE_ENDPOINT = IS_LOCAL
       ? "./fires-test.json"
-      : "https://kahuola.org/api/firms/hotspots?bbox=-157.2,20.4,-156.1,21.2&days=1";
+      : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1";
 
+    const HAWAII_BOUNDS = [
+      [-160.9, 18.8],
+      [-154.7, 22.5]
+    ];
+
+    const HAWAII_CENTER = [-157.9, 20.5];
     const REF_CENTER = [-156.675, 20.878];
     const POLL_MS = 60000;
     const FETCH_TIMEOUT_MS = 12000;
@@ -912,6 +956,10 @@
     const mobileSheet = document.getElementById("mobile-sheet");
     const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
     const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
+
+    let lastKnownUserCoord = null;
+    let userMarker = null;
+    let currentViewMode = "Statewide";
 
     function mountPanel(targetId, suffix) {
       const target = document.getElementById(targetId);
@@ -991,6 +1039,7 @@
       show("b-offline", DS.isOffline);
       show("b-parse", DS.parseFailures > 0);
       show("b-degraded", DS.degraded && !DS.isOffline);
+      show("b-loc", !!lastKnownUserCoord);
     }
 
     function hstTime(date) {
@@ -1048,24 +1097,28 @@
       const summaryText = ui("summary-text");
       const summarySource = ui("summary-source");
       const summaryUpdated = ui("summary-updated");
+      const summaryPrivacy = ui("summary-privacy");
 
       if (!summaryText) return;
+
+      const refPoint = lastKnownUserCoord || REF_CENTER;
+      const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
 
       if (DS.isOffline) {
         summaryText.textContent =
           "Cached fire signals are being shown while the connection is offline. Treat the map as situational context, not a live emergency directive.";
       } else if (features.length === 0) {
         summaryText.textContent =
-          "NASA FIRMS returned no current wildfire detections for the Maui region in this snapshot.";
+          "NASA FIRMS returned no current wildfire detections across Hawaiʻi in this snapshot.";
       } else if (criticalCount > 0 && Number.isFinite(nearest)) {
         summaryText.textContent =
-          `NASA FIRMS indicates critical wildfire detections in the Maui region. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
+          `NASA FIRMS indicates critical wildfire detections in Hawaiʻi. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
       } else if (Number.isFinite(nearest)) {
         summaryText.textContent =
-          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} for the Maui region in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from the reference view.`;
+          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
       } else {
         summaryText.textContent =
-          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} for the Maui region in this snapshot.`;
+          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot.`;
       }
 
       if (summarySource) {
@@ -1078,6 +1131,14 @@
         summaryUpdated.textContent =
           `Updated: ${DS.lastSourceDataTime ? hstTime(DS.lastSourceDataTime) : "—"}`;
       }
+
+      if (summaryPrivacy) {
+        summaryPrivacy.textContent = lastKnownUserCoord
+          ? "Location stays on device"
+          : "No device location used";
+      }
+
+      setText("view-mode", currentViewMode);
     }
 
     async function strictFetch(url) {
@@ -1140,22 +1201,15 @@
     const map = new maplibregl.Map({
       container: "map",
       style: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
-      center: REF_CENTER,
-      zoom: 11,
+      center: HAWAII_CENTER,
+      zoom: 6.5,
       attributionControl: true,
       antialias: false,
       failIfMajorPerformanceCaveat: false
     });
 
-    map.addControl(
-      new maplibregl.NavigationControl({ showCompass: false }),
-      "top-left"
-    );
-
-    map.addControl(
-      new maplibregl.ScaleControl({ unit: "imperial" }),
-      "bottom-left"
-    );
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+    map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
 
     function safeMapResize() {
       if (!map) return;
@@ -1167,8 +1221,19 @@
       });
     }
 
+    function fitHawaii(animated = false) {
+      map.fitBounds(HAWAII_BOUNDS, {
+        padding: { top: 96, right: 24, bottom: 120, left: 24 },
+        duration: animated ? 700 : 0,
+        maxZoom: 8
+      });
+      currentViewMode = lastKnownUserCoord ? "My Location" : "Statewide";
+      setText("view-mode", currentViewMode);
+    }
+
     let markers = [];
     let pollHandle = null;
+    let latestFeatures = [];
 
     function clearMarkers() {
       markers.forEach((m) => m.remove());
@@ -1200,6 +1265,8 @@
     function setRefreshingUI(isRefreshing) {
       const refresh = ui("refresh-btn");
       const fireCount = ui("fire-count");
+      const locateA = document.getElementById("locate-btn-panel-" + activeSuffix());
+      const locateMobile = document.getElementById("locate-btn-mobile");
 
       if (refresh) {
         refresh.disabled = isRefreshing;
@@ -1212,44 +1279,63 @@
         fireCount.className = "metric-value v-fire";
         fireCount.innerHTML = '<span class="spinner"></span>';
       }
+
+      if (locateA) locateA.disabled = isRefreshing;
+      if (locateMobile) locateMobile.disabled = false;
     }
 
-    async function loadFireSignals() {
-      setRefreshingUI(true);
+    function updateUserMarker(coord) {
+      if (!coord) return;
 
-      const result = await strictFetch(FIRE_ENDPOINT);
-      let features = Array.isArray(result.features) ? result.features : [];
+      if (userMarker) userMarker.remove();
 
-      if (features.length > 300) {
-        features = features.slice(0, 300);
-      }
+      const el = document.createElement("div");
+      el.className = "user-marker";
 
-      clearMarkers();
+      const popup = new maplibregl.Popup({
+        closeButton: false,
+        offset: 14
+      }).setHTML(
+        `<div style="font-weight:600;margin-bottom:4px">📍 Your Location</div>
+         <div style="color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}</div>
+         <div style="margin-top:6px;color:#9bc4ff">Used only on this device</div>`
+      );
 
+      userMarker = new maplibregl.Marker({ element: el })
+        .setLngLat(coord)
+        .setPopup(popup)
+        .addTo(map);
+    }
+
+    function setLocationButtonState(loading) {
+      const ids = [
+        "locate-btn-panel-desktop",
+        "locate-btn-panel-mobile",
+        "locate-btn-mobile"
+      ];
+
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = loading;
+        el.textContent = loading ? "Locating..." : "Use My Location";
+      });
+    }
+
+    function recalcNearestFromFeatures(features) {
+      const refPoint = lastKnownUserCoord || REF_CENTER;
       let closest = Infinity;
       let criticalCount = 0;
 
       for (const f of features) {
         if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
-
         const c = f.geometry.coordinates;
         if (c.length < 2) continue;
         if (typeof c[0] !== "number" || typeof c[1] !== "number") continue;
-        if (c[0] < -180 || c[0] > 180 || c[1] < -90 || c[1] > 90) continue;
-
         const severity = f.properties?.severity || "UNKNOWN";
         if (severity === "CRITICAL") criticalCount++;
-
-        addMarker(c, severity);
-
-        const d = distMiles(REF_CENTER, c);
+        const d = distMiles(refPoint, c);
         if (d < closest) closest = d;
-      }
-
-      const countEl = ui("fire-count");
-      if (countEl) {
-        countEl.textContent = String(features.length);
-        countEl.className = "metric-value " + (features.length > 0 ? "v-fire" : "v-good");
       }
 
       const nearEl = ui("nearest-fire");
@@ -1265,6 +1351,84 @@
         }
       }
 
+      updateSummary(features, closest, criticalCount);
+    }
+
+    function useMyLocation() {
+      if (!("geolocation" in navigator)) {
+        alert("Location is not available on this device.");
+        return;
+      }
+
+      setLocationButtonState(true);
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coord = [pos.coords.longitude, pos.coords.latitude];
+          lastKnownUserCoord = coord;
+          currentViewMode = "My Location";
+
+          updateUserMarker(coord);
+
+          map.flyTo({
+            center: coord,
+            zoom: Math.max(map.getZoom(), 9),
+            speed: 0.8,
+            essential: true
+          });
+
+          document.getElementById("b-loc-text").textContent = "Location used only on this device";
+          show("b-loc", true);
+          setText("view-mode", "My Location");
+          recalcNearestFromFeatures(latestFeatures);
+          setLocationButtonState(false);
+          setTimeout(safeMapResize, 250);
+        },
+        () => {
+          setLocationButtonState(false);
+          document.getElementById("b-loc-text").textContent = "Location permission not granted";
+          show("b-loc", true);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    }
+
+    async function loadFireSignals() {
+      setRefreshingUI(true);
+
+      const result = await strictFetch(FIRE_ENDPOINT);
+      let features = Array.isArray(result.features) ? result.features : [];
+
+      if (features.length > 500) {
+        features = features.slice(0, 500);
+      }
+
+      latestFeatures = features;
+      clearMarkers();
+
+      let criticalCount = 0;
+      for (const f of features) {
+        if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
+        const c = f.geometry.coordinates;
+        if (c.length < 2) continue;
+        if (typeof c[0] !== "number" || typeof c[1] !== "number") continue;
+        if (c[0] < -180 || c[0] > 180 || c[1] < -90 || c[1] > 90) continue;
+
+        const severity = f.properties?.severity || "UNKNOWN";
+        if (severity === "CRITICAL") criticalCount++;
+        addMarker(c, severity);
+      }
+
+      const countEl = ui("fire-count");
+      if (countEl) {
+        countEl.textContent = String(features.length);
+        countEl.className = "metric-value " + (features.length > 0 ? "v-fire" : "v-good");
+      }
+
       const critEl = ui("critical-count");
       if (critEl) {
         if (criticalCount > 0) {
@@ -1278,8 +1442,9 @@
 
       setText("fetch-time", DS.lastSourceDataTime ? hstTime(DS.lastSourceDataTime) : "—");
       setText("data-source", IS_LOCAL ? "fires-test.json" : (DS.lastPayloadSource || "Worker API"));
+      setText("view-mode", currentViewMode);
       applyFreshness(DS.lastSourceDataTime);
-      updateSummary(features, closest, criticalCount);
+      recalcNearestFromFeatures(features);
 
       if (DS.isOffline && DS.lastSourceDataTime) {
         document.getElementById("b-offline-text").textContent =
@@ -1289,9 +1454,13 @@
       setRefreshingUI(false);
     }
 
-    function bindRefreshButtons() {
+    function bindButtons() {
       document.getElementById("refresh-btn-desktop")?.addEventListener("click", loadFireSignals);
       document.getElementById("refresh-btn-mobile")?.addEventListener("click", loadFireSignals);
+
+      document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
+      document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
+      document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
     }
 
     function setSheetOpen(open) {
@@ -1305,7 +1474,7 @@
       setSheetOpen(!mobileSheet.classList.contains("open"));
     }
 
-    bindRefreshButtons();
+    bindButtons();
 
     diagBtn?.addEventListener("click", () => {
       const open = diag.classList.toggle("open");
@@ -1350,6 +1519,7 @@
 
     map.on("load", () => {
       syncDiag();
+      fitHawaii(false);
 
       if (window.innerWidth <= MOBILE_BREAKPOINT) {
         setSheetOpen(false);
@@ -1367,5 +1537,3 @@
   </script>
 </body>
 </html>
-
-
