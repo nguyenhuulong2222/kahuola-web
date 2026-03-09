@@ -245,6 +245,10 @@
       z-index:25;
       width:340px;
       max-width:calc(100vw - 32px);
+      max-height:calc(100dvh - 108px - var(--safe-top) - var(--safe-bottom));
+      display:flex;
+      flex-direction:column;
+      min-height:0;
       background:var(--panel);
       border:1px solid var(--border-hi);
       border-radius:var(--radius);
@@ -336,8 +340,11 @@
     }
 
     .panel-body{
+      flex:1 1 auto;
+      min-height:0;
       padding:10px 14px 14px;
       overflow:auto;
+      overscroll-behavior:contain;
       -webkit-overflow-scrolling:touch;
     }
 
@@ -423,6 +430,155 @@
       border-radius:14px;
       background:rgba(255,255,255,.03);
       overflow:hidden;
+    }
+
+    .accordion-card{
+      scroll-margin-top:12px;
+    }
+
+    .multi-hazard-card .accordion-content{
+      padding:0;
+    }
+
+    .hazard-module-scroll{
+      max-height:min(34vh, 280px);
+      overflow:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      padding:0 12px 10px;
+    }
+
+    .hazard-module-scroll .layer-status-stack{
+      gap:0;
+    }
+
+    .hazard-module-scroll + .blueprint-footnote{
+      padding:0 12px 10px;
+      margin-top:0;
+      border-top:1px solid var(--border);
+    }
+
+    .layer-status-row.js-hazard-detail{
+      cursor:pointer;
+      transition:background .18s ease, transform .18s ease;
+      border-radius:12px;
+      padding-left:10px;
+      padding-right:10px;
+      margin:4px 0;
+    }
+
+    .layer-status-row.js-hazard-detail:hover{
+      background:rgba(255,255,255,.03);
+    }
+
+    .layer-status-row.js-hazard-detail:active{
+      transform:scale(.995);
+      background:rgba(255,255,255,.05);
+    }
+
+    .layer-status-row .detail-chev{
+      display:none;
+    }
+
+    .hazard-detail-sheet{
+      position:absolute;
+      inset:0;
+      z-index:55;
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      background:rgba(0,0,0,.42);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      padding:16px;
+      padding-bottom:calc(16px + var(--safe-bottom));
+    }
+
+    .hazard-detail-sheet.open{display:flex;}
+
+    .hazard-detail-card{
+      width:min(100%, 420px);
+      max-height:min(78dvh, 680px);
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      background:rgba(12,12,12,.98);
+      border:1px solid var(--border-hi);
+      border-radius:24px;
+      box-shadow:0 24px 60px rgba(0,0,0,.42);
+      padding:14px;
+      transform:translateY(16px);
+      opacity:0;
+      transition:transform .22s ease, opacity .22s ease;
+    }
+
+    .hazard-detail-sheet.open .hazard-detail-card{
+      transform:translateY(0);
+      opacity:1;
+    }
+
+    .hazard-detail-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+
+    .hazard-detail-kicker{
+      color:var(--text-dim);
+      font-size:10px;
+      font-weight:600;
+      font-family:var(--font-mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:6px;
+    }
+
+    .hazard-detail-title{
+      font-size:20px;
+      font-weight:700;
+      line-height:1.15;
+      letter-spacing:-.01em;
+    }
+
+    .hazard-detail-close{
+      appearance:none;
+      border:1px solid var(--border-hi);
+      background:rgba(255,255,255,.03);
+      color:var(--text-dim);
+      width:36px;
+      height:36px;
+      border-radius:999px;
+      cursor:pointer;
+      flex:0 0 auto;
+    }
+
+    .hazard-detail-body{
+      display:grid;
+      gap:12px;
+    }
+
+    .hazard-detail-block{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      border-radius:16px;
+      padding:12px;
+    }
+
+    .hazard-detail-label{
+      color:var(--text-dim);
+      font-size:10px;
+      font-weight:600;
+      font-family:var(--font-mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+
+    .hazard-detail-text{
+      color:var(--text);
+      font-size:14px;
+      line-height:1.55;
     }
 
     .accordion-card[open]{
@@ -1128,6 +1284,33 @@
         </div>
       </section>
 
+
+      <div class="hazard-detail-sheet" id="hazard-detail-sheet" aria-hidden="true">
+        <div class="hazard-detail-card" role="dialog" aria-modal="true" aria-labelledby="hazard-detail-title">
+          <div class="hazard-detail-top">
+            <div>
+              <div class="hazard-detail-kicker">Hazard Module</div>
+              <div class="hazard-detail-title" id="hazard-detail-title">Module details</div>
+            </div>
+            <button class="hazard-detail-close" id="hazard-detail-close" aria-label="Close hazard details">✕</button>
+          </div>
+          <div class="hazard-detail-body">
+            <div class="hazard-detail-block">
+              <div class="hazard-detail-label">Status</div>
+              <div class="hazard-detail-text" id="hazard-detail-status">—</div>
+            </div>
+            <div class="hazard-detail-block">
+              <div class="hazard-detail-label">Context</div>
+              <div class="hazard-detail-text" id="hazard-detail-note">—</div>
+            </div>
+            <div class="hazard-detail-block">
+              <div class="hazard-detail-label">Design Direction</div>
+              <div class="hazard-detail-text" id="hazard-detail-body">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <button class="diag-btn" id="diag-btn" aria-expanded="false" aria-controls="diag">
         ⚙ SYSTEM
       </button>
@@ -1206,29 +1389,30 @@
         <span class="accordion-chevron">▾</span>
       </summary>
       <div class="accordion-content">
+        <div class="hazard-module-scroll">
         <div class="layer-status-stack">
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Flash Flood Watch" data-hazard-status="Unavailable" data-hazard-note="Flash flood watch data is not available yet in the cached aggregator feed." data-hazard-detail="For Maui, flood should be the first non-fire module because short-fuse flooding can threaten roads, gulches, and low-lying neighborhoods. This panel is wired to accept a cached flash-flood aggregator endpoint when backend is ready." tabindex="0" role="button" aria-label="Flash Flood Watch details">
             <div>
               <div class="layer-status-name">Smoke</div>
               <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
               <div class="layer-status-note" id="smoke-status-subnote">Layer visibility does not mean smoke is detected.</div>
               <span class="hidden" id="smoke-status-text">—</span>
             </div>
-            <div class="status-badge status-none" id="smoke-status-badge">No smoke</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="smoke-status-badge">No smoke</div><span class="detail-chev">›</span></div>
           </div>
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Perimeters" data-hazard-status="Secondary Layer" data-hazard-note="Perimeter data reflects incident boundaries when available." data-hazard-detail="Perimeters should remain directly under fire in the hierarchy. Estimated boundaries must never be presented as official, and unavailable perimeter feeds should fail safely without breaking the map." tabindex="0" role="button" aria-label="Perimeter details">
             <div>
               <div class="layer-status-name">Perimeters</div>
               <div class="layer-status-note" id="perimeter-status-note">Waiting for the latest perimeter feed.</div>
               <span class="hidden" id="perimeter-status-text">—</span>
             </div>
-            <div class="status-badge status-none" id="perimeter-status-badge">No perimeter</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="perimeter-status-badge">No perimeter</div><span class="detail-chev">›</span></div>
           </div>
         </div>
       </div>
     </details>
 
-    <details class="accordion-card" aria-label="Multi-Hazard Blueprint">
+    <details class="accordion-card multi-hazard-card" aria-label="Multi-Hazard Blueprint">
       <summary class="accordion-summary">
         <div class="accordion-title-wrap">
           <div class="layer-status-head">V4.6 Multi-Hazard Blueprint</div>
@@ -1237,49 +1421,51 @@
         <span class="accordion-chevron">▾</span>
       </summary>
       <div class="accordion-content">
+        <div class="hazard-module-scroll">
         <div class="layer-status-stack">
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Flash Flood Watch" data-hazard-status="Unavailable" data-hazard-note="Flash flood watch data is not available yet in the cached aggregator feed." data-hazard-detail="For Maui, flood should be the first non-fire module because short-fuse flooding can threaten roads, gulches, and low-lying neighborhoods. This panel is wired to accept a cached flash-flood aggregator endpoint when backend is ready." tabindex="0" role="button" aria-label="Flash Flood Watch details">
             <div>
               <div class="layer-status-name">Flash Flood Watch</div>
               <div class="layer-status-note" id="flood-status-note">Live-first module. Waiting for the cached flood watch feed.</div>
             </div>
-            <div class="status-badge status-none" id="flood-status-badge">No watch</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="flood-status-badge">No watch</div><span class="detail-chev">›</span></div>
           </div>
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Rain Radar" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Rain radar should follow flood watch, not replace it. Use radar as situational context for intensity and movement, while official watch or warning status remains the primary flood signal." tabindex="0" role="button" aria-label="Rain Radar details">
             <div>
               <div class="layer-status-name">Rain Radar</div>
               <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
             </div>
-            <div class="status-badge status-planned">Blueprint</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
           </div>
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Wind Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Wind risk matters for both wildfire spread and mountain microclimates. This module should eventually fuse RAWS and summit conditions into a civic-grade watch layer without overstating severity." tabindex="0" role="button" aria-label="Wind Risk details">
             <div>
               <div class="layer-status-name">Wind Risk</div>
               <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
             </div>
-            <div class="status-badge status-planned">Blueprint</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
           </div>
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Tsunami Alerts" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Tsunami belongs in the future multi-hazard stack, but it should remain visually secondary on Maui unless an alert is active. The panel should only escalate when official warning products are present." tabindex="0" role="button" aria-label="Tsunami Alerts details">
             <div>
               <div class="layer-status-name">Tsunami Alerts</div>
               <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
             </div>
-            <div class="status-badge status-planned">Blueprint</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
           </div>
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Hurricane Tracks" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Hurricane tracks should be map-level context with cone visualization and civic wording, not a dominant daily layer. It becomes primary only during active tropical systems affecting Hawaii." tabindex="0" role="button" aria-label="Hurricane Tracks details">
             <div>
               <div class="layer-status-name">Hurricane Tracks</div>
               <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
             </div>
-            <div class="status-badge status-planned">Blueprint</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
           </div>
-          <div class="layer-status-row">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Landslide Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Landslide risk should be derived conservatively from slope, rainfall, and incident context. On Maui, it pairs naturally with flood and road-closure intelligence after heavy rain or burn-scar events." tabindex="0" role="button" aria-label="Landslide Risk details">
             <div>
               <div class="layer-status-name">Landslide Risk</div>
               <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
             </div>
-            <div class="status-badge status-planned">Blueprint</div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
           </div>
+        </div>
         </div>
         <div class="blueprint-footnote">Only Flash Flood Watch is wired for live aggregator reads in this blueprint. The remaining modules are registry-ready placeholders for later phases.</div>
       </div>
@@ -1340,6 +1526,8 @@ const diagBtn = document.getElementById("diag-btn");
 const mobileSheet = document.getElementById("mobile-sheet");
 const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
 const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
+const hazardDetailSheet = document.getElementById("hazard-detail-sheet");
+const hazardDetailClose = document.getElementById("hazard-detail-close");
 
 let userMarker = null;
 let activePopup = null;
@@ -2682,7 +2870,57 @@ document.getElementById("diag-close")?.addEventListener("click", () => {
 });
 
 sheetToggleBtn?.addEventListener("click", toggleSheet);
+
+function openHazardDetailFromElement(el) {
+  if (!el || !hazardDetailSheet) return;
+  const title = el.dataset.hazardTitle || "Hazard module";
+  const status = el.dataset.hazardStatus || "Planned";
+  const note = el.dataset.hazardNote || "No additional context available.";
+  const detail = el.dataset.hazardDetail || note;
+  const titleNode = document.getElementById("hazard-detail-title");
+  const statusNode = document.getElementById("hazard-detail-status");
+  const noteNode = document.getElementById("hazard-detail-note");
+  const bodyNode = document.getElementById("hazard-detail-body");
+  if (titleNode) titleNode.textContent = title;
+  if (statusNode) statusNode.textContent = status;
+  if (noteNode) noteNode.textContent = note;
+  if (bodyNode) bodyNode.textContent = detail;
+  hazardDetailSheet.classList.add("open");
+  hazardDetailSheet.setAttribute("aria-hidden", "false");
+}
+
+function closeHazardDetail() {
+  if (!hazardDetailSheet) return;
+  hazardDetailSheet.classList.remove("open");
+  hazardDetailSheet.setAttribute("aria-hidden", "true");
+}
+
 sheetHandleWrap?.addEventListener("click", toggleSheet);
+
+
+document.addEventListener("click", (event) => {
+  const trigger = event.target.closest(".js-hazard-detail");
+  if (trigger) {
+    openHazardDetailFromElement(trigger);
+    return;
+  }
+  if (event.target === hazardDetailSheet) {
+    closeHazardDetail();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  const trigger = event.target.closest?.(".js-hazard-detail");
+  if (trigger && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openHazardDetailFromElement(trigger);
+  }
+  if (event.key === "Escape") {
+    closeHazardDetail();
+  }
+});
+
+hazardDetailClose?.addEventListener("click", closeHazardDetail);
 
 window.addEventListener("resize", () => {
   safeMapResize();
