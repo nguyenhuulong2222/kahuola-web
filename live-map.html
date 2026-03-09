@@ -1119,1226 +1119,1026 @@
     </div>
   </template>
 
-  <script>
-    "use strict";
+  
+<script>
+"use strict";
 
-    const MAPTILER_KEY = "gZAlLuBvEe2xMGBVun5D";
+/*
+  Kahu Ola Live Map — V4 Refactor Blueprint
+  -----------------------------------------
+  This version keeps the current Fire + Smoke UI working,
+  but moves model-specific logic into a central hazard registry so
+  future models can be added by editing one config block + a small parser.
 
-    const STYLES = {
-      dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
-      satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`
-    };
+  Active now:
+  - fire
+  - smoke
 
-    const IS_LOCAL =
-      location.hostname === "127.0.0.1" ||
-      location.hostname === "localhost" ||
-      location.protocol === "file:";
+  Scaffolded now:
+  - perimeter
+*/
 
-    const FIRE_ENDPOINT = IS_LOCAL
-      ? "./fires-test.json"
-      : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1";
+const MAPTILER_KEY = "gZAlLuBvEe2xMGBVun5D";
+const STYLES = {
+  dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
+  satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`
+};
 
-    const SMOKE_ENDPOINT = IS_LOCAL
-      ? "./smoke-test.json"
-      : "https://kahuola.org/hazards/smoke?region=hawaii";
+const IS_LOCAL =
+  location.hostname === "127.0.0.1" ||
+  location.hostname === "localhost" ||
+  location.protocol === "file:";
 
-    const HAWAII_BOUNDS = [
-      [-160.9, 18.8],
-      [-154.7, 22.5]
-    ];
+const HAWAII_BOUNDS = [[-160.9, 18.8], [-154.7, 22.5]];
+const HAWAII_CENTER = [-157.9, 20.5];
+const REF_CENTER = [-156.675, 20.878];
+const POLL_MS = 60000;
+const FETCH_TIMEOUT_MS = 12000;
+const MOBILE_BREAKPOINT = 980;
 
-    const HAWAII_CENTER = [-157.9, 20.5];
-    const REF_CENTER = [-156.675, 20.878];
-    const POLL_MS = 60000;
-    const FETCH_TIMEOUT_MS = 12000;
-    const MOBILE_BREAKPOINT = 980;
+const modeFooter = document.getElementById("mode-footer");
+const diag = document.getElementById("diag");
+const diagBtn = document.getElementById("diag-btn");
+const mobileSheet = document.getElementById("mobile-sheet");
+const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
+const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
 
-    const modeFooter = document.getElementById("mode-footer");
-    const diag = document.getElementById("diag");
-    const diagBtn = document.getElementById("diag-btn");
-    const mobileSheet = document.getElementById("mobile-sheet");
-    const sheetToggleBtn = document.getElementById("sheet-toggle-btn");
-    const sheetHandleWrap = document.getElementById("sheet-handle-wrap");
+let userMarker = null;
+let activePopup = null;
+let pollHandle = null;
+let currentBasemap = "dark";
+let currentViewMode = "Statewide";
+let lastKnownUserCoord = null;
+let smokeVisible = true;
 
-    let lastKnownUserCoord = null;
-    let userMarker = null;
-    let currentViewMode = "Statewide";
-    let latestFeatures = [];
-    let latestSmokeFeatures = [];
-    let currentBasemap = "dark";
-    let smokeVisible = true;
-    let activePopup = null;
-    let pollHandle = null;
+const appState = {
+  diagnostics: {
+    networkFailures: 0,
+    parseFailures: 0,
+    consecutiveFailures: 0,
+    isOffline: false,
+    get degraded() { return this.consecutiveFailures >= 3; }
+  },
+  hazards: {
+    fire: createHazardState("fire"),
+    smoke: createHazardState("smoke"),
+    perimeter: createHazardState("perimeter")
+  }
+};
 
-    function mountPanel(targetId, suffix) {
-      const target = document.getElementById(targetId);
-      const tpl = document.getElementById("panel-template");
-      const fragment = tpl.content.cloneNode(true);
+function createHazardState(key) {
+  return {
+    key,
+    enabled: key !== "perimeter",
+    visible: key !== "smoke" ? true : true,
+    status: "idle", // idle | loading | ready | unavailable
+    sourceStatus: "unknown", // detected | none | unavailable | unknown
+    features: [],
+    generatedAt: null,
+    sourceTime: null,
+    sourceLabel: null,
+    fetchAt: null,
+    error: null,
+    meta: {}
+  };
+}
 
-      fragment.querySelectorAll("[id]").forEach((el) => {
-        el.id = `${el.id}-${suffix}`;
-      });
+function getState(key) {
+  return appState.hazards[key];
+}
 
-      target.innerHTML = "";
-      target.appendChild(fragment);
+function mountPanel(targetId, suffix) {
+  const target = document.getElementById(targetId);
+  const tpl = document.getElementById("panel-template");
+  const fragment = tpl.content.cloneNode(true);
+  fragment.querySelectorAll("[id]").forEach((el) => {
+    el.id = `${el.id}-${suffix}`;
+  });
+  target.innerHTML = "";
+  target.appendChild(fragment);
+}
+
+mountPanel("panel-content-desktop", "desktop");
+mountPanel("panel-content-mobile", "mobile");
+
+function activeSuffix() {
+  return window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop";
+}
+function ui(baseId) {
+  return document.getElementById(`${baseId}-${activeSuffix()}`);
+}
+function setText(baseId, value) {
+  const ids = [`${baseId}-desktop`, `${baseId}-mobile`];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  });
+}
+function show(id, on) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle("hidden", !on);
+}
+
+if (modeFooter) {
+  modeFooter.textContent = IS_LOCAL
+    ? "Kahu Ola civic technology · local test mode"
+    : "Kahu Ola civic technology · live production mode";
+}
+
+function syncDiag() {
+  document.getElementById("d-net").textContent = String(appState.diagnostics.networkFailures);
+  document.getElementById("d-parse").textContent = String(appState.diagnostics.parseFailures);
+  document.getElementById("d-consec").textContent = String(appState.diagnostics.consecutiveFailures);
+  document.getElementById("d-offline").textContent = String(appState.diagnostics.isOffline);
+  document.getElementById("d-mode").textContent = IS_LOCAL ? "LOCAL" : "PRODUCTION";
+
+  show("b-local", IS_LOCAL);
+  show("b-offline", appState.diagnostics.isOffline);
+  show("b-parse", appState.diagnostics.parseFailures > 0);
+  show("b-degraded", appState.diagnostics.degraded && !appState.diagnostics.isOffline);
+  show("b-loc", !!lastKnownUserCoord);
+}
+
+function markSuccess() {
+  appState.diagnostics.consecutiveFailures = 0;
+  appState.diagnostics.isOffline = false;
+  syncDiag();
+}
+
+function markError(type) {
+  if (type === "network") appState.diagnostics.networkFailures += 1;
+  if (type === "parse") appState.diagnostics.parseFailures += 1;
+  appState.diagnostics.consecutiveFailures += 1;
+  syncDiag();
+}
+
+function hstTime(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString("en-US", {
+    timeZone: "Pacific/Honolulu",
+    hour: "2-digit",
+    minute: "2-digit"
+  }) + " HST";
+}
+
+function parseDateMaybe(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function distMiles(a, b) {
+  const R = 3958.8;
+  const dLat = (b[1] - a[1]) * Math.PI / 180;
+  const dLon = (b[0] - a[0]) * Math.PI / 180;
+  const lat1 = a[1] * Math.PI / 180;
+  const lat2 = b[1] * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function applyFreshness(date) {
+  const ids = ["freshness-badge-desktop", "freshness-badge-mobile"];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!date) {
+      el.className = "freshness f-unknown";
+      el.textContent = "● UNKNOWN";
+      return;
     }
-
-    mountPanel("panel-content-desktop", "desktop");
-    mountPanel("panel-content-mobile", "mobile");
-
-    function activeSuffix() {
-      return window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop";
+    const ageMin = (Date.now() - date.getTime()) / 60000;
+    if (ageMin <= 10) {
+      el.className = "freshness f-fresh";
+      el.textContent = "✓ FRESH";
+    } else if (ageMin <= 60) {
+      el.className = "freshness f-stale";
+      el.textContent = "⚠ MAY BE STALE";
+    } else {
+      el.className = "freshness f-old";
+      el.textContent = "✗ OUTDATED";
     }
+  });
+}
 
-    function ui(baseId) {
-      return document.getElementById(`${baseId}-${activeSuffix()}`);
-    }
+function fitHawaii(animated = false) {
+  map.fitBounds(HAWAII_BOUNDS, {
+    padding: { top: 96, right: 24, bottom: 120, left: 24 },
+    duration: animated ? 700 : 0,
+    maxZoom: 8
+  });
+  currentViewMode = lastKnownUserCoord ? "My Location" : "Statewide";
+  setText("view-mode", currentViewMode);
+}
 
-    function setText(baseId, value) {
-      const el = ui(baseId);
-      if (el) el.textContent = String(value);
-    }
+function safeMapResize() {
+  requestAnimationFrame(() => {
+    map.resize();
+    requestAnimationFrame(() => map.resize());
+  });
+}
 
-    function show(id, on) {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle("hidden", !on);
-    }
+function toggleBasemap() {
+  currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
+  map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
+  setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+  syncSatelliteButtons();
+}
 
-    if (modeFooter) {
-      modeFooter.textContent = IS_LOCAL
-        ? "Kahu Ola civic technology · local test mode"
-        : "Kahu Ola civic technology · live production mode";
-    }
+function syncSatelliteButtons() {
+  ["satellite-btn-panel-desktop", "satellite-btn-panel-mobile", "satellite-btn-mobile"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = currentBasemap === "dark" ? "Satellite" : "Dark Map";
+    el.classList.toggle("active", currentBasemap !== "dark");
+  });
+}
 
-    const DS = {
-      networkFailures: 0,
-      parseFailures: 0,
-      consecutiveFailures: 0,
-      isOffline: false,
-      lastFireFetchAt: null,
-      lastSmokeFetchAt: null,
-      lastSourceDataTime: null,
-      lastSmokeSourceTime: null,
-      lastPayloadSource: null,
-      lastSmokeSourceLabel: null,
-      get degraded() {
-        return this.consecutiveFailures >= 3;
-      },
-      success(nowDate, sourceDataTime, sourceLabel, domain = "fire") {
-        this.consecutiveFailures = 0;
-        this.isOffline = false;
-        const now = nowDate || new Date();
-        if (domain === "smoke") {
-          this.lastSmokeFetchAt = now;
-          this.lastSmokeSourceTime = sourceDataTime || now;
-          this.lastSmokeSourceLabel = sourceLabel || null;
-        } else {
-          this.lastFireFetchAt = now;
-          this.lastSourceDataTime = sourceDataTime || now;
-          this.lastPayloadSource = sourceLabel || null;
-        }
-        syncDiag();
-      },
-      error(type) {
-        if (type === "network") this.networkFailures++;
-        if (type === "parse") this.parseFailures++;
-        this.consecutiveFailures++;
-        syncDiag();
-      }
-    };
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-    function syncDiag() {
-      document.getElementById("d-net").textContent = DS.networkFailures;
-      document.getElementById("d-parse").textContent = DS.parseFailures;
-      document.getElementById("d-consec").textContent = DS.consecutiveFailures;
-      document.getElementById("d-offline").textContent = DS.isOffline ? "true" : "false";
-      document.getElementById("d-mode").textContent = IS_LOCAL ? "local" : "production";
+function formatDetectedTime(acqDate, acqTime) {
+  if (!acqDate && !acqTime) return "Unavailable";
+  const timeStr = acqTime ? String(acqTime).padStart(4, "0") : "";
+  const hh = timeStr ? timeStr.slice(0, 2) : "--";
+  const mm = timeStr ? timeStr.slice(2, 4) : "--";
+  return `${acqDate || "—"} ${timeStr ? `${hh}:${mm} UTC` : ""}`.trim();
+}
 
-      show("b-local", IS_LOCAL);
-      show("b-offline", DS.isOffline);
-      show("b-parse", DS.parseFailures > 0);
-      show("b-degraded", DS.degraded && !DS.isOffline);
-      show("b-loc", !!lastKnownUserCoord);
-    }
-
-    function hstTime(date) {
-      if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "—";
-      return date.toLocaleTimeString("en-US", {
-        timeZone: "Pacific/Honolulu",
-        hour: "2-digit",
-        minute: "2-digit"
-      }) + " HST";
-    }
-
-    function parseDateMaybe(value) {
-      if (!value) return null;
-      const d = new Date(value);
-      return Number.isNaN(d.getTime()) ? null : d;
-    }
-
-    function distMiles(a, b) {
-      const R = 3958.8;
-      const dLat = (b[1] - a[1]) * Math.PI / 180;
-      const dLon = (b[0] - a[0]) * Math.PI / 180;
-      const lat1 = a[1] * Math.PI / 180;
-      const lat2 = b[1] * Math.PI / 180;
-      const x =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-    }
-
-    function applyFreshness(date) {
-      const el = ui("freshness-badge");
-      if (!el) return;
-
-      if (!date) {
-        el.className = "freshness f-unknown";
-        el.textContent = "● UNKNOWN";
-        return;
-      }
-
-      const ageMin = (Date.now() - date.getTime()) / 60000;
-
-      if (ageMin <= 10) {
-        el.className = "freshness f-fresh";
-        el.textContent = "✓ FRESH";
-      } else if (ageMin <= 60) {
-        el.className = "freshness f-stale";
-        el.textContent = "⚠ MAY BE STALE";
-      } else {
-        el.className = "freshness f-old";
-        el.textContent = "✗ OUTDATED";
-      }
-    }
-
-    function updateSummary(features, nearest, criticalCount) {
-      const summaryText = ui("summary-text");
-      const summarySource = ui("summary-source");
-      const summaryUpdated = ui("summary-updated");
-      const summaryPrivacy = ui("summary-privacy");
-
-      if (!summaryText) return;
-
-      const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
-
-      if (DS.isOffline) {
-        summaryText.textContent =
-          "Cached fire signals are being shown while the connection is offline. Treat the map as situational context, not a live emergency directive.";
-      } else if (features.length === 0 && latestSmokeFeatures.length > 0) {
-        summaryText.textContent =
-          `NOAA HMS is showing ${latestSmokeFeatures.length} smoke region${latestSmokeFeatures.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot, while NASA FIRMS returned no current wildfire detections.`;
-      } else if (features.length === 0) {
-        summaryText.textContent =
-          "NASA FIRMS returned no current wildfire detections across Hawaiʻi in this snapshot.";
-      } else if (criticalCount > 0 && Number.isFinite(nearest)) {
-        summaryText.textContent =
-          `NASA FIRMS indicates critical wildfire detections in Hawaiʻi. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      } else if (Number.isFinite(nearest)) {
-        summaryText.textContent =
-          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      } else {
-        summaryText.textContent =
-          `NASA FIRMS returned ${features.length} wildfire detection${features.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot.`;
-      }
-
-      if (summarySource) {
-        const fireSource = IS_LOCAL
-          ? "Local test dataset"
-          : (DS.lastPayloadSource || "NASA FIRMS · Kahu Ola Worker");
-        const smokeSource = DS.lastSmokeSourceLabel || "NOAA HMS";
-        summarySource.textContent = smokeVisible
-          ? `Source: ${fireSource} · ${smokeSource}`
-          : `Source: ${fireSource}`;
-      }
-
-      if (summaryUpdated) {
-        summaryUpdated.textContent =
-          `Updated: ${DS.lastSourceDataTime ? hstTime(DS.lastSourceDataTime) : "—"}`;
-      }
-
-      if (summaryPrivacy) {
-        summaryPrivacy.textContent = lastKnownUserCoord
-          ? "Location stays on device"
-          : "No device location used";
-      }
-
-      setText("view-mode", currentViewMode);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-    }
-
-    async function strictFetch(url, domain = "fire") {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-
+function fetchJson(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { signal: ctrl.signal, cache: "no-store" })
+    .then(async (res) => {
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP_${res.status}`);
+      const text = await res.text();
       try {
-        const res = await fetch(url, {
-          signal: ctrl.signal,
-          cache: "no-store"
-        });
-
-        clearTimeout(timer);
-
-        if (!res.ok) {
-          DS.error("network");
-          return { ok: false, features: [], sourceTime: null, sourceLabel: null };
-        }
-
-        let json;
-        try {
-          json = JSON.parse(await res.text());
-        } catch {
-          DS.error("parse");
-          return { ok: false, features: [], sourceTime: null, sourceLabel: null };
-        }
-
-        const featureKey = Array.isArray(json.features) ? "features" : (Array.isArray(json.signals) ? "signals" : null);
-        if (!json || typeof json !== "object" || !featureKey) {
-          DS.error("parse");
-          return { ok: false, features: [], sourceTime: null, sourceLabel: null };
-        }
-
-        const nowDate = new Date();
-        const sourceTime =
-          parseDateMaybe(json.newest_acq_at) ||
-          parseDateMaybe(json.generated_at) ||
-          parseDateMaybe(json.fetched_at) ||
-          nowDate;
-
-        const sourceLabel =
-          json.source ||
-          json.provider ||
-          (domain === "smoke"
-            ? (IS_LOCAL ? "Local smoke test dataset" : "NOAA HMS")
-            : (IS_LOCAL ? "Local test dataset" : "NASA FIRMS · Kahu Ola Worker"));
-
-        DS.success(nowDate, sourceTime, sourceLabel, domain);
-
-        return { ok: true, features: json[featureKey], sourceTime, sourceLabel };
+        return JSON.parse(text);
       } catch {
-        clearTimeout(timer);
-        DS.isOffline = true;
-        DS.error("network");
-        return {
-          ok: false,
-          features: [],
-          sourceTime: DS.lastSourceDataTime,
-          sourceLabel: DS.lastPayloadSource
-        };
+        const err = new Error("PARSE_ERROR");
+        err.isParse = true;
+        throw err;
       }
-    }
-
-    const map = new maplibregl.Map({
-      container: "map",
-      style: STYLES.dark,
-      center: HAWAII_CENTER,
-      zoom: 6.5,
-      attributionControl: true,
-      antialias: false,
-      failIfMajorPerformanceCaveat: false
+    })
+    .catch((err) => {
+      clearTimeout(timer);
+      throw err;
     });
+}
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
-    map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
+function normalizeFireFeatures(rawFeatures) {
+  return (Array.isArray(rawFeatures) ? rawFeatures : [])
+    .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates))
+    .map((f) => {
+      const lng = Number(f.geometry.coordinates[0]);
+      const lat = Number(f.geometry.coordinates[1]);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) return null;
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: {
+          severity: f.properties?.severity || "UNKNOWN",
+          brightness: f.properties?.brightness || null,
+          confidence: f.properties?.confidence || null,
+          frp: f.properties?.frp || null,
+          acq_date: f.properties?.acq_date || null,
+          acq_time: f.properties?.acq_time || null
+        }
+      };
+    })
+    .filter(Boolean);
+}
 
-    function safeMapResize() {
-      requestAnimationFrame(() => {
-        map.resize();
-        requestAnimationFrame(() => {
-          map.resize();
-        });
-      });
-    }
+function normalizeSmokeFeatures(rawSignals) {
+  return (Array.isArray(rawSignals) ? rawSignals : [])
+    .map((s) => {
+      const geometry = s.geometry;
+      const props = s.properties || {};
+      if (!geometry || !["Polygon", "MultiPolygon"].includes(geometry.type)) return null;
+      const densityRaw = String(props.smoke_density || props.density || props.smoke || s.density || "light").toLowerCase();
+      const density = ["light", "medium", "heavy"].includes(densityRaw) ? densityRaw : "light";
+      return {
+        type: "Feature",
+        geometry,
+        properties: {
+          density,
+          severity: density === "heavy" ? "WARNING" : density === "medium" ? "WATCH" : "INFO",
+          advisory: props.advisory || "Smoke detected in this area. Sensitive groups should reduce prolonged outdoor exposure.",
+          source: (s.source && s.source.provider) || props.source || "NOAA HMS",
+          event_time: s.event_time || props.event_time || null
+        }
+      };
+    })
+    .filter(Boolean);
+}
 
-    function fitHawaii(animated = false) {
-      map.fitBounds(HAWAII_BOUNDS, {
-        padding: { top: 96, right: 24, bottom: 120, left: 24 },
-        duration: animated ? 700 : 0,
-        maxZoom: 8
-      });
-      currentViewMode = lastKnownUserCoord ? "My Location" : "Statewide";
-      setText("view-mode", currentViewMode);
-    }
+function normalizePerimeterFeatures(rawSignals) {
+  return (Array.isArray(rawSignals) ? rawSignals : [])
+    .map((s) => {
+      const geometry = s.geometry;
+      const props = s.properties || {};
+      if (!geometry || !["Polygon", "MultiPolygon"].includes(geometry.type)) return null;
+      return {
+        type: "Feature",
+        geometry,
+        properties: {
+          incident_name: props.incident_name || s.incident_name || "Unnamed perimeter",
+          official: !!(props.official ?? s.official),
+          acres: props.acres || null,
+          containment_pct: props.containment_pct || null,
+          status: props.status || s.status || null
+        }
+      };
+    })
+    .filter(Boolean);
+}
 
-    function toggleBasemap() {
-      currentBasemap = currentBasemap === "dark" ? "satellite" : "dark";
-      map.setStyle(currentBasemap === "dark" ? STYLES.dark : STYLES.satellite);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-      syncSatelliteButtons();
-    }
-
-    function syncSatelliteButtons() {
-      const ids = [
-        "satellite-btn-panel-desktop",
-        "satellite-btn-panel-mobile",
-        "satellite-btn-mobile"
-      ];
-
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.textContent = currentBasemap === "dark" ? "Satellite" : "Dark Map";
-        el.classList.toggle("active", currentBasemap !== "dark");
-      });
-    }
-
-    function normalizeFireFeatures(rawFeatures) {
-      return rawFeatures
-        .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates))
-        .map((f) => {
-          const lng = Number(f.geometry.coordinates[0]);
-          const lat = Number(f.geometry.coordinates[1]);
-
-          if (
-            !Number.isFinite(lng) ||
-            !Number.isFinite(lat) ||
-            lng < -180 || lng > 180 ||
-            lat < -90 || lat > 90
-          ) return null;
-
-          return {
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              coordinates: [lng, lat]
-            },
-            properties: {
-              severity: f.properties?.severity || "UNKNOWN",
-              brightness: f.properties?.brightness || null,
-              confidence: f.properties?.confidence || null,
-              frp: f.properties?.frp || null,
-              acq_date: f.properties?.acq_date || null,
-              acq_time: f.properties?.acq_time || null
-            }
-          };
-        })
-        .filter(Boolean);
-    }
-
-
-    function normalizeSmokeFeatures(rawSignals) {
-      return (Array.isArray(rawSignals) ? rawSignals : [])
-        .map((s) => {
-          const geometry = s.geometry;
-          const props = s.properties || {};
-          if (!geometry || !["Polygon", "MultiPolygon"].includes(geometry.type)) return null;
-
-          const densityRaw = String(
-            props.smoke_density || props.density || props.smoke || s.density || "light"
-          ).toLowerCase();
-          const density = ["light", "medium", "heavy"].includes(densityRaw) ? densityRaw : "light";
-
-          return {
-            type: "Feature",
-            geometry,
-            properties: {
-              density,
-              severity: density === "heavy" ? "WARNING" : density === "medium" ? "WATCH" : "INFO",
-              advisory: props.advisory || "Smoke detected in this area. Sensitive groups should reduce prolonged outdoor exposure.",
-              source: (s.source && s.source.provider) || props.source || "NOAA HMS",
-              event_time: s.event_time || props.event_time || null
-            }
-          };
-        })
-        .filter(Boolean);
-    }
-
-    function ensureSmokeLayers() {
-      if (!map.getSource("smoke")) {
-        map.addSource("smoke", {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] }
-        });
-      }
-
-      if (!map.getLayer("smoke-fill")) {
-        map.addLayer({
-          id: "smoke-fill",
-          type: "fill",
-          source: "smoke",
-          paint: {
-            "fill-color": [
-              "match", ["get", "density"],
-              "heavy", "#6a1b9a",
-              "medium", "#8e24aa",
-              "light", "#ba68c8",
-              "#ba68c8"
-            ],
-            "fill-opacity": smokeVisible ? [
-              "match", ["get", "density"],
-              "heavy", 0.42,
-              "medium", 0.30,
-              "light", 0.18,
-              0.18
-            ] : 0
-          }
-        });
-      }
-
-      if (!map.getLayer("smoke-outline")) {
-        map.addLayer({
-          id: "smoke-outline",
-          type: "line",
-          source: "smoke",
-          paint: {
-            "line-color": [
-              "match", ["get", "density"],
-              "heavy", "#ce93d8",
-              "medium", "#d8b4e7",
-              "light", "#e7d2f1",
-              "#e7d2f1"
-            ],
-            "line-width": [
-              "match", ["get", "density"],
-              "heavy", 2.4,
-              "medium", 1.8,
-              "light", 1.2,
-              1.2
-            ],
-            "line-opacity": smokeVisible ? 0.82 : 0
-          }
-        });
-      }
-
-      if (!map.__smokeEventsBound) {
-        map.__smokeEventsBound = true;
-        map.on("click", "smoke-fill", (e) => {
-          const feature = e.features && e.features[0];
-          if (!feature) return;
-          openSmokePopup(feature, e.lngLat);
-        });
-        map.on("mouseenter", "smoke-fill", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "smoke-fill", () => {
-          map.getCanvas().style.cursor = "";
-        });
-      }
-
-      syncSmokeLayerVisibility();
-    }
-
-    function updateSmokeSource(features) {
-      const source = map.getSource("smoke");
-      if (!source) return;
-      source.setData({ type: "FeatureCollection", features });
-    }
-
-    function syncSmokeLayerVisibility() {
-      if (map.getLayer("smoke-fill")) {
-        map.setPaintProperty("smoke-fill", "fill-opacity", smokeVisible ? [
-          "match", ["get", "density"],
-          "heavy", 0.42,
-          "medium", 0.30,
-          "light", 0.18,
-          0.18
-        ] : 0);
-      }
-      if (map.getLayer("smoke-outline")) {
-        map.setPaintProperty("smoke-outline", "line-opacity", smokeVisible ? 0.82 : 0);
-      }
-      syncSmokeButtons();
-    }
-
-    function syncSmokeButtons() {
-      ["smoke-btn-panel-desktop", "smoke-btn-panel-mobile", "smoke-btn-mobile"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.textContent = smokeVisible ? "Smoke Layer: On" : "Smoke Layer: Off";
-        el.classList.toggle("active", smokeVisible);
-      });
-    }
-
-    function toggleSmokeLayer() {
-      smokeVisible = !smokeVisible;
-      syncSmokeLayerVisibility();
-      if (latestSmokeFeatures.length > 0) {
-        updateSmokeStatusUI("detected", latestSmokeFeatures.length);
-      } else if (DS.lastSmokeFetchAt) {
-        updateSmokeStatusUI("none", 0);
-      } else {
+const HAZARD_REGISTRY = {
+  fire: {
+    key: "fire",
+    endpoint: IS_LOCAL
+      ? "./fires-test.json"
+      : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1",
+    enabled: true,
+    parsePayload(json) {
+      const features = normalizeFireFeatures(Array.isArray(json.features) ? json.features : []);
+      return {
+        features,
+        sourceTime: parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local test dataset" : "NASA FIRMS · Kahu Ola Worker")
+      };
+    },
+    ensureLayers,
+    applyData(features) { updateFireSource(features); },
+    onFetchComplete() { renderUnifiedPanels(); },
+    visible() { return true; }
+  },
+  smoke: {
+    key: "smoke",
+    endpoint: IS_LOCAL
+      ? "./smoke-test.json"
+      : "https://kahuola.org/hazards/smoke?region=hawaii",
+    enabled: true,
+    parsePayload(json) {
+      const rawSignals = Array.isArray(json.signals) ? json.signals : [];
+      const features = normalizeSmokeFeatures(rawSignals);
+      return {
+        features,
+        sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local smoke test dataset" : "NOAA HMS")
+      };
+    },
+    ensureLayers,
+    applyData(features) { updateSmokeSource(features); },
+    onFetchComplete() {
+      const state = getState("smoke");
+      if (state.status === "unavailable") {
         updateSmokeStatusUI("unavailable", 0);
+      } else if (state.features.length > 0) {
+        updateSmokeStatusUI("detected", state.features.length);
+      } else {
+        updateSmokeStatusUI("none", 0);
       }
-      recalcNearestFromFeatures(latestFeatures);
+      renderUnifiedPanels();
+    },
+    visible() { return smokeVisible; }
+  },
+  perimeter: {
+    key: "perimeter",
+    endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/hazards/perimeters?region=hawaii",
+    enabled: false,
+    parsePayload(json) {
+      const rawSignals = Array.isArray(json.signals) ? json.signals : [];
+      const features = normalizePerimeterFeatures(rawSignals);
+      return {
+        features,
+        sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceLabel: json.source || json.provider || "Perimeter feed"
+      };
+    },
+    ensureLayers,
+    applyData(features) { updatePerimeterSource(features); },
+    onFetchComplete() { /* scaffold only for future V4 phase */ },
+    visible() { return false; }
+  }
+};
+
+function activeHazardKeys() {
+  return Object.values(HAZARD_REGISTRY).filter((m) => m.enabled).map((m) => m.key);
+}
+
+async function refreshHazard(key, { silent = false } = {}) {
+  const model = HAZARD_REGISTRY[key];
+  const state = getState(key);
+  if (!model || !model.enabled) return;
+
+  if (key === "fire" && !silent) setRefreshingUI(true);
+  state.status = "loading";
+  state.error = null;
+
+  try {
+    const json = await fetchJson(model.endpoint);
+    const parsed = model.parsePayload(json || {});
+    state.features = Array.isArray(parsed.features) ? parsed.features : [];
+    state.fetchAt = new Date();
+    state.sourceTime = parsed.sourceTime || state.fetchAt;
+    state.generatedAt = parseDateMaybe(json.generated_at) || parsed.sourceTime || state.fetchAt;
+    state.sourceLabel = parsed.sourceLabel || null;
+    state.status = "ready";
+    state.sourceStatus = state.features.length > 0 ? "detected" : "none";
+    state.meta = parsed.meta || {};
+    model.applyData(state.features);
+    markSuccess();
+  } catch (err) {
+    state.status = "unavailable";
+    state.error = err;
+    state.sourceStatus = "unavailable";
+    state.features = [];
+    model.applyData([]);
+    appState.diagnostics.isOffline = true;
+    markError(err && err.isParse ? "parse" : "network");
+  } finally {
+    if (key === "fire") setRefreshingUI(false);
+    model.onFetchComplete?.();
+  }
+}
+
+async function refreshEnabledHazards(options = {}) {
+  for (const key of activeHazardKeys()) {
+    await refreshHazard(key, options);
+  }
+}
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: STYLES.dark,
+  center: HAWAII_CENTER,
+  zoom: 6.5,
+  attributionControl: true,
+  antialias: false,
+  failIfMajorPerformanceCaveat: false
+});
+
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left");
+
+function ensureLayers() {
+  ensureSmokeLayers();
+  ensureFireLayers();
+  ensurePerimeterLayers();
+}
+
+function ensureSmokeLayers() {
+  if (!map.getSource("smoke")) {
+    map.addSource("smoke", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  }
+  if (!map.getLayer("smoke-fill")) {
+    map.addLayer({
+      id: "smoke-fill",
+      type: "fill",
+      source: "smoke",
+      paint: {
+        "fill-color": ["match", ["get", "density"], "heavy", "#6a1b9a", "medium", "#8e24aa", "light", "#ba68c8", "#ba68c8"],
+        "fill-opacity": smokeVisible ? ["match", ["get", "density"], "heavy", 0.42, "medium", 0.30, "light", 0.18, 0.18] : 0
+      }
+    });
+  }
+  if (!map.getLayer("smoke-outline")) {
+    map.addLayer({
+      id: "smoke-outline",
+      type: "line",
+      source: "smoke",
+      paint: {
+        "line-color": ["match", ["get", "density"], "heavy", "#ce93d8", "medium", "#d8b4e7", "light", "#e7d2f1", "#e7d2f1"],
+        "line-width": ["match", ["get", "density"], "heavy", 2.4, "medium", 1.8, "light", 1.2, 1.2],
+        "line-opacity": smokeVisible ? 0.82 : 0
+      }
+    });
+  }
+  if (!map.__smokeEventsBound) {
+    map.__smokeEventsBound = true;
+    map.on("click", "smoke-fill", (e) => {
+      const feature = e.features && e.features[0];
+      if (feature) openSmokePopup(feature, e.lngLat);
+    });
+    map.on("mouseenter", "smoke-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "smoke-fill", () => { map.getCanvas().style.cursor = ""; });
+  }
+  syncSmokeLayerVisibility();
+}
+
+function ensureFireLayers() {
+  if (!map.getSource("fires")) {
+    map.addSource("fires", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+      cluster: true,
+      clusterMaxZoom: 9,
+      clusterRadius: 52
+    });
+  }
+  if (!map.getLayer("clusters")) {
+    map.addLayer({
+      id: "clusters",
+      type: "circle",
+      source: "fires",
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": ["step", ["get", "point_count"], "#ff8a00", 8, "#ff6a00", 20, "#ff3d00"],
+        "circle-radius": ["step", ["get", "point_count"], 16, 8, 22, 20, 28],
+        "circle-opacity": 0.95,
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "rgba(255,140,0,0.26)"
+      }
+    });
+  }
+  if (!map.getLayer("cluster-count")) {
+    map.addLayer({
+      id: "cluster-count",
+      type: "symbol",
+      source: "fires",
+      filter: ["has", "point_count"],
+      layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Open Sans Bold"], "text-size": 12 },
+      paint: { "text-color": "#ffffff" }
+    });
+  }
+  if (!map.getLayer("unclustered-fires-glow")) {
+    map.addLayer({
+      id: "unclustered-fires-glow",
+      type: "circle",
+      source: "fires",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": ["case", ["==", ["get", "severity"], "CRITICAL"], "rgba(255,23,68,0.18)", "rgba(255,138,0,0.16)"],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 10, 9, 14, 12, 18, 15, 24],
+        "circle-opacity": 1
+      }
+    });
+  }
+  if (!map.getLayer("unclustered-fires")) {
+    map.addLayer({
+      id: "unclustered-fires",
+      type: "circle",
+      source: "fires",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": ["case", ["==", ["get", "severity"], "CRITICAL"], "#ff1744", "#ff8a00"],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 4, 9, 6, 12, 8, 15, 10],
+        "circle-opacity": 0.96,
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "rgba(255,255,255,0.08)"
+      }
+    });
+  }
+  if (!map.__fireEventsBound) {
+    map.__fireEventsBound = true;
+    map.on("click", "clusters", (e) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+      if (!features.length) return;
+      const clusterId = features[0].properties.cluster_id;
+      map.getSource("fires").getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        map.easeTo({ center: features[0].geometry.coordinates, zoom, duration: 500 });
+      });
+    });
+    map.on("click", "unclustered-fires", (e) => {
+      const feature = e.features && e.features[0];
+      if (feature) openFirePopup(feature);
+    });
+    map.on("mouseenter", "clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "clusters", () => { map.getCanvas().style.cursor = ""; });
+    map.on("mouseenter", "unclustered-fires", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "unclustered-fires", () => { map.getCanvas().style.cursor = ""; });
+  }
+}
+
+function ensurePerimeterLayers() {
+  if (!map.getSource("perimeters")) {
+    map.addSource("perimeters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  }
+  if (!map.getLayer("perimeter-outline")) {
+    map.addLayer({
+      id: "perimeter-outline",
+      type: "line",
+      source: "perimeters",
+      paint: {
+        "line-color": ["case", ["==", ["get", "official"], true], "#ff5a4f", "#ffb74d"],
+        "line-width": 2,
+        "line-opacity": 0
+      }
+    });
+  }
+}
+
+function updateFireSource(features) {
+  const source = map.getSource("fires");
+  if (source) source.setData({ type: "FeatureCollection", features });
+}
+function updateSmokeSource(features) {
+  const source = map.getSource("smoke");
+  if (source) source.setData({ type: "FeatureCollection", features });
+}
+function updatePerimeterSource(features) {
+  const source = map.getSource("perimeters");
+  if (source) source.setData({ type: "FeatureCollection", features });
+}
+
+function syncSmokeLayerVisibility() {
+  if (map.getLayer("smoke-fill")) {
+    map.setPaintProperty("smoke-fill", "fill-opacity", smokeVisible ? ["match", ["get", "density"], "heavy", 0.42, "medium", 0.30, "light", 0.18, 0.18] : 0);
+  }
+  if (map.getLayer("smoke-outline")) {
+    map.setPaintProperty("smoke-outline", "line-opacity", smokeVisible ? 0.82 : 0);
+  }
+  syncSmokeButtons();
+}
+
+function syncSmokeButtons() {
+  ["smoke-btn-panel-desktop", "smoke-btn-panel-mobile", "smoke-btn-mobile"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = smokeVisible ? "Smoke Layer: On" : "Smoke Layer: Off";
+    el.classList.toggle("active", smokeVisible);
+  });
+}
+
+function toggleSmokeLayer() {
+  smokeVisible = !smokeVisible;
+  getState("smoke").visible = smokeVisible;
+  syncSmokeLayerVisibility();
+  updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length);
+  renderUnifiedPanels();
+}
+
+function updateSmokeStatusUI(state, count = 0) {
+  ["desktop", "mobile"].forEach((suffix) => {
+    const badge = document.getElementById(`smoke-status-badge-${suffix}`);
+    const note = document.getElementById(`smoke-status-note-${suffix}`);
+    const subnote = document.getElementById(`smoke-status-subnote-${suffix}`);
+    const metric = document.getElementById(`smoke-status-text-${suffix}`);
+    if (badge) badge.className = "status-badge";
+
+    if (state === "detected") {
+      if (badge) {
+        badge.classList.add("status-detected");
+        badge.textContent = count === 1 ? "Smoke detected" : `Smoke detected · ${count}`;
+      }
+      if (metric) metric.textContent = count === 1 ? "Detected (1 region)" : `Detected (${count} regions)`;
+      if (note) note.textContent = count === 1
+        ? "NOAA HMS shows smoke in 1 region in the current snapshot. Purple shaded coverage on the map marks where smoke is currently indicated."
+        : `NOAA HMS shows smoke in ${count} regions in the current snapshot. Purple shaded coverage on the map marks where smoke is currently indicated.`;
+      if (subnote) subnote.textContent = smokeVisible
+        ? "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage."
+        : "Smoke is present in the snapshot, but the Smoke Layer is currently off.";
+      return;
     }
 
-    function openSmokePopup(feature, lngLat) {
-      const p = feature.properties || {};
-      const density = p.density || "light";
-      const titleDensity = density.charAt(0).toUpperCase() + density.slice(1);
-      const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T", " ").slice(0, 16) + " UTC" : "Unavailable";
+    if (state === "none") {
+      if (badge) { badge.classList.add("status-none"); badge.textContent = "No smoke"; }
+      if (metric) metric.textContent = "No smoke in current snapshot";
+      if (note) note.textContent = "NOAA HMS did not return any smoke polygons for the current snapshot.";
+      if (subnote) subnote.textContent = "Turning the smoke layer on only enables the map overlay. It does not mean smoke is currently detected.";
+      return;
+    }
 
-      if (activePopup) activePopup.remove();
+    if (badge) { badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; }
+    if (metric) metric.textContent = "Smoke data unavailable";
+    if (note) note.textContent = "Smoke data is temporarily unavailable, so the map cannot confirm whether smoke is present right now.";
+    if (subnote) subnote.textContent = "This state is different from 'No smoke'. It means the feed could not be confirmed.";
+  });
+}
 
-      const html = `
-        <div class="popup-card">
-          <div class="popup-top">
-            <div>
-              <div class="popup-title">🌫 Smoke Presence</div>
-              <div class="popup-coords">${escapeHtml(p.source || "NOAA HMS")}</div>
-            </div>
-            <div class="popup-severity normal">${escapeHtml(titleDensity)}</div>
-          </div>
-          <div class="popup-grid">
-            <div class="popup-metric">
-              <div class="popup-metric-label">Density</div>
-              <div class="popup-metric-value">${escapeHtml(titleDensity)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Severity</div>
-              <div class="popup-metric-value">${escapeHtml(p.severity || "INFO")}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Detected Time</div>
-              <div class="popup-metric-value">${escapeHtml(detected)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Guidance</div>
-              <div class="popup-metric-value">Reduce prolonged outdoor exposure if you are sensitive to smoke.</div>
-            </div>
-          </div>
-          <div class="popup-note">${escapeHtml(p.advisory || "Smoke detected in this area. Sensitive groups should reduce prolonged outdoor exposure.")}</div>
+function renderUnifiedPanels() {
+  const fire = getState("fire");
+  const smoke = getState("smoke");
+  const fireFeatures = fire.features;
+  const smokeCount = smoke.features.length;
+
+  let nearest = Infinity;
+  let criticalCount = 0;
+  const refPoint = lastKnownUserCoord || REF_CENTER;
+  for (const f of fireFeatures) {
+    const coords = f?.geometry?.coordinates;
+    if (!Array.isArray(coords)) continue;
+    if (f.properties?.severity === "CRITICAL") criticalCount += 1;
+    nearest = Math.min(nearest, distMiles(refPoint, coords));
+  }
+
+  ["desktop", "mobile"].forEach((suffix) => {
+    const fireCountEl = document.getElementById(`fire-count-${suffix}`);
+    if (fireCountEl) {
+      if (fire.status === "loading") {
+        fireCountEl.className = "metric-value v-fire";
+        fireCountEl.innerHTML = '<span class="spinner"></span>';
+      } else {
+        fireCountEl.textContent = String(fireFeatures.length);
+        fireCountEl.className = "metric-value " + (fireFeatures.length > 0 ? "v-fire" : "v-good");
+      }
+    }
+
+    const nearestEl = document.getElementById(`nearest-fire-${suffix}`);
+    if (nearestEl) {
+      if (!fireFeatures.length || !Number.isFinite(nearest)) {
+        nearestEl.textContent = "None";
+        nearestEl.className = "metric-value v-good";
+      } else {
+        nearestEl.textContent = `${nearest.toFixed(1)} mi`;
+        nearestEl.className = "metric-value " + (nearest < 5 ? "v-crit" : nearest < 20 ? "v-warn" : "v-fire");
+      }
+    }
+
+    const criticalEl = document.getElementById(`critical-count-${suffix}`);
+    if (criticalEl) {
+      criticalEl.textContent = criticalCount > 0 ? String(criticalCount) : "None";
+      criticalEl.className = "metric-value " + (criticalCount > 0 ? "v-crit" : "v-good");
+    }
+
+    const fetchedEl = document.getElementById(`fetch-time-${suffix}`);
+    if (fetchedEl) fetchedEl.textContent = fire.sourceTime ? hstTime(fire.sourceTime) : "—";
+
+    const sourceEl = document.getElementById(`data-source-${suffix}`);
+    if (sourceEl) sourceEl.textContent = fire.sourceLabel || "—";
+
+    const viewEl = document.getElementById(`view-mode-${suffix}`);
+    if (viewEl) viewEl.textContent = currentViewMode;
+
+    const baseEl = document.getElementById(`basemap-mode-${suffix}`);
+    if (baseEl) baseEl.textContent = currentBasemap === "dark" ? "Dark" : "Satellite";
+
+    const summaryText = document.getElementById(`summary-text-${suffix}`);
+    const summarySource = document.getElementById(`summary-source-${suffix}`);
+    const summaryUpdated = document.getElementById(`summary-updated-${suffix}`);
+    const summaryPrivacy = document.getElementById(`summary-privacy-${suffix}`);
+
+    if (summaryText) {
+      const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
+      if (appState.diagnostics.isOffline) {
+        summaryText.textContent = "Cached hazard data is being shown while the connection is offline. Treat the map as situational context, not a live emergency directive.";
+      } else if (fireFeatures.length === 0 && smokeCount > 0) {
+        summaryText.textContent = `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"} across Hawaiʻi in this snapshot, while NASA FIRMS returned no current wildfire detections.`;
+      } else if (fireFeatures.length === 0) {
+        summaryText.textContent = "NASA FIRMS returned no current wildfire detections across Hawaiʻi in this snapshot.";
+      } else if (criticalCount > 0 && Number.isFinite(nearest)) {
+        summaryText.textContent = `NASA FIRMS indicates critical wildfire detections in Hawaiʻi. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+      } else if (Number.isFinite(nearest)) {
+        summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+      } else {
+        summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across Hawaiʻi in this snapshot.`;
+      }
+    }
+
+    if (summarySource) {
+      const smokeLabel = smoke.sourceLabel || "NOAA HMS";
+      summarySource.textContent = smokeVisible ? `Source: ${fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker"} · ${smokeLabel}` : `Source: ${fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker"}`;
+    }
+    if (summaryUpdated) summaryUpdated.textContent = `Updated: ${fire.sourceTime ? hstTime(fire.sourceTime) : "—"}`;
+    if (summaryPrivacy) summaryPrivacy.textContent = lastKnownUserCoord ? "Location stays on device" : "No device location used";
+  });
+
+  applyFreshness(fire.sourceTime);
+}
+
+function openSmokePopup(feature, lngLat) {
+  const p = feature.properties || {};
+  const density = p.density || "light";
+  const titleDensity = density.charAt(0).toUpperCase() + density.slice(1);
+  const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T", " ").slice(0, 16) + " UTC" : "Unavailable";
+  if (activePopup) activePopup.remove();
+  const html = `
+    <div class="popup-card">
+      <div class="popup-top">
+        <div>
+          <div class="popup-title">🌫 Smoke Presence</div>
+          <div class="popup-coords">${escapeHtml(p.source || "NOAA HMS")}</div>
         </div>
-      `;
+        <div class="popup-severity normal">${escapeHtml(titleDensity)}</div>
+      </div>
+      <div class="popup-grid">
+        <div class="popup-metric"><div class="popup-metric-label">Density</div><div class="popup-metric-value">${escapeHtml(titleDensity)}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Severity</div><div class="popup-metric-value">${escapeHtml(p.severity || "INFO")}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Guidance</div><div class="popup-metric-value">Reduce prolonged outdoor exposure if you are sensitive to smoke.</div></div>
+      </div>
+      <div class="popup-note">${escapeHtml(p.advisory || "Smoke detected in this area. Sensitive groups should reduce prolonged outdoor exposure.")}</div>
+    </div>`;
+  activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
+    .setLngLat(lngLat)
+    .setHTML(html)
+    .addTo(map);
+}
 
-      activePopup = new maplibregl.Popup({
-        closeButton: true,
-        closeOnMove: false,
-        offset: 14,
-        maxWidth: "320px"
-      })
-        .setLngLat(lngLat)
-        .setHTML(html)
-        .addTo(map);
-    }
+function updateUserMarker(coord) {
+  if (!coord) return;
+  if (userMarker) userMarker.remove();
+  const el = document.createElement("div");
+  el.className = "user-marker";
+  const popup = new maplibregl.Popup({ closeButton: false, offset: 14 }).setHTML(
+    `<div style="font-weight:600;margin-bottom:4px">📍 Your Location</div>
+     <div style="color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}</div>
+     <div style="margin-top:6px;color:#9bc4ff">Used only on this device</div>`
+  );
+  userMarker = new maplibregl.Marker({ element: el }).setLngLat(coord).setPopup(popup).addTo(map);
+}
 
-    function updateSmokeStatusUI(state, count = 0) {
-      const badge = ui("smoke-status-badge");
-      const note = ui("smoke-status-note");
-      const subnote = ui("smoke-status-subnote");
-      const metric = ui("smoke-status-text");
+function setLocationButtonState(loading) {
+  ["locate-btn-panel-desktop", "locate-btn-panel-mobile", "locate-btn-mobile"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = loading;
+    el.textContent = loading ? "Locating..." : "Use My Location";
+  });
+}
 
-      if (badge) badge.className = "status-badge";
+function useMyLocation() {
+  if (!("geolocation" in navigator)) {
+    alert("Location is not available on this device.");
+    return;
+  }
+  setLocationButtonState(true);
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const coord = [pos.coords.longitude, pos.coords.latitude];
+      lastKnownUserCoord = coord;
+      currentViewMode = "My Location";
+      updateUserMarker(coord);
+      map.flyTo({ center: coord, zoom: Math.max(map.getZoom(), 9), speed: 0.8, essential: true });
+      document.getElementById("b-loc-text").textContent = "Location used only on this device";
+      show("b-loc", true);
+      setText("view-mode", "My Location");
+      renderUnifiedPanels();
+      setLocationButtonState(false);
+      setTimeout(safeMapResize, 250);
+    },
+    () => {
+      setLocationButtonState(false);
+      document.getElementById("b-loc-text").textContent = "Location permission not granted";
+      show("b-loc", true);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+}
 
-      if (state === "detected") {
-        if (badge) {
-          badge.classList.add("status-detected");
-          badge.textContent = count === 1 ? "Smoke detected" : `Smoke detected · ${count}`;
-        }
-        if (metric) metric.textContent = count === 1 ? "Detected (1 region)" : `Detected (${count} regions)`;
-        if (note) note.textContent = count === 1
-          ? "NOAA HMS shows smoke in 1 region in the current snapshot. Purple shaded coverage on the map marks where smoke is currently indicated."
-          : `NOAA HMS shows smoke in ${count} regions in the current snapshot. Purple shaded coverage on the map marks where smoke is currently indicated.`;
-        if (subnote) subnote.textContent = smokeVisible
-          ? "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage."
-          : "Smoke is present in the latest snapshot, but the layer is currently hidden. Turn on Smoke Layer to view the polygons.";
-      } else if (state === "none") {
-        if (badge) {
-          badge.classList.add("status-none");
-          badge.textContent = "No smoke";
-        }
-        if (metric) metric.textContent = "None in snapshot";
-        if (note) note.textContent = "NOAA HMS returned no smoke polygons in the current snapshot for the live map area.";
-        if (subnote) subnote.textContent = "Smoke Layer can stay on for visibility, but no smoke polygons are currently available to draw.";
-      } else {
-        if (badge) {
-          badge.classList.add("status-unavailable");
-          badge.textContent = "Unavailable";
-        }
-        if (metric) metric.textContent = "Data unavailable";
-        if (note) note.textContent = "Smoke data is temporarily unavailable, so the map cannot confirm whether smoke is present right now.";
-        if (subnote) subnote.textContent = "This is different from 'No smoke'. Try refresh again or wait for the next NOAA HMS snapshot.";
-      }
-    }
+function openFirePopup(feature) {
+  const coords = feature.geometry.coordinates.slice();
+  const p = feature.properties || {};
+  const lat = coords[1];
+  const lng = coords[0];
+  const severity = p.severity || "UNKNOWN";
+  const severityClass = severity === "CRITICAL" ? "critical" : "normal";
+  const detectedTime = formatDetectedTime(p.acq_date, p.acq_time);
+  const frp = p.frp ?? "—";
+  const confidence = p.confidence ?? "—";
+  const milesFromYou = lastKnownUserCoord ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi" : "Enable location";
+  const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
+  const googleDirections = lastKnownUserCoord
+    ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
 
-    updateSmokeStatusUI("unavailable", 0);
-
-    async function loadSmokeSignals() {
-      const result = await strictFetch(SMOKE_ENDPOINT, "smoke");
-      const normalized = normalizeSmokeFeatures(result.features);
-      latestSmokeFeatures = normalized;
-      updateSmokeSource(normalized);
-
-      if (!result.ok) {
-        updateSmokeStatusUI("unavailable", 0);
-      } else if (normalized.length > 0) {
-        updateSmokeStatusUI("detected", normalized.length);
-      } else {
-        updateSmokeStatusUI("none", 0);
-      }
-
-      recalcNearestFromFeatures(latestFeatures);
-    }
-
-    function ensureFireLayers() {
-      if (!map.getSource("fires")) {
-        map.addSource("fires", {
-          type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: []
-          },
-          cluster: true,
-          clusterMaxZoom: 9,
-          clusterRadius: 52
-        });
-      }
-
-      if (!map.getLayer("clusters")) {
-        map.addLayer({
-          id: "clusters",
-          type: "circle",
-          source: "fires",
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": [
-              "step",
-              ["get", "point_count"],
-              "#ff8a00", 8,
-              "#ff6a00", 20,
-              "#ff3d00"
-            ],
-            "circle-radius": [
-              "step",
-              ["get", "point_count"],
-              16, 8,
-              22, 20,
-              28
-            ],
-            "circle-opacity": 0.95,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "rgba(255,140,0,0.26)"
-          }
-        });
-      }
-
-      if (!map.getLayer("cluster-count")) {
-        map.addLayer({
-          id: "cluster-count",
-          type: "symbol",
-          source: "fires",
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": ["get", "point_count_abbreviated"],
-            "text-font": ["Open Sans Bold"],
-            "text-size": 12
-          },
-          paint: {
-            "text-color": "#ffffff"
-          }
-        });
-      }
-
-      if (!map.getLayer("unclustered-fires-glow")) {
-        map.addLayer({
-          id: "unclustered-fires-glow",
-          type: "circle",
-          source: "fires",
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-color": [
-              "case",
-              ["==", ["get", "severity"], "CRITICAL"],
-              "rgba(255,23,68,0.18)",
-              "rgba(255,138,0,0.16)"
-            ],
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              6, 10,
-              9, 14,
-              12, 18,
-              15, 24
-            ],
-            "circle-opacity": 1
-          }
-        });
-      }
-
-      if (!map.getLayer("unclustered-fires")) {
-        map.addLayer({
-          id: "unclustered-fires",
-          type: "circle",
-          source: "fires",
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-color": [
-              "case",
-              ["==", ["get", "severity"], "CRITICAL"],
-              "#ff1744",
-              "#ff8a00"
-            ],
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              6, 4,
-              9, 6,
-              12, 8,
-              15, 10
-            ],
-            "circle-opacity": 0.96,
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "rgba(255,255,255,0.08)"
-          }
-        });
-      }
-
-      if (!map.__fireEventsBound) {
-        map.__fireEventsBound = true;
-
-        map.on("click", "clusters", (e) => {
-          const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
-          if (!features.length) return;
-
-          const clusterId = features[0].properties.cluster_id;
-          map.getSource("fires").getClusterExpansionZoom(clusterId, (err, zoom) => {
-            if (err) return;
-            map.easeTo({
-              center: features[0].geometry.coordinates,
-              zoom,
-              duration: 500
-            });
-          });
-        });
-
-        map.on("click", "unclustered-fires", (e) => {
-          const feature = e.features && e.features[0];
-          if (!feature) return;
-          openFirePopup(feature);
-        });
-
-        map.on("mouseenter", "clusters", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "clusters", () => {
-          map.getCanvas().style.cursor = "";
-        });
-        map.on("mouseenter", "unclustered-fires", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "unclustered-fires", () => {
-          map.getCanvas().style.cursor = "";
-        });
-      }
-    }
-
-    function updateFireSource(features) {
-      const source = map.getSource("fires");
-      if (!source) return;
-
-      source.setData({
-        type: "FeatureCollection",
-        features
-      });
-    }
-
-    function updateUserMarker(coord) {
-      if (!coord) return;
-
-      if (userMarker) userMarker.remove();
-
-      const el = document.createElement("div");
-      el.className = "user-marker";
-
-      const popup = new maplibregl.Popup({
-        closeButton: false,
-        offset: 14
-      }).setHTML(
-        `<div style="font-weight:600;margin-bottom:4px">📍 Your Location</div>
-         <div style="color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}</div>
-         <div style="margin-top:6px;color:#9bc4ff">Used only on this device</div>`
-      );
-
-      userMarker = new maplibregl.Marker({ element: el })
-        .setLngLat(coord)
-        .setPopup(popup)
-        .addTo(map);
-    }
-
-    function setLocationButtonState(loading) {
-      const ids = [
-        "locate-btn-panel-desktop",
-        "locate-btn-panel-mobile",
-        "locate-btn-mobile"
-      ];
-
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.disabled = loading;
-        el.textContent = loading ? "Locating..." : "Use My Location";
-      });
-    }
-
-    function recalcNearestFromFeatures(features) {
-      const refPoint = lastKnownUserCoord || REF_CENTER;
-      let closest = Infinity;
-      let criticalCount = 0;
-
-      for (const f of features) {
-        if (!f || !f.geometry || !Array.isArray(f.geometry.coordinates)) continue;
-        const c = f.geometry.coordinates;
-        const severity = f.properties?.severity || "UNKNOWN";
-
-        if (severity === "CRITICAL") criticalCount++;
-
-        const d = distMiles(refPoint, c);
-        if (d < closest) closest = d;
-      }
-
-      const nearEl = ui("nearest-fire");
-      if (nearEl) {
-        if (features.length === 0 || !Number.isFinite(closest)) {
-          nearEl.textContent = "None";
-          nearEl.className = "metric-value v-good";
-        } else {
-          nearEl.textContent = closest.toFixed(1) + " mi";
-          nearEl.className =
-            "metric-value " +
-            (closest < 5 ? "v-crit" : closest < 20 ? "v-warn" : "v-fire");
-        }
-      }
-
-      updateSummary(features, closest, criticalCount);
-    }
-
-    function formatDetectedTime(acqDate, acqTime) {
-      if (!acqDate && !acqTime) return "Unavailable";
-      const timeStr = acqTime ? String(acqTime).padStart(4, "0") : "";
-      const hh = timeStr ? timeStr.slice(0, 2) : "--";
-      const mm = timeStr ? timeStr.slice(2, 4) : "--";
-      return `${acqDate || "—"} ${timeStr ? `${hh}:${mm} UTC` : ""}`.trim();
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    function useMyLocation() {
-      if (!("geolocation" in navigator)) {
-        alert("Location is not available on this device.");
-        return;
-      }
-
-      setLocationButtonState(true);
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coord = [pos.coords.longitude, pos.coords.latitude];
-          lastKnownUserCoord = coord;
-          currentViewMode = "My Location";
-
-          updateUserMarker(coord);
-
-          map.flyTo({
-            center: coord,
-            zoom: Math.max(map.getZoom(), 9),
-            speed: 0.8,
-            essential: true
-          });
-
-          document.getElementById("b-loc-text").textContent = "Location used only on this device";
-          show("b-loc", true);
-          setText("view-mode", "My Location");
-          recalcNearestFromFeatures(latestFeatures);
-          setLocationButtonState(false);
-          setTimeout(safeMapResize, 250);
-        },
-        () => {
-          setLocationButtonState(false);
-          document.getElementById("b-loc-text").textContent = "Location permission not granted";
-          show("b-loc", true);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000
-        }
-      );
-    }
-
-    function openFirePopup(feature) {
-      const coords = feature.geometry.coordinates.slice();
-      const p = feature.properties || {};
-      const lat = coords[1];
-      const lng = coords[0];
-
-      const severity = p.severity || "UNKNOWN";
-      const severityClass = severity === "CRITICAL" ? "critical" : "normal";
-      const detectedTime = formatDetectedTime(p.acq_date, p.acq_time);
-      const frp = p.frp ?? "—";
-      const confidence = p.confidence ?? "—";
-
-      const milesFromYou = lastKnownUserCoord
-        ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi"
-        : "Enable location";
-
-      const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
-      const googleDirections = lastKnownUserCoord
-        ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
-        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-      const appleDirections = lastKnownUserCoord
-        ? `https://maps.apple.com/?saddr=${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}&daddr=${lat},${lng}&dirflg=d`
-        : `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
-      const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
-
-      map.easeTo({
-        center: coords,
-        zoom: Math.max(map.getZoom(), 11.5),
-        duration: 500
-      });
-
-      if (activePopup) activePopup.remove();
-
-      const html = `
-        <div class="popup-card">
-          <div class="popup-top">
-            <div>
-              <div class="popup-title">🔥 Fire Detection</div>
-              <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
-            </div>
-            <div class="popup-severity ${severityClass}">${escapeHtml(severity)}</div>
-          </div>
-
-          <div class="popup-grid">
-            <div class="popup-metric">
-              <div class="popup-metric-label">Detected Time</div>
-              <div class="popup-metric-value">${escapeHtml(detectedTime)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Distance From You</div>
-              <div class="popup-metric-value">${escapeHtml(milesFromYou)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">FRP</div>
-              <div class="popup-metric-value">${escapeHtml(frp)}</div>
-            </div>
-            <div class="popup-metric">
-              <div class="popup-metric-label">Confidence</div>
-              <div class="popup-metric-value">${escapeHtml(confidence)}</div>
-            </div>
-          </div>
-
-          <div class="popup-note">
-            Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.
-          </div>
-
-          <div class="popup-actions">
-            <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
-            <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
-            <a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a>
-            <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
-          </div>
+  map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
+  if (activePopup) activePopup.remove();
+  const html = `
+    <div class="popup-card">
+      <div class="popup-top">
+        <div>
+          <div class="popup-title">🔥 Fire Detection</div>
+          <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
         </div>
-      `;
+        <div class="popup-severity ${severityClass}">${escapeHtml(severity)}</div>
+      </div>
+      <div class="popup-grid">
+        <div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detectedTime)}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Distance From You</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">FRP</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Confidence</div><div class="popup-metric-value">${escapeHtml(confidence)}</div></div>
+      </div>
+      <div class="popup-note">Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.</div>
+      <div class="popup-actions">
+        <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
+        <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+        <a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a>
+        <a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a>
+      </div>
+    </div>`;
+  activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
+    .setLngLat(coords)
+    .setHTML(html)
+    .addTo(map);
+}
 
-      activePopup = new maplibregl.Popup({
-        closeButton: true,
-        closeOnMove: false,
-        offset: 14,
-        maxWidth: "320px"
-      })
-        .setLngLat(coords)
-        .setHTML(html)
-        .addTo(map);
+function setRefreshingUI(isRefreshing) {
+  ["desktop", "mobile"].forEach((suffix) => {
+    const refresh = document.getElementById(`refresh-btn-${suffix}`);
+    const fireCount = document.getElementById(`fire-count-${suffix}`);
+    if (refresh) {
+      refresh.disabled = isRefreshing;
+      refresh.innerHTML = isRefreshing ? '<span class="spinner"></span>REFRESHING' : '↻ REFRESH';
     }
-
-    async function loadFireSignals() {
-      setRefreshingUI(true);
-
-      const result = await strictFetch(FIRE_ENDPOINT);
-      let features = Array.isArray(result.features) ? result.features : [];
-
-      if (features.length > 1000) {
-        features = features.slice(0, 1000);
-      }
-
-      const normalized = normalizeFireFeatures(features);
-      latestFeatures = normalized;
-      updateFireSource(normalized);
-
-      let criticalCount = 0;
-      for (const f of normalized) {
-        if (f.properties?.severity === "CRITICAL") criticalCount++;
-      }
-
-      const countEl = ui("fire-count");
-      if (countEl) {
-        countEl.textContent = String(normalized.length);
-        countEl.className = "metric-value " + (normalized.length > 0 ? "v-fire" : "v-good");
-      }
-
-      const critEl = ui("critical-count");
-      if (critEl) {
-        if (criticalCount > 0) {
-          critEl.textContent = String(criticalCount);
-          critEl.className = "metric-value v-crit";
-        } else {
-          critEl.textContent = "None";
-          critEl.className = "metric-value v-good";
-        }
-      }
-
-      setText("fetch-time", DS.lastSourceDataTime ? hstTime(DS.lastSourceDataTime) : "—");
-      setText("data-source", IS_LOCAL ? "fires-test.json" : (DS.lastPayloadSource || "Worker API"));
-      setText("view-mode", currentViewMode);
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-      applyFreshness(DS.lastSourceDataTime);
-      recalcNearestFromFeatures(normalized);
-
-      if (DS.isOffline && DS.lastSourceDataTime) {
-        document.getElementById("b-offline-text").textContent =
-          `Offline — last: ${hstTime(DS.lastSourceDataTime)}`;
-      }
-
-      setRefreshingUI(false);
+    if (isRefreshing && fireCount) {
+      fireCount.className = "metric-value v-fire";
+      fireCount.innerHTML = '<span class="spinner"></span>';
     }
+  });
+}
 
-    function setRefreshingUI(isRefreshing) {
-      const refresh = ui("refresh-btn");
-      const fireCount = ui("fire-count");
+function bindButtons() {
+  document.getElementById("refresh-btn-desktop")?.addEventListener("click", () => refreshEnabledHazards({ silent: false }));
+  document.getElementById("refresh-btn-mobile")?.addEventListener("click", () => refreshEnabledHazards({ silent: false }));
+  document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
+  document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
+  document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
+  document.getElementById("satellite-btn-panel-desktop")?.addEventListener("click", toggleBasemap);
+  document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
+  document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
+  document.getElementById("smoke-btn-panel-desktop")?.addEventListener("click", toggleSmokeLayer);
+  document.getElementById("smoke-btn-panel-mobile")?.addEventListener("click", toggleSmokeLayer);
+  document.getElementById("smoke-btn-mobile")?.addEventListener("click", toggleSmokeLayer);
+}
 
-      if (refresh) {
-        refresh.disabled = isRefreshing;
-        refresh.innerHTML = isRefreshing
-          ? '<span class="spinner"></span>REFRESHING'
-          : '↻ REFRESH';
-      }
+function setSheetOpen(open) {
+  if (window.innerWidth > MOBILE_BREAKPOINT) return;
+  mobileSheet.classList.toggle("open", open);
+  sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
+  setTimeout(safeMapResize, 280);
+}
 
-      if (isRefreshing && fireCount) {
-        fireCount.className = "metric-value v-fire";
-        fireCount.innerHTML = '<span class="spinner"></span>';
-      }
-    }
+function toggleSheet() {
+  setSheetOpen(!mobileSheet.classList.contains("open"));
+}
 
-    function bindButtons() {
-      document.getElementById("refresh-btn-desktop")?.addEventListener("click", loadFireSignals);
-      document.getElementById("refresh-btn-mobile")?.addEventListener("click", loadFireSignals);
+bindButtons();
+syncDiag();
+syncSatelliteButtons();
+syncSmokeButtons();
+updateSmokeStatusUI("unknown", 0);
+renderUnifiedPanels();
 
-      document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
-      document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
-      document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
+diagBtn?.addEventListener("click", () => {
+  const open = diag.classList.toggle("open");
+  diagBtn.setAttribute("aria-expanded", String(open));
+  if (open) diagBtn.style.display = "none";
+});
 
-      document.getElementById("satellite-btn-panel-desktop")?.addEventListener("click", toggleBasemap);
-      document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
-      document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
-      document.getElementById("smoke-btn-panel-desktop")?.addEventListener("click", toggleSmokeLayer);
-      document.getElementById("smoke-btn-panel-mobile")?.addEventListener("click", toggleSmokeLayer);
-      document.getElementById("smoke-btn-mobile")?.addEventListener("click", toggleSmokeLayer);
-    }
+document.getElementById("diag-close")?.addEventListener("click", () => {
+  diag.classList.remove("open");
+  diagBtn.setAttribute("aria-expanded", "false");
+  diagBtn.style.display = "";
+});
 
-    function setSheetOpen(open) {
-      if (window.innerWidth > MOBILE_BREAKPOINT) return;
-      mobileSheet.classList.toggle("open", open);
-      sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details";
-      setTimeout(safeMapResize, 280);
-    }
+sheetToggleBtn?.addEventListener("click", toggleSheet);
+sheetHandleWrap?.addEventListener("click", toggleSheet);
 
-    function toggleSheet() {
-      setSheetOpen(!mobileSheet.classList.contains("open"));
-    }
+window.addEventListener("resize", () => {
+  safeMapResize();
+  updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length);
+  if (window.innerWidth > MOBILE_BREAKPOINT) return;
+  setSheetOpen(mobileSheet.classList.contains("open"));
+});
+window.addEventListener("orientationchange", () => setTimeout(safeMapResize, 200));
+window.addEventListener("pageshow", () => setTimeout(safeMapResize, 120));
+window.addEventListener("offline", () => {
+  appState.diagnostics.isOffline = true;
+  syncDiag();
+  renderUnifiedPanels();
+});
+window.addEventListener("online", () => {
+  appState.diagnostics.isOffline = false;
+  syncDiag();
+  refreshEnabledHazards({ silent: true });
+});
 
-    bindButtons();
+map.on("style.load", () => {
+  ensureLayers();
+  Object.keys(HAZARD_REGISTRY).forEach((key) => {
+    HAZARD_REGISTRY[key].applyData(getState(key).features);
+  });
+  syncSatelliteButtons();
+  syncSmokeButtons();
+  setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
+  if (userMarker && lastKnownUserCoord) updateUserMarker(lastKnownUserCoord);
+  safeMapResize();
+});
 
-    diagBtn?.addEventListener("click", () => {
-      const open = diag.classList.toggle("open");
-      diagBtn.setAttribute("aria-expanded", String(open));
-      if (open) diagBtn.style.display = "none";
-    });
+map.on("load", async () => {
+  ensureLayers();
+  fitHawaii(false);
+  if (window.innerWidth <= MOBILE_BREAKPOINT) setSheetOpen(false);
+  await refreshEnabledHazards({ silent: false });
+  safeMapResize();
+  setTimeout(safeMapResize, 150);
+  setTimeout(safeMapResize, 500);
+  if (pollHandle) clearInterval(pollHandle);
+  pollHandle = setInterval(() => refreshEnabledHazards({ silent: true }), POLL_MS);
+});
+</script>
 
-    document.getElementById("diag-close")?.addEventListener("click", () => {
-      diag.classList.remove("open");
-      diagBtn.setAttribute("aria-expanded", "false");
-      diagBtn.style.display = "";
-    });
-
-    sheetToggleBtn?.addEventListener("click", toggleSheet);
-    sheetHandleWrap?.addEventListener("click", toggleSheet);
-
-    window.addEventListener("resize", () => {
-      safeMapResize();
-      if (latestSmokeFeatures.length > 0) {
-        updateSmokeStatusUI("detected", latestSmokeFeatures.length);
-      } else if (DS.lastSmokeFetchAt) {
-        updateSmokeStatusUI("none", 0);
-      } else {
-        updateSmokeStatusUI("unavailable", 0);
-      }
-      if (window.innerWidth > MOBILE_BREAKPOINT) return;
-      setSheetOpen(mobileSheet.classList.contains("open"));
-    });
-
-    window.addEventListener("orientationchange", () => {
-      setTimeout(safeMapResize, 200);
-    });
-
-    window.addEventListener("pageshow", () => {
-      setTimeout(safeMapResize, 120);
-    });
-
-    window.addEventListener("offline", () => {
-      DS.isOffline = true;
-      syncDiag();
-      updateSummary([], Infinity, 0);
-    });
-
-    window.addEventListener("online", () => {
-      DS.isOffline = false;
-      syncDiag();
-      loadSmokeSignals();
-      loadSmokeSignals();
-      loadFireSignals();
-    });
-
-    map.on("style.load", () => {
-      ensureSmokeLayers();
-      ensureFireLayers();
-      updateSmokeSource(latestSmokeFeatures);
-      updateFireSource(latestFeatures);
-      syncSatelliteButtons();
-      syncSmokeButtons();
-      setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
-
-      if (userMarker && lastKnownUserCoord) {
-        updateUserMarker(lastKnownUserCoord);
-      }
-
-      safeMapResize();
-    });
-
-    map.on("load", () => {
-      syncDiag();
-      ensureSmokeLayers();
-      ensureFireLayers();
-      fitHawaii(false);
-
-      if (window.innerWidth <= MOBILE_BREAKPOINT) {
-        setSheetOpen(false);
-      }
-
-      loadFireSignals();
-
-      safeMapResize();
-      setTimeout(safeMapResize, 150);
-      setTimeout(safeMapResize, 500);
-
-      syncSatelliteButtons();
-      syncSmokeButtons();
-
-      if (pollHandle) clearInterval(pollHandle);
-      pollHandle = setInterval(() => {
-        loadSmokeSignals();
-        loadFireSignals();
-      }, POLL_MS);
-    });
-  </script>
 </body>
 </html>
