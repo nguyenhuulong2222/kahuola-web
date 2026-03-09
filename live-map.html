@@ -1009,6 +1009,7 @@
               <button class="action-btn locate-btn" id="locate-btn-mobile" type="button">Use My Location</button>
               <button class="action-btn satellite-btn" id="satellite-btn-mobile" type="button">Satellite</button>
               <button class="action-btn smoke-btn" id="smoke-btn-mobile" type="button">Smoke Layer: On</button>
+              <button class="action-btn" id="perimeter-btn-mobile" type="button">Perimeters: On</button>
               <a class="action-btn" href="/support.html">Support</a>
             </div>
           </div>
@@ -1059,6 +1060,11 @@
     <div class="metric">
       <span class="metric-label">Smoke Status</span>
       <span class="metric-value v-dim" id="smoke-status-text">—</span>
+    </div>
+
+    <div class="metric">
+      <span class="metric-label">Perimeter Status</span>
+      <span class="metric-value v-dim" id="perimeter-status-text">—</span>
     </div>
 
     <div class="metric">
@@ -1114,6 +1120,7 @@
       <button class="action-btn locate-btn" id="locate-btn-panel" type="button">Use My Location</button>
       <button class="action-btn satellite-btn" id="satellite-btn-panel" type="button">Satellite</button>
       <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke Layer: On</button>
+      <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
       <a class="action-btn" href="/privacy.html">Privacy</a>
       <a class="action-btn" href="/support.html">Support</a>
     </div>
@@ -1170,6 +1177,7 @@ let currentBasemap = "dark";
 let currentViewMode = "Statewide";
 let lastKnownUserCoord = null;
 let smokeVisible = true;
+let perimeterVisible = true;
 
 const appState = {
   diagnostics: {
@@ -1189,8 +1197,8 @@ const appState = {
 function createHazardState(key) {
   return {
     key,
-    enabled: key !== "perimeter",
-    visible: key !== "smoke" ? true : true,
+    enabled: true,
+    visible: true,
     status: "idle", // idle | loading | ready | unavailable
     sourceStatus: "unknown", // detected | none | unavailable | unknown
     features: [],
@@ -1393,23 +1401,60 @@ function fetchJson(url) {
     });
 }
 
-function normalizeFireFeatures(rawFeatures) {
-  return (Array.isArray(rawFeatures) ? rawFeatures : [])
-    .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates))
-    .map((f) => {
-      const lng = Number(f.geometry.coordinates[0]);
-      const lat = Number(f.geometry.coordinates[1]);
+function payloadError(json) {
+  return json && typeof json === "object" && typeof json.error === "string" ? json.error : null;
+}
+
+function parseCanonicalSignals(json, kind) {
+  const errText = payloadError(json);
+  if (errText) {
+    const err = new Error(`${kind.toUpperCase()}_ENDPOINT_ERROR: ${errText}`);
+    err.isParse = true;
+    throw err;
+  }
+  if (Array.isArray(json?.signals)) return json.signals;
+  if (Array.isArray(json?.features)) return json.features;
+  if (Array.isArray(json?.detections)) return json.detections;
+  if (Array.isArray(json?.items)) return json.items;
+  return [];
+}
+
+function parseFirmsTimestamp(acqDate, acqTime) {
+  if (!acqDate) return null;
+  const timeStr = String(acqTime || "0000").padStart(4, "0");
+  return parseDateMaybe(`${acqDate}T${timeStr.slice(0,2)}:${timeStr.slice(2,4)}:00Z`);
+}
+
+function normalizeFireFeatures(rawRecords) {
+  return (Array.isArray(rawRecords) ? rawRecords : [])
+    .map((record, index) => {
+      const props = record.properties || record || {};
+      const coordinates = Array.isArray(record?.geometry?.coordinates)
+        ? record.geometry.coordinates
+        : Array.isArray(record?.coordinates)
+          ? record.coordinates
+          : (Number.isFinite(Number(props.longitude)) && Number.isFinite(Number(props.latitude)))
+            ? [Number(props.longitude), Number(props.latitude)]
+            : null;
+      if (!coordinates || coordinates.length < 2) return null;
+      const lng = Number(coordinates[0]);
+      const lat = Number(coordinates[1]);
       if (!Number.isFinite(lng) || !Number.isFinite(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) return null;
+      const frp = props.frp ?? props.frp_mw ?? props.power ?? null;
+      const severity = String(props.severity || props.severity_level || (Number(frp) >= 25 ? "CRITICAL" : Number(frp) >= 8 ? "ELEVATED" : "UNKNOWN")).toUpperCase();
       return {
         type: "Feature",
         geometry: { type: "Point", coordinates: [lng, lat] },
         properties: {
-          severity: f.properties?.severity || "UNKNOWN",
-          brightness: f.properties?.brightness || null,
-          confidence: f.properties?.confidence || null,
-          frp: f.properties?.frp || null,
-          acq_date: f.properties?.acq_date || null,
-          acq_time: f.properties?.acq_time || null
+          id: props.id || record.id || `fire-${index}`,
+          severity,
+          brightness: props.brightness ?? props.bright_ti4 ?? props.bright_t31 ?? null,
+          confidence: props.confidence ?? props.conf ?? null,
+          frp,
+          acq_date: props.acq_date || null,
+          acq_time: props.acq_time || null,
+          event_time: props.event_time || parseFirmsTimestamp(props.acq_date, props.acq_time)?.toISOString() || null,
+          source: props.provider || props.source || "NASA FIRMS"
         }
       };
     })
@@ -1468,10 +1513,15 @@ const HAZARD_REGISTRY = {
       : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1",
     enabled: true,
     parsePayload(json) {
-      const features = normalizeFireFeatures(Array.isArray(json.features) ? json.features : []);
+      const raw = parseCanonicalSignals(json, "fire");
+      const features = normalizeFireFeatures(raw);
+      const newest = features
+        .map((f) => parseDateMaybe(f.properties?.event_time) || parseFirmsTimestamp(f.properties?.acq_date, f.properties?.acq_time))
+        .filter(Boolean)
+        .sort((a, b) => b - a)[0] || null;
       return {
         features,
-        sourceTime: parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceTime: newest || parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
         sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local test dataset" : "NASA FIRMS · Kahu Ola Worker")
       };
     },
@@ -1487,7 +1537,7 @@ const HAZARD_REGISTRY = {
       : "https://kahuola.org/hazards/smoke?region=hawaii",
     enabled: true,
     parsePayload(json) {
-      const rawSignals = Array.isArray(json.signals) ? json.signals : [];
+      const rawSignals = parseCanonicalSignals(json, "smoke");
       const features = normalizeSmokeFeatures(rawSignals);
       return {
         features,
@@ -1499,37 +1549,38 @@ const HAZARD_REGISTRY = {
     applyData(features) { updateSmokeSource(features); },
     onFetchComplete() {
       const state = getState("smoke");
-      if (state.status === "unavailable") {
-        updateSmokeStatusUI("unavailable", 0);
-      } else if (state.features.length > 0) {
-        updateSmokeStatusUI("detected", state.features.length);
-      } else {
-        updateSmokeStatusUI("none", 0);
-      }
+      updateSmokeStatusUI(state.sourceStatus, state.features.length);
       renderUnifiedPanels();
     },
     visible() { return smokeVisible; }
   },
   perimeter: {
     key: "perimeter",
-    endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/hazards/perimeters?region=hawaii",
-    enabled: false,
+    endpoint: IS_LOCAL
+      ? "./perimeters-test.json"
+      : "https://kahuola.org/hazards/perimeters?region=hawaii",
+    enabled: true,
     parsePayload(json) {
-      const rawSignals = Array.isArray(json.signals) ? json.signals : [];
+      const rawSignals = parseCanonicalSignals(json, "perimeter");
       const features = normalizePerimeterFeatures(rawSignals);
       return {
         features,
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: json.source || json.provider || "Perimeter feed"
+        sourceLabel: json.source || json.provider || "NIFC / County Perimeters"
       };
     },
     ensureLayers,
     applyData(features) { updatePerimeterSource(features); },
-    onFetchComplete() { /* scaffold only for future V4 phase */ },
-    visible() { return false; }
+    onFetchComplete() {
+      const state = getState("perimeter");
+      updatePerimeterStatusUI(state.sourceStatus, state.features.length);
+      renderUnifiedPanels();
+    },
+    visible() { return perimeterVisible; }
   }
 };
 
+function activeHazardKeys() {
 function activeHazardKeys() {
   return Object.values(HAZARD_REGISTRY).filter((m) => m.enabled).map((m) => m.key);
 }
@@ -1723,6 +1774,17 @@ function ensurePerimeterLayers() {
   if (!map.getSource("perimeters")) {
     map.addSource("perimeters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
   }
+  if (!map.getLayer("perimeter-fill")) {
+    map.addLayer({
+      id: "perimeter-fill",
+      type: "fill",
+      source: "perimeters",
+      paint: {
+        "fill-color": ["case", ["==", ["get", "official"], true], "#ff7043", "#ffca80"],
+        "fill-opacity": perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.08, 0.05] : 0
+      }
+    });
+  }
   if (!map.getLayer("perimeter-outline")) {
     map.addLayer({
       id: "perimeter-outline",
@@ -1730,11 +1792,21 @@ function ensurePerimeterLayers() {
       source: "perimeters",
       paint: {
         "line-color": ["case", ["==", ["get", "official"], true], "#ff5a4f", "#ffb74d"],
-        "line-width": 2,
-        "line-opacity": 0
+        "line-width": ["case", ["==", ["get", "official"], true], 2.6, 2],
+        "line-opacity": perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.92, 0.78] : 0
       }
     });
   }
+  if (!map.__perimeterEventsBound) {
+    map.__perimeterEventsBound = true;
+    map.on("click", "perimeter-fill", (e) => {
+      const feature = e.features && e.features[0];
+      if (feature) openPerimeterPopup(feature, e.lngLat);
+    });
+    map.on("mouseenter", "perimeter-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "perimeter-fill", () => { map.getCanvas().style.cursor = ""; });
+  }
+  syncPerimeterLayerVisibility();
 }
 
 function updateFireSource(features) {
@@ -1748,6 +1820,16 @@ function updateSmokeSource(features) {
 function updatePerimeterSource(features) {
   const source = map.getSource("perimeters");
   if (source) source.setData({ type: "FeatureCollection", features });
+}
+
+function syncPerimeterLayerVisibility() {
+  if (map.getLayer("perimeter-fill")) {
+    map.setPaintProperty("perimeter-fill", "fill-opacity", perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.08, 0.05] : 0);
+  }
+  if (map.getLayer("perimeter-outline")) {
+    map.setPaintProperty("perimeter-outline", "line-opacity", perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.92, 0.78] : 0);
+  }
+  syncPerimeterButtons();
 }
 
 function syncSmokeLayerVisibility() {
@@ -1769,11 +1851,28 @@ function syncSmokeButtons() {
   });
 }
 
+function syncPerimeterButtons() {
+  ["perimeter-btn-panel-desktop", "perimeter-btn-panel-mobile", "perimeter-btn-mobile"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = perimeterVisible ? "Perimeters: On" : "Perimeters: Off";
+    el.classList.toggle("active", perimeterVisible);
+  });
+}
+
 function toggleSmokeLayer() {
   smokeVisible = !smokeVisible;
   getState("smoke").visible = smokeVisible;
   syncSmokeLayerVisibility();
   updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length);
+  renderUnifiedPanels();
+}
+
+function togglePerimeterLayer() {
+  perimeterVisible = !perimeterVisible;
+  getState("perimeter").visible = perimeterVisible;
+  syncPerimeterLayerVisibility();
+  updatePerimeterStatusUI(getState("perimeter").sourceStatus, getState("perimeter").features.length);
   renderUnifiedPanels();
 }
 
@@ -1815,11 +1914,30 @@ function updateSmokeStatusUI(state, count = 0) {
   });
 }
 
+function updatePerimeterStatusUI(state, count = 0) {
+  ["desktop", "mobile"].forEach((suffix) => {
+    const metric = document.getElementById(`perimeter-status-text-${suffix}`);
+    if (!metric) return;
+    if (state === "detected") {
+      metric.textContent = count === 1 ? "Detected (1 perimeter)" : `Detected (${count} perimeters)`;
+      metric.className = "metric-value v-warn";
+    } else if (state === "none") {
+      metric.textContent = "No perimeter in current snapshot";
+      metric.className = "metric-value v-dim";
+    } else {
+      metric.textContent = "Perimeter data unavailable";
+      metric.className = "metric-value v-dim";
+    }
+  });
+}
+
 function renderUnifiedPanels() {
   const fire = getState("fire");
   const smoke = getState("smoke");
+  const perimeter = getState("perimeter");
   const fireFeatures = fire.features;
   const smokeCount = smoke.features.length;
+  const perimeterCount = perimeter.features.length;
 
   let nearest = Infinity;
   let criticalCount = 0;
@@ -1864,7 +1982,7 @@ function renderUnifiedPanels() {
     if (fetchedEl) fetchedEl.textContent = fire.sourceTime ? hstTime(fire.sourceTime) : "—";
 
     const sourceEl = document.getElementById(`data-source-${suffix}`);
-    if (sourceEl) sourceEl.textContent = fire.sourceLabel || "—";
+    if (sourceEl) sourceEl.textContent = [fire.sourceLabel, smoke.status !== "unavailable" ? smoke.sourceLabel : null, perimeter.status !== "unavailable" ? perimeter.sourceLabel : null].filter(Boolean).join(" · ") || "—";
 
     const viewEl = document.getElementById(`view-mode-${suffix}`);
     if (viewEl) viewEl.textContent = currentViewMode;
@@ -1929,6 +2047,35 @@ function openSmokePopup(feature, lngLat) {
       <div class="popup-note">${escapeHtml(p.advisory || "Smoke detected in this area. Sensitive groups should reduce prolonged outdoor exposure.")}</div>
     </div>`;
   activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
+    .setLngLat(lngLat)
+    .setHTML(html)
+    .addTo(map);
+}
+
+function openPerimeterPopup(feature, lngLat) {
+  const p = feature.properties || {};
+  const official = p.official === true;
+  const acres = p.acres ? `${Number(p.acres).toLocaleString()} acres` : "Unavailable";
+  const containment = p.containment_pct ?? "—";
+  if (activePopup) activePopup.remove();
+  const html = `
+    <div class="popup-card">
+      <div class="popup-top">
+        <div>
+          <div class="popup-title">🔺 Fire Perimeter</div>
+          <div class="popup-coords">${escapeHtml(p.incident_name || "Unnamed perimeter")}</div>
+        </div>
+        <div class="popup-severity ${official ? "critical" : "normal"}">${official ? "Official" : "Estimated"}</div>
+      </div>
+      <div class="popup-grid">
+        <div class="popup-metric"><div class="popup-metric-label">Boundary</div><div class="popup-metric-value">${official ? "Official" : "Estimated"}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Containment</div><div class="popup-metric-value">${escapeHtml(containment)}${containment !== "—" ? "%" : ""}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Area</div><div class="popup-metric-value">${escapeHtml(acres)}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Status</div><div class="popup-metric-value">${escapeHtml(p.status || "Active perimeter feed")}</div></div>
+      </div>
+      <div class="popup-note">Perimeter boundaries provide mapped context and may lag fast-moving field conditions. Always follow official emergency instructions first.</div>
+    </div>`;
+  activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "340px" })
     .setLngLat(lngLat)
     .setHTML(html)
     .addTo(map);
@@ -2061,6 +2208,9 @@ function bindButtons() {
   document.getElementById("smoke-btn-panel-desktop")?.addEventListener("click", toggleSmokeLayer);
   document.getElementById("smoke-btn-panel-mobile")?.addEventListener("click", toggleSmokeLayer);
   document.getElementById("smoke-btn-mobile")?.addEventListener("click", toggleSmokeLayer);
+  document.getElementById("perimeter-btn-panel-desktop")?.addEventListener("click", togglePerimeterLayer);
+  document.getElementById("perimeter-btn-panel-mobile")?.addEventListener("click", togglePerimeterLayer);
+  document.getElementById("perimeter-btn-mobile")?.addEventListener("click", togglePerimeterLayer);
 }
 
 function setSheetOpen(open) {
@@ -2078,7 +2228,9 @@ bindButtons();
 syncDiag();
 syncSatelliteButtons();
 syncSmokeButtons();
+syncPerimeterButtons();
 updateSmokeStatusUI("unknown", 0);
+updatePerimeterStatusUI("unknown", 0);
 renderUnifiedPanels();
 
 diagBtn?.addEventListener("click", () => {
