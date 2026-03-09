@@ -417,6 +417,58 @@
       background:rgba(255,255,255,.03);
     }
 
+    .accordion-card{
+      margin-top:12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      overflow:hidden;
+    }
+
+    .accordion-card[open]{
+      background:rgba(255,255,255,.04);
+    }
+
+    .accordion-summary{
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .accordion-summary::-webkit-details-marker{display:none}
+
+    .accordion-title-wrap{min-width:0;display:flex;flex-direction:column;gap:4px}
+
+    .accordion-summary .layer-status-head{
+      margin:0;
+    }
+
+    .accordion-subline{
+      color:var(--text-dim);
+      font-size:11px;
+      line-height:1.35;
+    }
+
+    .accordion-chevron{
+      color:var(--muted);
+      font-family:var(--font-mono);
+      font-size:12px;
+      flex:0 0 auto;
+      transition:transform .18s ease;
+    }
+
+    details[open] .accordion-chevron{transform:rotate(180deg)}
+
+    .accordion-content{
+      padding:0 12px 10px;
+      border-top:1px solid var(--border);
+    }
+
     .layer-status-head{
       display:flex;
       align-items:center;
@@ -1122,92 +1174,116 @@
 
     <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
 
-    <div class="summary-card" aria-label="Snapshot Context">
-      <div class="summary-title">Snapshot Context</div>
-      <div class="summary-text" id="summary-text">
-        Waiting for the latest wildfire snapshot.
+    <details class="accordion-card" aria-label="Snapshot Context">
+      <summary class="accordion-summary">
+        <div class="accordion-title-wrap">
+          <div class="layer-status-head">Snapshot Context</div>
+          <div class="accordion-subline" id="summary-preview">Situational context and source details.</div>
+        </div>
+        <span class="accordion-chevron">▾</span>
+      </summary>
+      <div class="accordion-content">
+        <div class="summary-text" id="summary-text">
+          Waiting for the latest wildfire snapshot.
+        </div>
+        <div class="summary-meta">
+          <span class="chip" id="summary-source">Source: Kahu Ola</span>
+          <span class="chip" id="summary-updated">Updated: —</span>
+          <span class="chip" id="summary-privacy">Location stays on device</span>
+          <span class="chip v-blue" id="basemap-mode">Dark</span>
+          <span class="chip v-blue" id="view-mode">Statewide</span>
+          <span class="chip v-dim" id="data-source">NASA FIRMS · Kahu Ola Worker</span>
+        </div>
       </div>
-      <div class="summary-meta">
-        <span class="chip" id="summary-source">Source: Kahu Ola</span>
-        <span class="chip" id="summary-updated">Updated: —</span>
-        <span class="chip" id="summary-privacy">Location stays on device</span>
-        <span class="chip v-blue" id="basemap-mode">Dark</span>
-        <span class="chip v-blue" id="view-mode">Statewide</span>
-        <span class="chip v-dim" id="data-source">NASA FIRMS · Kahu Ola Worker</span>
-      </div>
-    </div>
+    </details>
 
-    <div class="layer-status-card" aria-label="Secondary Layers">
-      <div class="layer-status-head">Secondary Layers</div>
-      <div class="layer-status-stack">
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Smoke</div>
-            <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
-            <div class="layer-status-note" id="smoke-status-subnote">Layer visibility does not mean smoke is detected.</div>
-            <span class="hidden" id="smoke-status-text">—</span>
-          </div>
-          <div class="status-badge status-none" id="smoke-status-badge">No smoke</div>
+    <details class="accordion-card" aria-label="Secondary Layers">
+      <summary class="accordion-summary">
+        <div class="accordion-title-wrap">
+          <div class="layer-status-head">Secondary Layers</div>
+          <div class="accordion-subline"><span id="secondary-preview">Smoke and perimeter status.</span></div>
         </div>
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Perimeters</div>
-            <div class="layer-status-note" id="perimeter-status-note">Waiting for the latest perimeter feed.</div>
-            <span class="hidden" id="perimeter-status-text">—</span>
+        <span class="accordion-chevron">▾</span>
+      </summary>
+      <div class="accordion-content">
+        <div class="layer-status-stack">
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Smoke</div>
+              <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
+              <div class="layer-status-note" id="smoke-status-subnote">Layer visibility does not mean smoke is detected.</div>
+              <span class="hidden" id="smoke-status-text">—</span>
+            </div>
+            <div class="status-badge status-none" id="smoke-status-badge">No smoke</div>
           </div>
-          <div class="status-badge status-none" id="perimeter-status-badge">No perimeter</div>
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Perimeters</div>
+              <div class="layer-status-note" id="perimeter-status-note">Waiting for the latest perimeter feed.</div>
+              <span class="hidden" id="perimeter-status-text">—</span>
+            </div>
+            <div class="status-badge status-none" id="perimeter-status-badge">No perimeter</div>
+          </div>
         </div>
       </div>
-    </div>
+    </details>
 
-    <div class="layer-status-card" aria-label="Multi-Hazard Blueprint">
-      <div class="layer-status-head">V4.6 Multi-Hazard Blueprint</div>
-      <div class="layer-status-stack">
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Flash Flood Watch</div>
-            <div class="layer-status-note" id="flood-status-note">Live-first module. Waiting for the cached flood watch feed.</div>
-          </div>
-          <div class="status-badge status-none" id="flood-status-badge">No watch</div>
+    <details class="accordion-card" aria-label="Multi-Hazard Blueprint">
+      <summary class="accordion-summary">
+        <div class="accordion-title-wrap">
+          <div class="layer-status-head">V4.6 Multi-Hazard Blueprint</div>
+          <div class="accordion-subline"><span id="blueprint-preview">Flash Flood live-first; 5 modules staged as placeholders.</span></div>
         </div>
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Rain Radar</div>
-            <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+        <span class="accordion-chevron">▾</span>
+      </summary>
+      <div class="accordion-content">
+        <div class="layer-status-stack">
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Flash Flood Watch</div>
+              <div class="layer-status-note" id="flood-status-note">Live-first module. Waiting for the cached flood watch feed.</div>
+            </div>
+            <div class="status-badge status-none" id="flood-status-badge">No watch</div>
           </div>
-          <div class="status-badge status-planned">Blueprint</div>
-        </div>
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Wind Risk</div>
-            <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Rain Radar</div>
+              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+            </div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="status-badge status-planned">Blueprint</div>
-        </div>
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Tsunami Alerts</div>
-            <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Wind Risk</div>
+              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+            </div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="status-badge status-planned">Blueprint</div>
-        </div>
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Hurricane Tracks</div>
-            <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Tsunami Alerts</div>
+              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+            </div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="status-badge status-planned">Blueprint</div>
-        </div>
-        <div class="layer-status-row">
-          <div>
-            <div class="layer-status-name">Landslide Risk</div>
-            <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Hurricane Tracks</div>
+              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+            </div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="status-badge status-planned">Blueprint</div>
+          <div class="layer-status-row">
+            <div>
+              <div class="layer-status-name">Landslide Risk</div>
+              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+            </div>
+            <div class="status-badge status-planned">Blueprint</div>
+          </div>
         </div>
+        <div class="blueprint-footnote">Only Flash Flood Watch is wired for live aggregator reads in this blueprint. The remaining modules are registry-ready placeholders for later phases.</div>
       </div>
-      <div class="blueprint-footnote">Only Flash Flood Watch is wired for live aggregator reads in this blueprint. The remaining modules are registry-ready placeholders for later phases.</div>
-    </div>
+    </details>
 
     <div class="panel-actions">
       <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
@@ -1330,6 +1406,21 @@ function mountPanel(targetId, suffix) {
 
 mountPanel("panel-content-desktop", "desktop");
 mountPanel("panel-content-mobile", "mobile");
+
+function setAccordionText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function updateAccordionPreviews() {
+  const smokeBadge = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || "Smoke";
+  const perimeterBadge = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || "Perimeters";
+  const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
+  setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
+  setAccordionText("secondary-preview-mobile", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
+  setAccordionText("blueprint-preview-desktop", `Flash Flood: ${floodBadge} · 5 modules staged`);
+  setAccordionText("blueprint-preview-mobile", `Flash Flood: ${floodBadge} · 5 modules staged`);
+}
 
 function activeSuffix() {
   return window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop";
