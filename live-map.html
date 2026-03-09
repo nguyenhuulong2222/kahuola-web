@@ -409,23 +409,20 @@
       color:#777;
     }
 
-    .smoke-status-card{
+    .layer-status-card{
       margin-top:12px;
-      padding:12px;
-      border:1px solid rgba(186,104,200,.24);
+      padding:10px 12px;
+      border:1px solid var(--border);
       border-radius:14px;
-      background:linear-gradient(180deg, rgba(112,44,140,.16), rgba(255,255,255,.03));
+      background:rgba(255,255,255,.03);
     }
 
-    .smoke-status-top{
+    .layer-status-head{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
       margin-bottom:8px;
-    }
-
-    .smoke-status-title{
       color:var(--text-dim);
       font-size:10px;
       font-weight:600;
@@ -433,6 +430,40 @@
       letter-spacing:.08em;
       text-transform:uppercase;
     }
+
+    .layer-status-stack{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .layer-status-row{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:8px;
+      align-items:start;
+      padding:8px 0;
+      border-top:1px solid var(--border);
+    }
+
+    .layer-status-row:first-child{border-top:none;padding-top:0}
+    .layer-status-row:last-child{padding-bottom:0}
+
+    .layer-status-name{
+      color:var(--text);
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .layer-status-note{
+      margin-top:4px;
+      color:var(--text-dim);
+      font-size:11px;
+      line-height:1.42;
+    }
+
+    .smoke-status-top,
+    .smoke-status-title{display:contents}
 
     .status-badge{
       display:inline-flex;
@@ -483,7 +514,7 @@
 
     .summary-card{
       margin-top:12px;
-      padding:12px;
+      padding:10px 12px;
       border:1px solid var(--border);
       border-radius:14px;
       background:rgba(255,255,255,.03);
@@ -500,8 +531,8 @@
     }
 
     .summary-text{
-      font-size:14px;
-      line-height:1.55;
+      font-size:13px;
+      line-height:1.45;
       color:var(--text);
     }
 
@@ -515,7 +546,7 @@
     .chip{
       display:inline-flex;
       align-items:center;
-      min-height:28px;
+      min-height:24px;
       max-width:100%;
       padding:4px 10px;
       border-radius:999px;
@@ -530,10 +561,10 @@
     }
 
     .panel-actions{
-      display:flex;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
       gap:8px;
       margin-top:12px;
-      flex-wrap:wrap;
     }
 
     .refresh-btn,
@@ -556,8 +587,8 @@
       padding:0 12px;
     }
 
-    .refresh-btn{width:100%}
-    .action-btn{flex:1}
+    .refresh-btn{width:100%;grid-column:1 / -1}
+    .action-btn{width:100%}
     .action-btn.locate-btn,
     .action-btn.satellite-btn{
       background:rgba(77,163,255,.08);
@@ -1058,71 +1089,58 @@
     </div>
 
     <div class="metric">
-      <span class="metric-label">Smoke Status</span>
-      <span class="metric-value v-dim" id="smoke-status-text">—</span>
-    </div>
-
-    <div class="metric">
-      <span class="metric-label">Perimeter Status</span>
-      <span class="metric-value v-dim" id="perimeter-status-text">—</span>
-    </div>
-
-    <div class="metric">
       <span class="metric-label">Fetched</span>
       <span class="metric-value v-dim" id="fetch-time">—</span>
     </div>
 
-    <div class="metric">
-      <span class="metric-label">Source</span>
-      <span class="metric-value v-dim" id="data-source">—</span>
-    </div>
-
-    <div class="metric">
-      <span class="metric-label">View</span>
-      <span class="metric-value v-blue" id="view-mode">Statewide</span>
-    </div>
-
-    <div class="metric">
-      <span class="metric-label">Basemap</span>
-      <span class="metric-value v-blue" id="basemap-mode">Dark</span>
-    </div>
-
     <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
 
-    <div class="summary-card" aria-label="Civic Intelligence">
-      <div class="summary-title">Civic Intelligence</div>
+    <div class="summary-card" aria-label="Snapshot Context">
+      <div class="summary-title">Snapshot Context</div>
       <div class="summary-text" id="summary-text">
-        Waiting for the latest wildfire signal summary.
+        Waiting for the latest wildfire snapshot.
       </div>
       <div class="summary-meta">
         <span class="chip" id="summary-source">Source: Kahu Ola</span>
         <span class="chip" id="summary-updated">Updated: —</span>
         <span class="chip" id="summary-privacy">Location stays on device</span>
+        <span class="chip v-blue" id="basemap-mode">Dark</span>
+        <span class="chip v-blue" id="view-mode">Statewide</span>
+        <span class="chip v-dim" id="data-source">NASA FIRMS · Kahu Ola Worker</span>
       </div>
     </div>
 
-    <div class="smoke-status-card" aria-label="Smoke Status">
-      <div class="smoke-status-top">
-        <div class="smoke-status-title">Smoke Layer</div>
-        <div class="status-badge status-none" id="smoke-status-badge">No smoke</div>
+    <div class="layer-status-card" aria-label="Secondary Layers">
+      <div class="layer-status-head">Secondary Layers</div>
+      <div class="layer-status-stack">
+        <div class="layer-status-row">
+          <div>
+            <div class="layer-status-name">Smoke</div>
+            <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
+            <div class="layer-status-note" id="smoke-status-subnote">Layer visibility does not mean smoke is detected.</div>
+            <span class="hidden" id="smoke-status-text">—</span>
+          </div>
+          <div class="status-badge status-none" id="smoke-status-badge">No smoke</div>
+        </div>
+        <div class="layer-status-row">
+          <div>
+            <div class="layer-status-name">Perimeters</div>
+            <div class="layer-status-note" id="perimeter-status-note">Waiting for the latest perimeter feed.</div>
+            <span class="hidden" id="perimeter-status-text">—</span>
+          </div>
+          <div class="status-badge status-none" id="perimeter-status-badge">No perimeter</div>
+        </div>
       </div>
-      <div class="smoke-status-text" id="smoke-status-note">Smoke layer is enabled. Waiting for the latest NOAA HMS snapshot.</div>
-      <div class="smoke-status-subtext" id="smoke-status-subnote">When smoke is present, shaded polygons will appear on the map. Turning the layer on does not mean smoke is currently detected.</div>
     </div>
 
     <div class="panel-actions">
       <button class="refresh-btn" id="refresh-btn" aria-label="Refresh fire data">
         ↻ REFRESH
       </button>
-    </div>
-
-    <div class="panel-actions">
       <button class="action-btn locate-btn" id="locate-btn-panel" type="button">Use My Location</button>
       <button class="action-btn satellite-btn" id="satellite-btn-panel" type="button">Satellite</button>
       <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke Layer: On</button>
       <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
-      <a class="action-btn" href="/privacy.html">Privacy</a>
-      <a class="action-btn" href="/support.html">Support</a>
     </div>
   </template>
 
@@ -1916,17 +1934,47 @@ function updateSmokeStatusUI(state, count = 0) {
 function updatePerimeterStatusUI(state, count = 0) {
   ["desktop", "mobile"].forEach((suffix) => {
     const metric = document.getElementById(`perimeter-status-text-${suffix}`);
-    if (!metric) return;
+    const badge = document.getElementById(`perimeter-status-badge-${suffix}`);
+    const note = document.getElementById(`perimeter-status-note-${suffix}`);
+    if (badge) badge.className = "status-badge";
+
     if (state === "detected") {
-      metric.textContent = count === 1 ? "Detected (1 perimeter)" : `Detected (${count} perimeters)`;
-      metric.className = "metric-value v-warn";
-    } else if (state === "none") {
-      metric.textContent = "No perimeter in current snapshot";
-      metric.className = "metric-value v-dim";
-    } else {
+      if (metric) {
+        metric.textContent = count === 1 ? "Detected (1 perimeter)" : `Detected (${count} perimeters)`;
+        metric.className = "metric-value v-warn";
+      }
+      if (badge) {
+        badge.classList.add("status-detected");
+        badge.textContent = count === 1 ? "Detected · 1" : `Detected · ${count}`;
+      }
+      if (note) note.textContent = count === 1
+        ? "Validated perimeter geometry is present in 1 region in the current snapshot."
+        : `Validated perimeter geometry is present in ${count} regions in the current snapshot.`;
+      return;
+    }
+
+    if (state === "none") {
+      if (metric) {
+        metric.textContent = "No perimeter in current snapshot";
+        metric.className = "metric-value v-dim";
+      }
+      if (badge) {
+        badge.classList.add("status-none");
+        badge.textContent = "No perimeter";
+      }
+      if (note) note.textContent = "No perimeter polygons were returned in the current snapshot.";
+      return;
+    }
+
+    if (metric) {
       metric.textContent = "Perimeter data unavailable";
       metric.className = "metric-value v-dim";
     }
+    if (badge) {
+      badge.classList.add("status-unavailable");
+      badge.textContent = "Unavailable";
+    }
+    if (note) note.textContent = "Perimeter data is temporarily unavailable, so the map cannot confirm incident boundaries right now.";
   });
 }
 
@@ -1997,7 +2045,7 @@ function renderUnifiedPanels() {
     if (summaryText) {
       const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
       if (appState.diagnostics.isOffline) {
-        summaryText.textContent = "Cached hazard data is being shown while the connection is offline. Treat the map as situational context, not a live emergency directive.";
+        summaryText.textContent = "Cached hazard data is being shown while connectivity is degraded. Treat this map as situational context, not a live directive.";
       } else if (fireFeatures.length === 0 && smokeCount > 0) {
         summaryText.textContent = `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"} across Hawaiʻi in this snapshot, while NASA FIRMS returned no current wildfire detections.`;
       } else if (fireFeatures.length === 0) {
