@@ -1288,7 +1288,7 @@
 <body>
   <div id="app">
     <header role="banner">
-      <div class="brand" aria-label="Kahu Ola — Civic Fire Detection Map">
+      <div class="brand" aria-label="Kahu Ola — Civic Wildfire Signal Map">
         <div class="logo">
           🔥 Kahu Ola
           <small>V4.4 · HAWAIʻI FIRE DETECTION MAP</small>
@@ -1341,7 +1341,7 @@
               <button class="action-btn satellite-btn" id="satellite-btn-mobile" type="button">Satellite</button>
               <button class="action-btn smoke-btn" id="smoke-btn-mobile" type="button">Smoke Layer: On</button>
               <button class="action-btn" id="perimeter-btn-mobile" type="button">Perimeters: On</button>
-              <button class="action-btn flood-btn" id="flood-btn-mobile" type="button">Flood Watch: On</button>
+              <button class="action-btn flood-btn" id="flood-btn-mobile" type="button">Flood Context: On</button>
               <a class="action-btn" href="/support.html">Support</a>
             </div>
           </div>
@@ -1457,7 +1457,7 @@
       <div class="accordion-content">
         <div class="hazard-module-scroll">
         <div class="layer-status-stack">
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Smoke Presence" data-hazard-status="Secondary Layer" data-hazard-note="Smoke status reflects whether NOAA HMS smoke polygons are present in the current cached snapshot." data-hazard-detail="Smoke remains a secondary situational layer under wildfire-first hierarchy. A visible smoke layer does not mean smoke is currently detected; the status badge distinguishes detected, none, and unavailable states." tabindex="0" role="button" aria-label="Flash Flood Watch details">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Smoke Presence" data-hazard-status="Secondary Layer" data-hazard-note="Smoke status reflects whether NOAA HMS smoke polygons are present in the current cached snapshot." data-hazard-detail="Smoke remains a secondary situational layer under wildfire-first hierarchy. A visible smoke layer does not mean smoke is currently detected; the status badge distinguishes detected, none, and unavailable states." tabindex="0" role="button" aria-label="Flood Context Watch details">
             <div>
               <div class="layer-status-name">Smoke</div>
               <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
@@ -1487,11 +1487,11 @@
         <span class="accordion-chevron">▾</span>
       </summary>
       <div class="accordion-content">
-        <div class="priority-module" id="flood-card" tabindex="0" role="button" aria-label="Flash Flood details">
+        <div class="priority-module" id="flood-card" tabindex="0" role="button" aria-label="Flood Context details">
           <div class="priority-module-head">
             <div>
-              <div class="priority-kicker">Primary statewide flood hazard</div>
-              <div class="priority-title">Flash Flood</div>
+              <div class="priority-kicker">Primary statewide flood context</div>
+              <div class="priority-title">Flood Context</div>
             </div>
             <div class="status-badge status-none" id="flood-status-badge">No active watch</div>
           </div>
@@ -1519,24 +1519,24 @@
             </div>
             <div class="status-badge status-planned" id="rain-radar-badge">Unavailable</div>
           </div>
-          <div class="mini-module js-hazard-detail" data-hazard-title="Wind Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Wind risk matters for both wildfire spread and mountain microclimates. This module should eventually fuse RAWS and summit conditions into a civic-grade watch layer without overstating severity." tabindex="0" role="button" aria-label="Wind Risk details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Fire Weather" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Wind risk matters for both wildfire spread and mountain microclimates. This module should eventually fuse RAWS and summit conditions into a civic-grade watch layer without overstating severity." tabindex="0" role="button" aria-label="Fire Weather details">
             <div>
-              <div class="mini-module-title">Wind Risk</div>
+              <div class="mini-module-title">Fire Weather</div>
               <div class="mini-module-note">Fire spread context</div>
             </div>
             <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="mini-module js-hazard-detail" data-hazard-title="Tsunami Alerts" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Tsunami belongs in the future multi-hazard stack, but it should remain visually secondary on Maui unless an alert is active. The panel should only escalate when official warning products are present." tabindex="0" role="button" aria-label="Tsunami Alerts details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Coastal Alerts Alerts" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Coastal Alerts belongs in the future multi-hazard stack, but it should remain visually secondary on Maui unless an alert is active. The panel should only escalate when official warning products are present." tabindex="0" role="button" aria-label="Coastal Alerts Alerts details">
             <div>
-              <div class="mini-module-title">Tsunami</div>
+              <div class="mini-module-title">Coastal Alerts</div>
               <div class="mini-module-note">Official alert layer</div>
             </div>
             <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="mini-module js-hazard-detail" data-hazard-title="Hurricane Tracks" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Hurricane tracks should be map-level context with cone visualization and civic wording, not a dominant daily layer. It becomes primary only during active tropical systems affecting Hawaiʻi." tabindex="0" role="button" aria-label="Hurricane Tracks details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Hurricanes / Cyclones Tracks" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Hurricanes / Cyclones tracks should be map-level context with cone visualization and civic wording, not a dominant daily layer. It becomes primary only during active tropical systems affecting Hawaiʻi." tabindex="0" role="button" aria-label="Hurricanes / Cyclones Tracks details">
             <div>
-              <div class="mini-module-title">Hurricane</div>
-              <div class="mini-module-note">Track + cone context</div>
+              <div class="mini-module-title">Hurricanes / Cyclones</div>
+              <div class="mini-module-note">Track + cone advisory</div>
             </div>
             <div class="status-badge status-planned">Blueprint</div>
           </div>
@@ -1560,7 +1560,7 @@
       <button class="action-btn satellite-btn" id="satellite-btn-panel" type="button">Satellite</button>
       <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke Layer: On</button>
       <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
-      <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Watch: On</button>
+      <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Context: On</button>
     </div>
   </template>
 
@@ -1600,6 +1600,11 @@ const REF_CENTER = [-156.675, 20.878];
 const POLL_MS = 60000;
 const FETCH_TIMEOUT_MS = 12000;
 const MOBILE_BREAKPOINT = 980;
+const NOAA_RADAR_SOURCE_ID = "noaa-rain-radar";
+const NOAA_RADAR_LAYER_ID = "noaa-rain-radar-layer";
+const NOAA_RADAR_TILES = [
+  "https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity/MapServer/tile/{z}/{y}/{x}"
+];
 
 const modeFooter = document.getElementById("mode-footer");
 const diag = document.getElementById("diag");
@@ -1687,7 +1692,7 @@ function setAccordionText(id, value) {
 function updateAccordionPreviews() {
   const smokeBadge = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || "Smoke";
   const perimeterBadge = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || "Perimeters";
-  const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
+  const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flood Context";
   const contextBadge = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || "Context";
   const radarBadge = document.getElementById("rain-radar-badge-desktop")?.textContent || document.getElementById("rain-radar-badge-mobile")?.textContent || "Radar";
   setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
@@ -1811,6 +1816,8 @@ function safeMapResize() {
     map.resize();
     requestAnimationFrame(() => map.resize());
   });
+  setTimeout(() => map.resize(), 120);
+  setTimeout(() => map.resize(), 320);
 }
 
 function toggleBasemap() {
@@ -2049,7 +2056,7 @@ function normalizeFlashFloodFeatures(rawSignals) {
         geometry: signal.geometry,
         properties: {
           id: signal.id,
-          headline: typeof props.headline === "string" ? props.headline : (typeof props.event === "string" ? props.event : "Flash Flood status"),
+          headline: typeof props.headline === "string" ? props.headline : (typeof props.event === "string" ? props.event : "Flood Context status"),
           event: typeof props.event === "string" ? props.event : "Flood alert",
           status: typeof props.status === "string" ? props.status.toUpperCase() : "UNKNOWN",
           severity: level,
@@ -2141,6 +2148,7 @@ function normalizeRainRadarFeatures(rawSignals) {
         properties: {
           id: signal.id,
           reflectivity_class: reflectivityClass,
+          intensity: reflectivityClass,
           severity: level,
           estimated_rain_rate_mm_hr: Number.isFinite(props.estimated_rain_rate_mm_hr) ? props.estimated_rain_rate_mm_hr : null,
           motion_heading_deg: Number.isFinite(props.motion_heading_deg) ? props.motion_heading_deg : null,
@@ -2367,11 +2375,11 @@ map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left")
 
 function ensureLayers() {
   ensureSmokeLayers();
+  ensureNoaaRainRadarLayer();
   ensureFireLayers();
   ensurePerimeterLayers();
   ensureFlashFloodLayers();
   ensureFloodContextLayers();
-  ensureRainRadarLayers();
 }
 
 function ensureSmokeLayers() {
@@ -2558,8 +2566,9 @@ function updateFloodContextSource(features) {
   if (source) source.setData({ type: "FeatureCollection", features });
 }
 function updateRainRadarSource(features) {
-  const source = map.getSource("rain-radar");
-  if (source) source.setData({ type: "FeatureCollection", features });
+  // NOAA radar is rendered as a raster tile layer in V4.7.
+  // Feature data is retained for status summaries only and is not drawn as polygons.
+  return features;
 }
 
 function ensureFlashFloodLayers() {
@@ -2663,45 +2672,26 @@ function ensureFloodContextLayers() {
   syncFloodContextLayerVisibility();
 }
 
-function ensureRainRadarLayers() {
-  if (!map.getSource("rain-radar")) {
-    map.addSource("rain-radar", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+function ensureNoaaRainRadarLayer() {
+  if (!map.getSource(NOAA_RADAR_SOURCE_ID)) {
+    map.addSource(NOAA_RADAR_SOURCE_ID, {
+      type: "raster",
+      tiles: NOAA_RADAR_TILES,
+      tileSize: 256
+    });
   }
-  if (!map.getLayer("rain-radar-fill")) {
+  if (!map.getLayer(NOAA_RADAR_LAYER_ID)) {
     map.addLayer({
-      id: "rain-radar-fill",
-      type: "fill",
-      source: "rain-radar",
-      filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+      id: NOAA_RADAR_LAYER_ID,
+      type: "raster",
+      source: NOAA_RADAR_SOURCE_ID,
       paint: {
-        "fill-color": ["match", ["get", "intensity"], "HEAVY", "#2ca7ff", "MODERATE", "#6cc7ff", "LIGHT", "#aee6ff", "#aee6ff"],
-        "fill-opacity": rainRadarVisible ? ["match", ["get", "intensity"], "HEAVY", 0.085, "MODERATE", 0.06, "LIGHT", 0.03, 0.03] : 0
+        "raster-opacity": rainRadarVisible ? 0.72 : 0,
+        "raster-fade-duration": 400,
+        "raster-resampling": "linear"
       }
-    });
+    }, "smoke-fill");
   }
-  if (!map.getLayer("rain-radar-outline")) {
-    map.addLayer({
-      id: "rain-radar-outline",
-      type: "line",
-      source: "rain-radar",
-      filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
-      paint: {
-        "line-color": "#7fd5ff",
-        "line-width": 1.2,
-        "line-opacity": rainRadarVisible ? 0.42 : 0
-      }
-    });
-  }
-  if (!map.__rainRadarEventsBound) {
-    map.__rainRadarEventsBound = true;
-    map.on("click", "rain-radar-fill", (e) => {
-      const feature = e.features && e.features[0];
-      if (feature) openRainRadarPopup(feature, e.lngLat);
-    });
-    map.on("mouseenter", "rain-radar-fill", () => { map.getCanvas().style.cursor = "pointer"; });
-    map.on("mouseleave", "rain-radar-fill", () => { map.getCanvas().style.cursor = ""; });
-  }
-  syncRainRadarLayerVisibility();
 }
 
 function syncFlashFloodLayerVisibility() {
@@ -2718,7 +2708,7 @@ function syncFlashFloodLayerVisibility() {
   ["flood-btn-panel-desktop", "flood-btn-panel-mobile", "flood-btn-mobile"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = flashFloodVisible ? "Flood Layers: On" : "Flood Layers: Off";
+    el.textContent = flashFloodVisible ? "Flood Context: On" : "Flood Context: Off";
     el.classList.toggle("active", flashFloodVisible);
   });
 }
@@ -2729,8 +2719,9 @@ function syncFloodContextLayerVisibility() {
 }
 
 function syncRainRadarLayerVisibility() {
-  if (map.getLayer("rain-radar-fill")) map.setPaintProperty("rain-radar-fill", "fill-opacity", rainRadarVisible ? ["match", ["get", "intensity"], "HEAVY", 0.085, "MODERATE", 0.06, "LIGHT", 0.03, 0.03] : 0);
-  if (map.getLayer("rain-radar-outline")) map.setPaintProperty("rain-radar-outline", "line-opacity", rainRadarVisible ? 0.42 : 0);
+  if (map.getLayer(NOAA_RADAR_LAYER_ID)) {
+    map.setPaintProperty(NOAA_RADAR_LAYER_ID, "raster-opacity", rainRadarVisible ? 0.72 : 0);
+  }
 }
 
 function toggleFlashFloodLayer() {
@@ -2947,11 +2938,11 @@ function updateRainRadarStatusUI(state) {
     if (state.sourceStatus === "detected") {
       badge.classList.add("status-detected");
       badge.textContent = count > 0 ? `Radar · ${count}` : "Radar";
-      if (note) note.textContent = "Observed NOAA rain radar context is available for this snapshot.";
+      if (note) note.textContent = "Live NOAA rain radar tile overlay is available for this snapshot.";
     } else if (state.sourceStatus === "none") {
       badge.classList.add("status-none");
       badge.textContent = "No radar";
-      if (note) note.textContent = "No radar geometry was returned in this snapshot.";
+      if (note) note.textContent = "No radar context was returned in this snapshot.";
     } else {
       badge.classList.add("status-unavailable");
       badge.textContent = "Unavailable";
@@ -3078,7 +3069,7 @@ function openFloodModuleDetail(kind) {
   const radar = getState("rainRadar");
   if (kind === "flood") {
     openHazardDetail({
-      title: "Flash Flood",
+      title: "Flood Context",
       status: flood.sourceStatus === "detected" ? "Official flood status active" : flood.sourceStatus === "none" ? "No active flash flood watch" : "Official flood status unavailable",
       note: "Official source: National Weather Service. Statewide Hawaiʻi civic flood context is estimated separately by Kahu Ola. Statewide Hawaiʻi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.",
       body: "Use this map for situational awareness. Official flood polygons come from the National Weather Service. PacIOOS provides local rainfall and watershed context. NOAA radar is a supporting context layer and does not replace official watches or warnings."
@@ -3112,7 +3103,7 @@ function openFloodContextPopup(feature, lngLat) {
 function openRainRadarPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">${escapeHtml(p.source || "NOAA")}</div></div><div class="popup-severity normal">${escapeHtml(p.intensity || "Radar")}</div></div><div class="popup-note">Statewide Hawaiʻi rain context for situational awareness. Always follow official flood watches and warnings first.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">NOAA live radar overlay</div></div><div class="popup-severity normal">${escapeHtml(p.intensity || "Radar")}</div></div><div class="popup-note">Live NOAA radar overlay for statewide Hawaiʻi rain context. Always follow official flood watches and warnings first.</div></div>`;
   activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 
@@ -3125,13 +3116,13 @@ function openFlashFloodPopup(feature, lngLat) {
     <div class="popup-card">
       <div class="popup-top">
         <div>
-          <div class="popup-title">🌊 Flash Flood Watch</div>
+          <div class="popup-title">🌊 Flood Context Watch</div>
           <div class="popup-coords">${escapeHtml(p.source || "NWS")}</div>
         </div>
         <div class="popup-severity normal">${escapeHtml(severity)}</div>
       </div>
       <div class="popup-grid">
-        <div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || "Flash Flood Watch")}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || "Flood Context Watch")}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Severity</div><div class="popup-metric-value">${escapeHtml(severity)}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Guidance</div><div class="popup-metric-value">Follow official county and NWS guidance first.</div></div>
@@ -3277,8 +3268,8 @@ function openFirePopup(feature) {
     <div class="popup-card">
       <div class="popup-top">
         <div>
-          <div class="popup-title">🔥 Fire Detection</div>
-          <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+          <div class="popup-title">🔥 Wildfire Signal</div>
+          <div class="popup-coords">NASA FIRMS · ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
         </div>
         <div class="popup-severity ${severityClass}">${escapeHtml(severity)}</div>
       </div>
@@ -3288,7 +3279,7 @@ function openFirePopup(feature) {
         <div class="popup-metric"><div class="popup-metric-label">FRP</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Confidence</div><div class="popup-metric-value">${escapeHtml(confidence)}</div></div>
       </div>
-      <div class="popup-note">Use directions for ground navigation context. This point is a satellite fire detection signal, not an on-scene emergency instruction.</div>
+      <div class="popup-note">NASA FIRMS hotspot signal for situational awareness. Use directions for ground navigation context only. This marker does not replace on-scene emergency instruction.</div>
       <div class="popup-actions">
         <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
         <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
@@ -3449,6 +3440,10 @@ map.on("style.load", () => {
   });
   syncSatelliteButtons();
   syncSmokeButtons();
+  syncPerimeterButtons();
+  syncFlashFloodLayerVisibility();
+  syncFloodContextLayerVisibility();
+  syncRainRadarLayerVisibility();
   setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
   if (userMarker && lastKnownUserCoord) updateUserMarker(lastKnownUserCoord);
   safeMapResize();
@@ -3459,6 +3454,7 @@ map.on("load", async () => {
   fitHawaii(false);
   if (window.innerWidth <= MOBILE_BREAKPOINT) setSheetOpen(false);
   await refreshEnabledHazards({ silent: false });
+  syncRainRadarLayerVisibility();
   safeMapResize();
   setTimeout(safeMapResize, 150);
   setTimeout(safeMapResize, 500);
