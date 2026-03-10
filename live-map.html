@@ -1217,7 +1217,43 @@
         gap:6px;
       }
     }
-  </style>
+  
+.priority-module {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, rgba(10,18,32,0.96), rgba(10,18,32,0.82));
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.priority-module:hover { transform: translateY(-1px); border-color: rgba(103, 176, 255, 0.28); }
+.priority-module-head {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px;
+}
+.priority-kicker {
+  font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px;
+}
+.priority-title { font-size:18px; font-weight:700; line-height:1.15; }
+.priority-note { color:var(--text); line-height:1.45; margin-bottom:6px; }
+.priority-subnote { color:var(--text-dim); font-size:12px; line-height:1.4; }
+.mini-module-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;
+}
+.mini-module {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  min-height:72px; padding:12px; border-radius:18px; cursor:pointer;
+  border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03);
+  transition:transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.mini-module:hover { transform:translateY(-1px); border-color:rgba(103,176,255,0.22); background:rgba(255,255,255,0.045); }
+.mini-module-title { font-weight:700; margin-bottom:4px; }
+.mini-module-note { font-size:12px; color:var(--text-dim); line-height:1.3; }
+@media (max-width: 900px) {
+  .mini-module-grid { grid-template-columns:1fr; }
+  .priority-title { font-size:17px; }
+}
+
+</style>
 </head>
 <body>
   <div id="app">
@@ -1391,7 +1427,7 @@
       <div class="accordion-content">
         <div class="hazard-module-scroll">
         <div class="layer-status-stack">
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Flash Flood Watch" data-hazard-status="Unavailable" data-hazard-note="Flash flood watch data is not available yet in the cached aggregator feed." data-hazard-detail="For Maui, flood should be the first non-fire module because short-fuse flooding can threaten roads, gulches, and low-lying neighborhoods. This panel is wired to accept a cached flash-flood aggregator endpoint when backend is ready." tabindex="0" role="button" aria-label="Flash Flood Watch details">
+          <div class="layer-status-row js-hazard-detail" data-hazard-title="Smoke Presence" data-hazard-status="Secondary Layer" data-hazard-note="Smoke status reflects whether NOAA HMS smoke polygons are present in the current cached snapshot." data-hazard-detail="Smoke remains a secondary situational layer under wildfire-first hierarchy. A visible smoke layer does not mean smoke is currently detected; the status badge distinguishes detected, none, and unavailable states." tabindex="0" role="button" aria-label="Flash Flood Watch details">
             <div>
               <div class="layer-status-name">Smoke</div>
               <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
@@ -1415,59 +1451,62 @@
     <details class="accordion-card multi-hazard-card" aria-label="Multi-Hazard Blueprint">
       <summary class="accordion-summary">
         <div class="accordion-title-wrap">
-          <div class="layer-status-head">V4.6 Multi-Hazard Blueprint</div>
-          <div class="accordion-subline"><span id="blueprint-preview">Flash Flood live-first; 5 modules staged as placeholders.</span></div>
+          <div class="layer-status-head">V4.6.3 Flood-First Expansion</div>
+          <div class="accordion-subline"><span id="blueprint-preview">Flash Flood live-first; 5 modules staged as compact placeholders.</span></div>
         </div>
         <span class="accordion-chevron">▾</span>
       </summary>
       <div class="accordion-content">
-        <div class="hazard-module-scroll">
-        <div class="layer-status-stack">
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Flash Flood Watch" data-hazard-status="Unavailable" data-hazard-note="Flash flood watch data is not available yet in the cached aggregator feed." data-hazard-detail="For Maui, flood should be the first non-fire module because short-fuse flooding can threaten roads, gulches, and low-lying neighborhoods. This panel is wired to accept a cached flash-flood aggregator endpoint when backend is ready." tabindex="0" role="button" aria-label="Flash Flood Watch details">
+        <div class="priority-module js-hazard-detail" data-hazard-title="Flash Flood Watch" data-hazard-status="Unavailable" data-hazard-note="Flash flood watch data is not available yet in the cached aggregator feed." data-hazard-detail="For Maui, flood should be the first non-fire module because short-fuse flooding can threaten roads, gulches, and low-lying neighborhoods. This module is wired for polygon or county-zone rendering when the backend endpoint is ready." tabindex="0" role="button" aria-label="Flash Flood Watch details">
+          <div class="priority-module-head">
             <div>
-              <div class="layer-status-name">Flash Flood Watch</div>
-              <div class="layer-status-note" id="flood-status-note">Live-first module. Waiting for the cached flood watch feed.</div>
+              <div class="priority-kicker">Priority after wildfire</div>
+              <div class="priority-title">Flash Flood Watch</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="flood-status-badge">No watch</div><span class="detail-chev">›</span></div>
+            <div class="status-badge status-none" id="flood-status-badge">No watch</div>
           </div>
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Rain Radar" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Rain radar should follow flood watch, not replace it. Use radar as situational context for intensity and movement, while official watch or warning status remains the primary flood signal." tabindex="0" role="button" aria-label="Rain Radar details">
+          <div class="priority-note" id="flood-status-note">Live-first module. Waiting for the cached flood watch feed.</div>
+          <div class="priority-subnote">Uses calm civic wording, compact panel badge, and hazard detail sheet when opened.</div>
+        </div>
+
+        <div class="mini-module-grid">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Rain Radar" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Rain radar should follow flood watch, not replace it. Use radar as situational context for intensity and movement, while official watch or warning status remains the primary flood signal." tabindex="0" role="button" aria-label="Rain Radar details">
             <div>
-              <div class="layer-status-name">Rain Radar</div>
-              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+              <div class="mini-module-title">Rain Radar</div>
+              <div class="mini-module-note">Context layer</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Wind Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Wind risk matters for both wildfire spread and mountain microclimates. This module should eventually fuse RAWS and summit conditions into a civic-grade watch layer without overstating severity." tabindex="0" role="button" aria-label="Wind Risk details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Wind Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Wind risk matters for both wildfire spread and mountain microclimates. This module should eventually fuse RAWS and summit conditions into a civic-grade watch layer without overstating severity." tabindex="0" role="button" aria-label="Wind Risk details">
             <div>
-              <div class="layer-status-name">Wind Risk</div>
-              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+              <div class="mini-module-title">Wind Risk</div>
+              <div class="mini-module-note">Fire spread context</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Tsunami Alerts" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Tsunami belongs in the future multi-hazard stack, but it should remain visually secondary on Maui unless an alert is active. The panel should only escalate when official warning products are present." tabindex="0" role="button" aria-label="Tsunami Alerts details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Tsunami Alerts" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Tsunami belongs in the future multi-hazard stack, but it should remain visually secondary on Maui unless an alert is active. The panel should only escalate when official warning products are present." tabindex="0" role="button" aria-label="Tsunami Alerts details">
             <div>
-              <div class="layer-status-name">Tsunami Alerts</div>
-              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+              <div class="mini-module-title">Tsunami</div>
+              <div class="mini-module-note">Official alert layer</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Hurricane Tracks" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Hurricane tracks should be map-level context with cone visualization and civic wording, not a dominant daily layer. It becomes primary only during active tropical systems affecting Hawaii." tabindex="0" role="button" aria-label="Hurricane Tracks details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Hurricane Tracks" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Hurricane tracks should be map-level context with cone visualization and civic wording, not a dominant daily layer. It becomes primary only during active tropical systems affecting Hawaii." tabindex="0" role="button" aria-label="Hurricane Tracks details">
             <div>
-              <div class="layer-status-name">Hurricane Tracks</div>
-              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+              <div class="mini-module-title">Hurricane</div>
+              <div class="mini-module-note">Track + cone context</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
-          <div class="layer-status-row js-hazard-detail" data-hazard-title="Landslide Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Landslide risk should be derived conservatively from slope, rainfall, and incident context. On Maui, it pairs naturally with flood and road-closure intelligence after heavy rain or burn-scar events." tabindex="0" role="button" aria-label="Landslide Risk details">
+          <div class="mini-module js-hazard-detail" data-hazard-title="Landslide Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Landslide risk should be derived conservatively from slope, rainfall, and incident context. On Maui, it pairs naturally with flood and road-closure intelligence after heavy rain or burn-scar events." tabindex="0" role="button" aria-label="Landslide Risk details">
             <div>
-              <div class="layer-status-name">Landslide Risk</div>
-              <div class="layer-status-note">Blueprint scaffold only — endpoint not active yet.</div>
+              <div class="mini-module-title">Landslide</div>
+              <div class="mini-module-note">Post-rain context</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-planned">Blueprint</div><span class="detail-chev">›</span></div>
+            <div class="status-badge status-planned">Blueprint</div>
           </div>
         </div>
-        </div>
-        <div class="blueprint-footnote">Only Flash Flood Watch is wired for live aggregator reads in this blueprint. The remaining modules are registry-ready placeholders for later phases.</div>
+        <div class="blueprint-footnote">Flood is the only live-wired expansion module in V4.6.3. The remaining modules stay compact here and open in the hazard detail sheet when tapped.</div>
       </div>
     </details>
 
@@ -1606,8 +1645,8 @@ function updateAccordionPreviews() {
   const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
   setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
   setAccordionText("secondary-preview-mobile", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
-  setAccordionText("blueprint-preview-desktop", `Flash Flood: ${floodBadge} · 5 modules staged`);
-  setAccordionText("blueprint-preview-mobile", `Flash Flood: ${floodBadge} · 5 modules staged`);
+  setAccordionText("blueprint-preview-desktop", `Flood: ${floodBadge} · 5 compact modules staged`);
+  setAccordionText("blueprint-preview-mobile", `Flood: ${floodBadge} · 5 compact modules staged`);
 }
 
 function activeSuffix() {
