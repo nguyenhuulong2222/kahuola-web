@@ -2178,7 +2178,7 @@ const HAZARD_REGISTRY = {
     key: "smoke",
     endpoint: IS_LOCAL
       ? "./smoke-test.json"
-      : "https://kahuola.org/api/hazards/smoke?region=hawaii",
+      : "https://kahuola.org/hazards/smoke?region=hawaii",
     enabled: true,
     parsePayload(json) {
       const rawSignals = parseCanonicalSignals(json, "smoke");
@@ -2202,7 +2202,7 @@ const HAZARD_REGISTRY = {
     key: "perimeter",
     endpoint: IS_LOCAL
       ? "./perimeters-test.json"
-      : "https://kahuola.org/api/hazards/perimeters?region=hawaii",
+      : "https://kahuola.org/hazards/perimeters?region=hawaii",
     enabled: true,
     parsePayload(json) {
       const rawSignals = parseCanonicalSignals(json, "perimeter");
@@ -2258,7 +2258,7 @@ const HAZARD_REGISTRY = {
       return {
         features,
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: "PacIOOS"
+        sourceLabel: json.source || json.provider || "Kahu Ola local flood context"
       };
     },
     ensureLayers,
@@ -2277,7 +2277,7 @@ const HAZARD_REGISTRY = {
       return {
         features,
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: "NOAA radar context"
+        sourceLabel: json.source || json.provider || "NOAA MRMS"
       };
     },
     ensureLayers,
@@ -2661,8 +2661,8 @@ function ensureRainRadarLayers() {
       source: "rain-radar",
       filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
       paint: {
-        "fill-color": ["match", ["get", "reflectivity_class"], "HEAVY", "#2ca7ff", "MODERATE", "#6cc7ff", "LIGHT", "#aee6ff", "#aee6ff"],
-        "fill-opacity": rainRadarVisible ? ["match", ["get", "reflectivity_class"], "HEAVY", 0.12, "MODERATE", 0.08, "LIGHT", 0.05, 0.05] : 0
+        "fill-color": ["match", ["get", "reflectivity_class"], "INTENSE", "#0d47a1", "HEAVY", "#1565c0", "MODERATE", "#42a5f5", "LIGHT", "#90caf9", "#90caf9"],
+        "fill-opacity": rainRadarVisible ? ["match", ["get", "reflectivity_class"], "INTENSE", 0.24, "HEAVY", 0.18, "MODERATE", 0.12, "LIGHT", 0.08, 0.06] : 0
       }
     });
   }
@@ -2716,7 +2716,7 @@ function syncFloodContextLayerVisibility() {
 }
 
 function syncRainRadarLayerVisibility() {
-  if (map.getLayer("rain-radar-fill")) map.setPaintProperty("rain-radar-fill", "fill-opacity", rainRadarVisible ? ["match", ["get", "reflectivity_class"], "HEAVY", 0.12, "MODERATE", 0.08, "LIGHT", 0.05, 0.05] : 0);
+  if (map.getLayer("rain-radar-fill")) map.setPaintProperty("rain-radar-fill", "fill-opacity", rainRadarVisible ? ["match", ["get", "reflectivity_class"], "INTENSE", 0.24, "HEAVY", 0.18, "MODERATE", 0.12, "LIGHT", 0.08, 0.06] : 0);
   if (map.getLayer("rain-radar-outline")) map.setPaintProperty("rain-radar-outline", "line-opacity", rainRadarVisible ? 0.6 : 0);
 }
 
@@ -2911,7 +2911,7 @@ function updateFloodContextStatusUI(state) {
     if (state.sourceStatus === "detected") {
       badge.classList.add("status-detected");
       badge.textContent = count > 0 ? `Context · ${count}` : "Context";
-      if (note) note.textContent = "PacIOOS-linked local Hawaiʻi flood context is available for this snapshot.";
+      if (note) note.textContent = "Derived local Hawaiʻi rain context is available for this snapshot.";
     } else if (state.sourceStatus === "none") {
       badge.classList.add("status-none");
       badge.textContent = "No context";
@@ -2919,7 +2919,7 @@ function updateFloodContextStatusUI(state) {
     } else {
       badge.classList.add("status-unavailable");
       badge.textContent = "Unavailable";
-      if (note) note.textContent = "PacIOOS local flood context could not be confirmed right now.";
+      if (note) note.textContent = "Local Hawaiʻi rain context could not be derived right now.";
     }
   });
 }
@@ -2934,7 +2934,7 @@ function updateRainRadarStatusUI(state) {
     if (state.sourceStatus === "detected") {
       badge.classList.add("status-detected");
       badge.textContent = count > 0 ? `Radar · ${count}` : "Radar";
-      if (note) note.textContent = "Observed NOAA rain radar context is available for this snapshot.";
+      if (note) note.textContent = "Observed NOAA MRMS rain radar context is available for this snapshot.";
     } else if (state.sourceStatus === "none") {
       badge.classList.add("status-none");
       badge.textContent = "No radar";
@@ -3013,11 +3013,11 @@ function renderUnifiedPanels() {
     const officialChip = document.getElementById(`flood-official-chip-${suffix}`);
     if (officialChip) officialChip.textContent = `Official: ${flashFlood.sourceLabel || "NWS"}`;
     const contextChip = document.getElementById(`flood-context-chip-${suffix}`);
-    if (contextChip) contextChip.textContent = `Context: ${floodContext.sourceLabel || "PacIOOS"}`;
+    if (contextChip) contextChip.textContent = `Context: ${floodContext.sourceLabel || "Local context"}`;
     const radarChip = document.getElementById(`flood-radar-chip-${suffix}`);
     if (radarChip) radarChip.textContent = `Radar: ${rainRadar.sourceLabel || "NOAA"}`;
     const floodSubnote = document.getElementById(`flood-status-subnote-${suffix}`);
-    if (floodSubnote) floodSubnote.textContent = "Local Hawaiʻi context: PacIOOS. Delivered by Kahu Ola civic aggregator.";
+    if (floodSubnote) floodSubnote.textContent = "Local Hawaiʻi rain context is derived by Kahu Ola from official NOAA radar snapshots. Official alerts still come from NWS.";
 
     const summaryText = document.getElementById(`summary-text-${suffix}`);
     const summarySource = document.getElementById(`summary-source-${suffix}`);
@@ -3099,7 +3099,7 @@ function openFloodContextPopup(feature, lngLat) {
 function openRainRadarPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">${escapeHtml(p.source || "NOAA")}</div></div><div class="popup-severity normal">${escapeHtml(p.reflectivity_class || "Radar")}</div></div><div class="popup-note">Observed rainfall context for situational awareness. Always follow official flood watches and warnings first.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">${escapeHtml(p.source || "NOAA MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.reflectivity_class || "Radar")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Estimated rain</div><div class="popup-metric-value">${p.estimated_rain_rate_mm_hr ? escapeHtml(String(p.estimated_rain_rate_mm_hr)) + " mm/hr" : "Unavailable"}</div></div><div class="popup-metric"><div class="popup-metric-label">Reflectivity</div><div class="popup-metric-value">${p.sample_value_dbz ? escapeHtml(String(p.sample_value_dbz)) + " dBZ" : "Unavailable"}</div></div></div><div class="popup-note">Observed NOAA MRMS rainfall context for situational awareness. Always follow official flood watches and warnings first.</div></div>`;
   activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 
