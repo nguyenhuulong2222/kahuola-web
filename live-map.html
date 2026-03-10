@@ -1587,6 +1587,7 @@ const REF_CENTER = [-156.675, 20.878];
 const POLL_MS = 60000;
 const FETCH_TIMEOUT_MS = 12000;
 const MOBILE_BREAKPOINT = 980;
+const API_BASE = IS_LOCAL ? "" : "https://kahuola.org/api";
 
 const modeFooter = document.getElementById("mode-footer");
 const diag = document.getElementById("diag");
@@ -1857,6 +1858,10 @@ function fetchJson(url) {
 
 function payloadError(json) {
   return json && typeof json === "object" && typeof json.error === "string" ? json.error : null;
+}
+
+function isNotFoundError(err) {
+  return !!err && (String(err.message || "").includes("HTTP_404") || String(err.message || "").includes("Not found"));
 }
 
 function parseCanonicalSignals(json, kind) {
@@ -2154,7 +2159,7 @@ const HAZARD_REGISTRY = {
     key: "fire",
     endpoint: IS_LOCAL
       ? "./fires-test.json"
-      : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1",
+      : `${API_BASE}/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1`,
     enabled: true,
     parsePayload(json) {
       const raw = parseCanonicalSignals(json, "fire");
@@ -2178,7 +2183,7 @@ const HAZARD_REGISTRY = {
     key: "smoke",
     endpoint: IS_LOCAL
       ? "./smoke-test.json"
-      : "https://kahuola.org/hazards/smoke?region=hawaii",
+      : `${API_BASE}/hazards/smoke?region=hawaii`,
     enabled: true,
     parsePayload(json) {
       const rawSignals = parseCanonicalSignals(json, "smoke");
@@ -2202,7 +2207,7 @@ const HAZARD_REGISTRY = {
     key: "perimeter",
     endpoint: IS_LOCAL
       ? "./perimeters-test.json"
-      : "https://kahuola.org/hazards/perimeters?region=hawaii",
+      : `${API_BASE}/hazards/perimeters?region=hawaii`,
     enabled: true,
     parsePayload(json) {
       const rawSignals = parseCanonicalSignals(json, "perimeter");
@@ -2226,7 +2231,7 @@ const HAZARD_REGISTRY = {
     key: "flashFlood",
     endpoint: IS_LOCAL
       ? "./flash-flood-test.json"
-      : "https://kahuola.org/hazards/flash-flood?region=hawaii",
+      : `${API_BASE}/hazards/flash-flood?region=hawaii`,
     enabled: true,
     affectsGlobalHealth: false,
     parsePayload(json) {
@@ -2249,7 +2254,7 @@ const HAZARD_REGISTRY = {
   },
   floodContext: {
     key: "floodContext",
-    endpoint: IS_LOCAL ? "./flood-context-test.json" : "https://kahuola.org/hazards/flood-context?region=hawaii",
+    endpoint: IS_LOCAL ? "./flood-context-test.json" : `${API_BASE}/hazards/flood-context?region=hawaii`,
     enabled: true,
     affectsGlobalHealth: false,
     parsePayload(json) {
@@ -2268,7 +2273,7 @@ const HAZARD_REGISTRY = {
   },
   rainRadar: {
     key: "rainRadar",
-    endpoint: IS_LOCAL ? "./rain-radar-test.json" : "https://kahuola.org/hazards/rain-radar?region=hawaii",
+    endpoint: IS_LOCAL ? "./rain-radar-test.json" : `${API_BASE}/hazards/rain-radar?region=hawaii`,
     enabled: true,
     affectsGlobalHealth: false,
     parsePayload(json) {
@@ -2326,6 +2331,11 @@ async function refreshHazard(key, { silent = false } = {}) {
     if (model.affectsGlobalHealth !== false) {
       appState.diagnostics.isOffline = true;
       markError(err && err.isParse ? "parse" : "network");
+    }
+    if (isNotFoundError(err)) {
+      console.warn(`[Kahu Ola] ${key} endpoint not found:`, model.endpoint);
+    } else {
+      console.warn(`[Kahu Ola] ${key} refresh failed:`, err);
     }
   } finally {
     if (key === "fire") setRefreshingUI(false);
@@ -2661,8 +2671,8 @@ function ensureRainRadarLayers() {
       source: "rain-radar",
       filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
       paint: {
-        "fill-color": ["match", ["get", "intensity"], "HEAVY", "#2ca7ff", "MODERATE", "#6cc7ff", "LIGHT", "#aee6ff", "#aee6ff"],
-        "fill-opacity": rainRadarVisible ? ["match", ["get", "intensity"], "HEAVY", 0.12, "MODERATE", 0.08, "LIGHT", 0.05, 0.05] : 0
+        "fill-color": ["match", ["get", "reflectivity_class"], "INTENSE", "#1f8fff", "HEAVY", "#2ca7ff", "MODERATE", "#6cc7ff", "LIGHT", "#aee6ff", "#aee6ff"],
+        "fill-opacity": rainRadarVisible ? ["match", ["get", "reflectivity_class"], "INTENSE", 0.14, "HEAVY", 0.12, "MODERATE", 0.08, "LIGHT", 0.05, 0.05] : 0
       }
     });
   }
@@ -2705,7 +2715,7 @@ function syncFlashFloodLayerVisibility() {
   ["flood-btn-panel-desktop", "flood-btn-panel-mobile", "flood-btn-mobile"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = flashFloodVisible ? "Flood Layers: On" : "Flood Layers: Off";
+    el.textContent = flashFloodVisible ? "Flood Watch: On" : "Flood Watch: Off";
     el.classList.toggle("active", flashFloodVisible);
   });
 }
@@ -2716,7 +2726,7 @@ function syncFloodContextLayerVisibility() {
 }
 
 function syncRainRadarLayerVisibility() {
-  if (map.getLayer("rain-radar-fill")) map.setPaintProperty("rain-radar-fill", "fill-opacity", rainRadarVisible ? ["match", ["get", "intensity"], "HEAVY", 0.12, "MODERATE", 0.08, "LIGHT", 0.05, 0.05] : 0);
+  if (map.getLayer("rain-radar-fill")) map.setPaintProperty("rain-radar-fill", "fill-opacity", rainRadarVisible ? ["match", ["get", "reflectivity_class"], "INTENSE", 0.14, "HEAVY", 0.12, "MODERATE", 0.08, "LIGHT", 0.05, 0.05] : 0);
   if (map.getLayer("rain-radar-outline")) map.setPaintProperty("rain-radar-outline", "line-opacity", rainRadarVisible ? 0.6 : 0);
 }
 
@@ -2897,7 +2907,7 @@ function updateFlashFloodStatusUI(state, count = 0) {
     }
 
     if (badge) { badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; }
-    if (note) note.textContent = "Official source: National Weather Service. Flood status could not be confirmed right now.";
+    if (note) note.textContent = "Official source: National Weather Service. Flood status could not be confirmed right now. Check that /api/hazards/flash-flood is deployed on the Worker.";
   });
 }
 
@@ -3099,7 +3109,7 @@ function openFloodContextPopup(feature, lngLat) {
 function openRainRadarPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">${escapeHtml(p.source || "NOAA")}</div></div><div class="popup-severity normal">${escapeHtml(p.intensity || "Radar")}</div></div><div class="popup-note">Observed rainfall context for situational awareness. Always follow official flood watches and warnings first.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">${escapeHtml(p.source || "NOAA")}</div></div><div class="popup-severity normal">${escapeHtml(p.reflectivity_class || "Radar")}</div></div><div class="popup-note">Observed rainfall context for situational awareness. Always follow official flood watches and warnings first.</div></div>`;
   activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 
