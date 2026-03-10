@@ -1942,23 +1942,190 @@ function normalizePerimeterFeatures(rawSignals) {
     .filter(Boolean);
 }
 
+// ============================================================
+// Flood module trust-first normalizers
+// Official authority: NWS
+// Local Hawaiʻi context: PacIOOS
+// Radar context: NOAA
+// Delivered by: Kahu Ola civic aggregator
+// ============================================================
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeIsoString(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeSignalSource(rawSource, fallbackProvider, fallbackProduct, officialDefault) {
+  const source = rawSource && typeof rawSource === "object" ? rawSource : {};
+  return {
+    provider: typeof source.provider === "string" && source.provider.trim() ? source.provider.trim() : fallbackProvider,
+    product: typeof source.product === "string" && source.product.trim() ? source.product.trim() : fallbackProduct,
+    fetched_at: normalizeIsoString(source.fetched_at),
+    official: typeof source.official === "boolean" ? source.official : officialDefault
+  };
+}
+
+function normalizeSignalSeverity(rawSeverity, fallbackLevel) {
+  const sev = rawSeverity && typeof rawSeverity === "object" ? rawSeverity : {};
+  return {
+    level: typeof sev.level === "string" && sev.level.trim() ? sev.level.trim().toUpperCase() : fallbackLevel,
+    reason_codes: safeArray(sev.reason_codes).filter((v) => typeof v === "string")
+  };
+}
+
+function normalizeBaseFloodPolygonSignal(raw, index, config) {
+  if (!raw || typeof raw !== "object") return null;
+  const geometry = raw.geometry;
+  if (!geometry || !["Polygon", "MultiPolygon"].includes(geometry.type)) return null;
+  const props = raw.properties && typeof raw.properties === "object" ? raw.properties : {};
+  return {
+    schema_version: typeof raw.schema_version === "string" && raw.schema_version.trim() ? raw.schema_version.trim() : "1.0",
+    type: typeof raw.type === "string" && raw.type.trim() ? raw.type.trim() : config.type,
+    id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${config.idPrefix}-${index}`,
+    source: normalizeSignalSource(raw.source, config.provider, config.product, config.official),
+    event_time: normalizeIsoString(raw.event_time) || normalizeIsoString(props.event_time),
+    geometry,
+    severity: normalizeSignalSeverity(raw.severity, config.fallbackSeverity),
+    ttl_seconds: Number.isFinite(raw.ttl_seconds) && raw.ttl_seconds > 0 ? Math.floor(raw.ttl_seconds) : config.ttlSeconds,
+    properties: props
+  };
+}
+
 function normalizeFlashFloodFeatures(rawSignals) {
-  return (Array.isArray(rawSignals) ? rawSignals : [])
-    .map((s, index) => {
-      const geometry = s.geometry;
-      const props = s.properties || {};
-      if (!geometry || !["Polygon", "MultiPolygon", "Point"].includes(geometry.type)) return null;
-      const severity = String((s.severity && s.severity.level) || props.severity || props.level || "WATCH").toUpperCase();
+  return safeArray(rawSignals)
+    .map((raw, index) => {
+      const signal = normalizeBaseFloodPolygonSignal(raw, index, {
+        type: "FloodAlertSignal",
+        idPrefix: "flash-flood",
+        provider: "NWS",
+        product: "FLASH_FLOOD_ALERT",
+        official: true,
+        fallbackSeverity: "INFO",
+        ttlSeconds: 900
+      });
+      if (!signal) return null;
+      const props = signal.properties || {};
+      const eventName = typeof props.event === "string" ? props.event.toUpperCase() : "";
+      const headline = typeof props.headline === "string" ? props.headline.toUpperCase() : "";
+      let level = signal.severity.level;
+      if (eventName.includes("WARNING") || headline.includes("WARNING")) level = "WARNING";
+      else if (eventName.includes("WATCH") || headline.includes("WATCH")) level = "WATCH";
+      else if (eventName.includes("ADVISORY") || headline.includes("ADVISORY")) level = "INFO";
+      signal.severity.level = level;
       return {
         type: "Feature",
-        geometry,
+        geometry: signal.geometry,
         properties: {
-          id: s.id || props.id || `flood-${index}`,
-          headline: props.headline || props.event || props.title || "Flash Flood Watch",
-          severity,
-          advisory: props.advisory || props.description || "Flood watches indicate elevated runoff risk. Follow county and NWS guidance.",
-          source: (s.source && s.source.provider) || props.source || "NWS",
-          event_time: s.event_time || props.event_time || null
+          id: signal.id,
+          headline: typeof props.headline === "string" ? props.headline : (typeof props.event === "string" ? props.event : "Flash Flood status"),
+          event: typeof props.event === "string" ? props.event : "Flood alert",
+          status: typeof props.status === "string" ? props.status.toUpperCase() : "UNKNOWN",
+          severity: level,
+          area_desc: typeof props.area_desc === "string" ? props.area_desc : "Hawaiʻi",
+          zone_ids: safeArray(props.zone_ids).filter((v) => typeof v === "string"),
+          certainty: typeof props.certainty === "string" ? props.certainty.toUpperCase() : null,
+          urgency: typeof props.urgency === "string" ? props.urgency.toUpperCase() : null,
+          expires_at: normalizeIsoString(props.expires_at),
+          advisory: typeof props.instruction === "string" && props.instruction.trim() ? props.instruction : "Use this map for situational awareness. Always follow National Weather Service and county emergency guidance.",
+          official_source_label: "National Weather Service",
+          context_source_label: "PacIOOS",
+          delivered_by: "Kahu Ola civic aggregator",
+          source: signal.source.provider,
+          product: signal.source.product,
+          fetched_at: signal.source.fetched_at,
+          event_time: signal.event_time,
+          ttl_seconds: signal.ttl_seconds
+        }
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeFloodContextFeatures(rawSignals) {
+  return safeArray(rawSignals)
+    .map((raw, index) => {
+      const signal = normalizeBaseFloodPolygonSignal(raw, index, {
+        type: "FloodRiskSignal",
+        idPrefix: "flood-context",
+        provider: "PACIOOS",
+        product: "RAINFALL_WATERSHED_CONTEXT",
+        official: false,
+        fallbackSeverity: "LOW",
+        ttlSeconds: 1800
+      });
+      if (!signal) return null;
+      const props = signal.properties || {};
+      const riskIndex = typeof props.risk_index === "string" && props.risk_index.trim() ? props.risk_index.trim().toUpperCase() : signal.severity.level;
+      const allowed = ["LOW", "MODERATE", "ELEVATED", "HIGH"];
+      const level = allowed.includes(riskIndex) ? riskIndex : "LOW";
+      return {
+        type: "Feature",
+        geometry: signal.geometry,
+        properties: {
+          id: signal.id,
+          risk_index: level,
+          severity: level,
+          rainfall_intensity_mm_hr: Number.isFinite(props.rainfall_intensity_mm_hr) ? props.rainfall_intensity_mm_hr : null,
+          recent_accumulation_mm: Number.isFinite(props.recent_accumulation_mm) ? props.recent_accumulation_mm : null,
+          watershed_saturation: typeof props.watershed_saturation === "string" ? props.watershed_saturation.toUpperCase() : null,
+          stream_context: typeof props.stream_context === "string" ? props.stream_context.toUpperCase() : null,
+          estimated: true,
+          local_context_note: typeof props.local_context_note === "string" && props.local_context_note.trim() ? props.local_context_note : "Local Hawaiʻi flood context derived from PacIOOS-linked observations and watershed indicators.",
+          display_label: "Estimated local flood risk",
+          not_official_warning: true,
+          source: signal.source.provider,
+          source_label: "PacIOOS",
+          official_source_label: "National Weather Service",
+          delivered_by: "Kahu Ola civic aggregator",
+          fetched_at: signal.source.fetched_at,
+          event_time: signal.event_time,
+          ttl_seconds: signal.ttl_seconds
+        }
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeRainRadarFeatures(rawSignals) {
+  return safeArray(rawSignals)
+    .map((raw, index) => {
+      const signal = normalizeBaseFloodPolygonSignal(raw, index, {
+        type: "RainRadarSignal",
+        idPrefix: "rain-radar",
+        provider: "NOAA",
+        product: "RAIN_RADAR_CONTEXT",
+        official: false,
+        fallbackSeverity: "LOW",
+        ttlSeconds: 900
+      });
+      if (!signal) return null;
+      const props = signal.properties || {};
+      const reflectivityClass = typeof props.reflectivity_class === "string" && props.reflectivity_class.trim() ? props.reflectivity_class.trim().toUpperCase() : "LIGHT";
+      const reflectivityToSeverity = { LIGHT: "LOW", MODERATE: "MODERATE", HEAVY: "ELEVATED", INTENSE: "HIGH" };
+      const level = reflectivityToSeverity[reflectivityClass] || "LOW";
+      return {
+        type: "Feature",
+        geometry: signal.geometry,
+        properties: {
+          id: signal.id,
+          reflectivity_class: reflectivityClass,
+          severity: level,
+          estimated_rain_rate_mm_hr: Number.isFinite(props.estimated_rain_rate_mm_hr) ? props.estimated_rain_rate_mm_hr : null,
+          motion_heading_deg: Number.isFinite(props.motion_heading_deg) ? props.motion_heading_deg : null,
+          motion_speed_kph: Number.isFinite(props.motion_speed_kph) ? props.motion_speed_kph : null,
+          radar_station_id: typeof props.radar_station_id === "string" ? props.radar_station_id : null,
+          advisory: "Radar context supports situational awareness and is not an official warning.",
+          context_only: true,
+          not_official_warning: true,
+          source: signal.source.provider,
+          source_label: "NOAA radar context",
+          official_source_label: "National Weather Service",
+          delivered_by: "Kahu Ola civic aggregator",
+          fetched_at: signal.source.fetched_at,
+          event_time: signal.event_time,
+          ttl_seconds: signal.ttl_seconds
         }
       };
     })
@@ -2051,7 +2218,7 @@ const HAZARD_REGISTRY = {
       return {
         features,
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: json.source || json.provider || "National Weather Service"
+        sourceLabel: "National Weather Service"
       };
     },
     ensureLayers,
@@ -2074,7 +2241,7 @@ const HAZARD_REGISTRY = {
       return {
         features,
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: json.source || json.provider || "PacIOOS"
+        sourceLabel: "PacIOOS"
       };
     },
     ensureLayers,
@@ -2093,7 +2260,7 @@ const HAZARD_REGISTRY = {
       return {
         features,
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: json.source || json.provider || "NOAA Rain Radar"
+        sourceLabel: "NOAA radar context"
       };
     },
     ensureLayers,
