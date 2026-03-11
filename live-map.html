@@ -1564,23 +1564,17 @@
     </div>
   </template>
 
-  
-<script>
+ <script>
 "use strict";
 
 /*
-  Kahu Ola Live Map — V4 Refactor Blueprint
-  -----------------------------------------
-  This version keeps the current Fire + Smoke UI working,
-  but moves model-specific logic into a central hazard registry so
-  future models can be added by editing one config block + a small parser.
-
-  Active now:
-  - fire
-  - smoke
-
-  Scaffolded now:
-  - perimeter
+  Kahu Ola Live Map — V4.7.2 click-overlap hotfix
+  ------------------------------------------------
+  Fixes:
+  1) Strict layer targeting on click
+  2) Fire click priority over flood/radar polygons
+  3) Flood/Radar OFF = visibility:none (no interactivity)
+  4) Fire popup identity = Wildfire Signal / NASA FIRMS
 */
 
 const MAPTILER_KEY = "gZAlLuBvEe2xMGBVun5D";
@@ -1600,11 +1594,6 @@ const REF_CENTER = [-156.675, 20.878];
 const POLL_MS = 60000;
 const FETCH_TIMEOUT_MS = 12000;
 const MOBILE_BREAKPOINT = 980;
-const NOAA_RADAR_SOURCE_ID = "noaa-rain-radar";
-const NOAA_RADAR_LAYER_ID = "noaa-rain-radar-layer";
-const NOAA_RADAR_TILES = [
-  "https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity/MapServer/tile/{z}/{y}/{x}"
-];
 
 const modeFooter = document.getElementById("mode-footer");
 const diag = document.getElementById("diag");
@@ -1654,8 +1643,8 @@ function createHazardState(key) {
     key,
     enabled: true,
     visible: true,
-    status: "idle", // idle | loading | ready | unavailable
-    sourceStatus: "unknown", // detected | none | unavailable | unknown
+    status: "idle",
+    sourceStatus: "unknown",
     features: [],
     generatedAt: null,
     sourceTime: null,
@@ -1692,7 +1681,7 @@ function setAccordionText(id, value) {
 function updateAccordionPreviews() {
   const smokeBadge = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || "Smoke";
   const perimeterBadge = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || "Perimeters";
-  const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flood Context";
+  const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
   const contextBadge = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || "Context";
   const radarBadge = document.getElementById("rain-radar-badge-desktop")?.textContent || document.getElementById("rain-radar-badge-mobile")?.textContent || "Radar";
   setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
@@ -1815,9 +1804,8 @@ function safeMapResize() {
   requestAnimationFrame(() => {
     map.resize();
     requestAnimationFrame(() => map.resize());
+    setTimeout(() => map.resize(), 120);
   });
-  setTimeout(() => map.resize(), 120);
-  setTimeout(() => map.resize(), 320);
 }
 
 function toggleBasemap() {
@@ -1979,13 +1967,6 @@ function normalizePerimeterFeatures(rawSignals) {
     .filter(Boolean);
 }
 
-// ============================================================
-// Flood module trust-first normalizers
-// Official authority: NWS
-// Local Hawaiʻi context: PacIOOS
-// Radar context: NOAA
-// Delivered by: Kahu Ola civic aggregator
-// ============================================================
 function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -2056,7 +2037,7 @@ function normalizeFlashFloodFeatures(rawSignals) {
         geometry: signal.geometry,
         properties: {
           id: signal.id,
-          headline: typeof props.headline === "string" ? props.headline : (typeof props.event === "string" ? props.event : "Flood Context status"),
+          headline: typeof props.headline === "string" ? props.headline : (typeof props.event === "string" ? props.event : "Flash Flood status"),
           event: typeof props.event === "string" ? props.event : "Flood alert",
           status: typeof props.status === "string" ? props.status.toUpperCase() : "UNKNOWN",
           severity: level,
@@ -2197,9 +2178,7 @@ const HAZARD_REGISTRY = {
   },
   smoke: {
     key: "smoke",
-    endpoint: IS_LOCAL
-      ? "./smoke-test.json"
-      : "https://kahuola.org/hazards/smoke?region=hawaii",
+    endpoint: IS_LOCAL ? "./smoke-test.json" : "https://kahuola.org/hazards/smoke?region=hawaii",
     enabled: true,
     parsePayload(json) {
       const rawSignals = parseCanonicalSignals(json, "smoke");
@@ -2221,9 +2200,7 @@ const HAZARD_REGISTRY = {
   },
   perimeter: {
     key: "perimeter",
-    endpoint: IS_LOCAL
-      ? "./perimeters-test.json"
-      : "https://kahuola.org/hazards/perimeters?region=hawaii",
+    endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/hazards/perimeters?region=hawaii",
     enabled: true,
     parsePayload(json) {
       const rawSignals = parseCanonicalSignals(json, "perimeter");
@@ -2245,9 +2222,7 @@ const HAZARD_REGISTRY = {
   },
   flashFlood: {
     key: "flashFlood",
-    endpoint: IS_LOCAL
-      ? "./flash-flood-test.json"
-      : "https://kahuola.org/api/hazards/flash-flood?region=hawaii",
+    endpoint: IS_LOCAL ? "./flash-flood-test.json" : "https://kahuola.org/api/hazards/flash-flood?region=hawaii",
     enabled: true,
     affectsGlobalHealth: false,
     parsePayload(json) {
@@ -2375,11 +2350,128 @@ map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-left")
 
 function ensureLayers() {
   ensureSmokeLayers();
-  ensureNoaaRainRadarLayer();
-  ensureFireLayers();
   ensurePerimeterLayers();
   ensureFlashFloodLayers();
   ensureFloodContextLayers();
+  ensureRainRadarLayers();
+  ensureFireLayers();
+}
+
+function setLayerVisibility(layerId, visible) {
+  if (!map.getLayer(layerId)) return;
+  map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+}
+
+function raiseFireLayersAboveOverlays() {
+  const order = [
+    "smoke-fill",
+    "smoke-outline",
+    "perimeter-fill",
+    "perimeter-outline",
+    "flash-flood-fill",
+    "flash-flood-outline",
+    "flash-flood-point",
+    "flood-context-fill",
+    "flood-context-outline",
+    "rain-radar-fill",
+    "rain-radar-outline",
+    "clusters",
+    "cluster-count",
+    "unclustered-fires-glow",
+    "unclustered-fires"
+  ];
+
+  order.forEach((id) => {
+    if (map.getLayer(id)) {
+      try { map.moveLayer(id); } catch (_) {}
+    }
+  });
+
+  ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+    if (map.getLayer(id)) {
+      try { map.moveLayer(id); } catch (_) {}
+    }
+  });
+}
+
+function queryFirstRenderedFeature(point, layers) {
+  const existingLayers = (layers || []).filter((id) => map.getLayer(id));
+  if (!existingLayers.length) return null;
+  const features = map.queryRenderedFeatures(point, { layers: existingLayers });
+  return features && features.length ? features[0] : null;
+}
+
+function zoomToCluster(feature) {
+  if (!feature || !feature.properties) return;
+  const clusterId = feature.properties.cluster_id;
+  const source = map.getSource("fires");
+  if (!source || typeof source.getClusterExpansionZoom !== "function") return;
+  source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+    if (err) return;
+    map.easeTo({
+      center: feature.geometry.coordinates,
+      zoom,
+      duration: 500
+    });
+  });
+}
+
+function bindGlobalCanvasClickRouter() {
+  if (map.__globalCanvasClickRouterBound) return;
+  map.__globalCanvasClickRouterBound = true;
+
+  map.on("click", (e) => {
+    const fireFeature = queryFirstRenderedFeature(e.point, ["unclustered-fires"]);
+    if (fireFeature) {
+      openFirePopup(fireFeature, e.lngLat);
+      return;
+    }
+
+    const clusterFeature = queryFirstRenderedFeature(e.point, ["clusters"]);
+    if (clusterFeature) {
+      zoomToCluster(clusterFeature);
+      return;
+    }
+
+    if (flashFloodVisible) {
+      const flashFeature = queryFirstRenderedFeature(e.point, ["flash-flood-point", "flash-flood-fill"]);
+      if (flashFeature) {
+        openFlashFloodPopup(flashFeature, e.lngLat);
+        return;
+      }
+    }
+
+    if (floodContextVisible) {
+      const floodFeature = queryFirstRenderedFeature(e.point, ["flood-context-fill"]);
+      if (floodFeature) {
+        openFloodContextPopup(floodFeature, e.lngLat);
+        return;
+      }
+    }
+
+    if (rainRadarVisible) {
+      const radarFeature = queryFirstRenderedFeature(e.point, ["rain-radar-fill"]);
+      if (radarFeature) {
+        openRainRadarPopup(radarFeature, e.lngLat);
+        return;
+      }
+    }
+
+    if (smokeVisible) {
+      const smokeFeature = queryFirstRenderedFeature(e.point, ["smoke-fill"]);
+      if (smokeFeature) {
+        openSmokePopup(smokeFeature, e.lngLat);
+        return;
+      }
+    }
+
+    if (perimeterVisible) {
+      const perimeterFeature = queryFirstRenderedFeature(e.point, ["perimeter-fill"]);
+      if (perimeterFeature) {
+        openPerimeterPopup(perimeterFeature, e.lngLat);
+      }
+    }
+  });
 }
 
 function ensureSmokeLayers() {
@@ -2409,16 +2501,47 @@ function ensureSmokeLayers() {
       }
     });
   }
-  if (!map.__smokeEventsBound) {
-    map.__smokeEventsBound = true;
-    map.on("click", "smoke-fill", (e) => {
-      const feature = e.features && e.features[0];
-      if (feature) openSmokePopup(feature, e.lngLat);
-    });
+  if (!map.__smokeHoverBound) {
+    map.__smokeHoverBound = true;
     map.on("mouseenter", "smoke-fill", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "smoke-fill", () => { map.getCanvas().style.cursor = ""; });
   }
   syncSmokeLayerVisibility();
+}
+
+function ensurePerimeterLayers() {
+  if (!map.getSource("perimeters")) {
+    map.addSource("perimeters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  }
+  if (!map.getLayer("perimeter-fill")) {
+    map.addLayer({
+      id: "perimeter-fill",
+      type: "fill",
+      source: "perimeters",
+      paint: {
+        "fill-color": ["case", ["==", ["get", "official"], true], "#ff7043", "#ffca80"],
+        "fill-opacity": perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.08, 0.05] : 0
+      }
+    });
+  }
+  if (!map.getLayer("perimeter-outline")) {
+    map.addLayer({
+      id: "perimeter-outline",
+      type: "line",
+      source: "perimeters",
+      paint: {
+        "line-color": ["case", ["==", ["get", "official"], true], "#ff5a4f", "#ffb74d"],
+        "line-width": ["case", ["==", ["get", "official"], true], 2.6, 2],
+        "line-opacity": perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.92, 0.78] : 0
+      }
+    });
+  }
+  if (!map.__perimeterHoverBound) {
+    map.__perimeterHoverBound = true;
+    map.on("mouseenter", "perimeter-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "perimeter-fill", () => { map.getCanvas().style.cursor = ""; });
+  }
+  syncPerimeterLayerVisibility();
 }
 
 function ensureFireLayers() {
@@ -2452,7 +2575,11 @@ function ensureFireLayers() {
       type: "symbol",
       source: "fires",
       filter: ["has", "point_count"],
-      layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Open Sans Bold"], "text-size": 12 },
+      layout: {
+        "text-field": ["get", "point_count_abbreviated"],
+        "text-font": ["Open Sans Bold"],
+        "text-size": 12
+      },
       paint: { "text-color": "#ffffff" }
     });
   }
@@ -2484,65 +2611,13 @@ function ensureFireLayers() {
       }
     });
   }
-  if (!map.__fireEventsBound) {
-    map.__fireEventsBound = true;
-    map.on("click", "clusters", (e) => {
-      const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
-      if (!features.length) return;
-      const clusterId = features[0].properties.cluster_id;
-      map.getSource("fires").getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        map.easeTo({ center: features[0].geometry.coordinates, zoom, duration: 500 });
-      });
-    });
-    map.on("click", "unclustered-fires", (e) => {
-      const feature = e.features && e.features[0];
-      if (feature) openFirePopup(feature);
-    });
+  if (!map.__fireHoverBound) {
+    map.__fireHoverBound = true;
     map.on("mouseenter", "clusters", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "clusters", () => { map.getCanvas().style.cursor = ""; });
     map.on("mouseenter", "unclustered-fires", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "unclustered-fires", () => { map.getCanvas().style.cursor = ""; });
   }
-}
-
-function ensurePerimeterLayers() {
-  if (!map.getSource("perimeters")) {
-    map.addSource("perimeters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  }
-  if (!map.getLayer("perimeter-fill")) {
-    map.addLayer({
-      id: "perimeter-fill",
-      type: "fill",
-      source: "perimeters",
-      paint: {
-        "fill-color": ["case", ["==", ["get", "official"], true], "#ff7043", "#ffca80"],
-        "fill-opacity": perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.08, 0.05] : 0
-      }
-    });
-  }
-  if (!map.getLayer("perimeter-outline")) {
-    map.addLayer({
-      id: "perimeter-outline",
-      type: "line",
-      source: "perimeters",
-      paint: {
-        "line-color": ["case", ["==", ["get", "official"], true], "#ff5a4f", "#ffb74d"],
-        "line-width": ["case", ["==", ["get", "official"], true], 2.6, 2],
-        "line-opacity": perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.92, 0.78] : 0
-      }
-    });
-  }
-  if (!map.__perimeterEventsBound) {
-    map.__perimeterEventsBound = true;
-    map.on("click", "perimeter-fill", (e) => {
-      const feature = e.features && e.features[0];
-      if (feature) openPerimeterPopup(feature, e.lngLat);
-    });
-    map.on("mouseenter", "perimeter-fill", () => { map.getCanvas().style.cursor = "pointer"; });
-    map.on("mouseleave", "perimeter-fill", () => { map.getCanvas().style.cursor = ""; });
-  }
-  syncPerimeterLayerVisibility();
 }
 
 function updateFireSource(features) {
@@ -2566,9 +2641,8 @@ function updateFloodContextSource(features) {
   if (source) source.setData({ type: "FeatureCollection", features });
 }
 function updateRainRadarSource(features) {
-  // NOAA radar is rendered as a raster tile layer in V4.7.
-  // Feature data is retained for status summaries only and is not drawn as polygons.
-  return features;
+  const source = map.getSource("rain-radar");
+  if (source) source.setData({ type: "FeatureCollection", features });
 }
 
 function ensureFlashFloodLayers() {
@@ -2616,20 +2690,15 @@ function ensureFlashFloodLayers() {
       }
     });
   }
-  if (!map.__flashFloodEventsBound) {
-    map.__flashFloodEventsBound = true;
+  if (!map.__flashFloodHoverBound) {
+    map.__flashFloodHoverBound = true;
     ["flash-flood-fill", "flash-flood-point"].forEach((layerId) => {
-      map.on("click", layerId, (e) => {
-        const feature = e.features && e.features[0];
-        if (feature) openFlashFloodPopup(feature, e.lngLat);
-      });
       map.on("mouseenter", layerId, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", layerId, () => { map.getCanvas().style.cursor = ""; });
     });
   }
   syncFlashFloodLayerVisibility();
 }
-
 
 function ensureFloodContextLayers() {
   if (!map.getSource("flood-context")) {
@@ -2660,41 +2729,56 @@ function ensureFloodContextLayers() {
       }
     });
   }
-  if (!map.__floodContextEventsBound) {
-    map.__floodContextEventsBound = true;
-    map.on("click", "flood-context-fill", (e) => {
-      const feature = e.features && e.features[0];
-      if (feature) openFloodContextPopup(feature, e.lngLat);
-    });
+  if (!map.__floodContextHoverBound) {
+    map.__floodContextHoverBound = true;
     map.on("mouseenter", "flood-context-fill", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "flood-context-fill", () => { map.getCanvas().style.cursor = ""; });
   }
   syncFloodContextLayerVisibility();
 }
 
-function ensureNoaaRainRadarLayer() {
-  if (!map.getSource(NOAA_RADAR_SOURCE_ID)) {
-    map.addSource(NOAA_RADAR_SOURCE_ID, {
-      type: "raster",
-      tiles: NOAA_RADAR_TILES,
-      tileSize: 256
+function ensureRainRadarLayers() {
+  if (!map.getSource("rain-radar")) {
+    map.addSource("rain-radar", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  }
+  if (!map.getLayer("rain-radar-fill")) {
+    map.addLayer({
+      id: "rain-radar-fill",
+      type: "fill",
+      source: "rain-radar",
+      filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+      paint: {
+        "fill-color": ["match", ["get", "intensity"], "HEAVY", "#2ca7ff", "MODERATE", "#6cc7ff", "LIGHT", "#aee6ff", "#aee6ff"],
+        "fill-opacity": rainRadarVisible ? ["match", ["get", "intensity"], "HEAVY", 0.085, "MODERATE", 0.06, "LIGHT", 0.03, 0.03] : 0
+      }
     });
   }
-  if (!map.getLayer(NOAA_RADAR_LAYER_ID)) {
+  if (!map.getLayer("rain-radar-outline")) {
     map.addLayer({
-      id: NOAA_RADAR_LAYER_ID,
-      type: "raster",
-      source: NOAA_RADAR_SOURCE_ID,
+      id: "rain-radar-outline",
+      type: "line",
+      source: "rain-radar",
+      filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
       paint: {
-        "raster-opacity": rainRadarVisible ? 0.72 : 0,
-        "raster-fade-duration": 400,
-        "raster-resampling": "linear"
+        "line-color": "#7fd5ff",
+        "line-width": 1.2,
+        "line-opacity": rainRadarVisible ? 0.42 : 0
       }
-    }, "smoke-fill");
+    });
   }
+  if (!map.__rainRadarHoverBound) {
+    map.__rainRadarHoverBound = true;
+    map.on("mouseenter", "rain-radar-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "rain-radar-fill", () => { map.getCanvas().style.cursor = ""; });
+  }
+  syncRainRadarLayerVisibility();
 }
 
 function syncFlashFloodLayerVisibility() {
+  setLayerVisibility("flash-flood-fill", flashFloodVisible);
+  setLayerVisibility("flash-flood-outline", flashFloodVisible);
+  setLayerVisibility("flash-flood-point", flashFloodVisible);
+
   if (map.getLayer("flash-flood-fill")) {
     map.setPaintProperty("flash-flood-fill", "fill-opacity", flashFloodVisible ? ["match", ["get", "severity"], "WARNING", 0.11, "WATCH", 0.08, 0.06] : 0);
   }
@@ -2705,22 +2789,44 @@ function syncFlashFloodLayerVisibility() {
     map.setPaintProperty("flash-flood-point", "circle-opacity", flashFloodVisible ? 1 : 0);
     map.setPaintProperty("flash-flood-point", "circle-stroke-opacity", flashFloodVisible ? 1 : 0);
   }
+
   ["flood-btn-panel-desktop", "flood-btn-panel-mobile", "flood-btn-mobile"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = flashFloodVisible ? "Flood Context: On" : "Flood Context: Off";
+    el.textContent = flashFloodVisible ? "Flood Layers: On" : "Flood Layers: Off";
     el.classList.toggle("active", flashFloodVisible);
   });
 }
 
 function syncFloodContextLayerVisibility() {
-  if (map.getLayer("flood-context-fill")) map.setPaintProperty("flood-context-fill", "fill-opacity", floodContextVisible ? ["match", ["get", "risk_index"], "HIGH", 0.11, "ELEVATED", 0.085, "MODERATE", 0.06, "LOW", 0.035, 0.045] : 0);
-  if (map.getLayer("flood-context-outline")) map.setPaintProperty("flood-context-outline", "line-opacity", floodContextVisible ? 0.58 : 0);
+  setLayerVisibility("flood-context-fill", floodContextVisible);
+  setLayerVisibility("flood-context-outline", floodContextVisible);
+
+  if (map.getLayer("flood-context-fill")) {
+    map.setPaintProperty("flood-context-fill", "fill-opacity",
+      floodContextVisible
+        ? ["match", ["get", "risk_index"], "HIGH", 0.11, "ELEVATED", 0.085, "MODERATE", 0.06, "LOW", 0.035, 0.045]
+        : 0
+    );
+  }
+  if (map.getLayer("flood-context-outline")) {
+    map.setPaintProperty("flood-context-outline", "line-opacity", floodContextVisible ? 0.58 : 0);
+  }
 }
 
 function syncRainRadarLayerVisibility() {
-  if (map.getLayer(NOAA_RADAR_LAYER_ID)) {
-    map.setPaintProperty(NOAA_RADAR_LAYER_ID, "raster-opacity", rainRadarVisible ? 0.72 : 0);
+  setLayerVisibility("rain-radar-fill", rainRadarVisible);
+  setLayerVisibility("rain-radar-outline", rainRadarVisible);
+
+  if (map.getLayer("rain-radar-fill")) {
+    map.setPaintProperty("rain-radar-fill", "fill-opacity",
+      rainRadarVisible
+        ? ["match", ["get", "intensity"], "HEAVY", 0.085, "MODERATE", 0.06, "LIGHT", 0.03, 0.03]
+        : 0
+    );
+  }
+  if (map.getLayer("rain-radar-outline")) {
+    map.setPaintProperty("rain-radar-outline", "line-opacity", rainRadarVisible ? 0.42 : 0);
   }
 }
 
@@ -2739,6 +2845,9 @@ function toggleFlashFloodLayer() {
 }
 
 function syncPerimeterLayerVisibility() {
+  setLayerVisibility("perimeter-fill", perimeterVisible);
+  setLayerVisibility("perimeter-outline", perimeterVisible);
+
   if (map.getLayer("perimeter-fill")) {
     map.setPaintProperty("perimeter-fill", "fill-opacity", perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.08, 0.05] : 0);
   }
@@ -2749,6 +2858,9 @@ function syncPerimeterLayerVisibility() {
 }
 
 function syncSmokeLayerVisibility() {
+  setLayerVisibility("smoke-fill", smokeVisible);
+  setLayerVisibility("smoke-outline", smokeVisible);
+
   if (map.getLayer("smoke-fill")) {
     map.setPaintProperty("smoke-fill", "fill-opacity", smokeVisible ? ["match", ["get", "density"], "heavy", 0.42, "medium", 0.30, "light", 0.18, 0.18] : 0);
   }
@@ -2938,11 +3050,11 @@ function updateRainRadarStatusUI(state) {
     if (state.sourceStatus === "detected") {
       badge.classList.add("status-detected");
       badge.textContent = count > 0 ? `Radar · ${count}` : "Radar";
-      if (note) note.textContent = "Live NOAA rain radar tile overlay is available for this snapshot.";
+      if (note) note.textContent = "Observed NOAA rain radar context is available for this snapshot.";
     } else if (state.sourceStatus === "none") {
       badge.classList.add("status-none");
       badge.textContent = "No radar";
-      if (note) note.textContent = "No radar context was returned in this snapshot.";
+      if (note) note.textContent = "No radar geometry was returned in this snapshot.";
     } else {
       badge.classList.add("status-unavailable");
       badge.textContent = "Unavailable";
@@ -3048,7 +3160,6 @@ function renderUnifiedPanels() {
     }
 
     if (summarySource) {
-      const smokeLabel = smoke.sourceLabel || "NOAA HMS";
       const floodLabel = flashFlood.sourceLabel || "National Weather Service";
       const parts = [fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker", "Delivered by Kahu Ola civic aggregator"];
       if (flashFloodVisible) parts.push(`Flood official: ${floodLabel}`);
@@ -3061,6 +3172,7 @@ function renderUnifiedPanels() {
   });
 
   applyFreshness(fire.sourceTime);
+  updateAccordionPreviews();
 }
 
 function openFloodModuleDetail(kind) {
@@ -3069,7 +3181,7 @@ function openFloodModuleDetail(kind) {
   const radar = getState("rainRadar");
   if (kind === "flood") {
     openHazardDetail({
-      title: "Flood Context",
+      title: "Flash Flood",
       status: flood.sourceStatus === "detected" ? "Official flood status active" : flood.sourceStatus === "none" ? "No active flash flood watch" : "Official flood status unavailable",
       note: "Official source: National Weather Service. Statewide Hawaiʻi civic flood context is estimated separately by Kahu Ola. Statewide Hawaiʻi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.",
       body: "Use this map for situational awareness. Official flood polygons come from the National Weather Service. PacIOOS provides local rainfall and watershed context. NOAA radar is a supporting context layer and does not replace official watches or warnings."
@@ -3103,7 +3215,7 @@ function openFloodContextPopup(feature, lngLat) {
 function openRainRadarPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">NOAA live radar overlay</div></div><div class="popup-severity normal">${escapeHtml(p.intensity || "Radar")}</div></div><div class="popup-note">Live NOAA radar overlay for statewide Hawaiʻi rain context. Always follow official flood watches and warnings first.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌦 Rain Radar</div><div class="popup-coords">${escapeHtml(p.source || "NOAA")}</div></div><div class="popup-severity normal">${escapeHtml(p.intensity || "Radar")}</div></div><div class="popup-note">Statewide Hawaiʻi rain context for situational awareness. Always follow official flood watches and warnings first.</div></div>`;
   activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 
@@ -3116,13 +3228,13 @@ function openFlashFloodPopup(feature, lngLat) {
     <div class="popup-card">
       <div class="popup-top">
         <div>
-          <div class="popup-title">🌊 Flood Context Watch</div>
+          <div class="popup-title">🌊 Flash Flood Watch</div>
           <div class="popup-coords">${escapeHtml(p.source || "NWS")}</div>
         </div>
         <div class="popup-severity normal">${escapeHtml(severity)}</div>
       </div>
       <div class="popup-grid">
-        <div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || "Flood Context Watch")}</div></div>
+        <div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || "Flash Flood Watch")}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Severity</div><div class="popup-metric-value">${escapeHtml(severity)}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Guidance</div><div class="popup-metric-value">Follow official county and NWS guidance first.</div></div>
@@ -3244,7 +3356,7 @@ function useMyLocation() {
   );
 }
 
-function openFirePopup(feature) {
+function openFirePopup(feature, lngLat) {
   const coords = feature.geometry.coordinates.slice();
   const p = feature.properties || {};
   const lat = coords[1];
@@ -3256,7 +3368,7 @@ function openFirePopup(feature) {
   const confidence = p.confidence ?? "—";
   const milesFromYou = lastKnownUserCoord ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi" : "Enable location";
   const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-  const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Fire%20Detection`;
+  const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Wildfire%20Signal`;
   const googleDirections = lastKnownUserCoord
     ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}`
     : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
@@ -3279,7 +3391,7 @@ function openFirePopup(feature) {
         <div class="popup-metric"><div class="popup-metric-label">FRP</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div>
         <div class="popup-metric"><div class="popup-metric-label">Confidence</div><div class="popup-metric-value">${escapeHtml(confidence)}</div></div>
       </div>
-      <div class="popup-note">NASA FIRMS hotspot signal for situational awareness. Use directions for ground navigation context only. This marker does not replace on-scene emergency instruction.</div>
+      <div class="popup-note">Use directions for ground navigation context. This point is a satellite wildfire detection signal, not an on-scene emergency instruction.</div>
       <div class="popup-actions">
         <a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a>
         <a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a>
@@ -3288,7 +3400,7 @@ function openFirePopup(feature) {
       </div>
     </div>`;
   activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" })
-    .setLngLat(coords)
+    .setLngLat(lngLat || coords)
     .setHTML(html)
     .addTo(map);
 }
@@ -3326,6 +3438,13 @@ function bindButtons() {
   document.getElementById("flood-btn-panel-desktop")?.addEventListener("click", toggleFlashFloodLayer);
   document.getElementById("flood-btn-panel-mobile")?.addEventListener("click", toggleFlashFloodLayer);
   document.getElementById("flood-btn-mobile")?.addEventListener("click", toggleFlashFloodLayer);
+
+  document.getElementById("flood-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("flood"));
+  document.getElementById("flood-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("flood"));
+  document.getElementById("flood-context-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("context"));
+  document.getElementById("flood-context-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("context"));
+  document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("radar"));
+  document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("radar"));
 }
 
 function setSheetOpen(open) {
@@ -3337,6 +3456,35 @@ function setSheetOpen(open) {
 
 function toggleSheet() {
   setSheetOpen(!mobileSheet.classList.contains("open"));
+}
+
+function openHazardDetail(payload) {
+  if (!hazardDetailSheet) return;
+  const titleNode = document.getElementById("hazard-detail-title");
+  const statusNode = document.getElementById("hazard-detail-status");
+  const noteNode = document.getElementById("hazard-detail-note");
+  const bodyNode = document.getElementById("hazard-detail-body");
+  if (titleNode) titleNode.textContent = payload.title || "Hazard module";
+  if (statusNode) statusNode.textContent = payload.status || "—";
+  if (noteNode) noteNode.textContent = payload.note || "—";
+  if (bodyNode) bodyNode.textContent = payload.body || "—";
+  hazardDetailSheet.classList.add("open");
+  hazardDetailSheet.setAttribute("aria-hidden", "false");
+}
+
+function openHazardDetailFromElement(el) {
+  if (!el || !hazardDetailSheet) return;
+  const title = el.dataset.hazardTitle || "Hazard module";
+  const status = el.dataset.hazardStatus || "Planned";
+  const note = el.dataset.hazardNote || "No additional context available.";
+  const detail = el.dataset.hazardDetail || note;
+  openHazardDetail({ title, status, note, body: detail });
+}
+
+function closeHazardDetail() {
+  if (!hazardDetailSheet) return;
+  hazardDetailSheet.classList.remove("open");
+  hazardDetailSheet.setAttribute("aria-hidden", "true");
 }
 
 bindButtons();
@@ -3362,33 +3510,7 @@ document.getElementById("diag-close")?.addEventListener("click", () => {
 });
 
 sheetToggleBtn?.addEventListener("click", toggleSheet);
-
-function openHazardDetailFromElement(el) {
-  if (!el || !hazardDetailSheet) return;
-  const title = el.dataset.hazardTitle || "Hazard module";
-  const status = el.dataset.hazardStatus || "Planned";
-  const note = el.dataset.hazardNote || "No additional context available.";
-  const detail = el.dataset.hazardDetail || note;
-  const titleNode = document.getElementById("hazard-detail-title");
-  const statusNode = document.getElementById("hazard-detail-status");
-  const noteNode = document.getElementById("hazard-detail-note");
-  const bodyNode = document.getElementById("hazard-detail-body");
-  if (titleNode) titleNode.textContent = title;
-  if (statusNode) statusNode.textContent = status;
-  if (noteNode) noteNode.textContent = note;
-  if (bodyNode) bodyNode.textContent = detail;
-  hazardDetailSheet.classList.add("open");
-  hazardDetailSheet.setAttribute("aria-hidden", "false");
-}
-
-function closeHazardDetail() {
-  if (!hazardDetailSheet) return;
-  hazardDetailSheet.classList.remove("open");
-  hazardDetailSheet.setAttribute("aria-hidden", "true");
-}
-
 sheetHandleWrap?.addEventListener("click", toggleSheet);
-
 
 document.addEventListener("click", (event) => {
   const trigger = event.target.closest(".js-hazard-detail");
@@ -3417,6 +3539,8 @@ hazardDetailClose?.addEventListener("click", closeHazardDetail);
 window.addEventListener("resize", () => {
   safeMapResize();
   updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length);
+  updatePerimeterStatusUI(getState("perimeter").sourceStatus, getState("perimeter").features.length);
+  updateFlashFloodStatusUI(getState("flashFlood").sourceStatus, getState("flashFlood").features.length);
   if (window.innerWidth > MOBILE_BREAKPOINT) return;
   setSheetOpen(mobileSheet.classList.contains("open"));
 });
@@ -3435,9 +3559,13 @@ window.addEventListener("online", () => {
 
 map.on("style.load", () => {
   ensureLayers();
+  bindGlobalCanvasClickRouter();
+  raiseFireLayersAboveOverlays();
+
   Object.keys(HAZARD_REGISTRY).forEach((key) => {
     HAZARD_REGISTRY[key].applyData(getState(key).features);
   });
+
   syncSatelliteButtons();
   syncSmokeButtons();
   syncPerimeterButtons();
@@ -3451,17 +3579,26 @@ map.on("style.load", () => {
 
 map.on("load", async () => {
   ensureLayers();
+  bindGlobalCanvasClickRouter();
+  raiseFireLayersAboveOverlays();
+
   fitHawaii(false);
   if (window.innerWidth <= MOBILE_BREAKPOINT) setSheetOpen(false);
   await refreshEnabledHazards({ silent: false });
-  syncRainRadarLayerVisibility();
+  raiseFireLayersAboveOverlays();
   safeMapResize();
   setTimeout(safeMapResize, 150);
   setTimeout(safeMapResize, 500);
+
   if (pollHandle) clearInterval(pollHandle);
-  pollHandle = setInterval(() => refreshEnabledHazards({ silent: true }), POLL_MS);
+  pollHandle = setInterval(async () => {
+    await refreshEnabledHazards({ silent: true });
+    raiseFireLayersAboveOverlays();
+  }, POLL_MS);
 });
-</script>
+</script> 
+
 
 </body>
 </html>
+
