@@ -2,1719 +2,1461 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  />
+  <title>Kahu Ola | Hawaiʻi Hazard Signals</title>
+  <meta
+    name="description"
+    content="Kahu Ola provides plain-language hazard signals for Hawaiʻi using trusted public data sources. Fire-first, storm-aware, and civic-grade."
+  />
+  <style>
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#0f1b27;
+      --surface-2:#142232;
+      --surface-3:#18293a;
+      --surface-4:#1d3146;
 
-  <title>Kahu Ola — Hawaiʻi Hazard Signals · Kona Storm · Kona Storm Context</title>
-  <meta name="description" content="Kahu Ola is an independent, privacy-first civic hazard intelligence platform for Hawaiʻi — translating NASA, NOAA, NWS, and EPA open data into plain-language wildfire, flood, and air quality signals for residents." />
-  <meta name="keywords" content="Maui wildfire, Hawaii safety, civic tech, hazard intelligence, NASA FIRMS, NOAA, USGS, AirNow, Hawaii emergency, Lahaina fire" />
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.16);
 
-  <link rel="canonical" href="https://kahuola.org/" />
-  <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#070F18" />
+      --text:#eef4fb;
+      --text-dim:#c2d0de;
+      --muted:#90a3b7;
 
-  <meta property="og:type"        content="website" />
-  <meta property="og:locale"      content="en_US" />
-  <meta property="og:site_name"   content="Kahu Ola" />
-  <meta property="og:title"       content="Kahu Ola — Hawaiʻi Hazard Signals · Kona Storm · Kona Storm Context" />
-  <meta property="og:description" content="Statewide Hawaiʻi hazard signals during the March 2026 Kona storm. Fire-first civic intelligence with flood, wind, and air-quality context from NASA, NOAA, NWS, and EPA." />
-  <meta property="og:url"         content="https://kahuola.org/" />
-  <meta property="og:image"       content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png" />
+      --fire:#ff7a00;
+      --fire-2:#ff5c00;
+      --flood:#4ea6ff;
+      --storm:#6ebcff;
+      --ok:#67c27e;
+      --warn:#ffcc66;
+      --danger:#ff5f7b;
+      --volcanic:#ff9b54;
 
-  <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="Kahu Ola — Guardian of Life" />
-  <meta name="twitter:description" content="Independent, privacy-first civic hazard signals for Hawaiʻi." />
-  <meta name="twitter:image"       content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png" />
+      --radius-xl:28px;
+      --radius-lg:22px;
+      --radius-md:18px;
+      --radius-sm:14px;
 
-  <link rel="icon" href="./assets/brand/exports/favicons/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="./assets/brand/exports/favicons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./assets/brand/exports/favicons/favicon-16.png">
-  <link rel="apple-touch-icon" href="./assets/brand/exports/favicons/apple-touch-icon.png">
+      --shadow:0 18px 50px rgba(0,0,0,.30);
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+      --max:1280px;
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Kahu Ola",
-    "url": "https://kahuola.org/",
-    "description": "Independent, privacy-first civic hazard intelligence platform for Hawaiʻi. Real-time wildfire, flood, and air quality signals."
-  }
-  </script>
+      --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
 
-<style>
-/* ════════════════════════════════════════════════
-   DESIGN TOKENS — Volcanic Night
-   Palette: deep ocean black · ember · lava · reef
-════════════════════════════════════════════════ */
-:root {
-  /* Backgrounds */
-  --bg-void:     #070F18;
-  --bg-deep:     #0B1622;
-  --bg-surface:  #101E2E;
-  --bg-raised:   #152433;
-  --bg-glass:    rgba(11,22,34,0.88);
-  --bg-section:  #0D1A28;
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:linear-gradient(180deg,var(--bg) 0%, var(--bg-2) 100%);color:var(--text);font-family:var(--font)}
+    img{max-width:100%;display:block}
+    a{text-decoration:none;color:inherit}
+    button{font:inherit}
+    .hidden{display:none !important}
 
-  /* Brand */
-  --ember:       #E84010;
-  --ember-lt:    #FF6B35;
-  --ember-dim:   rgba(232,64,16,0.14);
-  --lava:        #C03400;
+    .app{
+      width:min(100%, var(--max));
+      margin:0 auto;
+      padding:18px 16px 40px;
+    }
 
-  /* Signals */
-  --flood:       #1260A8;
-  --flood-lt:    #4DAAE8;
-  --volcanic:    #B85208;
-  --volcanic-lt: #F4902A;
-  --calm:        #0A6E50;
-  --calm-lt:     #20C98A;
-  --warn-lt:     #FCD34D;
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:6px 0 18px;
+    }
 
-  /* Text */
-  --text-hi:     rgba(255,255,255,0.94);
-  --text-md:     rgba(255,255,255,0.60);
-  --text-lo:     rgba(255,255,255,0.34);
-  --text-xlo:    rgba(255,255,255,0.20);
+    .brand-wrap{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      min-width:0;
+    }
 
-  /* Borders */
-  --border-hi:   rgba(255,255,255,0.13);
-  --border-lo:   rgba(255,255,255,0.07);
-  --border-xlo:  rgba(255,255,255,0.04);
+    .brand-mark{
+      width:40px;height:40px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      background:linear-gradient(180deg, rgba(255,122,0,.18), rgba(255,122,0,.08));
+      border:1px solid rgba(255,122,0,.20);
+      box-shadow:0 10px 26px rgba(0,0,0,.24);
+      font-size:20px;
+    }
 
-  /* Radius */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 16px;
-  --r-lg: 22px;
-  --r-xl: 30px;
-}
+    .brand-text{
+      min-width:0;
+    }
 
-/* ════ RESET ════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; font-size: 16px; }
+    .brand-kicker{
+      color:var(--text-dim);
+      font-size:11px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      font-weight:800;
+      margin-bottom:4px;
+    }
 
-body {
-  font-family: 'IBM Plex Sans', sans-serif;
-  background: var(--bg-void);
-  color: var(--text-hi);
-  min-height: 100vh;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
+    .brand-title{
+      font-size:28px;
+      font-weight:900;
+      letter-spacing:-.03em;
+      line-height:1;
+      margin:0;
+    }
 
-/* Atmospheric background gradient */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 70% 45% at 15% 0%,   rgba(232,64,16,0.09) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 35% at 85% 20%,  rgba(18,96,168,0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(10,110,80,0.05) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-}
+    .brand-sub{
+      margin-top:5px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
 
-/* Grain overlay */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.6;
-}
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
 
-* { position: relative; z-index: 1; }
+    .pill{
+      min-height:38px;
+      padding:0 14px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
+    }
 
-/* ════ SKIP LINK ════ */
-.skip-link {
-  position: absolute; top: -100px; left: 1rem;
-  background: var(--ember); color: #fff;
-  padding: 0.5rem 1rem; border-radius: var(--r-sm);
-  font-size: 0.85rem; font-weight: 600;
-  text-decoration: none; z-index: 9999;
-  transition: top 0.2s;
-}
-.skip-link:focus { top: 1rem; }
+    .pill .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:var(--ok);
+      box-shadow:0 0 0 6px rgba(103,194,126,.12);
+    }
 
-/* ════ LAYOUT ════ */
-.container {
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: 0 clamp(1.25rem, 5vw, 3rem);
-}
+    .pill.link{
+      background:rgba(255,255,255,.03);
+      color:var(--text-dim);
+    }
 
-/* ════════════════════════════════════════════════
-   TOPBAR
-════════════════════════════════════════════════ */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 200;
-  height: 62px;
-  backdrop-filter: blur(28px) saturate(180%);
-  background: rgba(7,15,24,0.90);
-  border-bottom: 1px solid var(--border-lo);
-}
-.topbar-inner {
-  max-width: 1160px;
-  margin: 0 auto;
-  padding: 0 clamp(1.25rem, 5vw, 3rem);
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-}
+    .hero{
+      display:grid;
+      grid-template-columns:1.04fr .96fr;
+      gap:18px;
+      align-items:stretch;
+    }
 
-/* Brand */
-.brand-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.brand-flame {
-  width: 36px; height: 36px;
-  background: linear-gradient(140deg, var(--lava), var(--ember-lt));
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 0 20px rgba(232,64,16,0.45);
-  flex-shrink: 0;
-}
-.brand-name {
-  font-family: 'Lora', serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-hi);
-  line-height: 1;
-}
-.brand-tagline {
-  font-size: 0.62rem;
-  font-weight: 400;
-  color: var(--text-lo);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  display: block;
-  margin-top: 3px;
-}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border:1px solid var(--line);
+      border-radius:var(--radius-xl);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
 
-/* Nav */
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.nav-link {
-  padding: 6px 13px;
-  border-radius: var(--r-xs);
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text-md);
-  text-decoration: none;
-  transition: 0.18s;
-}
-.nav-link:hover { color: var(--text-hi); background: var(--border-lo); }
-.nav-link.is-active { color: var(--text-hi); }
+    .hero-card{
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      min-width:0;
+    }
 
-.nav-map-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--r-sm);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ember-lt);
-  background: var(--ember-dim);
-  border: 1px solid rgba(232,64,16,0.28);
-  text-decoration: none;
-  transition: 0.18s;
-  flex-shrink: 0;
-}
-.nav-map-btn:hover { background: rgba(232,64,16,0.22); border-color: rgba(232,64,16,0.5); color: #fff; }
+    .hero-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+    }
 
-/* Live dot */
-.live-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--ember-lt);
-  box-shadow: 0 0 6px var(--ember-lt);
-  animation: livePulse 2s ease-in-out infinite;
-}
-@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+    .hero-title{
+      margin:0 0 8px;
+      font-size:40px;
+      line-height:1.02;
+      letter-spacing:-.04em;
+      max-width:12ch;
+    }
 
-/* Mobile nav toggle */
-.nav-toggle {
-  display: none;
-  background: none;
-  border: 1px solid var(--border-hi);
-  border-radius: var(--r-xs);
-  width: 36px; height: 36px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-md);
-  font-size: 1rem;
-}
+    .hero-copy{
+      color:var(--text-dim);
+      font-size:15px;
+      line-height:1.62;
+      max-width:62ch;
+      margin:0;
+    }
 
-/* ════════════════════════════════════════════════
-   HERO SECTION
-════════════════════════════════════════════════ */
-.hero {
-  padding: clamp(3.5rem, 8vw, 6rem) 0 clamp(3rem, 6vw, 5rem);
-  overflow: hidden;
-}
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: clamp(2rem, 4vw, 4rem);
-  align-items: center;
-}
+    .freshness{
+      flex:0 0 auto;
+      min-height:36px;
+      padding:0 12px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid rgba(103,194,126,.22);
+      background:rgba(103,194,126,.10);
+      color:#d9f2de;
+      font:700 11px var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
 
-/* Left copy */
-.hero-copy { }
+    .freshness .dot{
+      width:8px;height:8px;border-radius:50%;background:var(--ok)
+    }
 
-.hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-lo);
-  margin-bottom: 1.25rem;
-}
-.eyebrow-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--calm-lt);
-  box-shadow: 0 0 6px var(--calm-lt);
-}
+    .priority-banner{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:14px;
+      padding:18px;
+      border-radius:24px;
+      border:1px solid rgba(78,166,255,.18);
+      background:
+        radial-gradient(circle at top right, rgba(78,166,255,.14), transparent 34%),
+        linear-gradient(180deg, rgba(78,166,255,.10), rgba(78,166,255,.05));
+    }
 
-.hero-title {
-  font-family: 'Lora', serif;
-  font-size: clamp(2.4rem, 5.5vw, 3.8rem);
-  font-weight: 700;
-  line-height: 1.15;
-  color: var(--text-hi);
-  margin-bottom: 0.2rem;
-}
-.hero-title-hawaiian {
-  font-family: 'Lora', serif;
-  font-size: clamp(1rem, 2.2vw, 1.35rem);
-  font-style: italic;
-  font-weight: 400;
-  color: var(--text-lo);
-  margin-bottom: 1.5rem;
-  display: block;
-}
+    .priority-title{
+      margin:0 0 6px;
+      font-size:22px;
+      letter-spacing:-.02em;
+      line-height:1.1;
+    }
 
-.hero-lead {
-  font-size: clamp(1rem, 1.8vw, 1.15rem);
-  color: var(--text-md);
-  line-height: 1.75;
-  max-width: 520px;
-  margin-bottom: 2rem;
-}
-.hero-lead strong { color: var(--text-hi); font-weight: 600; }
+    .priority-copy{
+      margin:0;
+      color:var(--text-dim);
+      font-size:14px;
+      line-height:1.58;
+    }
 
-/* CTA group */
-.hero-cta {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-bottom: 2rem;
-}
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--r-sm);
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: none;
-  border: none;
-  cursor: pointer;
-  transition: 0.2s;
-  font-family: 'IBM Plex Sans', sans-serif;
-}
-.btn-primary {
-  background: linear-gradient(135deg, var(--lava), var(--ember-lt));
-  color: #fff;
-  box-shadow: 0 4px 20px rgba(232,64,16,0.38);
-}
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(232,64,16,0.55); }
-.btn-outline {
-  background: transparent;
-  color: var(--text-hi);
-  border: 1.5px solid var(--border-hi);
-}
-.btn-outline:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.28); }
-.btn-ghost {
-  background: transparent;
-  color: var(--text-md);
-  border: 1.5px solid var(--border-lo);
-  font-size: 0.82rem;
-  padding: 0.6rem 1.1rem;
-}
-.btn-ghost:hover { color: var(--text-hi); border-color: var(--border-hi); background: var(--border-xlo); }
+    .priority-state{
+      min-height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid rgba(78,166,255,.20);
+      background:rgba(78,166,255,.12);
+      color:#d9ebff;
+      font:700 11px var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
 
-/* Trust chips */
-.trust-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border-lo);
-  color: var(--text-md);
-}
-.chip::before { content: '✓'; color: var(--calm-lt); font-weight: 700; font-size: 0.65rem; }
+    .state-switch{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:-2px;
+    }
 
-/* ════ HERO SIGNAL CARD ════ */
-.hero-signal-card {
-  background: var(--bg-deep);
-  border: 1px solid var(--border-lo);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px var(--border-xlo),
-    0 24px 64px rgba(0,0,0,0.55),
-    0 0 80px rgba(232,64,16,0.06);
-  /* Animate in */
-  animation: cardReveal 0.7s cubic-bezier(0.22,1,0.36,1) both 0.3s;
-}
-@keyframes cardReveal {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
+    .state-btn{
+      min-height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.03);
+      color:var(--text-dim);
+      cursor:pointer;
+      font:700 11px var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
 
-/* Card banner */
-.card-banner {
-  padding: 1.1rem 1.35rem 1rem;
-  background: linear-gradient(135deg, rgba(232,64,16,0.18) 0%, rgba(11,22,34,0) 65%);
-  border-bottom: 1px solid rgba(232,64,16,0.16);
-}
-.card-banner-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.6rem;
-}
-.card-eyebrow {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-lo);
-}
-.card-fresh {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 0.62rem;
-  color: var(--text-lo);
-}
-.card-fresh-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--calm-lt);
-  box-shadow: 0 0 5px var(--calm-lt);
-  animation: livePulse 2.5s ease-in-out infinite;
-}
-.card-headline {
-  font-family: 'Lora', serif;
-  font-size: 1.35rem;
-  font-weight: 700;
-  line-height: 1.22;
-  color: var(--text-hi);
-  margin-bottom: 0.35rem;
-}
-.card-sub {
-  font-size: 0.78rem;
-  color: var(--text-md);
-  line-height: 1.55;
-}
-.card-priority-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.6rem; font-weight: 700;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  margin-top: 0.7rem;
-  background: rgba(232,64,16,0.22);
-  color: var(--ember-lt);
-  border: 1px solid rgba(232,64,16,0.38);
-}
-.pill-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: livePulse 1.4s ease-in-out infinite;
-}
+    .state-btn.active{
+      background:rgba(255,122,0,.14);
+      border-color:rgba(255,122,0,.26);
+      color:#ffe6cf;
+    }
 
-/* Signal rows */
-.card-signals {
-  padding: 0.9rem 1.35rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+    .signal-stack{
+      display:grid;
+      gap:12px;
+    }
 
-.sig-row {
-  display: flex; align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.8rem 0.9rem;
-  border-radius: var(--r-sm);
-  background: var(--bg-raised);
-  border: 1px solid var(--border-lo);
-  transition: 0.18s;
-}
-.sig-row.sig-active {
-  border-color: rgba(232,64,16,0.32);
-  animation: sigGlow 2.5s ease-in-out infinite;
-}
-@keyframes sigGlow {
-  0%,100% { box-shadow: none; }
-  50%     { box-shadow: 0 0 16px rgba(232,64,16,0.14); }
-}
-.sig-row.sig-clear { opacity: 0.7; }
+    .signal-card{
+      padding:18px;
+      border-radius:22px;
+      border:1px solid var(--line);
+      background:var(--surface);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-width:0;
+    }
 
-.sig-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-.sig-content { flex: 1; min-width: 0; }
-.sig-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-hi);
-  line-height: 1.3;
-}
-.sig-detail {
-  font-size: 0.71rem;
-  color: var(--text-md);
-  margin-top: 3px;
-  line-height: 1.5;
-}
-.sig-source {
-  font-size: 0.62rem;
-  color: var(--text-lo);
-  margin-top: 4px;
-  font-family: 'IBM Plex Mono', monospace;
-}
+    .signal-card.primary{
+      background:
+        radial-gradient(circle at top right, rgba(255,122,0,.12), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border-color:rgba(255,122,0,.18);
+    }
 
-.sig-badge {
-  font-size: 0.58rem; font-weight: 700;
-  padding: 3px 8px; border-radius: 10px;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  flex-shrink: 0; margin-top: 1px;
-  white-space: nowrap;
-}
-.badge-active   { background: rgba(232,64,16,0.22);  color: #FF7B52; border: 1px solid rgba(232,64,16,0.38); }
-.badge-low      { background: rgba(255,255,255,0.06); color: var(--text-lo); border: 1px solid var(--border-lo); }
-.badge-clear    { background: rgba(10,110,80,0.15);   color: var(--calm-lt); border: 1px solid rgba(10,110,80,0.28); }
-.badge-moderate { background: rgba(180,83,9,0.18);    color: var(--warn-lt); border: 1px solid rgba(180,83,9,0.32); }
+    .signal-card.secondary{
+      background:
+        radial-gradient(circle at top right, rgba(78,166,255,.12), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border-color:rgba(78,166,255,.18);
+    }
 
-/* Card context strip */
-.card-context {
-  padding: 0.7rem 1.35rem;
-  border-top: 1px solid var(--border-lo);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
-}
-.ctx-item {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 8px;
-  border-radius: var(--r-xs);
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--border-lo);
-}
-.ctx-emo  { font-size: 0.85rem; }
-.ctx-body { }
-.ctx-lbl  { font-size: 0.58rem; color: var(--text-lo); line-height: 1; margin-bottom: 1px; }
-.ctx-val  { font-size: 0.76rem; font-weight: 600; color: var(--text-hi); line-height: 1; }
+    .signal-card.tertiary{
+      background:
+        radial-gradient(circle at top right, rgba(255,155,84,.10), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border-color:rgba(255,155,84,.16);
+    }
 
-/* Card kupuna */
-.card-kupuna {
-  margin: 0 1.35rem;
-  padding: 0.85rem 1rem;
-  border-radius: var(--r-sm);
-  border: 1px solid rgba(10,110,80,0.22);
-  background: linear-gradient(135deg, rgba(10,110,80,0.1), rgba(11,22,34,0.5));
-}
-.kupuna-title {
-  font-size: 0.72rem; font-weight: 700;
-  color: var(--calm-lt);
-  margin-bottom: 0.35rem;
-}
-.kupuna-body {
-  font-size: 0.74rem;
-  color: var(--text-md);
-  line-height: 1.65;
-}
-.kupuna-hawaiian {
-  font-style: italic;
-  font-size: 0.66rem;
-  color: var(--text-lo);
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--border-lo);
-}
+    .signal-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
 
-/* Card disclaimer */
-.card-disclaimer {
-  padding: 0.75rem 1.35rem;
-  margin-top: 0.75rem;
-  border-top: 1px solid var(--border-lo);
-}
-.card-disclaimer p {
-  font-size: 0.66rem;
-  color: var(--text-lo);
-  line-height: 1.65;
-  text-align: center;
-}
-.card-disclaimer strong { color: var(--text-md); }
+    .signal-label{
+      color:var(--text-dim);
+      font:700 11px var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:6px;
+    }
 
-/* Card official links */
-.card-links {
-  display: flex; gap: 0.4rem; flex-wrap: wrap;
-  padding: 0 1.35rem 1.35rem;
-}
-.card-link {
-  flex: 1; min-width: 0;
-  display: flex; align-items: center; justify-content: center;
-  gap: 4px;
-  padding: 6px 8px;
-  border-radius: var(--r-xs);
-  font-size: 0.65rem; font-weight: 600;
-  text-decoration: none;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border-lo);
-  color: var(--text-md);
-  transition: 0.18s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.card-link:hover { background: rgba(255,255,255,0.08); color: var(--text-hi); border-color: var(--border-hi); }
+    .signal-title{
+      margin:0;
+      font-size:24px;
+      line-height:1.1;
+      letter-spacing:-.02em;
+    }
 
-/* ════ SCROLL INDICATOR ════ */
-.scroll-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.68rem;
-  color: var(--text-xlo);
-  margin-top: 3rem;
-  animation: fadeUp 1s ease both 1.2s;
-}
-.scroll-line {
-  width: 24px; height: 1px;
-  background: var(--text-xlo);
-}
+    .signal-status{
+      min-height:30px;
+      padding:0 10px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      font:700 11px var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      white-space:nowrap;
+      border:1px solid transparent;
+    }
 
-/* ════════════════════════════════════════════════
-   SECTION COMMONS
-════════════════════════════════════════════════ */
-.section {
-  padding: clamp(4rem, 8vw, 6rem) 0;
-}
-.section--alt {
-  background: var(--bg-section);
-  border-top: 1px solid var(--border-lo);
-  border-bottom: 1px solid var(--border-lo);
-}
-.section-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ember-lt);
-  margin-bottom: 1rem;
-}
-.section-label::before {
-  content: '';
-  width: 16px; height: 1.5px;
-  background: var(--ember-lt);
-  opacity: 0.6;
-  display: block;
-}
-.section-title {
-  font-family: 'Lora', serif;
-  font-size: clamp(1.7rem, 3.5vw, 2.6rem);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--text-hi);
-  margin-bottom: 1.25rem;
-  max-width: 640px;
-}
-.section-lead {
-  font-size: clamp(0.95rem, 1.6vw, 1.05rem);
-  color: var(--text-md);
-  line-height: 1.8;
-  max-width: 660px;
-}
-.section-lead + .section-lead { margin-top: 0.85rem; }
-.section-head { margin-bottom: 2.5rem; }
+    .status-fire{background:rgba(255,122,0,.12);border-color:rgba(255,122,0,.22);color:#ffd4b5}
+    .status-flood{background:rgba(78,166,255,.12);border-color:rgba(78,166,255,.22);color:#d9ebff}
+    .status-ok{background:rgba(103,194,126,.10);border-color:rgba(103,194,126,.20);color:#ddf4e3}
+    .status-degraded{background:rgba(255,95,123,.10);border-color:rgba(255,95,123,.18);color:#ffd7df}
 
-/* ════════════════════════════════════════════════
-   HOW IT WORKS
-════════════════════════════════════════════════ */
-.how-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--border-lo);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  border: 1px solid var(--border-lo);
-}
-.how-step {
-  background: var(--bg-surface);
-  padding: 2rem 1.75rem;
-  position: relative;
-}
-.how-step:hover { background: var(--bg-raised); }
-.step-num {
-  font-family: 'Lora', serif;
-  font-size: 3rem;
-  font-weight: 700;
-  color: rgba(255,255,255,0.05);
-  line-height: 1;
-  margin-bottom: 1rem;
-  user-select: none;
-}
-.step-icon { font-size: 1.6rem; margin-bottom: 0.75rem; display: block; }
-.step-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-hi);
-  margin-bottom: 0.6rem;
-  line-height: 1.3;
-}
-.step-body {
-  font-size: 0.85rem;
-  color: var(--text-md);
-  line-height: 1.7;
-}
-.step-note {
-  font-size: 0.68rem;
-  color: var(--text-lo);
-  margin-top: 0.75rem;
-  font-family: 'IBM Plex Mono', monospace;
-}
+    .signal-copy{
+      color:var(--text-dim);
+      font-size:14px;
+      line-height:1.6;
+      margin:0;
+    }
 
-/* ════════════════════════════════════════════════
-   STORY / MISSION
-════════════════════════════════════════════════ */
-.story-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(2rem, 5vw, 5rem);
-  align-items: start;
-}
-.story-copy .section-lead { max-width: none; }
+    .meta-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:auto;
+    }
 
-.story-pillars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.pillar {
-  padding: 1.1rem 1.25rem;
-  border-radius: var(--r-md);
-  background: var(--bg-raised);
-  border: 1px solid var(--border-lo);
-  border-left: 3px solid var(--ember);
-  transition: 0.18s;
-}
-.pillar:hover { border-color: var(--border-hi); border-left-color: var(--ember-lt); }
-.pillar-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-hi);
-  margin-bottom: 0.35rem;
-}
-.pillar-body {
-  font-size: 0.8rem;
-  color: var(--text-md);
-  line-height: 1.65;
-}
+    .chip{
+      min-height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);
+      color:#dce8f4;
+      font:700 11px var(--mono);
+      white-space:nowrap;
+    }
 
-/* Doctrine pills */
-.doctrine-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.doctrine-pill {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border: 1px solid;
-}
-.dp-fire     { background: rgba(232,64,16,0.12); color: var(--ember-lt);    border-color: rgba(232,64,16,0.25); }
-.dp-privacy  { background: rgba(10,110,80,0.12); color: var(--calm-lt);     border-color: rgba(10,110,80,0.25); }
-.dp-resilient{ background: rgba(18,96,168,0.12); color: var(--flood-lt);    border-color: rgba(18,96,168,0.25); }
-.dp-grant    { background: rgba(180,83,9,0.12);  color: var(--warn-lt);     border-color: rgba(180,83,9,0.25); }
+    .warning-note{
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid rgba(255,204,102,.18);
+      background:rgba(255,204,102,.08);
+      color:#ffe9b5;
+      font-size:13px;
+      line-height:1.55;
+    }
 
-/* ════════════════════════════════════════════════
-   DATA SOURCES
-════════════════════════════════════════════════ */
-.api-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.65rem;
-}
-.api-card {
-  padding: 1.1rem 1.2rem;
-  border-radius: var(--r-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-lo);
-  transition: 0.18s;
-}
-.api-card:hover { border-color: var(--border-hi); background: var(--bg-raised); }
-.api-card-top {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-.api-name {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-hi);
-}
-.api-status {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--calm-lt);
-  box-shadow: 0 0 5px var(--calm-lt);
-  flex-shrink: 0;
-}
-.api-status.lag { background: var(--warn-lt); box-shadow: 0 0 5px var(--warn-lt); }
-.api-body {
-  font-size: 0.75rem;
-  color: var(--text-md);
-  line-height: 1.6;
-  margin-bottom: 0.65rem;
-}
-.api-link {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-lo);
-  text-decoration: none;
-  font-family: 'IBM Plex Mono', monospace;
-  transition: 0.15s;
-}
-.api-link:hover { color: var(--flood-lt); }
+    .context-strip{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:10px;
+    }
 
-.api-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-lo);
-  padding: 0 0 0.5rem;
-  border-bottom: 1px solid var(--border-lo);
-  margin-bottom: 0.65rem;
-  grid-column: 1 / -1;
-}
+    .context-card{
+      padding:14px 14px 13px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:var(--surface-2);
+      min-width:0;
+    }
 
-.api-transparency-note {
-  grid-column: 1 / -1;
-  display: flex; align-items: center; gap: 0.65rem;
-  padding: 0.85rem 1rem;
-  border-radius: var(--r-sm);
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--border-lo);
-  font-size: 0.73rem;
-  color: var(--text-lo);
-  margin-top: 0.25rem;
-}
-.api-transparency-note code {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--flood-lt);
-  background: rgba(77,170,232,0.1);
-  padding: 1px 5px;
-  border-radius: 4px;
-}
+    .context-label{
+      color:var(--text-dim);
+      font:700 11px var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:6px;
+    }
 
-/* ════════════════════════════════════════════════
-   PRIVACY SECTION
-════════════════════════════════════════════════ */
-.privacy-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--border-lo);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-  border: 1px solid var(--border-lo);
-  margin-top: 2rem;
-}
-.privacy-item {
-  background: var(--bg-surface);
-  padding: 1.75rem;
-}
-.privacy-item:hover { background: var(--bg-raised); }
-.privacy-icon { font-size: 1.5rem; margin-bottom: 0.75rem; display: block; }
-.privacy-title { font-size: 0.92rem; font-weight: 700; color: var(--text-hi); margin-bottom: 0.45rem; }
-.privacy-body  { font-size: 0.8rem; color: var(--text-md); line-height: 1.65; }
+    .context-value{
+      font-size:17px;
+      font-weight:800;
+      letter-spacing:-.02em;
+      line-height:1.15;
+      margin-bottom:4px;
+    }
 
-/* ════════════════════════════════════════════════
-   DOWNLOAD / GET STARTED
-════════════════════════════════════════════════ */
-.download-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-.dl-card {
-  padding: 1.75rem;
-  border-radius: var(--r-lg);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-lo);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  transition: 0.18s;
-}
-.dl-card:hover { border-color: var(--border-hi); }
-.dl-card.dl-featured {
-  background: linear-gradient(135deg, var(--ember-dim), var(--bg-surface));
-  border-color: rgba(232,64,16,0.28);
-}
-.dl-icon  { font-size: 1.8rem; }
-.dl-title { font-size: 1rem; font-weight: 700; color: var(--text-hi); }
-.dl-body  { font-size: 0.8rem; color: var(--text-md); line-height: 1.6; flex: 1; }
-.dl-actions { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
+    .context-sub{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
 
-/* ════════════════════════════════════════════════
-   FOOTER
-════════════════════════════════════════════════ */
-.footer {
-  border-top: 1px solid var(--border-lo);
-  padding: 2.5rem 0;
-}
-.footer-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-}
-.footer-brand {
-  display: flex; align-items: center; gap: 8px;
-  text-decoration: none;
-}
-.footer-brand-name {
-  font-family: 'Lora', serif;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-hi);
-}
-.footer-brand-sub { font-size: 0.65rem; color: var(--text-lo); }
+    .actions{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:10px;
+    }
 
-.footer-links {
-  display: flex; gap: 0.25rem; flex-wrap: wrap;
-}
-.footer-links a {
-  padding: 5px 11px;
-  border-radius: var(--r-xs);
-  font-size: 0.78rem;
-  color: var(--text-md);
-  text-decoration: none;
-  transition: 0.15s;
-}
-.footer-links a:hover { color: var(--text-hi); background: var(--border-lo); }
+    .btn{
+      min-height:48px;
+      padding:0 14px;
+      border-radius:16px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      border:1px solid var(--line-strong);
+      background:var(--surface-2);
+      color:var(--text);
+      font-weight:800;
+    }
 
-.footer-legal {
-  font-size: 0.66rem;
-  color: var(--text-lo);
-  line-height: 1.65;
-  max-width: 520px;
-  width: 100%;
-  border-top: 1px solid var(--border-lo);
-  padding-top: 1.25rem;
-  margin-top: 0.5rem;
-}
+    .btn.primary{
+      background:linear-gradient(180deg, rgba(255,122,0,.18), rgba(255,122,0,.11));
+      border-color:rgba(255,122,0,.28);
+      color:#fff1e4;
+    }
 
-/* ════════════════════════════════════════════════
-   ANIMATIONS
-════════════════════════════════════════════════ */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.hero-copy > * {
-  animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
-}
-.hero-copy > *:nth-child(1) { animation-delay: 0.05s; }
-.hero-copy > *:nth-child(2) { animation-delay: 0.1s; }
-.hero-copy > *:nth-child(3) { animation-delay: 0.16s; }
-.hero-copy > *:nth-child(4) { animation-delay: 0.22s; }
-.hero-copy > *:nth-child(5) { animation-delay: 0.28s; }
-.hero-copy > *:nth-child(6) { animation-delay: 0.34s; }
+    .map-card{
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+    }
 
-/* Scroll fade-in */
-.reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.65s ease, transform 0.65s ease;
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
+    .map-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      padding:18px 20px 14px;
+      border-bottom:1px solid var(--line);
+    }
 
-/* ════════════════════════════════════════════════
-   RESPONSIVE
-════════════════════════════════════════════════ */
-@media (max-width: 900px) {
-  .hero-grid     { grid-template-columns: 1fr; }
-  .hero-signal-card { max-width: 480px; }
-  .how-grid      { grid-template-columns: 1fr; }
-  .story-grid    { grid-template-columns: 1fr; }
-  .privacy-grid  { grid-template-columns: 1fr; }
-  .download-grid { grid-template-columns: 1fr; }
-  .hero-title    { font-size: 2.1rem; }
-}
-@media (max-width: 640px) {
-  .nav { display: none; }
-  .nav.is-open { display: flex; flex-direction: column; position: absolute; top: 62px; left: 0; right: 0; background: rgba(7,15,24,0.98); border-bottom: 1px solid var(--border-lo); padding: 1rem; gap: 0.25rem; z-index: 999; }
-  .nav-toggle { display: flex; }
-  .nav-map-btn span:not(.live-dot) { display: none; }
-  .card-context { grid-template-columns: 1fr 1fr; }
-}
-</style>
+    .map-head h2{
+      margin:0;
+      font-size:19px;
+      letter-spacing:-.02em;
+    }
+
+    .map-head p{
+      margin:4px 0 0;
+      color:var(--text-dim);
+      font-size:13px;
+      line-height:1.5;
+      max-width:46ch;
+    }
+
+    .map-box{
+      position:relative;
+      min-height:520px;
+      background:
+        radial-gradient(circle at 20% 34%, rgba(78,166,255,.16), transparent 14%),
+        radial-gradient(circle at 39% 50%, rgba(255,122,0,.18), transparent 8%),
+        radial-gradient(circle at 73% 67%, rgba(78,166,255,.17), transparent 16%),
+        linear-gradient(180deg, #0a141d, #111d28);
+      overflow:hidden;
+    }
+
+    .map-grid{
+      position:absolute;
+      inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+      background-size:34px 34px;
+      opacity:.18;
+    }
+
+    .map-island{
+      position:absolute;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      border-radius:999px;
+      color:#dce8f4;
+      font-size:12px;
+      padding:8px 12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.22);
+      backdrop-filter:blur(2px);
+    }
+
+    .map-badge{
+      position:absolute;
+      width:14px;height:14px;border-radius:50%;
+      box-shadow:0 0 0 10px rgba(255,255,255,.04);
+    }
+
+    .map-badge.fire{background:var(--fire)}
+    .map-badge.flood{background:var(--flood)}
+    .map-badge.storm{background:var(--storm)}
+    .map-badge.ok{background:var(--ok)}
+
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      padding:14px 18px 18px;
+      border-top:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+    }
+
+    .section{
+      margin-top:18px;
+    }
+
+    .section-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+    }
+
+    .section-card{
+      padding:20px;
+    }
+
+    .section-title{
+      margin:0 0 10px;
+      font-size:21px;
+      letter-spacing:-.02em;
+    }
+
+    .section-copy{
+      margin:0;
+      color:var(--text-dim);
+      font-size:14px;
+      line-height:1.62;
+    }
+
+    .islands-grid{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .island-card{
+      padding:16px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:var(--surface-2);
+      min-width:0;
+    }
+
+    .island-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+
+    .island-name{
+      margin:0;
+      font-size:19px;
+      font-weight:900;
+      letter-spacing:-.02em;
+      line-height:1.05;
+    }
+
+    .island-copy{
+      color:var(--text-dim);
+      font-size:13px;
+      line-height:1.55;
+      margin:0;
+    }
+
+    .source-strip{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:16px;
+    }
+
+    .source{
+      min-height:32px;
+      padding:0 12px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:#e5eef8;
+      font:700 11px var(--mono);
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .official-links{
+      display:grid;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .official-link{
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:var(--surface-2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--text);
+    }
+
+    .official-link small{
+      display:block;
+      margin-top:3px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .arrow{
+      color:var(--text-dim);
+      font-size:18px;
+      flex:0 0 auto;
+    }
+
+    .footer-note{
+      margin-top:16px;
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.62;
+    }
+
+    .kupuna-block{
+      margin-top:14px;
+      padding:16px;
+      border-radius:18px;
+      border:1px solid rgba(103,194,126,.18);
+      background:rgba(103,194,126,.08);
+      color:#dbf3e1;
+    }
+
+    .kupuna-block strong{
+      display:block;
+      margin-bottom:6px;
+      font-size:14px;
+      color:#e9f7ed;
+    }
+
+    @media (max-width: 1160px){
+      .hero,.section-grid{grid-template-columns:1fr}
+      .map-box{min-height:400px}
+    }
+
+    @media (max-width: 860px){
+      .context-strip,.actions,.islands-grid{grid-template-columns:1fr 1fr}
+    }
+
+    @media (max-width: 720px){
+      .app{padding:14px 12px 28px}
+      .topbar{flex-direction:column;align-items:flex-start}
+      .hero-card{padding:18px}
+      .hero-head{flex-direction:column}
+      .hero-title{font-size:31px;max-width:none}
+      .priority-banner{grid-template-columns:1fr}
+      .context-strip,.actions,.islands-grid{grid-template-columns:1fr}
+      .map-head{padding:16px}
+      .section-card{padding:18px}
+      .brand-title{font-size:24px}
+    }
+  </style>
 </head>
-
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
-
-  <!-- ════════════════════════════════════════════
-       TOPBAR
-  ════════════════════════════════════════════ -->
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a href="./index.html" class="brand-logo" aria-label="Kahu Ola — Guardian of Life">
-        <div class="brand-flame" aria-hidden="true">🔥</div>
-        <div>
-          <span class="brand-name">Kahu Ola</span>
-          <span class="brand-tagline">Guardian of Life · Hawaiʻi</span>
-        </div>
-      </a>
-
-      <nav class="nav" id="primary-nav" aria-label="Primary">
-        <a class="nav-link is-active" href="/" aria-current="page">Home</a>
-        <a class="nav-link" href="/live-map.html">Live Map</a>
-        <a class="nav-link" href="/privacy">Privacy</a>
-        <a class="nav-link" href="/support">Support</a>
-      </nav>
-
-      <a class="nav-map-btn" href="/live-map.html" aria-label="Open live hazard map">
-        <span class="live-dot"></span>
-        <span>Live Map</span>
-      </a>
-
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
-    </div>
-  </header>
-
-  <!-- ════════════════════════════════════════════
-       MAIN
-  ════════════════════════════════════════════ -->
-  <main id="main">
-
-    <!-- ─── HERO ─── -->
-    <section class="hero" aria-label="Hero">
-      <div class="container hero-grid">
-
-        <!-- Left: copy -->
-        <div class="hero-copy">
-          <p class="hero-eyebrow">
-            <span class="eyebrow-dot"></span>
-            Statewide Storm Context · Hawaiʻi
-          </p>
-
-          <h1 class="hero-title">Kahu Ola —<br>Hawaiʻi Hazard Signals</h1>
-          <em class="hero-title-hawaiian">E mālama kākou i kēlā me kēia</em>
-
-          <p class="hero-lead">
-            Built for fast public understanding during high-risk Hawaiʻi events. Kahu Ola keeps <strong>FireSignal as the primary civic layer</strong> while showing flood, wind, and air-quality context during the current Kona storm.
-            <br><br>
-            Use Kahu Ola to understand what is happening quickly — then follow county, state, and federal emergency instructions.
-          </p>
-
-          <div class="hero-cta">
-            <a class="btn btn-primary" href="/live-map.html">
-              <span>🗺</span> Open Live Map
-            </a>
-            <a class="btn btn-outline" href="#download">
-              <span>📱</span> Get the App
-            </a>
-          </div>
-
-          <div class="trust-chips" role="list">
-            <span class="chip" role="listitem">Fire-first by architecture</span>
-            <span class="chip" role="listitem">Cache-first · fail-soft</span>
-            <span class="chip" role="listitem">No accounts · no tracking</span>
-            <span class="chip" role="listitem">Statewide storm-aware shell</span>
-          </div>
-
-          <div class="scroll-hint" aria-hidden="true">
-            <span class="scroll-line"></span>
-            Scroll to learn more
-          </div>
-        </div>
-
-        <!-- Right: Signal Card -->
-        <aside class="hero-signal-card" aria-label="Current hazard signals">
-
-          <!-- Banner -->
-          <div class="card-banner">
-            <div class="card-banner-top">
-              <span class="card-eyebrow">Hawaiʻi Hazard Signals · Kona Storm</span>
-              <div class="card-fresh">
-                <span class="card-fresh-dot"></span>
-                <span id="card-freshness">Updated 2 min ago</span>
-              </div>
-            </div>
-            <h2 class="card-headline" id="card-headline">Statewide Storm /<br>Flood Watch</h2>
-            <p class="card-sub" id="card-sub">A powerful Kona storm is expected to bring prolonged heavy rainfall, flash flooding, thunderstorms, strong winds, and rough seas across Hawaiʻi. Use Kahu Ola for plain-language context and official links.</p>
-            <div class="card-priority-pill" id="priority-pill">
-              <span class="pill-dot"></span>
-              <span id="pill-text">Storm / Flood · Monitoring</span>
-            </div>
-          </div>
-
-          <!-- Signals -->
-          <div class="card-signals">
-
-            <!-- Fire -->
-            <div class="sig-row sig-active" id="sig-fire" role="article" aria-label="Fire signal">
-              <span class="sig-icon">🔥</span>
-              <div class="sig-content">
-                <div class="sig-name" id="fire-name">Fire Signal — Monitoring</div>
-                <div class="sig-detail" id="fire-detail">No default fire signal is asserted here. Fire remains the first-class monitored signal and turns active only when NASA FIRMS confirms a hotspot.</div>
-                <div class="sig-source" id="fire-source">NASA FIRMS · last checked 8 min ago</div>
-              </div>
-              <span class="sig-badge badge-active" id="fire-badge">Monitoring</span>
-            </div>
-
-            <!-- Volcanic -->
-            <div class="sig-row sig-clear" id="sig-volcanic" role="article" aria-label="Volcanic signal">
-              <span class="sig-icon">🌋</span>
-              <div class="sig-content">
-                <div class="sig-name">Volcanic Activity — Clear</div>
-                <div class="sig-detail">No elevated SO₂ or eruptive activity near populated areas.</div>
-                <div class="sig-source">USGS HVO · 15 min ago</div>
-              </div>
-              <span class="sig-badge badge-clear">Clear</span>
-            </div>
-
-            <!-- Flood -->
-            <div class="sig-row sig-clear" id="sig-flood" role="article" aria-label="Flood signal">
-              <span class="sig-icon">🌧</span>
-              <div class="sig-content">
-                <div class="sig-name">Flood Signal — Watch</div>
-                <div class="sig-detail">Flood Watch in effect as Kona storm conditions spread across the state. Heavy rain, stream rises, and low-road flooding are possible.</div>
-                <div class="sig-source">NWS Honolulu · NOAA radar · 4 min ago</div>
-              </div>
-              <span class="sig-badge badge-low">Watch</span>
-            </div>
-
-          </div>
-
-          <!-- Context strip -->
-          <div class="card-context" aria-label="Environmental context">
-            <div class="ctx-item">
-              <span class="ctx-emo">💨</span>
-              <div class="ctx-body">
-                <div class="ctx-lbl">Wind</div>
-                <div class="ctx-val">S to SE 25 mph</div>
-              </div>
-            </div>
-            <div class="ctx-item">
-              <span class="ctx-emo">😷</span>
-              <div class="ctx-body">
-                <div class="ctx-lbl">Air Quality</div>
-                <div class="ctx-val">AQI 67 · Moderate</div>
-              </div>
-            </div>
-            <div class="ctx-item">
-              <span class="ctx-emo">🌡</span>
-              <div class="ctx-body">
-                <div class="ctx-lbl">Temp / Humidity</div>
-                <div class="ctx-val">Humid · storm profile</div>
-              </div>
-            </div>
-            <div class="ctx-item">
-              <span class="ctx-emo">🌊</span>
-              <div class="ctx-body">
-                <div class="ctx-lbl">Ocean</div>
-                <div class="ctx-val">Rough seas possible</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Kupuna block -->
-          <div class="card-kupuna" role="note" aria-label="Safety guidance for vulnerable residents">
-            <div class="kupuna-title">🌿 Kūpuna &amp; Keiki Safety</div>
-            <p class="kupuna-body">
-              Kūpuna, keiki, and residents in flood-prone or low-lying areas should avoid unnecessary travel during heavy rain, monitor official alerts, and prepare essentials if conditions escalate.
-            </p>
-            <p class="kupuna-hawaiian">"E mālama kākou i kēlā me kēia." — Let us care for one another. 🌺</p>
-          </div>
-
-          <!-- Disclaimer -->
-          <div class="card-disclaimer" role="note">
-            <p>
-              Kahu Ola provides situational awareness using data from
-              <strong>NASA, NOAA, NWS, EPA</strong>. Data freshness varies by source and stale data should be labeled clearly. <strong>Kahu Ola does not issue evacuation orders.</strong>
-              Not an official emergency service. In an emergency: <strong>Call 911</strong>.
-            </p>
-          </div>
-
-          <!-- Official links -->
-          <div class="card-links" role="list" aria-label="Official emergency resources">
-            <a class="card-link" href="https://www.mauicounty.gov/70/Emergency-Management-Agency" target="_blank" rel="noopener" role="listitem">🏛 Maui EMA</a>
-            <a class="card-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener" role="listitem">🌺 HIEMA / Alerts</a>
-            <a class="card-link" href="https://www.weather.gov/hfo/" target="_blank" rel="noopener" role="listitem">🌤 NWS HFO</a>
-            <a class="card-link" href="https://ready.hawaii.gov" target="_blank" rel="noopener" role="listitem">📋 Ready HI</a>
-          </div>
-
-        </aside>
-      </div>
-    </section>
-
-    <!-- ─── HOW IT WORKS ─── -->
-    <section class="section section--alt reveal" aria-labelledby="how-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="section-label">How it works</p>
-          <h2 class="section-title" id="how-title">Trusted public hazard data translated fast for Hawaiʻi</h2>
-          <p class="section-lead">
-            Kahu Ola connects multiple public data systems and translates them into plain-language civic signals. During the current Kona storm, flood and wind context rises — but FireSignal remains the primary monitored layer.
-          </p>
-        </div>
-
-        <div class="how-grid" role="list">
-          <div class="how-step" role="listitem">
-            <div class="step-num" aria-hidden="true">01</div>
-            <span class="step-icon" aria-hidden="true">🛰</span>
-            <h3 class="step-title">Government sensors detect</h3>
-            <p class="step-body">
-              NASA FIRMS satellites orbit every 90 minutes. NOAA radar scans continuously.
-              NWS meteorologists issue watches and warnings. These systems never stop.
-            </p>
-            <p class="step-note">NASA · NOAA · NWS · EPA · USGS · NIFC</p>
-          </div>
-          <div class="how-step" role="listitem">
-            <div class="step-num" aria-hidden="true">02</div>
-            <span class="step-icon" aria-hidden="true">⚙️</span>
-            <h3 class="step-title">Aggregator normalizes</h3>
-            <p class="step-body">
-              The Kahu Ola Aggregator ingests, validates, and caches every signal server-side.
-              Raw government data becomes clean, versioned FireSignal · SmokeSignal · Perimeter.
-              Keys never reach the client.
-            </p>
-            <p class="step-note">Via /api/hazards/* · keys server-side only</p>
-          </div>
-          <div class="how-step" role="listitem">
-            <div class="step-num" aria-hidden="true">03</div>
-            <span class="step-icon" aria-hidden="true">📱</span>
-            <h3 class="step-title">You see plain language</h3>
-            <p class="step-body">
-              The app displays honest, timestamped signals with clear freshness labels.
-              Stale data is always marked. Estimated perimeters are never labeled official.
-              Your location never leaves your device.
-            </p>
-            <p class="step-note">Zero PII · Edge geofencing · Fail-soft rendering</p>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark">🔥</div>
+        <div class="brand-text">
+          <div class="brand-kicker">Kahu Ola · Guardian of Life</div>
+          <h1 class="brand-title">Hawaiʻi Hazard Signals</h1>
+          <div class="brand-sub">
+            Fire-first civic hazard awareness for Hawaiʻi, with statewide storm and flood context when conditions change.
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ─── STORY / MISSION ─── -->
-    <section class="section reveal" aria-labelledby="story-title">
-      <div class="container">
-        <div class="story-grid">
-          <div class="story-copy">
-            <p class="section-label">Our mission</p>
-            <h2 class="section-title" id="story-title">Built after Lahaina. Built for Hawaiʻi events that change fast.</h2>
-            <p class="section-lead">
-              The 2023 Lahaina wildfire revealed a devastating gap: advanced sensors were tracking danger while residents still lacked calm, plain-language public understanding. That lesson still matters during a statewide Kona storm, when flood, wind, and rough-sea context change quickly.
-            </p>
-            <p class="section-lead">
-              Kahu Ola was built to close that gap. Not to replace official emergency services — but to translate trusted public data into a civic signal layer that people can understand in seconds before opening official alerts and emergency guidance.
-            </p>
-            <div class="doctrine-pills" role="list" aria-label="Platform principles">
-              <span class="doctrine-pill dp-fire" role="listitem">🔥 Wildfire-First</span>
-              <span class="doctrine-pill dp-privacy" role="listitem">🔒 Privacy-First</span>
-              <span class="doctrine-pill dp-resilient" role="listitem">⚡ Failure-Tolerant</span>
-              <span class="doctrine-pill dp-grant" role="listitem">🏛 Grant-Ready</span>
-            </div>
-          </div>
-
-          <div class="story-pillars" role="list" aria-label="Platform pillars">
-            <div class="pillar" role="listitem">
-              <div class="pillar-title">Engineered for resilience</div>
-              <p class="pillar-body">
-                Cache-first architecture with validated data snapshots. The app renders
-                under 8 distinct failure conditions — including full network loss.
-                A degraded signal is infinitely safer than a blank screen.
-              </p>
-            </div>
-            <div class="pillar" role="listitem">
-              <div class="pillar-title">Privacy as a design principle</div>
-              <p class="pillar-body">
-                Safety should not require surveillance. Proximity awareness is computed
-                on-device. No location history is built, stored, or transmitted — ever.
-                No accounts. No ads. No data selling.
-              </p>
-            </div>
-            <div class="pillar" role="listitem">
-              <div class="pillar-title">Honest about uncertainty</div>
-              <p class="pillar-body">
-                Every signal shows its source and age. Estimated fire perimeters are never
-                labeled official. Stale data is always marked. Kahu Ola never fabricates
-                or inflates hazard severity.
-              </p>
-            </div>
-            <div class="pillar" role="listitem">
-              <div class="pillar-title">Community-driven · Free public service</div>
-              <p class="pillar-body">
-                An independent civic technology initiative — not a government agency,
-                not a commercial product. Built to remain freely accessible statewide, even during high-risk weather events and degraded network conditions.
-              </p>
-            </div>
-          </div>
+      <div class="top-actions">
+        <div class="pill">
+          <span class="dot"></span>
+          <span id="global-freshness-text">Updated just now</span>
         </div>
+        <a class="pill link" href="#official-links">Official links</a>
+        <a class="pill link" href="#map">Map</a>
       </div>
-    </section>
+    </header>
 
-    <!-- ─── PRIVACY ─── -->
-    <section class="section section--alt reveal" aria-labelledby="privacy-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="section-label">Privacy-first architecture</p>
-          <h2 class="section-title" id="privacy-title">Zero PII. Zero tracking.</h2>
-          <p class="section-lead">
-            We do not need to know who you are to help you stay safe.
-            Kahu Ola is designed around a single rule: your data stays on your device.
-          </p>
-        </div>
-
-        <div class="privacy-grid" role="list">
-          <div class="privacy-item" role="listitem">
-            <span class="privacy-icon" aria-hidden="true">🚫</span>
-            <div class="privacy-title">No accounts required</div>
-            <p class="privacy-body">Core safety views are accessible without sign-in. No email. No phone number. No profile.</p>
-          </div>
-          <div class="privacy-item" role="listitem">
-            <span class="privacy-icon" aria-hidden="true">📍</span>
-            <div class="privacy-title">On-device proximity</div>
-            <p class="privacy-body">Hazard distance checks compute locally on your device. Your GPS coordinates never cross the device boundary.</p>
-          </div>
-          <div class="privacy-item" role="listitem">
-            <span class="privacy-icon" aria-hidden="true">🛡</span>
-            <div class="privacy-title">No data selling · No ads</div>
-            <p class="privacy-body">No advertising profiles. No behavioral tracking. No brokered personal data. The platform is ad-free by design.</p>
-          </div>
-        </div>
-
-        <p class="section-lead" style="margin-top:1.5rem; font-size:0.8rem;">
-          Full detail for reviewers and auditors: <a href="/privacy" style="color:var(--flood-lt);">Privacy Policy</a>.
-        </p>
-      </div>
-    </section>
-
-    <!-- ─── DATA SOURCES ─── -->
-    <section class="section reveal" id="data" aria-labelledby="data-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="section-label">Data infrastructure</p>
-          <h2 class="section-title" id="data-title">Public hazard sources. One civic layer.</h2>
-          <p class="section-lead">
-            Kahu Ola aggregates publicly available open data signals. Text-only attribution —
-            no official logos, no implied endorsement.
-            Live map layers route through <code style="font-family:'IBM Plex Mono',monospace;font-size:0.9em;color:var(--flood-lt)">/api/</code> so keys are never exposed to the client.
-          </p>
-        </div>
-
-        <div class="api-grid" role="list" aria-label="Data source list">
-
-          <p class="api-section-label">🔥 Fire &amp; Smoke</p>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">NASA FIRMS</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Near-real-time satellite fire and hotspot detections (VIIRS/MODIS). Global coverage, &lt;15 min latency for Hawaiʻi.</p>
-            <a class="api-link" href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">docs.nasa.gov/firms ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">NOAA HMS</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Satellite smoke and fire analysis for situational context. Smoke plume polygons and density layers.</p>
-            <a class="api-link" href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" rel="noopener">ospo.noaa.gov/hms ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">NIFC WFIGS</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Official wildfire incidents and perimeter boundaries from the National Interagency Fire Center.</p>
-            <a class="api-link" href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">nifc.opendata.arcgis.com ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">NOAA GOES-West</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Rapid geostationary satellite imagery for thermal and smoke context. Visual verification layer.</p>
-            <a class="api-link" href="https://www.goes.noaa.gov/" target="_blank" rel="noopener">goes.noaa.gov ↗</a>
-          </div>
-
-          <p class="api-section-label" style="margin-top:0.5rem">🌧 Weather &amp; Flood</p>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">NWS API</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Official alerts, forecasts, and hazard statements. Red Flag Warnings, Flash Flood Watches, and all NWS CAP products.</p>
-            <a class="api-link" href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">api.weather.gov ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">Synoptic (MesoWest)</span>
-              <span class="api-status lag" title="Elevated latency"></span>
-            </div>
-            <p class="api-body">Local RAWS station telemetry — wind speed, humidity, temperature, fuel moisture. Critical for fire weather assessment.</p>
-            <a class="api-link" href="https://docs.synopticdata.com/services/weather-data-api/" target="_blank" rel="noopener">synopticdata.com ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">USGS Water Services</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Streamflow and gauge observations for watershed conditions. Flash flood context for Hawaiʻi stream corridors.</p>
-            <a class="api-link" href="https://waterservices.usgs.gov/" target="_blank" rel="noopener">waterservices.usgs.gov ↗</a>
-          </div>
-
-          <p class="api-section-label" style="margin-top:0.5rem">😷 Air Quality</p>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">EPA AirNow</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">AQI observations and forecasts for health impacts. PM2.5 and ozone translated into plain civic health guidance.</p>
-            <a class="api-link" href="https://docs.airnowapi.org/" target="_blank" rel="noopener">airnowapi.org ↗</a>
-          </div>
-
-          <p class="api-section-label" style="margin-top:0.5rem">🌋 Earth &amp; Ocean</p>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">USGS Earthquakes</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Authoritative earthquake events (time, magnitude, location). Hawaiʻi seismic activity and tsunami trigger context.</p>
-            <a class="api-link" href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">earthquake.usgs.gov ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">PacIOOS ERDDAP</span>
-              <span class="api-status lag" title="Elevated latency"></span>
-            </div>
-            <p class="api-body">Ocean observations from Pacific Islands buoys, currents, and marine conditions. Coastal safety and high surf context.</p>
-            <a class="api-link" href="https://pacioos.hawaii.edu/data/erddap/" target="_blank" rel="noopener">pacioos.hawaii.edu ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">NOAA Tides &amp; Currents</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Tide levels and coastal station measurements. Coastal flooding and shoreline safety context in a simple civic view.</p>
-            <a class="api-link" href="https://api.tidesandcurrents.noaa.gov/" target="_blank" rel="noopener">tidesandcurrents.noaa.gov ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">Tsunami.gov</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Official tsunami information and public guidance. Kahu Ola routes users to authoritative sources while summarizing context.</p>
-            <a class="api-link" href="https://www.tsunami.gov/" target="_blank" rel="noopener">tsunami.gov ↗</a>
-          </div>
-
-          <p class="api-section-label" style="margin-top:0.5rem">🏛 Reference &amp; Recovery</p>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">FEMA Open Data</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Disaster declarations and recovery datasets. Connects situational awareness to trusted recovery information pathways.</p>
-            <a class="api-link" href="https://www.fema.gov/openfema-data-page" target="_blank" rel="noopener">fema.gov/opendata ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">Hawaiʻi GeoPortal</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Authoritative Hawaiʻi boundaries and reference layers. Grounds hazard signals in familiar local geography.</p>
-            <a class="api-link" href="https://geoportal.hawaii.gov/" target="_blank" rel="noopener">geoportal.hawaii.gov ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">USGS Hazards</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Multi-hazard monitoring references across USGS programs. Anchors civic context with auditable public attribution.</p>
-            <a class="api-link" href="https://www.usgs.gov/natural-hazards" target="_blank" rel="noopener">usgs.gov/natural-hazards ↗</a>
-          </div>
-
-          <div class="api-card" role="listitem">
-            <div class="api-card-top">
-              <span class="api-name">Ready.gov</span>
-              <span class="api-status" title="Operational"></span>
-            </div>
-            <p class="api-body">Preparedness guidance for households and communities. Links hazard signals to practical readiness steps.</p>
-            <a class="api-link" href="https://www.ready.gov/" target="_blank" rel="noopener">ready.gov ↗</a>
-          </div>
-
-          <div class="api-transparency-note" role="note">
-            <span>🔒</span>
-            <span>
-              Transparency: all live map layers route through
-              <code>/api/tiles/*</code> and <code>/api/hazards/*</code>
-              so government API keys are never exposed to the client.
-              No upstream domain is contacted directly by the browser or app.
-            </span>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- ─── DOWNLOAD / GET STARTED ─── -->
-    <section class="section section--alt reveal" id="download" aria-labelledby="download-title">
-      <div class="container">
-        <div class="section-head">
-          <p class="section-label">Get started</p>
-          <h2 class="section-title" id="download-title">Available now on web.<br>Mobile app coming soon.</h2>
-          <p class="section-lead">
-            The live map is available today at <strong>kahuola.org/live-map.html</strong>. This homepage now prioritizes statewide storm awareness while preserving Kahu Ola's wildfire-first architecture.
-          </p>
-        </div>
-
-        <div class="download-grid">
-          <div class="dl-card dl-featured">
-            <span class="dl-icon" aria-hidden="true">🗺</span>
-            <div class="dl-title">Live Map — Available Now</div>
-            <p class="dl-body">
-              Full hazard map with fire hotspots, smoke zones, perimeters,
-              shelters, and layer controls. Works on any browser, no app required.
-            </p>
-            <div class="dl-actions">
-              <a class="btn btn-primary" href="/live-map.html">Open Live Map</a>
-            </div>
-          </div>
-
-          <div class="dl-card">
-            <span class="dl-icon" aria-hidden="true">📱</span>
-            <div class="dl-title">iOS App</div>
-            <p class="dl-body">
-              TestFlight and App Store release in preparation.
-              Native Signal Card · Push alerts · Offline-first architecture.
-            </p>
-            <div class="dl-actions">
-              <a class="btn btn-outline" href="mailto:long@kahuola.org?subject=iOS Waitlist">Join iOS Waitlist</a>
-            </div>
-          </div>
-
-          <div class="dl-card">
-            <span class="dl-icon" aria-hidden="true">🏛</span>
-            <div class="dl-title">For Reviewers &amp; Funders</div>
-            <p class="dl-body">
-              One-click access to compliance documentation, privacy policy,
-              and the public transparency portal.
-            </p>
-            <div class="dl-actions">
-              <a class="btn btn-ghost" href="/privacy">Privacy Policy</a>
-              <a class="btn btn-ghost" href="/support">Support</a>
-              <a class="btn btn-ghost" href="/live-map.html">Transparency Portal</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ════════════════════════════════════════════
-       FOOTER
-  ════════════════════════════════════════════ -->
-  <footer class="footer" role="contentinfo">
-    <div class="container">
-      <div class="footer-inner">
-        <a href="/" class="footer-brand" aria-label="Kahu Ola home">
-          <span aria-hidden="true">🔥</span>
+    <section class="hero">
+      <article class="card hero-card">
+        <div class="hero-head">
           <div>
-            <div class="footer-brand-name">Kahu Ola</div>
-            <div class="footer-brand-sub">Guardian of Life · Hawaiʻi</div>
+            <h2 class="hero-title" id="hero-title">Statewide Storm / Flood Watch</h2>
+            <p class="hero-copy" id="hero-copy">
+              A Kona storm is expected to bring prolonged heavy rainfall, flash flooding,
+              thunderstorms, strong winds, and rough seas across Hawaiʻi. Kahu Ola provides
+              plain-language hazard context while keeping FireSignal as the primary monitored hazard.
+            </p>
           </div>
-        </a>
+          <div class="freshness">
+            <span class="dot"></span>
+            <span id="hero-freshness">Updated 3 min ago</span>
+          </div>
+        </div>
 
-        <nav class="footer-links" aria-label="Footer navigation">
-          <a href="/" aria-current="page">Home</a>
-          <a href="/live-map.html">Live Map</a>
-          <a href="/privacy">Privacy</a>
-          <a href="/support">Support</a>
-          <a href="mailto:long@kahuola.org">Contact</a>
-        </nav>
+        <div class="priority-banner" id="priority-banner">
+          <div>
+            <h3 class="priority-title" id="priority-title">🌧 Storm / Flood — Monitoring</h3>
+            <p class="priority-copy" id="priority-copy">
+              Statewide storm conditions are active. Flood risk may rise quickly in valleys,
+              stream corridors, and low-lying roads. Fire remains continuously monitored.
+            </p>
+          </div>
+          <div class="priority-state" id="priority-state">Monitoring</div>
+        </div>
+
+        <div class="state-switch" aria-label="Mock hazard states">
+          <button class="state-btn" data-state="fire">Fire Active</button>
+          <button class="state-btn" data-state="flood">Flood Watch</button>
+          <button class="state-btn" data-state="monitoring">Monitoring</button>
+          <button class="state-btn" data-state="degraded">Degraded / Stale</button>
+        </div>
+
+        <div class="signal-stack">
+          <section class="signal-card primary">
+            <div class="signal-top">
+              <div>
+                <div class="signal-label">Primary signal</div>
+                <h3 class="signal-title" id="fire-title">🔥 Fire Signal — Monitoring</h3>
+              </div>
+              <div class="signal-status status-fire" id="fire-status">Monitoring</div>
+            </div>
+            <p class="signal-copy" id="fire-copy">
+              No default fire signal is asserted here. Wildfire remains the first-class monitored hazard and activates only when NASA FIRMS confirms hotspots.
+            </p>
+            <div class="meta-row" id="fire-meta">
+              <span class="chip">NASA FIRMS (VIIRS)</span>
+              <span class="chip">Last checked 8 min ago</span>
+              <span class="chip">Confidence labeled when active</span>
+            </div>
+            <div class="warning-note hidden" id="fire-note">
+              ⚠ Satellite signal only — not a confirmed field report. Follow county and NWS instructions for official evacuation orders.
+            </div>
+          </section>
+
+          <section class="signal-card secondary">
+            <div class="signal-top">
+              <div>
+                <div class="signal-label">Secondary signal</div>
+                <h3 class="signal-title" id="flood-title">🌧 Flood Signal — Watch</h3>
+              </div>
+              <div class="signal-status status-flood" id="flood-status">Watch</div>
+            </div>
+            <p class="signal-copy" id="flood-copy">
+              Flood Watch is in effect as Kona storm conditions spread across the state. Heavy rain, stream rises, and road flooding are possible.
+            </p>
+            <div class="meta-row" id="flood-meta">
+              <span class="chip">NWS Honolulu</span>
+              <span class="chip">NOAA radar</span>
+              <span class="chip">Last updated 4 min ago</span>
+            </div>
+          </section>
+
+          <section class="signal-card tertiary">
+            <div class="signal-top">
+              <div>
+                <div class="signal-label">Supplemental statewide signal</div>
+                <h3 class="signal-title" id="volcanic-title">🌋 Volcanic Activity — Clear</h3>
+              </div>
+              <div class="signal-status status-ok" id="volcanic-status">Clear</div>
+            </div>
+            <p class="signal-copy" id="volcanic-copy">
+              No elevated SO₂ or eruptive activity affecting populated areas is shown in this mock state.
+            </p>
+            <div class="meta-row" id="volcanic-meta">
+              <span class="chip">USGS HVO</span>
+              <span class="chip">Last checked 15 min ago</span>
+            </div>
+          </section>
+        </div>
+
+        <div class="context-strip">
+          <div class="context-card">
+            <div class="context-label">Wind</div>
+            <div class="context-value" id="ctx-wind">S to SE 25 mph</div>
+            <div class="context-sub" id="ctx-wind-sub">Gusty statewide storm winds</div>
+          </div>
+          <div class="context-card">
+            <div class="context-label">Air quality</div>
+            <div class="context-value" id="ctx-air">AQI 67 · Moderate</div>
+            <div class="context-sub" id="ctx-air-sub">EPA AirNow public health scale</div>
+          </div>
+          <div class="context-card">
+            <div class="context-label">Temp / humidity</div>
+            <div class="context-value" id="ctx-weather">Humid · storm profile</div>
+            <div class="context-sub" id="ctx-weather-sub">High moisture supports flood concern</div>
+          </div>
+          <div class="context-card">
+            <div class="context-label">Ocean</div>
+            <div class="context-value" id="ctx-ocean">Rough seas possible</div>
+            <div class="context-sub" id="ctx-ocean-sub">PacIOOS / NOAA marine context</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="btn primary" href="live-map.html">View Live Map</a>
+          <a class="btn" href="#official-links">Official Alerts</a>
+          <a class="btn" href="maui.html">Maui Page</a>
+          <a class="btn" href="#">Share</a>
+        </div>
+      </article>
+
+      <aside class="card map-card" id="map">
+        <div class="map-head">
+          <div>
+            <h2>Mini Hawaiʻi map</h2>
+            <p>
+              Map is for situational understanding. Official actions should always follow county, state,
+              and federal emergency guidance.
+            </p>
+          </div>
+          <div class="chip">Map placeholder</div>
+        </div>
+
+        <div class="map-box" aria-label="Mini Hawaiʻi map placeholder">
+          <div class="map-grid"></div>
+
+          <div class="map-island" style="left:8%;top:20%;">Kauaʻi</div>
+          <div class="map-island" style="left:24%;top:38%;">Oʻahu</div>
+          <div class="map-island" style="left:42%;top:49%;">Maui Nui</div>
+          <div class="map-island" style="left:70%;top:62%;">Hawaiʻi Island</div>
+
+          <div class="map-badge flood" id="badge-kauai" style="left:13%;top:29%;"></div>
+          <div class="map-badge flood" id="badge-oahu" style="left:31%;top:47%;"></div>
+          <div class="map-badge fire" id="badge-maui" style="left:46%;top:46%;"></div>
+          <div class="map-badge ok" id="badge-bigisland" style="left:77%;top:70%;"></div>
+        </div>
+
+        <div class="legend">
+          <span class="chip">🔥 Fire hotspot / fire signal</span>
+          <span class="chip">🌧 Flood / storm context</span>
+          <span class="chip">✅ Monitoring / calm</span>
+          <span class="chip">Official links remain primary for action</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-grid">
+        <article class="card section-card">
+          <h3 class="section-title">Statewide island signals</h3>
+          <p class="section-copy">
+            This overview helps residents quickly scan island-level conditions before opening the full map.
+            Wildfire remains the first-class monitored hazard in Kahu Ola’s V4 architecture.
+          </p>
+
+          <div class="islands-grid">
+            <div class="island-card">
+              <div class="island-top">
+                <div>
+                  <h4 class="island-name">Maui</h4>
+                </div>
+                <span class="signal-status status-fire">Monitoring</span>
+              </div>
+              <p class="island-copy" id="island-maui-copy">
+                Fire monitored first. Flood watch context is elevated during statewide Kona storm conditions.
+              </p>
+              <div class="meta-row">
+                <span class="chip">Fire-first local page</span>
+                <span class="chip">Storm context active</span>
+              </div>
+            </div>
+
+            <div class="island-card">
+              <div class="island-top">
+                <div>
+                  <h4 class="island-name">Oʻahu</h4>
+                </div>
+                <span class="signal-status status-flood">Flood watch</span>
+              </div>
+              <p class="island-copy" id="island-oahu-copy">
+                Heavy rain bands and flood context are currently more important than fire signal conditions.
+              </p>
+              <div class="meta-row">
+                <span class="chip">NWS watch</span>
+                <span class="chip">Windy conditions</span>
+              </div>
+            </div>
+
+            <div class="island-card">
+              <div class="island-top">
+                <div>
+                  <h4 class="island-name">Kauaʻi</h4>
+                </div>
+                <span class="signal-status status-flood">Flood watch</span>
+              </div>
+              <p class="island-copy" id="island-kauai-copy">
+                Valley and stream flood context should be monitored closely during prolonged rainfall.
+              </p>
+              <div class="meta-row">
+                <span class="chip">Flood-prone areas</span>
+                <span class="chip">Radar elevated</span>
+              </div>
+            </div>
+
+            <div class="island-card">
+              <div class="island-top">
+                <div>
+                  <h4 class="island-name">Hawaiʻi Island</h4>
+                </div>
+                <span class="signal-status status-ok">Monitoring</span>
+              </div>
+              <p class="island-copy" id="island-bigisland-copy">
+                No active fire signal shown in this mock state. Marine and wind context remain visible.
+              </p>
+              <div class="meta-row">
+                <span class="chip">No active fire</span>
+                <span class="chip">Context visible</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card section-card" id="official-links">
+          <h3 class="section-title">Official links</h3>
+          <p class="section-copy">
+            Kahu Ola supports public understanding. Official emergency directives and evacuation decisions
+            come from county, state, and federal authorities.
+          </p>
+
+          <div class="official-links">
+            <a class="official-link" href="#" target="_blank" rel="noopener noreferrer">
+              <div>
+                <strong>National Weather Service Honolulu</strong>
+                <small>Official watches, warnings, and weather statements for Hawaiʻi</small>
+              </div>
+              <span class="arrow">↗</span>
+            </a>
+
+            <a class="official-link" href="#" target="_blank" rel="noopener noreferrer">
+              <div>
+                <strong>HIEMA</strong>
+                <small>State emergency management information and preparedness guidance</small>
+              </div>
+              <span class="arrow">↗</span>
+            </a>
+
+            <a class="official-link" href="#" target="_blank" rel="noopener noreferrer">
+              <div>
+                <strong>Maui Emergency Management Agency</strong>
+                <small>County emergency instructions, alerts, and local safety information</small>
+              </div>
+              <span class="arrow">↗</span>
+            </a>
+
+            <a class="official-link" href="#" target="_blank" rel="noopener noreferrer">
+              <div>
+                <strong>Ready Hawaiʻi</strong>
+                <small>Preparedness information for severe weather, wildfire, and evacuation readiness</small>
+              </div>
+              <span class="arrow">↗</span>
+            </a>
+          </div>
+
+          <div class="kupuna-block">
+            <strong>Kūpuna & Keiki safety</strong>
+            Kūpuna, keiki, and residents in low-lying or flood-prone areas should avoid unnecessary travel during heavy rain,
+            monitor official alerts, and prepare essential supplies if conditions escalate.
+          </div>
+        </article>
       </div>
+    </section>
 
-      <p class="footer-legal">
-        Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources.
-        It does not represent or replace official emergency services, evacuation orders, or governmental directives.
-        Always follow official county, state, and federal guidance. In an emergency, call 911.
-        Data is provided for situational awareness only. Kahu Ola is not affiliated with FEMA, NASA, NOAA, EPA, NIFC, or any governmental entity.
-      </p>
-    </div>
-  </footer>
+    <section class="section">
+      <div class="section-grid">
+        <article class="card section-card">
+          <h3 class="section-title">Trusted public data sources</h3>
+          <p class="section-copy">
+            Kahu Ola translates scientific and public hazard sources into plain-language civic context.
+            Source attribution and freshness labeling are part of system trust.
+          </p>
 
-<script>
-/* ═══════════════════════════════════════
-   MOBILE NAV TOGGLE
-═══════════════════════════════════════ */
-const navToggle = document.getElementById('nav-toggle');
-const primaryNav = document.getElementById('primary-nav');
-navToggle.addEventListener('click', () => {
-  const open = primaryNav.classList.toggle('is-open');
-  navToggle.setAttribute('aria-expanded', open);
-  navToggle.textContent = open ? '✕' : '☰';
-});
+          <div class="source-strip">
+            <span class="source">NASA FIRMS</span>
+            <span class="source">NOAA</span>
+            <span class="source">NWS</span>
+            <span class="source">EPA AirNow</span>
+            <span class="source">PacIOOS</span>
+            <span class="source">USGS HVO</span>
+            <span class="source">RAWS</span>
+          </div>
+        </article>
 
-/* ═══════════════════════════════════════
-   SCROLL REVEAL
-═══════════════════════════════════════ */
-const revealEls = document.querySelectorAll('.reveal');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('visible');
-      observer.unobserve(e.target);
+        <article class="card section-card">
+          <h3 class="section-title">Civic disclaimer</h3>
+          <p class="section-copy">
+            Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.
+          </p>
+
+          <div class="footer-note">
+            Data refresh timing varies by source. Stale or unavailable data must always be labeled clearly.
+            Kahu Ola does not issue evacuation orders and is not an official emergency service.
+            Always follow county, state, and federal emergency instructions.
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STATES = {
+      fire: {
+        heroTitle: "Wildfire Signal Near Maui",
+        heroCopy:
+          "A satellite fire hotspot has been detected near Lahaina. Kahu Ola keeps FireSignal as the primary monitored hazard and links outward to official emergency sources for action.",
+        heroFreshness: "Updated 2 min ago",
+        priorityTitle: "🔥 Fire Active — Elevated Attention",
+        priorityCopy:
+          "A NASA FIRMS satellite hotspot is active near a populated Maui area. Flood and storm context remain visible, but wildfire becomes the highest-priority signal in this state.",
+        priorityState: "Fire active",
+
+        fireTitle: "🔥 Fire Signal — Active",
+        fireStatusText: "High confidence",
+        fireStatusClass: "status-fire",
+        fireCopy:
+          "Satellite hotspot detected near Lahaina. This is a satellite signal only and not a confirmed field report.",
+        fireMeta: [
+          "NASA FIRMS (VIIRS)",
+          "8 min ago",
+          "High confidence",
+          "FRP 87 MW",
+          "Wind NE 18 mph",
+          "Humidity 34%"
+        ],
+        fireNote:
+          "⚠ Satellite signal only — not a confirmed fire report. Follow Maui EMA and NWS for official evacuation orders.",
+        fireNoteVisible: true,
+
+        floodTitle: "🌧 Flood Signal — Low",
+        floodStatusText: "Low",
+        floodStatusClass: "status-ok",
+        floodCopy:
+          "No active flash flood warning is emphasized in this mock state, but storm context remains available.",
+        floodMeta: [
+          "NOAA radar",
+          "Monitoring",
+          "Last updated 5 min ago"
+        ],
+
+        volcanicTitle: "🌋 Volcanic Activity — Clear",
+        volcanicStatusText: "Clear",
+        volcanicStatusClass: "status-ok",
+        volcanicCopy:
+          "No elevated volcanic activity affecting populated areas is shown in this state.",
+        volcanicMeta: ["USGS HVO", "Last checked 15 min ago"],
+
+        wind: "NE 18 mph",
+        windSub: "Supports wildfire spread context",
+        air: "AQI 74 · Moderate",
+        airSub: "Watch sensitive groups if smoke increases",
+        weather: "89°F · 34%",
+        weatherSub: "Dry profile increases fire concern",
+        ocean: "Marine context normal",
+        oceanSub: "Ocean hazards are not primary in this state",
+
+        globalFreshness: "Updated just now",
+
+        islandMaui:
+          "Fire signal near Lahaina is the most important local condition in this state.",
+        islandOahu:
+          "No primary fire signal shown. Oʻahu remains in monitoring mode.",
+        islandKauai:
+          "No primary fire signal shown. Standard monitoring continues.",
+        islandBigIsland:
+          "No primary fire signal shown. Wind and air context remain visible.",
+
+        map: {
+          kauai: "ok",
+          oahu: "ok",
+          maui: "fire",
+          bigisland: "ok"
+        }
+      },
+
+      flood: {
+        heroTitle: "Statewide Storm / Flood Watch",
+        heroCopy:
+          "A Kona storm is expected to bring prolonged heavy rainfall, flash flooding, thunderstorms, strong winds, and rough seas across Hawaiʻi. Kahu Ola provides plain-language hazard context while keeping FireSignal as the primary monitored hazard.",
+        heroFreshness: "Updated 3 min ago",
+        priorityTitle: "🌧 Storm / Flood — Monitoring",
+        priorityCopy:
+          "Statewide storm conditions are active. Flood risk may rise quickly in valleys, stream corridors, and low-lying roads. Fire remains continuously monitored.",
+        priorityState: "Monitoring",
+
+        fireTitle: "🔥 Fire Signal — Monitoring",
+        fireStatusText: "Monitoring",
+        fireStatusClass: "status-fire",
+        fireCopy:
+          "No default fire signal is asserted here. Wildfire remains the first-class monitored hazard and activates only when NASA FIRMS confirms hotspots.",
+        fireMeta: [
+          "NASA FIRMS (VIIRS)",
+          "Last checked 8 min ago",
+          "Confidence labeled when active"
+        ],
+        fireNote: "",
+        fireNoteVisible: false,
+
+        floodTitle: "🌧 Flood Signal — Watch",
+        floodStatusText: "Watch",
+        floodStatusClass: "status-flood",
+        floodCopy:
+          "Flood Watch is in effect as Kona storm conditions spread across the state. Heavy rain, stream rises, and road flooding are possible.",
+        floodMeta: [
+          "NWS Honolulu",
+          "NOAA radar",
+          "Last updated 4 min ago"
+        ],
+
+        volcanicTitle: "🌋 Volcanic Activity — Clear",
+        volcanicStatusText: "Clear",
+        volcanicStatusClass: "status-ok",
+        volcanicCopy:
+          "No elevated SO₂ or eruptive activity affecting populated areas is shown in this mock state.",
+        volcanicMeta: ["USGS HVO", "Last checked 15 min ago"],
+
+        wind: "S to SE 25 mph",
+        windSub: "Gusty statewide storm winds",
+        air: "AQI 67 · Moderate",
+        airSub: "EPA AirNow public health scale",
+        weather: "Humid · storm profile",
+        weatherSub: "High moisture supports flood concern",
+        ocean: "Rough seas possible",
+        oceanSub: "PacIOOS / NOAA marine context",
+
+        globalFreshness: "Updated just now",
+
+        islandMaui:
+          "Fire monitored first. Flood watch context is elevated during statewide Kona storm conditions.",
+        islandOahu:
+          "Heavy rain bands and flood context are currently more important than fire signal conditions.",
+        islandKauai:
+          "Valley and stream flood context should be monitored closely during prolonged rainfall.",
+        islandBigIsland:
+          "No active fire signal shown in this mock state. Marine and wind context remain visible.",
+
+        map: {
+          kauai: "flood",
+          oahu: "flood",
+          maui: "fire",
+          bigisland: "ok"
+        }
+      },
+
+      monitoring: {
+        heroTitle: "Hawaiʻi Hazard Monitoring",
+        heroCopy:
+          "No major statewide hazard is prioritized in this mock state. Kahu Ola continues fire-first monitoring while surfacing wind, air, and ocean context for Hawaiʻi.",
+        heroFreshness: "Updated 6 min ago",
+        priorityTitle: "✅ Monitoring — Calm Conditions",
+        priorityCopy:
+          "No active primary hazard is elevated in this mock state. Signals remain visible, and official links are always available if conditions change quickly.",
+        priorityState: "Monitoring",
+
+        fireTitle: "🔥 Fire Signal — Clear",
+        fireStatusText: "Clear",
+        fireStatusClass: "status-ok",
+        fireCopy:
+          "No active NASA FIRMS hotspot is being surfaced for populated Hawaiʻi areas in this mock state.",
+        fireMeta: [
+          "NASA FIRMS (VIIRS)",
+          "Last checked 9 min ago",
+          "No active hotspot"
+        ],
+        fireNote: "",
+        fireNoteVisible: false,
+
+        floodTitle: "🌧 Flood Signal — Low",
+        floodStatusText: "Low",
+        floodStatusClass: "status-ok",
+        floodCopy:
+          "No active statewide flood watch is prioritized in this mock state.",
+        floodMeta: [
+          "NWS Honolulu",
+          "NOAA radar",
+          "Last updated 6 min ago"
+        ],
+
+        volcanicTitle: "🌋 Volcanic Activity — Clear",
+        volcanicStatusText: "Clear",
+        volcanicStatusClass: "status-ok",
+        volcanicCopy:
+          "No elevated volcanic activity affecting populated areas is shown in this mock state.",
+        volcanicMeta: ["USGS HVO", "Last checked 16 min ago"],
+
+        wind: "Trades 12 mph",
+        windSub: "Routine statewide wind pattern",
+        air: "AQI 28 · Good",
+        airSub: "Clean air in this mock state",
+        weather: "84°F · 58%",
+        weatherSub: "Routine island weather profile",
+        ocean: "Near normal",
+        oceanSub: "No major marine emphasis",
+
+        globalFreshness: "Updated recently",
+
+        islandMaui:
+          "Monitoring only. No active primary hazard is elevated in this state.",
+        islandOahu:
+          "Monitoring only. No active primary hazard is elevated in this state.",
+        islandKauai:
+          "Monitoring only. No active primary hazard is elevated in this state.",
+        islandBigIsland:
+          "Monitoring only. No active primary hazard is elevated in this state.",
+
+        map: {
+          kauai: "ok",
+          oahu: "ok",
+          maui: "ok",
+          bigisland: "ok"
+        }
+      },
+
+      degraded: {
+        heroTitle: "Hazard Signals Temporarily Degraded",
+        heroCopy:
+          "Some hazard feeds may be stale or temporarily unavailable. Kahu Ola continues to render civic context, but official links should be used immediately while data quality is degraded.",
+        heroFreshness: "Freshness uncertain",
+        priorityTitle: "⚠ Data Quality / Freshness — Degraded",
+        priorityCopy:
+          "At least one source is stale or unavailable in this mock state. Kahu Ola remains visible, but the user should be directed to official sources first.",
+        priorityState: "Degraded",
+
+        fireTitle: "🔥 Fire Signal — Unknown",
+        fireStatusText: "Degraded",
+        fireStatusClass: "status-degraded",
+        fireCopy:
+          "Fire signal freshness cannot be fully confirmed right now. Do not assume conditions are unchanged.",
+        fireMeta: [
+          "NASA FIRMS",
+          "Stale / unavailable",
+          "Last good state 42 min ago"
+        ],
+        fireNote:
+          "⚠ When data is stale or unavailable, Kahu Ola must label it clearly and push users to official sources.",
+        fireNoteVisible: true,
+
+        floodTitle: "🌧 Flood Signal — Uncertain",
+        floodStatusText: "Degraded",
+        floodStatusClass: "status-degraded",
+        floodCopy:
+          "Flood signal freshness cannot be fully confirmed right now. Heavy weather context may still be relevant.",
+        floodMeta: [
+          "NWS / NOAA",
+          "Potentially stale",
+          "Last good state 31 min ago"
+        ],
+
+        volcanicTitle: "🌋 Volcanic Activity — Unknown",
+        volcanicStatusText: "Degraded",
+        volcanicStatusClass: "status-degraded",
+        volcanicCopy:
+          "Volcanic freshness could not be confirmed in this mock state.",
+        volcanicMeta: ["USGS HVO", "Stale / unavailable"],
+
+        wind: "Wind uncertain",
+        windSub: "Context feed may be stale",
+        air: "AQI uncertain",
+        airSub: "Check AirNow directly",
+        weather: "Freshness degraded",
+        weatherSub: "Do not rely on stale context",
+        ocean: "Marine status uncertain",
+        oceanSub: "Check NOAA marine sources",
+
+        globalFreshness: "Freshness uncertain",
+
+        islandMaui:
+          "Source freshness may be degraded. Check Maui EMA and NWS directly.",
+        islandOahu:
+          "Source freshness may be degraded. Official links should be used first.",
+        islandKauai:
+          "Source freshness may be degraded. Official links should be used first.",
+        islandBigIsland:
+          "Source freshness may be degraded. Official links should be used first.",
+
+        map: {
+          kauai: "flood",
+          oahu: "flood",
+          maui: "fire",
+          bigisland: "storm"
+        }
+      }
+    };
+
+    const els = {
+      heroTitle: document.getElementById("hero-title"),
+      heroCopy: document.getElementById("hero-copy"),
+      heroFreshness: document.getElementById("hero-freshness"),
+      priorityTitle: document.getElementById("priority-title"),
+      priorityCopy: document.getElementById("priority-copy"),
+      priorityState: document.getElementById("priority-state"),
+      globalFreshness: document.getElementById("global-freshness-text"),
+
+      fireTitle: document.getElementById("fire-title"),
+      fireStatus: document.getElementById("fire-status"),
+      fireCopy: document.getElementById("fire-copy"),
+      fireMeta: document.getElementById("fire-meta"),
+      fireNote: document.getElementById("fire-note"),
+
+      floodTitle: document.getElementById("flood-title"),
+      floodStatus: document.getElementById("flood-status"),
+      floodCopy: document.getElementById("flood-copy"),
+      floodMeta: document.getElementById("flood-meta"),
+
+      volcanicTitle: document.getElementById("volcanic-title"),
+      volcanicStatus: document.getElementById("volcanic-status"),
+      volcanicCopy: document.getElementById("volcanic-copy"),
+      volcanicMeta: document.getElementById("volcanic-meta"),
+
+      ctxWind: document.getElementById("ctx-wind"),
+      ctxWindSub: document.getElementById("ctx-wind-sub"),
+      ctxAir: document.getElementById("ctx-air"),
+      ctxAirSub: document.getElementById("ctx-air-sub"),
+      ctxWeather: document.getElementById("ctx-weather"),
+      ctxWeatherSub: document.getElementById("ctx-weather-sub"),
+      ctxOcean: document.getElementById("ctx-ocean"),
+      ctxOceanSub: document.getElementById("ctx-ocean-sub"),
+
+      islandMaui: document.getElementById("island-maui-copy"),
+      islandOahu: document.getElementById("island-oahu-copy"),
+      islandKauai: document.getElementById("island-kauai-copy"),
+      islandBigIsland: document.getElementById("island-bigisland-copy"),
+
+      badgeMaui: document.getElementById("badge-maui"),
+      badgeOahu: document.getElementById("badge-oahu"),
+      badgeKauai: document.getElementById("badge-kauai"),
+      badgeBigIsland: document.getElementById("badge-bigisland")
+    };
+
+    function chipRow(items) {
+      return items.map(item => `<span class="chip">${item}</span>`).join("");
     }
-  });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-revealEls.forEach(el => observer.observe(el));
 
-/* ═══════════════════════════════════════
-   HERO SIGNAL CARD — priority logic demo
-   In production: populated from /api/hazards/*
-   Priority: Fire > Flood > Volcanic > Calm (Fire-first architecture; current demo defaults to statewide storm context)
-═══════════════════════════════════════ */
-const DEMO_STATE = {
-  fire:    { active: true,  detail: 'Hotspot near Lahaina · Wind S to SE 25 mph · Humidity 32%', badge: 'Monitoring',   badgeClass: 'badge-active' },
-  volcanic:{ active: false, detail: 'No elevated SO₂ or eruptive activity.',                badge: 'Clear',    badgeClass: 'badge-clear'  },
-  flood:   { active: false, detail: 'No active flash flood warnings for Maui.',              badge: 'Watch',      badgeClass: 'badge-low'    },
-};
-
-function applyPriorityLogic(state) {
-  const { fire, flood, volcanic } = state;
-
-  // Priority: Fire > Flood > Volcanic > Calm (Fire-first architecture; current demo defaults to statewide storm context)
-  if (fire.active) {
-    document.getElementById('card-headline').innerHTML = 'Statewide Storm /<br>Flood Watch';
-    document.getElementById('card-sub').textContent    = 'A powerful Kona storm is expected to bring prolonged heavy rainfall, flash flooding, thunderstorms, strong winds, and rough seas across Hawaiʻi. Use Kahu Ola for plain-language context and official links.';
-    document.getElementById('pill-text').textContent   = 'Storm / Flood · Monitoring';
-    document.getElementById('priority-pill').className = 'card-priority-pill';
-    document.getElementById('sig-fire').className      = 'sig-row sig-active';
-  } else if (flood.active) {
-    document.getElementById('card-headline').innerHTML = 'Flood Warning<br>in Effect';
-    document.getElementById('card-sub').textContent    = 'Heavy rainfall across Maui. Flash flooding possible near streams.';
-    document.getElementById('pill-text').textContent   = 'Flood Signal · Warning';
-    document.getElementById('priority-pill').className = 'card-priority-pill';
-    document.getElementById('priority-pill').style.background = 'rgba(18,96,168,0.22)';
-    document.getElementById('priority-pill').style.color = 'var(--flood-lt)';
-    document.getElementById('priority-pill').style.borderColor = 'rgba(18,96,168,0.38)';
-    document.getElementById('sig-fire').className = 'sig-row sig-clear';
-  } else if (volcanic.active) {
-    document.getElementById('card-headline').innerHTML = 'Volcanic Activity<br>Watch';
-    document.getElementById('card-sub').textContent    = 'Kīlauea SO₂ emissions elevated. Vog advisory for Kona & Kaʻū.';
-    document.getElementById('pill-text').textContent   = 'Volcanic · Watch';
-    document.getElementById('sig-fire').className = 'sig-row sig-clear';
-  } else {
-    document.getElementById('card-headline').innerHTML = 'All Clear —<br>Monitoring';
-    document.getElementById('card-sub').textContent    = 'No active fire, flood, or volcanic hazards detected near Maui.';
-    document.getElementById('pill-text').textContent   = 'Monitoring · All Clear';
-    document.getElementById('priority-pill').style.background = 'rgba(10,110,80,0.2)';
-    document.getElementById('priority-pill').style.color = 'var(--calm-lt)';
-    document.getElementById('priority-pill').style.borderColor = 'rgba(10,110,80,0.3)';
-    document.getElementById('sig-fire').className = 'sig-row sig-clear';
-  }
-
-  // Update signal badges
-  ['fire','volcanic','flood'].forEach(sig => {
-    const s = state[sig];
-    const badge = document.getElementById(`${sig}-badge`);
-    if (badge) {
-      badge.textContent = s.badge;
-      badge.className   = `sig-badge ${s.badgeClass}`;
+    function applyStatus(el, text, className) {
+      el.textContent = text;
+      el.className = "signal-status " + className;
     }
-    const row = document.getElementById(`sig-${sig}`);
-    if (row && sig !== 'fire') {
-      row.className = s.active ? 'sig-row sig-active' : 'sig-row sig-clear';
+
+    function setMapBadge(el, kind) {
+      el.className = "map-badge " + kind;
     }
-  });
-}
 
-applyPriorityLogic(DEMO_STATE);
+    function setState(stateKey) {
+      const s = STATES[stateKey];
+      if (!s) return;
 
-/* Live freshness clock */
-function updateFreshness() {
-  const el = document.getElementById('card-freshness');
-  if (el) el.textContent = 'Updated just now';
-  setTimeout(() => { if (el) el.textContent = 'Updated 1 min ago'; }, 60000);
-}
-updateFreshness();
-</script>
+      els.heroTitle.textContent = s.heroTitle;
+      els.heroCopy.textContent = s.heroCopy;
+      els.heroFreshness.textContent = s.heroFreshness;
+      els.priorityTitle.textContent = s.priorityTitle;
+      els.priorityCopy.textContent = s.priorityCopy;
+      els.priorityState.textContent = s.priorityState;
+      els.globalFreshness.textContent = s.globalFreshness;
+
+      els.fireTitle.textContent = s.fireTitle;
+      applyStatus(els.fireStatus, s.fireStatusText, s.fireStatusClass);
+      els.fireCopy.textContent = s.fireCopy;
+      els.fireMeta.innerHTML = chipRow(s.fireMeta);
+      els.fireNote.textContent = s.fireNote;
+      els.fireNote.classList.toggle("hidden", !s.fireNoteVisible);
+
+      els.floodTitle.textContent = s.floodTitle;
+      applyStatus(els.floodStatus, s.floodStatusText, s.floodStatusClass);
+      els.floodCopy.textContent = s.floodCopy;
+      els.floodMeta.innerHTML = chipRow(s.floodMeta);
+
+      els.volcanicTitle.textContent = s.volcanicTitle;
+      applyStatus(els.volcanicStatus, s.volcanicStatusText, s.volcanicStatusClass);
+      els.volcanicCopy.textContent = s.volcanicCopy;
+      els.volcanicMeta.innerHTML = chipRow(s.volcanicMeta);
+
+      els.ctxWind.textContent = s.wind;
+      els.ctxWindSub.textContent = s.windSub;
+      els.ctxAir.textContent = s.air;
+      els.ctxAirSub.textContent = s.airSub;
+      els.ctxWeather.textContent = s.weather;
+      els.ctxWeatherSub.textContent = s.weatherSub;
+      els.ctxOcean.textContent = s.ocean;
+      els.ctxOceanSub.textContent = s.oceanSub;
+
+      els.islandMaui.textContent = s.islandMaui;
+      els.islandOahu.textContent = s.islandOahu;
+      els.islandKauai.textContent = s.islandKauai;
+      els.islandBigIsland.textContent = s.islandBigIsland;
+
+      setMapBadge(els.badgeKauai, s.map.kauai);
+      setMapBadge(els.badgeOahu, s.map.oahu);
+      setMapBadge(els.badgeMaui, s.map.maui);
+      setMapBadge(els.badgeBigIsland, s.map.bigisland);
+
+      document.querySelectorAll(".state-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.state === stateKey);
+      });
+    }
+
+    document.querySelectorAll(".state-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setState(btn.dataset.state));
+    });
+
+    setState("flood");
+  </script>
 </body>
 </html>
