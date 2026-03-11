@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kahu Ola | Maui Kona Storm Signals</title>
+  <meta name="description" content="Kahu Ola Maui-focused Kona storm hazard signals — rain, flood-prone roads, wind exposure, and community safety for Maui residents." />
+  <link rel="canonical" href="https://kahuola.org/Maui.html" />
+  <meta name="theme-color" content="#070F18" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ════════════════════════════════════════════════
+   DESIGN TOKENS — Kahu Ola V4.7 Dark
+════════════════════════════════════════════════ */
+:root {
+  --bg-void:     #070F18;
+  --bg-deep:     #0B1622;
+  --bg-surface:  #101E2E;
+  --bg-raised:   #152433;
+  --bg-section:  #0D1A28;
+
+  --ember:       #E84010;
+  --ember-lt:    #FF6B35;
+  --ember-dim:   rgba(232,64,16,0.14);
+  --lava:        #C03400;
+
+  --flood:       #1260A8;
+  --flood-lt:    #4DAAE8;
+  --calm:        #0A6E50;
+  --calm-lt:     #20C98A;
+  --warn-lt:     #FCD34D;
+
+  --text-hi:     rgba(255,255,255,0.94);
+  --text-md:     rgba(255,255,255,0.60);
+  --text-lo:     rgba(255,255,255,0.34);
+  --text-xlo:    rgba(255,255,255,0.20);
+
+  --border-hi:   rgba(255,255,255,0.13);
+  --border-lo:   rgba(255,255,255,0.07);
+  --border-xlo:  rgba(255,255,255,0.04);
+
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+
+  --max-w: 1100px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg-void);
+  color: var(--text-hi);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 10% 0%,  rgba(18,96,168,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 35% at 90% 15%,  rgba(232,64,16,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(10,110,80,0.05) 0%, transparent 55%);
+  pointer-events: none; z-index: 0;
+}
+
+* { position: relative; z-index: 1; }
+
+a { color: inherit; text-decoration: none; }
+
+.container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 5vw, 2.5rem);
+}
+
+/* ════ TOPBAR ════ */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  height: 60px;
+  backdrop-filter: blur(24px) saturate(160%);
+  background: rgba(7,15,24,0.92);
+  border-bottom: 1px solid var(--border-lo);
+}
+.topbar-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 5vw, 2.5rem);
+  height: 100%;
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 1.5rem;
+}
+.brand-logo {
+  display: flex; align-items: center; gap: 9px;
+  text-decoration: none; flex-shrink: 0;
+}
+.brand-flame {
+  width: 34px; height: 34px;
+  background: linear-gradient(140deg, var(--lava), var(--ember-lt));
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 0 18px rgba(232,64,16,0.4);
+}
+.brand-name {
+  font-family: 'Lora', serif; font-size: 1.05rem;
+  font-weight: 700; color: var(--text-hi); line-height: 1;
+}
+.brand-sub {
+  font-size: 0.6rem; font-weight: 400; color: var(--text-lo);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  display: block; margin-top: 3px;
+}
+.nav-links {
+  display: flex; align-items: center; gap: 2px;
+}
+.nav-link {
+  padding: 6px 12px; border-radius: var(--r-xs);
+  font-size: 0.82rem; font-weight: 500;
+  color: var(--text-md); text-decoration: none; transition: 0.18s;
+}
+.nav-link:hover { color: var(--text-hi); background: var(--border-lo); }
+.nav-back {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: var(--r-xs);
+  font-size: 0.78rem; font-weight: 500;
+  color: var(--flood-lt); text-decoration: none;
+  border: 1px solid rgba(18,96,168,0.28);
+  background: rgba(18,96,168,0.08); transition: 0.18s;
+}
+.nav-back:hover { background: rgba(18,96,168,0.16); }
+
+/* ════ PAGE HERO ════ */
+.page-hero {
+  padding: clamp(2.5rem, 6vw, 4.5rem) 0 clamp(2rem, 5vw, 3.5rem);
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--flood-lt); margin-bottom: 1rem;
+}
+.hero-kicker::before {
+  content: ''; width: 14px; height: 1.5px;
+  background: var(--flood-lt); opacity: 0.6; display: block;
+}
+.hero-title {
+  font-family: 'Lora', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700; line-height: 1.15;
+  color: var(--text-hi); margin-bottom: 0.5rem;
+}
+.hero-sub {
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  color: var(--text-md); line-height: 1.7;
+  max-width: 600px; margin-bottom: 1.5rem;
+}
+.freshness-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 13px; border-radius: 20px;
+  font-size: 0.68rem; font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(10,110,80,0.14);
+  border: 1px solid rgba(10,110,80,0.28);
+  color: var(--calm-lt);
+}
+.freshness-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--calm-lt);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ════ PRIMARY ALERT CARD ════ */
+.primary-alert {
+  margin-bottom: 1.5rem;
+  padding: 1.35rem 1.5rem;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(18,96,168,0.30);
+  background: linear-gradient(135deg, rgba(18,96,168,0.16) 0%, rgba(11,22,34,0.6) 60%);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.alert-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+.alert-eyebrow {
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--flood-lt);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 0.35rem;
+}
+.alert-title {
+  font-family: 'Lora', serif;
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-weight: 700; line-height: 1.15;
+  color: var(--text-hi);
+}
+.alert-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 13px; border-radius: 20px;
+  font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  background: rgba(18,96,168,0.22);
+  color: var(--flood-lt);
+  border: 1px solid rgba(18,96,168,0.38);
+  white-space: nowrap; flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.alert-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.alert-body {
+  font-size: 0.9rem; color: var(--text-md);
+  line-height: 1.7; margin-bottom: 0.85rem;
+}
+.alert-note {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(252,211,77,0.20);
+  background: rgba(252,211,77,0.07);
+  font-size: 0.75rem; color: var(--warn-lt);
+  line-height: 1.55;
+}
+
+/* ════ SIGNAL STACK ════ */
+.signals-section {
+  margin-bottom: 2rem;
+}
+.section-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.66rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ember-lt); margin-bottom: 1rem;
+}
+.section-label::before {
+  content: ''; width: 14px; height: 1.5px;
+  background: var(--ember-lt); opacity: 0.6; display: block;
+}
+
+.signal-stack {
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+.signal-card {
+  display: flex; align-items: flex-start; gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-lo);
+  transition: 0.18s;
+}
+.signal-card:hover { border-color: var(--border-hi); }
+.signal-card.active {
+  border-color: rgba(18,96,168,0.36);
+  animation: glowFlood 2.5s ease-in-out infinite;
+}
+.signal-card.fire-active {
+  border-color: rgba(232,64,16,0.36);
+  animation: glowFire 2.5s ease-in-out infinite;
+}
+@keyframes glowFlood { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 18px rgba(18,96,168,0.16)} }
+@keyframes glowFire  { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 18px rgba(232,64,16,0.16)} }
+.signal-card.muted { opacity: 0.7; }
+
+.sig-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.sig-body { flex: 1; min-width: 0; }
+.sig-name {
+  font-size: 0.88rem; font-weight: 700;
+  color: var(--text-hi); line-height: 1.3; margin-bottom: 0.3rem;
+}
+.sig-detail {
+  font-size: 0.78rem; color: var(--text-md); line-height: 1.55;
+}
+.sig-chips {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem;
+}
+.sig-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 0.62rem; font-weight: 500;
+  font-family: 'IBM Plex Mono', monospace;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-lo);
+  color: var(--text-lo);
+}
+.sig-badge {
+  font-size: 0.6rem; font-weight: 700;
+  padding: 3px 9px; border-radius: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  flex-shrink: 0; margin-top: 2px;
+  white-space: nowrap; font-family: 'IBM Plex Mono', monospace;
+}
+.badge-monitoring { background: rgba(255,255,255,0.06); color: var(--text-lo); border: 1px solid var(--border-lo); }
+.badge-watch      { background: rgba(18,96,168,0.20); color: var(--flood-lt); border: 1px solid rgba(18,96,168,0.36); }
+.badge-clear      { background: rgba(10,110,80,0.15); color: var(--calm-lt); border: 1px solid rgba(10,110,80,0.28); }
+.badge-moderate   { background: rgba(180,83,9,0.18); color: var(--warn-lt); border: 1px solid rgba(180,83,9,0.32); }
+
+/* ════ CONTEXT GRID ════ */
+.context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+}
+.ctx-card {
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-lo);
+}
+.ctx-emo { font-size: 1.3rem; margin-bottom: 0.4rem; display: block; }
+.ctx-label {
+  font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-lo); margin-bottom: 0.3rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.ctx-value { font-size: 0.92rem; font-weight: 700; color: var(--text-hi); margin-bottom: 0.2rem; }
+.ctx-note  { font-size: 0.72rem; color: var(--text-md); line-height: 1.45; }
+
+/* ════ LOCAL CONTEXT CARDS ════ */
+.local-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+.local-card {
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-lo);
+  transition: 0.18s;
+}
+.local-card:hover { border-color: var(--border-hi); background: var(--bg-raised); }
+.local-icon { font-size: 1.2rem; margin-bottom: 0.5rem; display: block; }
+.local-title {
+  font-size: 0.9rem; font-weight: 700;
+  color: var(--text-hi); margin-bottom: 0.4rem;
+}
+.local-body {
+  font-size: 0.8rem; color: var(--text-md); line-height: 1.6;
+}
+.local-caution {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 0.6rem;
+  font-size: 0.68rem; font-weight: 600;
+  color: var(--warn-lt);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ════ KUPUNA BLOCK ════ */
+.kupuna-block {
+  padding: 1.25rem 1.35rem;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(10,110,80,0.24);
+  background: linear-gradient(135deg, rgba(10,110,80,0.12), rgba(11,22,34,0.5));
+  margin-bottom: 2rem;
+}
+.kupuna-title {
+  font-size: 0.8rem; font-weight: 700;
+  color: var(--calm-lt); margin-bottom: 0.5rem;
+}
+.kupuna-body {
+  font-size: 0.85rem; color: var(--text-md); line-height: 1.7;
+}
+.kupuna-list {
+  margin-top: 0.85rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.kupuna-item {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  font-size: 0.82rem; color: var(--text-md); line-height: 1.6;
+}
+.kupuna-item::before {
+  content: '›';
+  color: var(--calm-lt); font-weight: 700; flex-shrink: 0;
+}
+.kupuna-hawaiian {
+  font-style: italic; font-size: 0.72rem; color: var(--text-lo);
+  margin-top: 0.85rem; padding-top: 0.75rem;
+  border-top: 1px solid var(--border-lo);
+}
+
+/* ════ SECTION DIVIDER ════ */
+.section-block {
+  margin-bottom: 2.5rem;
+}
+.section-title {
+  font-family: 'Lora', serif;
+  font-size: clamp(1.2rem, 2.8vw, 1.7rem);
+  font-weight: 700; line-height: 1.2;
+  color: var(--text-hi); margin-bottom: 1rem;
+}
+
+/* ════ OFFICIAL LINKS ════ */
+.official-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+}
+.official-link {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-lo);
+  text-decoration: none; transition: 0.18s;
+}
+.official-link:hover { border-color: var(--border-hi); background: var(--bg-raised); }
+.official-link-icon { font-size: 1.1rem; flex-shrink: 0; }
+.official-link-body { min-width: 0; }
+.official-link-name {
+  font-size: 0.85rem; font-weight: 700;
+  color: var(--text-hi); line-height: 1.2;
+}
+.official-link-sub {
+  font-size: 0.68rem; color: var(--text-lo); margin-top: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.official-link-arr {
+  margin-left: auto; font-size: 0.8rem;
+  color: var(--flood-lt); flex-shrink: 0;
+}
+
+/* ════ CIVIC DISCLAIMER ════ */
+.disclaimer {
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border-lo);
+  margin-bottom: 2rem;
+}
+.disclaimer p {
+  font-size: 0.75rem; color: var(--text-lo);
+  line-height: 1.7;
+}
+.disclaimer strong { color: var(--text-md); }
+
+/* ════ FOOTER ════ */
+.footer {
+  border-top: 1px solid var(--border-lo);
+  padding: 2rem 0;
+}
+.footer-inner {
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+}
+.footer-brand {
+  font-family: 'Lora', serif; font-size: 0.9rem;
+  font-weight: 700; color: var(--text-hi);
+}
+.footer-sub { font-size: 0.62rem; color: var(--text-lo); margin-top: 2px; }
+.footer-links {
+  display: flex; gap: 0.25rem; flex-wrap: wrap;
+}
+.footer-links a {
+  padding: 5px 10px; border-radius: var(--r-xs);
+  font-size: 0.76rem; color: var(--text-md);
+  text-decoration: none; transition: 0.15s;
+}
+.footer-links a:hover { color: var(--text-hi); background: var(--border-lo); }
+.footer-legal {
+  font-size: 0.64rem; color: var(--text-lo);
+  line-height: 1.65; width: 100%;
+  border-top: 1px solid var(--border-lo);
+  padding-top: 1rem; margin-top: 0.5rem;
+}
+
+/* ════ RESPONSIVE ════ */
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .alert-top { flex-direction: column; gap: 0.6rem; }
+  .local-grid { grid-template-columns: 1fr; }
+  .official-links { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+  <!-- ═══ TOPBAR ═══ -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="./index.html" class="brand-logo" aria-label="Kahu Ola — Guardian of Life">
+        <div class="brand-flame" aria-hidden="true">🔥</div>
+        <div>
+          <span class="brand-name">Kahu Ola</span>
+          <span class="brand-sub">Guardian of Life · Hawaiʻi</span>
+        </div>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link" href="/index.html">Home</a>
+        <a class="nav-link" href="/live-map.html">Live Map</a>
+        <a class="nav-link" href="/privacy">Privacy</a>
+      </nav>
+      <a class="nav-back" href="/live-map.html">🗺 Live Map</a>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ═══ PAGE HERO ═══ -->
+    <section class="page-hero">
+      <div class="container">
+        <p class="hero-kicker">Maui · County Hazard Context</p>
+        <h1 class="hero-title">Maui Kona Storm Signals</h1>
+        <p class="hero-sub">
+          Maui-focused hazard context for rain, flood-prone roads, wind exposure,
+          and community safety during current Kona storm conditions.
+        </p>
+        <div class="freshness-pill">
+          <span class="freshness-dot"></span>
+          Monitoring active
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+
+      <!-- ═══ PRIMARY ALERT CARD ═══ -->
+      <div class="primary-alert" role="article" aria-label="Maui primary alert">
+        <div class="alert-top">
+          <div>
+            <div class="alert-eyebrow">Maui · Primary Storm Context</div>
+            <h2 class="alert-title">🌀 Kona Storm — Flood &amp; Wind Watch</h2>
+          </div>
+          <span class="alert-badge">
+            <span class="alert-dot"></span>
+            Monitoring
+          </span>
+        </div>
+        <p class="alert-body">
+          A Kona storm system is affecting Maui County with prolonged heavy rainfall,
+          elevated flash flood risk in valleys and stream corridors, strong and gusty winds,
+          and rough coastal seas. Wildfire monitoring remains active as a primary signal and
+          will escalate immediately if NASA FIRMS confirms a hotspot.
+        </p>
+        <div class="alert-note" role="note">
+          ⚠ This is situational awareness only. Follow Maui Emergency Management Agency,
+          National Weather Service Honolulu, and county instructions at all times.
+          In an emergency, call 911.
+        </div>
+      </div>
+
+      <!-- ═══ SIGNAL STACK ═══ -->
+      <div class="signals-section section-block">
+        <p class="section-label">Maui Signal Stack</p>
+        <div class="signal-stack" role="list">
+
+          <!-- Fire Signal -->
+          <div class="signal-card muted" role="article" aria-label="Fire signal — Maui">
+            <span class="sig-icon">🔥</span>
+            <div class="sig-body">
+              <div class="sig-name">Fire Signal — Monitoring</div>
+              <div class="sig-detail">
+                No active satellite hotspot on Maui. Wildfire is the primary signal class
+                and escalates immediately when NASA FIRMS confirms a detection.
+                Fuel conditions may shift after storm moisture departs.
+              </div>
+              <div class="sig-chips">
+                <span class="sig-chip">NASA FIRMS (VIIRS)</span>
+                <span class="sig-chip">Monitoring continuous</span>
+              </div>
+            </div>
+            <span class="sig-badge badge-monitoring">Monitoring</span>
+          </div>
+
+          <!-- Flood Signal -->
+          <div class="signal-card active" role="article" aria-label="Flood signal — Maui">
+            <span class="sig-icon">🌧</span>
+            <div class="sig-body">
+              <div class="sig-name">Flood Signal — Watch</div>
+              <div class="sig-detail">
+                Flood Watch is in effect for Maui County. Heavy rainfall from the Kona storm
+                is expected to cause stream rises, ponding on low-lying roads, and possible
+                flash flooding in gulches and valley floors.
+              </div>
+              <div class="sig-chips">
+                <span class="sig-chip">NWS Honolulu</span>
+                <span class="sig-chip">NOAA Radar</span>
+                <span class="sig-chip">PacIOOS context</span>
+              </div>
+            </div>
+            <span class="sig-badge badge-watch">Watch</span>
+          </div>
+
+          <!-- Wind / Rain Context -->
+          <div class="signal-card" role="article" aria-label="Wind and rain context — Maui">
+            <span class="sig-icon">💨</span>
+            <div class="sig-body">
+              <div class="sig-name">Wind / Rain Context — Elevated</div>
+              <div class="sig-detail">
+                Variable winds shifting NE to S, gusting 30–45 mph on exposed ridges.
+                Rainfall totals may reach 2–4 inches across windward slopes.
+                Kona winds can push rainfall unusually deep into typically dry leeward areas.
+              </div>
+              <div class="sig-chips">
+                <span class="sig-chip">RAWS stations</span>
+                <span class="sig-chip">NWS forecast</span>
+                <span class="sig-chip">Synoptic Data</span>
+              </div>
+            </div>
+            <span class="sig-badge badge-moderate">Elevated</span>
+          </div>
+
+          <!-- Air Quality -->
+          <div class="signal-card muted" role="article" aria-label="Air quality — Maui">
+            <span class="sig-icon">😷</span>
+            <div class="sig-body">
+              <div class="sig-name">Air Quality — Moderate</div>
+              <div class="sig-detail">
+                AQI 67 — Moderate. Rain is suppressing any residual smoke or particulate.
+                Sensitive groups should continue to monitor. Post-storm fire conditions
+                may change air quality rapidly if fire ignitions occur.
+              </div>
+              <div class="sig-chips">
+                <span class="sig-chip">EPA AirNow</span>
+                <span class="sig-chip">AQI 67</span>
+              </div>
+            </div>
+            <span class="sig-badge badge-monitoring">Moderate</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ ENVIRONMENTAL CONTEXT ═══ -->
+      <div class="section-block">
+        <p class="section-label">Environmental Context</p>
+        <div class="context-grid">
+          <div class="ctx-card">
+            <span class="ctx-emo">💨</span>
+            <div class="ctx-label">Wind</div>
+            <div class="ctx-value">NE–S 25–38 mph</div>
+            <div class="ctx-note">Gusts to 45 mph on exposed ridges and summits</div>
+          </div>
+          <div class="ctx-card">
+            <span class="ctx-emo">🌧</span>
+            <div class="ctx-label">Rainfall</div>
+            <div class="ctx-value">Heavy — 1–4 in</div>
+            <div class="ctx-note">Persistent rain over windward and valley slopes</div>
+          </div>
+          <div class="ctx-card">
+            <span class="ctx-emo">😷</span>
+            <div class="ctx-label">Air Quality</div>
+            <div class="ctx-value">AQI 67 · Moderate</div>
+            <div class="ctx-note">Rain suppressing particulate; monitor for post-storm shifts</div>
+          </div>
+          <div class="ctx-card">
+            <span class="ctx-emo">🌊</span>
+            <div class="ctx-label">Ocean / Surf</div>
+            <div class="ctx-value">Rough seas</div>
+            <div class="ctx-note">High surf possible on south and west shores; avoid shore breaks</div>
+          </div>
+          <div class="ctx-card">
+            <span class="ctx-emo">🌡</span>
+            <div class="ctx-label">Temp / Humidity</div>
+            <div class="ctx-value">82°F · humid</div>
+            <div class="ctx-note">Elevated humidity — typical Kona storm profile</div>
+          </div>
+          <div class="ctx-card">
+            <span class="ctx-emo">🔥</span>
+            <div class="ctx-label">Fire Weather</div>
+            <div class="ctx-value">Low — rain active</div>
+            <div class="ctx-note">Watch for rapid drying 24–48 hrs post-storm as trade winds return</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MAUI LOCAL CONTEXT ═══ -->
+      <div class="section-block">
+        <p class="section-label">Maui Local Context</p>
+        <h2 class="section-title">Area-specific conditions</h2>
+        <div class="local-grid">
+
+          <div class="local-card">
+            <span class="local-icon">🛣</span>
+            <div class="local-title">Hāna Highway — Gulch Flooding Risk</div>
+            <p class="local-body">
+              Multiple stream crossings along Hāna Highway are susceptible to rapid flooding
+              during heavy Kona rain events. Bridge and road flooding can develop quickly
+              with little visible warning from upstream rainfall.
+            </p>
+            <span class="local-caution">⚠ Road caution advised</span>
+          </div>
+
+          <div class="local-card">
+            <span class="local-icon">🏔</span>
+            <div class="local-title">Windward / Leeward Contrast</div>
+            <p class="local-body">
+              Kona storm patterns reverse typical conditions — rain pushes into normally
+              dry West Maui and leeward areas. Standard fire weather patterns do not apply.
+              Flood risk exists across both windward and leeward slopes.
+            </p>
+            <span class="local-caution">⚠ Atypical rain distribution</span>
+          </div>
+
+          <div class="local-card">
+            <span class="local-icon">🌊</span>
+            <div class="local-title">West Maui Coastal Roads</div>
+            <p class="local-body">
+              Coastal road segments near Lahaina and Kapalua may experience wave wash
+              and reduced visibility during high surf. Avoid low coastal crossings
+              when seas are elevated.
+            </p>
+            <span class="local-caution">⚠ Shore approach caution</span>
+          </div>
+
+          <div class="local-card">
+            <span class="local-icon">🏠</span>
+            <div class="local-title">Emergency Readiness</div>
+            <p class="local-body">
+              Keep emergency supplies accessible. Know your nearest shelter location.
+              Do not wait for an official warning to prepare — monitoring conditions
+              and being ready is the key preparation step.
+            </p>
+          </div>
+
+          <div class="local-card">
+            <span class="local-icon">⚡</span>
+            <div class="local-title">Post-Storm Fire Watch</div>
+            <p class="local-body">
+              After the storm passes and trade winds return, rapid fuel drying may
+              increase fire risk — especially in West Maui and low-elevation grasslands.
+              Kahu Ola wildfire monitoring remains active through this transition.
+            </p>
+          </div>
+
+          <div class="local-card">
+            <span class="local-icon">📡</span>
+            <div class="local-title">Data Freshness Note</div>
+            <p class="local-body">
+              All signals show age at time of display. If a source feed is unavailable,
+              the panel shows a "Monitoring" fallback state — never a blank. Stale data
+              is always labeled as such.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ KUPUNA & KEIKI ═══ -->
+      <div class="kupuna-block section-block" role="note" aria-label="Safety for vulnerable residents">
+        <div class="kupuna-title">🌿 Kūpuna, Keiki &amp; Community Safety</div>
+        <p class="kupuna-body">
+          Children, elderly residents, and people with respiratory or mobility conditions
+          need extra care during Kona storm conditions on Maui.
+        </p>
+        <div class="kupuna-list">
+          <div class="kupuna-item">
+            Avoid unnecessary travel during heavy rain. Flash flooding can develop rapidly in valleys and stream corridors.
+          </div>
+          <div class="kupuna-item">
+            Do not attempt to cross flooded roadways. Even shallow moving water is dangerous for vehicles and pedestrians.
+          </div>
+          <div class="kupuna-item">
+            Check on elderly neighbors and those who may have limited access to emergency alerts.
+          </div>
+          <div class="kupuna-item">
+            Keep medications, documents, and emergency supplies ready in case evacuation is ordered.
+          </div>
+          <div class="kupuna-item">
+            Monitor air quality after storm — smoke from post-storm fires affects keiki and kūpuna first.
+          </div>
+        </div>
+        <p class="kupuna-hawaiian">"E mālama kākou i kēlā me kēia." — Let us care for one another. 🌺</p>
+      </div>
+
+      <!-- ═══ OFFICIAL LINKS ═══ -->
+      <div class="section-block">
+        <p class="section-label">Official Sources</p>
+        <h2 class="section-title">Official Maui &amp; Statewide resources</h2>
+        <div class="official-links" role="list">
+
+          <a class="official-link" href="https://www.mauicounty.gov/70/Emergency-Management-Agency" target="_blank" rel="noopener" role="listitem">
+            <span class="official-link-icon">🏛</span>
+            <div class="official-link-body">
+              <div class="official-link-name">Maui Emergency Management Agency</div>
+              <div class="official-link-sub">mauicounty.gov/ema</div>
+            </div>
+            <span class="official-link-arr">↗</span>
+          </a>
+
+          <a class="official-link" href="https://www.weather.gov/hfo/" target="_blank" rel="noopener" role="listitem">
+            <span class="official-link-icon">🌤</span>
+            <div class="official-link-body">
+              <div class="official-link-name">National Weather Service Honolulu</div>
+              <div class="official-link-sub">weather.gov/hfo</div>
+            </div>
+            <span class="official-link-arr">↗</span>
+          </a>
+
+          <a class="official-link" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener" role="listitem">
+            <span class="official-link-icon">🌺</span>
+            <div class="official-link-body">
+              <div class="official-link-name">Hawaiʻi Emergency Management Agency</div>
+              <div class="official-link-sub">dod.hawaii.gov/hiema</div>
+            </div>
+            <span class="official-link-arr">↗</span>
+          </a>
+
+          <a class="official-link" href="https://ready.hawaii.gov" target="_blank" rel="noopener" role="listitem">
+            <span class="official-link-icon">📋</span>
+            <div class="official-link-body">
+              <div class="official-link-name">Ready Hawaiʻi</div>
+              <div class="official-link-sub">ready.hawaii.gov</div>
+            </div>
+            <span class="official-link-arr">↗</span>
+          </a>
+
+        </div>
+      </div>
+
+      <!-- ═══ CIVIC DISCLAIMER ═══ -->
+      <div class="disclaimer section-block" role="note">
+        <p>
+          <strong>Civic disclaimer:</strong> Kahu Ola provides situational awareness using publicly available data
+          from NASA, NOAA, NWS, EPA, PacIOOS, and USGS.
+          <strong>Kahu Ola does not issue evacuation orders</strong> and is not an official emergency service.
+          All hazard signals are for informational context only. Always follow official county, state, and federal
+          emergency guidance. In an emergency, <strong>call 911</strong>.
+          Data freshness is labeled per signal. If a source is unavailable, a "Monitoring" fallback state is shown —
+          never a blank panel.
+        </p>
+      </div>
+
+    </div><!-- /container -->
+  </main>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <a href="/" style="text-decoration:none;">
+          <div class="footer-brand">Kahu Ola</div>
+          <div class="footer-sub">Guardian of Life · Hawaiʻi · Maui Hazard Signals</div>
+        </a>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="/index.html">Home</a>
+          <a href="/live-map.html">Live Map</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/support">Support</a>
+          <a href="mailto:long@kahuola.org">Contact</a>
+        </nav>
+      </div>
+      <p class="footer-legal">
+        Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources.
+        It does not represent or replace official emergency services, evacuation orders, or governmental directives.
+        Always follow official county, state, and federal guidance.
+        Not affiliated with FEMA, NASA, NOAA, EPA, NIFC, or any governmental entity.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
