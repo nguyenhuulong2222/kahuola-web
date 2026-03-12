@@ -1,7 +1,8 @@
-export async function handleHealth(_request: Request, _env: any): Promise<Response> {
+export async function handleHealth(_request: Request, env: Env): Promise<Response> {
   return Response.json({
     status: "healthy",
-    service: "kahuola-worker",
-    version: "4.8",
+    service: env.PROJECT_NAME ?? "Kahu Ola",
+    version: env.PROJECT_VERSION ?? "4.8",
+    environment: env.ENVIRONMENT ?? "unknown",
   });
 }
