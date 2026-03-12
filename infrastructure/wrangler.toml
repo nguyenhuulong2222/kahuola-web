@@ -1,24 +1,41 @@
-name = "kahuola-worker"
+name = "kahuola-worker-v48"
 main = "../worker/index.ts"
 compatibility_date = "2026-03-01"
-
-workers_dev = true
+workers_dev = false
 
 routes = [
   { pattern = "kahuola.org/api/*", zone_name = "kahuola.org" }
 ]
 
-[vars]
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
 
+[vars]
 PROJECT_NAME = "Kahu Ola"
 PROJECT_VERSION = "4.8"
+REGION = "hawaii"
 
+# Upstream endpoint variables (set per environment)
+NASA_FIRMS_ENDPOINT = ""
+NWS_ALERTS_ENDPOINT = ""
+NOAA_ENDPOINT = ""
+AIRNOW_ENDPOINT = ""
+HMS_ENDPOINT = ""
+PACIOOS_ENDPOINT = ""
+WFIGS_ENDPOINT = ""
+RAWS_ENDPOINT = ""
+USGS_ENDPOINT = ""
+
+[env.dev.vars]
+ENVIRONMENT = "development"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production.vars]
 ENVIRONMENT = "production"
 
-[limits]
-
-cpu_ms = 50
-
 [observability.logs]
-
 enabled = true

@@ -11,8 +11,19 @@ export type Severity =
 
 export type SignalType =
   | "fire"
+  | "smoke"
+  | "perimeter"
   | "flood"
-  | "storm";
+  | "storm"
+  | "radar"
+  | "air_quality"
+  | "ocean"
+  | "volcanic"
+  | "fire_weather";
+
+export type Scope = "local" | "island" | "statewide";
+
+export type DisplayColor = "green" | "blue" | "yellow" | "orange" | "red" | "gray";
 
 export interface SourceMeta {
   provider: string;
@@ -31,16 +42,16 @@ export interface DisplayMeta {
   headline: string;
   summary: string;
   severity: Severity;
-  color: "green" | "blue" | "yellow" | "orange" | "red" | "gray";
+  color: DisplayColor;
   confidence_label?: string;
 }
 
-export interface BaseSignal<TProps = Record<string, unknown>> {
+export interface BaseSignal<TSignalType extends SignalType, TProps = Record<string, unknown>> {
   schema_version: "4.8";
-  signal_type: SignalType;
+  signal_type: TSignalType;
   signal_id: string;
   region: string;
-  scope: "local" | "island" | "statewide";
+  scope: Scope;
   source: SourceMeta;
   freshness: FreshnessMeta;
   display: DisplayMeta;

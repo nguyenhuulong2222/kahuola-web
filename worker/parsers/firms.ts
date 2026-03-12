@@ -1,6 +1,6 @@
 import type { FireSignal, ParseResult } from "../models";
 import { buildFreshnessMeta } from "../services/freshness-engine";
-import { SCHEMA_VERSION, COLORS, TTL } from "../utils/constants";
+import { SCHEMA_VERSION, FRESHNESS_POLICY } from "../utils/constants";
 import { pointGeometry } from "../utils/geojson";
 import { formatAcqDateTimeUtc } from "../utils/time";
 import {
@@ -27,6 +27,12 @@ function severityFromFire(confidence: "low" | "nominal" | "high", frpMw: number 
   return "LOW" as const;
 }
 
+function colorFromSeverity(severity: "LOW" | "WATCH" | "WARNING"): "yellow" | "orange" | "red" {
+  if (severity === "WARNING") return "red";
+  if (severity === "WATCH") return "orange";
+  return "yellow";
+}
+
 export function parseFirmsPayload(payload: unknown, region = "hawaii"): ParseResult<FireSignal> {
   const errors: string[] = [];
   const items: FireSignal[] = [];
@@ -42,6 +48,10 @@ export function parseFirmsPayload(payload: unknown, region = "hawaii"): ParseRes
         const lat = assertNumber(row.latitude, "latitude");
         const lon = assertNumber(row.longitude, "longitude");
 
+        if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+          throw new Error("latitude/longitude out of range");
+        }
+
         const confidence = normalizeConfidence(row.confidence);
         const frp = optionalNumber(row.frp);
         const satellite = optionalString(row.satellite) ?? "VIIRS";
@@ -52,7 +62,7 @@ export function parseFirmsPayload(payload: unknown, region = "hawaii"): ParseRes
 
         const severity = severityFromFire(confidence, frp);
 
-        items.push({
+        const signal: FireSignal = {
           schema_version: SCHEMA_VERSION,
           signal_type: "fire",
           signal_id: `fire_${region}_${i}_${lat}_${lon}`,
@@ -63,15 +73,12 @@ export function parseFirmsPayload(payload: unknown, region = "hawaii"): ParseRes
             product: satellite,
             official: false,
           },
-          freshness: buildFreshnessMeta(acqDatetime, {
-            fresh_seconds: TTL.FIRE_SECONDS,
-            stale_ok_seconds: TTL.FIRE_STALE_OK_SECONDS,
-          }),
+          freshness: buildFreshnessMeta(acqDatetime, FRESHNESS_POLICY.fire),
           display: {
             headline: "Fire signal detected",
             summary: "Satellite hotspot detected in the current hazard snapshot.",
             severity,
-            color: severity === "WARNING" ? COLORS.FIRE : severity === "WATCH" ? "orange" : "yellow",
+            color: colorFromSeverity(severity),
             confidence_label:
               confidence.charAt(0).toUpperCase() + confidence.slice(1),
           },
@@ -89,7 +96,15 @@ export function parseFirmsPayload(payload: unknown, region = "hawaii"): ParseRes
             acq_datetime_utc: acqDatetime,
           },
           geometry: pointGeometry(lon, lat),
-        });
+        };
+
+        // Fail-closed: never emit stale-drop records as operational signals.
+        if (signal.freshness.state === "STALE_DROP") {
+          dropped += 1;
+          continue;
+        }
+
+        items.push(signal);
       } catch (err) {
         dropped += 1;
         errors.push(`FIRMS row ${i} dropped: ${(err as Error).message}`);

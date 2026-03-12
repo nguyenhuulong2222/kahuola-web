@@ -1,6 +1,9 @@
-/**
- * Placeholder for Kahu Ola V4.8
- * File: worker/models/RadarSignal.ts
- * TODO: implement
- */
-export {};
+import type { BaseSignal } from "./Shared";
+
+export interface RadarSignalProps {
+  rain_rate_in_hr: number | null;
+  coverage: "localized" | "broad" | "statewide" | "unknown";
+  sustained_minutes: number | null;
+}
+
+export type RadarSignal = BaseSignal<"radar", RadarSignalProps>;

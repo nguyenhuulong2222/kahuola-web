@@ -8,7 +8,7 @@ export function assertString(value: unknown, field: string): string {
 export function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const v = value.trim();
-  return v ? v : null;
+  return v.length > 0 ? v : null;
 }
 
 export function assertNumber(value: unknown, field: string): number {
@@ -24,7 +24,10 @@ export function optionalNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function assertObject(value: unknown, field: string): Record<string, unknown> {
+export function assertObject(
+  value: unknown,
+  field: string,
+): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`Invalid object field: ${field}`);
   }
@@ -36,4 +39,37 @@ export function assertArray(value: unknown, field: string): unknown[] {
     throw new Error(`Invalid array field: ${field}`);
   }
   return value;
+}
+
+export function assertEnum<T extends string>(
+  value: unknown,
+  field: string,
+  allowed: readonly T[],
+): T {
+  if (typeof value !== "string") {
+    throw new Error(`Invalid enum field: ${field}`);
+  }
+  const normalized = value.trim() as T;
+  if (!allowed.includes(normalized)) {
+    throw new Error(
+      `Invalid enum value for ${field}: ${value}. Expected one of: ${allowed.join(", ")}`,
+    );
+  }
+  return normalized;
+}
+
+export function safeBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+  return fallback;
+}
+
+export function isGeoJsonGeometry(value: unknown): value is GeoJSON.Geometry {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { type?: unknown };
+  return typeof candidate.type === "string";
 }

@@ -16,6 +16,13 @@ export type CacheJson =
   | boolean
   | null;
 
+function normalizeTtl(ttlSeconds: number): number {
+  if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+    throw new Error(`Invalid cache TTL: ${ttlSeconds}`);
+  }
+  return Math.floor(ttlSeconds);
+}
+
 export async function readJsonCache<T>(
   cache: CacheLike,
   key: string,
@@ -27,6 +34,11 @@ export async function readJsonCache<T>(
     return JSON.parse(raw) as T;
   } catch (err) {
     console.error(`Cache JSON parse failed for key=${key}`, err);
+    if (cache.delete) {
+      await cache.delete(key).catch(() => {
+        // best effort cleanup only
+      });
+    }
     return null;
   }
 }
@@ -38,7 +50,7 @@ export async function writeJsonCache<T extends CacheJson>(
   ttlSeconds: number,
 ): Promise<void> {
   await cache.put(key, JSON.stringify(value), {
-    expirationTtl: ttlSeconds,
+    expirationTtl: normalizeTtl(ttlSeconds),
   });
 }
 
@@ -51,10 +63,14 @@ export async function deleteCacheKey(
   }
 }
 
+function normalizeSegment(segment: string): string {
+  return segment.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
 export function cacheKey(
-  scope: "hazard" | "home" | "health",
+  scope: "hazard" | "home" | "health" | "context" | "system",
   type: string,
   region: string,
 ): string {
-  return `${scope}:${type}:${region}`;
+  return `${normalizeSegment(scope)}:${normalizeSegment(type)}:${normalizeSegment(region)}`;
 }

@@ -1,6 +1,9 @@
-/**
- * Placeholder for Kahu Ola V4.8
- * File: worker/models/VolcanicSignal.ts
- * TODO: implement
- */
-export {};
+import type { BaseSignal } from "./Shared";
+
+export interface VolcanicSignalProps {
+  so2_elevated: boolean;
+  vog_advisory: boolean;
+  districts: string[];
+}
+
+export type VolcanicSignal = BaseSignal<"volcanic", VolcanicSignalProps>;

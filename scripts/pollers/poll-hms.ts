@@ -1,6 +1,17 @@
 /**
- * Placeholder for Kahu Ola V4.8
- * File: scripts/pollers/poll-hms.ts
- * TODO: implement
+ * HMS poller starter for Kahu Ola V4.8.
+ * TODO: fetch HMS endpoint and parse with worker/parsers/hms.ts.
  */
-export {};
+export interface PollHmsResult {
+  ok: boolean;
+  count: number;
+  errors: string[];
+}
+
+export async function pollHms(): Promise<PollHmsResult> {
+  return {
+    ok: false,
+    count: 0,
+    errors: ["TODO: pollHms not implemented yet"],
+  };
+}

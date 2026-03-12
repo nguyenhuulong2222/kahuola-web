@@ -1,6 +1,6 @@
 import type { FloodSignal, ParseResult, StormSignal } from "../models";
 import { buildFreshnessMeta } from "../services/freshness-engine";
-import { SCHEMA_VERSION, COLORS, TTL } from "../utils/constants";
+import { SCHEMA_VERSION, FRESHNESS_POLICY, COLORS } from "../utils/constants";
 import {
   assertArray,
   assertObject,
@@ -22,8 +22,18 @@ function alertSeverity(event: string): "WATCH" | "WARNING" | "ELEVATED" | "UNKNO
   const e = event.toLowerCase();
   if (e.includes("warning")) return "WARNING";
   if (e.includes("watch")) return "WATCH";
-  if (e.includes("storm")) return "ELEVATED";
+  if (e.includes("storm") || e.includes("hurricane") || e.includes("wind")) return "ELEVATED";
   return "UNKNOWN";
+}
+
+function isFloodEvent(event: string): boolean {
+  const e = event.toLowerCase();
+  return e.includes("flood");
+}
+
+function isStormEvent(event: string): boolean {
+  const e = event.toLowerCase();
+  return e.includes("storm") || e.includes("hurricane") || e.includes("wind");
 }
 
 export function parseNwsAlerts(
@@ -56,12 +66,11 @@ export function parseNwsAlerts(
         const event = assertString(props.event, "event");
         const sent = optionalString(props.sent) ?? optionalString(props.effective);
         const areaDesc = optionalString(props.areaDesc) ?? "Affected area";
-        const severity = alertSeverity(event);
 
-        if (event.toLowerCase().includes("flood")) {
+        if (isFloodEvent(event)) {
           const level = event.toLowerCase().includes("warning") ? "warning" : "watch";
 
-          floodItems.push({
+          const signal: FloodSignal = {
             schema_version: SCHEMA_VERSION,
             signal_type: "flood",
             signal_id: `flood_${region}_${i}`,
@@ -72,10 +81,7 @@ export function parseNwsAlerts(
               product: "api.weather.gov alerts",
               official: true,
             },
-            freshness: buildFreshnessMeta(sent, {
-              fresh_seconds: TTL.NWS_ALERT_SECONDS,
-              stale_ok_seconds: TTL.NWS_ALERT_STALE_OK_SECONDS,
-            }),
+            freshness: buildFreshnessMeta(sent, FRESHNESS_POLICY.flood),
             display: {
               headline: event,
               summary: `${event} affecting ${areaDesc}.`,
@@ -89,14 +95,22 @@ export function parseNwsAlerts(
               ends: optionalString(props.ends),
               area_desc: areaDesc,
             },
-            geometry: (feature.geometry as GeoJSON.Geometry | null) ?? null,
-          });
-        } else if (
-          event.toLowerCase().includes("storm") ||
-          event.toLowerCase().includes("hurricane") ||
-          event.toLowerCase().includes("wind")
-        ) {
-          stormItems.push({
+            geometry: feature.geometry ?? null,
+          };
+
+          if (signal.freshness.state === "STALE_DROP") {
+            floodDropped += 1;
+            continue;
+          }
+
+          floodItems.push(signal);
+          continue;
+        }
+
+        if (isStormEvent(event)) {
+          const severity = alertSeverity(event);
+
+          const signal: StormSignal = {
             schema_version: SCHEMA_VERSION,
             signal_type: "storm",
             signal_id: `storm_${region}_${i}`,
@@ -107,10 +121,7 @@ export function parseNwsAlerts(
               product: "api.weather.gov alerts",
               official: true,
             },
-            freshness: buildFreshnessMeta(sent, {
-              fresh_seconds: TTL.NWS_ALERT_SECONDS,
-              stale_ok_seconds: TTL.NWS_ALERT_STALE_OK_SECONDS,
-            }),
+            freshness: buildFreshnessMeta(sent, FRESHNESS_POLICY.storm),
             display: {
               headline: event,
               summary: `${event} affecting ${areaDesc}.`,
@@ -124,15 +135,22 @@ export function parseNwsAlerts(
               certainty: optionalString(props.certainty),
               area_desc: areaDesc,
             },
-            geometry: (feature.geometry as GeoJSON.Geometry | null) ?? null,
-          });
+            geometry: feature.geometry ?? null,
+          };
+
+          if (signal.freshness.state === "STALE_DROP") {
+            stormDropped += 1;
+            continue;
+          }
+
+          stormItems.push(signal);
         }
       } catch (err) {
         const msg = `NWS feature ${i} dropped: ${(err as Error).message}`;
-        floodDropped += 1;
-        stormDropped += 1;
         floodErrors.push(msg);
         stormErrors.push(msg);
+        floodDropped += 1;
+        stormDropped += 1;
       }
     }
   } catch (err) {

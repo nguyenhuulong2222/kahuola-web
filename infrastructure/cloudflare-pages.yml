@@ -1,2 +1,14 @@
-# Placeholder Cloudflare Pages configuration for Kahu Ola V4.8
+# Cloudflare Pages build/deploy starter for Kahu Ola V4.8
 version: 1
+project:
+  root_dir: .
+  build:
+    command: ""
+    output_dir: web
+  deployment_configs:
+    preview:
+      environment_variables:
+        WORKER_API_BASE: "/api"
+    production:
+      environment_variables:
+        WORKER_API_BASE: "/api"

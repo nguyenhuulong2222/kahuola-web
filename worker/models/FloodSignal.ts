@@ -6,8 +6,8 @@ export interface FloodSignalProps {
   onset?: string | null;
   ends?: string | null;
   area_desc?: string;
+  rain_rate_in_hr?: number | null;
+  duration_minutes?: number | null;
 }
 
-export type FloodSignal = BaseSignal<FloodSignalProps> & {
-  signal_type: "flood";
-};
+export type FloodSignal = BaseSignal<"flood", FloodSignalProps>;

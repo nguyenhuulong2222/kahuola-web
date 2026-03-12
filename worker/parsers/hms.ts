@@ -1,6 +1,17 @@
 /**
- * Placeholder for Kahu Ola V4.8
- * File: worker/parsers/hms.ts
- * TODO: implement
+ * NOAA HMS parser starter for Kahu Ola V4.8
+ * TODO: implement real SmokeSignal parsing.
  */
-export {};
+export interface HmsParseResult {
+  items: unknown[];
+  dropped: number;
+  errors: string[];
+}
+
+export function parseHmsPayload(_payload: unknown): HmsParseResult {
+  return {
+    items: [],
+    dropped: 0,
+    errors: ["TODO: parseHmsPayload not implemented yet"],
+  };
+}

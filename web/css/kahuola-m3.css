@@ -1,4 +1,108 @@
-/*
- * Placeholder stylesheet for Kahu Ola V4.8
- * File: web/css/kahuola-m3.css
- */
+:root {
+  --bg: #f6f7f4;
+  --ink: #193227;
+  --muted: #4e6a5c;
+  --card: #ffffff;
+  --alert: #9d2f1f;
+  --line: #d9ded7;
+  --btn: #1f4c3a;
+  --btn-ink: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at 10% 0%, #ffffff 0%, var(--bg) 55%);
+  color: var(--ink);
+}
+
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.subtitle,
+.freshness,
+.diagnostics {
+  margin: 0.2rem 0;
+  color: var(--muted);
+}
+
+.hero,
+.stack,
+.trust,
+.banner {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.banner {
+  border-color: #efc1b9;
+  background: #fff1ed;
+  color: var(--alert);
+}
+
+.hidden {
+  display: none;
+}
+
+.stack-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.signal-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fcfdfb;
+}
+
+.signal-card h4 {
+  margin: 0 0 0.4rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  background: var(--btn);
+  color: var(--btn-ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.btn-secondary {
+  background: #2f6e56;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 0.85rem;
+  }
+
+  .topbar h1 {
+    font-size: 1.65rem;
+  }
+}

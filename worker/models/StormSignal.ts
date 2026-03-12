@@ -6,8 +6,8 @@ export interface StormSignalProps {
   severity_text?: string | null;
   certainty?: string | null;
   area_desc?: string;
+  wind_mph?: number | null;
+  gust_mph?: number | null;
 }
 
-export type StormSignal = BaseSignal<StormSignalProps> & {
-  signal_type: "storm";
-};
+export type StormSignal = BaseSignal<"storm", StormSignalProps>;

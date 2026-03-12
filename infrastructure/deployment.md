@@ -1,128 +1,41 @@
-# Kahu Ola Deployment Guide
-
-This document explains how to deploy the Kahu Ola Worker and Web frontend.
-
----
-
-# Architecture
-
-Browser
-↓
-Cloudflare Pages
-↓
-Cloudflare Worker
-↓
-Hazard Data Sources
-
-
-Sources include:
-
-- NASA FIRMS
-- NOAA
-- NWS
-- EPA AirNow
-- PacIOOS
-- USGS
-
----
-
-# Deploy Worker
-
-Install Wrangler
-
-
-npm install -g wrangler
-
-
-Login
-
-
-wrangler login
-
-
-Deploy
-
-
-wrangler deploy
-
-
----
-
-# Deploy Web
-
-The web frontend is deployed using **Cloudflare Pages**.
-
-Directory:
-
-
-/web
-
-
-Build command:
-
-
-none
-
-
-Output directory:
-
-
-web
-
-
----
-
-# Environment Variables
-
-Set using Cloudflare dashboard.
-
-Examples:
-
-
-NASA_FIRMS_ENDPOINT
-NOAA_ENDPOINT
-NWS_ENDPOINT
-AIRNOW_ENDPOINT
-
-
----
-
-# Cache Strategy
-
-The system uses:
-
-• Edge caching  
-• Snapshot caching  
-• Freshness labeling  
-
-Clients never query external APIs directly.
-
----
-
-# Monitoring
-
-Health endpoint:
-
-
-/v1/system/health
-
-
-Diagnostics endpoint:
-
-
-/v1/system/status
-
-
----
-
-# Safety Policy
-
-Kahu Ola is an **information platform**, not an emergency authority.
-
-Users must follow instructions from:
-
-• HIEMA  
-• Maui Emergency Management Agency  
-• National Weather Service  
-
-Always prioritize official guidance.
+# Kahu Ola V4.8 Deployment
+
+## Scope
+This guide covers deployment of:
+- Cloudflare Pages web frontend
+- Cloudflare Worker API boundary
+- Cloudflare KV snapshot cache
+
+## 1. Pre-Deploy Checks
+- Ensure no client-side direct upstream API calls.
+- Ensure stale/degraded labeling paths are active.
+- Ensure parser failures drop invalid records.
+- Verify `worker/index.ts` routes match `/api/v1/*` public contract.
+
+## 2. Worker Deploy
+1. Configure `infrastructure/wrangler.toml` namespace IDs.
+2. Set environment vars for upstream endpoints per environment.
+3. Set secrets using Wrangler/dashboard (never commit values):
+   - `NASA_FIRMS_API_KEY`
+   - `AIRNOW_API_KEY`
+4. Deploy:
+   - `cd worker`
+   - `wrangler deploy --config ..\infrastructure\wrangler.toml --env production`
+
+## 3. Pages Deploy
+- Project root: repository root
+- Build command: none (static web)
+- Output directory: `web`
+- Ensure Pages project proxies `/api/*` to Worker routes.
+
+## 4. Post-Deploy Verification
+- `GET /api/v1/system/health`
+- `GET /api/v1/system/status`
+- `GET /api/v1/home/summary`
+- Validate stale/degraded labeling in UI response fields.
+
+## 5. Safety Constraints
+- Production uses real upstream data only.
+- No mock hazard values in production frontend.
+- Secrets remain in Cloudflare env/secrets only.
+- Homepage remains statewide and fail-safe under degraded upstreams.
