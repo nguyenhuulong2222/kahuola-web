@@ -1,3 +1,7 @@
+Production Rule:
+All live Kahu Ola surfaces must use real upstream hazard data only.
+Mock states are allowed only for development review and must never be shipped to production.
+
 Kahu Ola
 Hawaiʻi Civic Hazard Intelligence Platform
 
