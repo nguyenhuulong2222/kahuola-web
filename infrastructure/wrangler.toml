@@ -1,0 +1,24 @@
+name = "kahuola-worker"
+main = "../worker/index.ts"
+compatibility_date = "2026-03-01"
+
+workers_dev = true
+
+routes = [
+  { pattern = "kahuola.org/api/*", zone_name = "kahuola.org" }
+]
+
+[vars]
+
+PROJECT_NAME = "Kahu Ola"
+PROJECT_VERSION = "4.8"
+
+ENVIRONMENT = "production"
+
+[limits]
+
+cpu_ms = 50
+
+[observability.logs]
+
+enabled = true
