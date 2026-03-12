@@ -500,3 +500,11 @@ See LICENSE file.
 # Contributing
 
 See CONTRIBUTING.md
+
+## For AI Assistants
+
+Start here:
+
+docs/PROJECT_PRIMER.md
+docs/AI_ONBOARDING.md
+docs/architecture/V4_8_MASTER_INDEX.md
