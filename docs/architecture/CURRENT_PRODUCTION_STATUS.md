@@ -39,3 +39,36 @@ PacIOOS — ocean and coastal sensors
 ---
 
 # Core Endpoints
+
+
+/v1/home/summary
+/v1/hazards
+/v1/context
+/v1/health
+
+
+---
+
+# Current Hazard Prioritization
+
+Priority order:
+
+1. Fire
+2. Flood
+3. Storm
+4. Volcanic
+5. Monitoring
+
+---
+
+# Known Limitations
+
+Some upstream sources may temporarily fail.
+
+The system will automatically fall back to stale data states.
+
+---
+
+# Operational Goal
+
+Maintain continuous situational awareness for Hawaiʻi residents during wildfire, storm, flood, and volcanic events.
