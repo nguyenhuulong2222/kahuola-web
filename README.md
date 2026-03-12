@@ -390,3 +390,113 @@ All system behavior must follow the V4 doctrine and associated runtime specifica
    - V4_8_MASTER_INDEX.md
    - CURRENT_PRODUCTION_STATUS.md
    - relevant spec files
+
+# Kahu Ola
+
+Kahu Ola is a civic hazard intelligence platform for Hawaiʻi designed to provide clear, real-time situational awareness during natural hazards such as wildfires, floods, storms, volcanic activity, and air quality events.
+
+The system translates complex satellite and meteorological data into plain-language hazard signals that residents can understand within seconds.
+
+Primary mission:
+
+E mālama pono — protect life through clear information.
+
+---
+
+# Core Principles
+
+Kahu Ola follows a strict architecture doctrine to ensure reliability, transparency, and public trust.
+
+### 1. Client is Stateless
+All hazard data must flow through the Kahu Ola Aggregator.
+
+Browser / mobile apps must never call upstream hazard APIs directly.
+
+
+Client → Cloudflare Worker → Upstream Sources
+
+
+Upstream sources include:
+
+- NASA FIRMS
+- NOAA
+- NWS
+- EPA AirNow
+- USGS
+- PacIOOS
+- RAWS
+- NIFC WFIGS
+
+---
+
+### 2. Real Data Only
+
+Production systems must only use real hazard data.
+
+Mock data is strictly forbidden in production environments.
+
+Mock states are allowed only for development previews.
+
+---
+
+### 3. Graceful Failure
+
+The system must never show a blank screen.
+
+If upstream data fails:
+
+
+FRESH → STALE_OK → STALE_DROP → DEGRADED
+
+
+Users must always see the current system state.
+
+---
+
+### 4. Public Safety Responsibility
+
+Kahu Ola provides **situational awareness only**.
+
+It does not issue evacuation orders.
+
+Official emergency instructions always come from:
+
+- HIEMA
+- County Emergency Management
+- NWS
+
+---
+
+# Documentation Index
+
+All system documentation is organized in:
+
+
+docs/
+
+
+See:
+
+
+docs/architecture/V4_8_MASTER_INDEX.md
+
+
+---
+
+# Production Domains
+
+
+https://kahuola.org
+
+
+---
+
+# License
+
+See LICENSE file.
+
+---
+
+# Contributing
+
+See CONTRIBUTING.md
