@@ -1,24 +1,34 @@
-import { readJsonCache } from "../utils/cache";
+import { readJsonCache, cacheKey } from "../utils/cache";
 
 export async function handleContext(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const region = url.searchParams.get("region") ?? "hawaii";
+  const region = url.searchParams.get("region") ?? env.REGION ?? "hawaii";
 
   if (url.pathname === "/v1/context/flood") {
-    const data = (await readJsonCache<any[]>(env.CACHE, `hazard:flood:${region}`)) ?? [];
+    const items = await readJsonCache<any[]>(
+      env.CACHE,
+      cacheKey("hazard", "flood", region),
+    );
+
     return Response.json({
       status: "ok",
       region,
-      items: data,
+      items: items ?? [],
+      count: items?.length ?? 0,
     });
   }
 
   if (url.pathname === "/v1/context/storm") {
-    const data = (await readJsonCache<any[]>(env.CACHE, `hazard:storm:${region}`)) ?? [];
+    const items = await readJsonCache<any[]>(
+      env.CACHE,
+      cacheKey("hazard", "storm", region),
+    );
+
     return Response.json({
       status: "ok",
       region,
-      items: data,
+      items: items ?? [],
+      count: items?.length ?? 0,
     });
   }
 
