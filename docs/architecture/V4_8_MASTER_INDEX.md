@@ -306,3 +306,113 @@ navigation layer for V4.8 documentation.
 
 This file should be the first document opened by any engineer or AI
 coding agent entering the repo.
+
+# Kahu Ola V4.8 Master Documentation Index
+
+This document defines the complete documentation structure of the Kahu Ola system.
+
+It serves as the primary navigation point for all architectural and operational documentation.
+
+---
+
+# Architecture
+
+docs/architecture/
+
+V4_8_SYSTEM_ARCHITECTURE.md  
+V4_8_CLIENT_ARCHITECTURE.md  
+V4_8_DEPLOYMENT_ARCHITECTURE.md  
+
+---
+
+# Runtime
+
+docs/runtime/
+
+V4_8_RUNTIME_PROTECTION_ADDENDUM.md  
+V4_8_CACHE_STRATEGY.md  
+V4_8_RATE_LIMIT_PROTECTION.md  
+V4_8_DATA_FRESHNESS_POLICY.md  
+
+---
+
+# Hazard Signal System
+
+docs/signals/
+
+V4_8_SIGNAL_MODEL_SPEC.md  
+V4_8_EVENT_PRIORITY_SPEC.md  
+V4_8_MULTI_HAZARD_DECISION_TREE.md  
+V4_8_HAZARD_SIGNAL_PIPELINE.md  
+
+---
+
+# Map System
+
+docs/map/
+
+V4_8_MAP_LAYER_SPEC.md  
+
+---
+
+# UX System
+
+docs/ux/
+
+V4_8_HOMEPAGE_HERO_SPEC.md  
+V4_8_ALERT_COPY_GUIDELINES.md  
+V4_8_MOCK_STATE_SPEC.md  
+V4_8_DEGRADED_STATE_UX_SPEC.md  
+
+---
+
+# Data Sources
+
+docs/data/
+
+V4_8_DATA_SOURCE_REGISTRY.md  
+
+---
+
+# Security
+
+docs/security/
+
+V4_8_SECURITY_MODEL.md  
+V4_8_TRUST_MODEL.md  
+
+---
+
+# Observability
+
+docs/operations/
+
+V4_8_OBSERVABILITY_SPEC.md  
+V4_8_COMMUNITY_INTEGRATION.md  
+
+---
+
+# Visual Architecture
+
+docs/diagrams/
+
+architecture_diagram.svg  
+hazard_pipeline.svg  
+decision_tree.svg  
+
+---
+
+# Operational Docs
+
+docs/operations/
+
+CURRENT_PRODUCTION_STATUS.md  
+PROJECT_HANDOFF_RULES.md  
+
+---
+
+# Decision Records
+
+docs/adr/
+
+ADR_001_PRODUCTION_REAL_DATA_ONLY.md
