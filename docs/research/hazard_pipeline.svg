@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="760" viewBox="0 0 1800 760">
+  <defs>
+    <style>
+      .bg{fill:#08111a}
+      .box{fill:#101b27;stroke:#3a5670;stroke-width:2}
+      .box2{fill:#142232;stroke:#46627d;stroke-width:2}
+      .title{fill:#eef4fb;font:700 34px Arial, sans-serif}
+      .h{fill:#eef4fb;font:700 20px Arial, sans-serif}
+      .t{fill:#c4d2df;font:400 16px Arial, sans-serif}
+      .line{stroke:#8ea3b7;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8ea3b7"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1800" height="760"/>
+  <text x="900" y="56" text-anchor="middle" class="title">Kahu Ola Hazard Signal Pipeline</text>
+  <text x="900" y="88" text-anchor="middle" class="t">Detection → Validation → Signal → Context → Priority → Snapshot → Safe Civic Action</text>
+  <rect class="box" x="40" y="180" rx="24" ry="24" width="210" height="180"/>
+  <text x="145" y="220" text-anchor="middle" class="h">1. Detection</text>
+  <text x="145" y="255" text-anchor="middle" class="t">NASA · NOAA · NWS</text>
+  <text x="145" y="282" text-anchor="middle" class="t">EPA · USGS · PacIOOS</text>
+  <text x="145" y="309" text-anchor="middle" class="t">raw hazard inputs</text>
+  <rect class="box2" x="300" y="180" rx="24" ry="24" width="210" height="180"/>
+  <text x="405" y="220" text-anchor="middle" class="h">2. Polling</text>
+  <text x="405" y="255" text-anchor="middle" class="t">scheduled fetchers</text>
+  <text x="405" y="282" text-anchor="middle" class="t">fast / medium / slow</text>
+  <text x="405" y="309" text-anchor="middle" class="t">source acquisition</text>
+  <rect class="box" x="560" y="180" rx="24" ry="24" width="210" height="180"/>
+  <text x="665" y="220" text-anchor="middle" class="h">3. Validation</text>
+  <text x="665" y="255" text-anchor="middle" class="t">schema checks</text>
+  <text x="665" y="282" text-anchor="middle" class="t">GeoJSON checks</text>
+  <text x="665" y="309" text-anchor="middle" class="t">invalid → DROP</text>
+  <rect class="box2" x="820" y="180" rx="24" ry="24" width="210" height="180"/>
+  <text x="925" y="220" text-anchor="middle" class="h">4. Signal</text>
+  <text x="925" y="255" text-anchor="middle" class="t">FireSignal</text>
+  <text x="925" y="282" text-anchor="middle" class="t">FloodSignal · StormSignal</text>
+  <text x="925" y="309" text-anchor="middle" class="t">normalized model</text>
+  <rect class="box" x="1080" y="180" rx="24" ry="24" width="210" height="180"/>
+  <text x="1185" y="220" text-anchor="middle" class="h">5. Context</text>
+  <text x="1185" y="255" text-anchor="middle" class="t">wind · humidity</text>
+  <text x="1185" y="282" text-anchor="middle" class="t">AQI · rain · proximity</text>
+  <text x="1185" y="309" text-anchor="middle" class="t">official links</text>
+  <rect class="box2" x="1340" y="180" rx="24" ry="24" width="210" height="180"/>
+  <text x="1445" y="220" text-anchor="middle" class="h">6. Priority</text>
+  <text x="1445" y="255" text-anchor="middle" class="t">Degraded</text>
+  <text x="1445" y="282" text-anchor="middle" class="t">Fire > Flood > Storm</text>
+  <text x="1445" y="309" text-anchor="middle" class="t">hero state select</text>
+  <rect class="box" x="610" y="460" rx="24" ry="24" width="260" height="180"/>
+  <text x="740" y="500" text-anchor="middle" class="h">7. Snapshot Cache</text>
+  <text x="740" y="535" text-anchor="middle" class="t">homepage summary</text>
+  <text x="740" y="562" text-anchor="middle" class="t">island summaries</text>
+  <text x="740" y="589" text-anchor="middle" class="t">map bundles</text>
+  <rect class="box2" x="960" y="460" rx="24" ry="24" width="260" height="180"/>
+  <text x="1090" y="500" text-anchor="middle" class="h">8. Worker API</text>
+  <text x="1090" y="535" text-anchor="middle" class="t">cached reads only</text>
+  <text x="1090" y="562" text-anchor="middle" class="t">freshness labels</text>
+  <text x="1090" y="589" text-anchor="middle" class="t">degraded-safe responses</text>
+  <rect class="box" x="1310" y="460" rx="24" ry="24" width="330" height="180"/>
+  <text x="1475" y="500" text-anchor="middle" class="h">9. Civic Action</text>
+  <text x="1475" y="535" text-anchor="middle" class="t">Homepage · Map · App · Watch</text>
+  <text x="1475" y="562" text-anchor="middle" class="t">Official Alerts · HIEMA · Maui EMA</text>
+  <text x="1475" y="589" text-anchor="middle" class="t">No evacuation routing claims</text>
+  <line class="line" x1="250" y1="270" x2="300" y2="270"/>
+  <line class="line" x1="510" y1="270" x2="560" y2="270"/>
+  <line class="line" x1="770" y1="270" x2="820" y2="270"/>
+  <line class="line" x1="1030" y1="270" x2="1080" y2="270"/>
+  <line class="line" x1="1290" y1="270" x2="1340" y2="270"/>
+  <line class="line" x1="1445" y1="360" x2="1090" y2="460"/>
+  <line class="line" x1="1090" y1="640" x2="1310" y2="550"/>
+  <line class="line" x1="930" y1="360" x2="740" y2="460"/>
+</svg>
