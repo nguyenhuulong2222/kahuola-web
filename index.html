@@ -14,7 +14,6 @@
       --bg-2:#0b1620;
       --surface:#101b27;
       --surface-2:#142232;
-      --surface-3:#18293a;
       --line:rgba(255,255,255,.08);
       --line-strong:rgba(255,255,255,.14);
 
@@ -39,9 +38,6 @@
 
       --danger:#ff5e7b;
       --danger-soft:rgba(255,94,123,.10);
-
-      --volcano:#ff9a55;
-      --volcano-soft:rgba(255,154,85,.10);
 
       --radius-xl:28px;
       --radius-lg:22px;
@@ -519,19 +515,14 @@
       background:rgba(255,255,255,.02);
     }
 
-    .section{
-      margin-top:18px;
-    }
-
+    .section{ margin-top:18px; }
     .section-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:18px;
     }
 
-    .section-card{
-      padding:20px;
-    }
+    .section-card{ padding:20px; }
 
     .section-title{
       margin:0 0 10px;
@@ -701,11 +692,9 @@
     @media (max-width: 1120px){
       .hero-grid,.section-grid{grid-template-columns:1fr}
     }
-
     @media (max-width: 860px){
       .context-strip,.islands-grid{grid-template-columns:1fr 1fr}
     }
-
     @media (max-width: 720px){
       .app{padding:14px 12px 28px}
       .topbar{flex-direction:column;align-items:flex-start}
@@ -734,9 +723,9 @@
       </div>
 
       <div class="top-actions">
-        <div class="pill">
+        <div class="pill" id="updatedPill">
           <span class="dot"></span>
-          Updated 4 min ago
+          Loading…
         </div>
         <a class="pill link" href="#official-links">Official Alerts</a>
         <a class="pill link" href="live-map.html">Live Map</a>
@@ -747,26 +736,25 @@
       <article class="card hero-card">
         <div class="hero-head">
           <div>
-            <h2 class="hero-title">Statewide Storm / Flood Watch</h2>
-            <p class="hero-copy">
-              Heavy rain, flood risk, and strong winds are affecting parts of Hawaiʻi. Kahu Ola is monitoring wildfire,
-              flood, storm, air quality, and official alert conditions across the islands.
+            <h2 class="hero-title" id="heroTitle">Loading Hawaiʻi hazard state…</h2>
+            <p class="hero-copy" id="heroCopy">
+              Loading the latest validated statewide hazard snapshot from the Kahu Ola worker.
             </p>
           </div>
-          <div class="freshness">
+          <div class="freshness" id="freshnessChip">
             <span class="dot"></span>
-            Updated 4 min ago
+            snapshot pending
           </div>
         </div>
 
         <div class="hero-banner">
           <div>
-            <h3 class="hero-banner-title">🌧 Kona Storm Conditions Across Hawaiʻi</h3>
-            <p class="hero-banner-copy">
-              Heavy rain, flood risk, and gusty winds may continue for several hours. Official weather alerts may change quickly.
+            <h3 class="hero-banner-title" id="heroBannerTitle">Monitoring statewide conditions</h3>
+            <p class="hero-banner-copy" id="heroBannerCopy">
+              Official watches, warnings, and scientific hazard signals will appear here as soon as the worker returns data.
             </p>
           </div>
-          <div class="state-chip">Monitoring</div>
+          <div class="state-chip" id="stateChip">Loading</div>
         </div>
 
         <div class="hero-actions">
@@ -779,16 +767,14 @@
             <div class="signal-top">
               <div>
                 <div class="signal-label">Signal 1</div>
-                <h3 class="signal-title">🔥 Fire Signal — Monitoring</h3>
+                <h3 class="signal-title" id="fireTitle">🔥 Fire Signal — Monitoring</h3>
               </div>
-              <div class="status ok">Clear</div>
+              <div class="status ok" id="fireStatus">Clear</div>
             </div>
-            <p class="signal-copy">
-              No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.
-            </p>
+            <p class="signal-copy" id="fireCopy">Waiting for validated wildfire signal data.</p>
             <div class="meta-row">
-              <span class="chip">NASA FIRMS</span>
-              <span class="chip">Last checked 8 min ago</span>
+              <span class="chip" id="fireSourceChip">NASA FIRMS</span>
+              <span class="chip" id="fireFreshnessChip">Loading…</span>
             </div>
           </section>
 
@@ -796,17 +782,14 @@
             <div class="signal-top">
               <div>
                 <div class="signal-label">Signal 2</div>
-                <h3 class="signal-title">🌧 Flood Signal — Watch</h3>
+                <h3 class="signal-title" id="floodTitle">🌧 Flood Signal — Loading</h3>
               </div>
-              <div class="status watch">Watch</div>
+              <div class="status watch" id="floodStatus">Loading</div>
             </div>
-            <p class="signal-copy">
-              Flood Watch is active for parts of Maui County. Heavy rain may cause flooding in valleys and low-lying roads.
-            </p>
+            <p class="signal-copy" id="floodCopy">Waiting for validated flood signal data.</p>
             <div class="meta-row">
-              <span class="chip">NWS Honolulu</span>
-              <span class="chip">NOAA Radar</span>
-              <span class="chip">Last checked 4 min ago</span>
+              <span class="chip" id="floodSourceChip">NWS / NOAA</span>
+              <span class="chip" id="floodFreshnessChip">Loading…</span>
             </div>
           </section>
 
@@ -814,17 +797,14 @@
             <div class="signal-top">
               <div>
                 <div class="signal-label">Signal 3</div>
-                <h3 class="signal-title">🌀 Storm Signal — Active</h3>
+                <h3 class="signal-title" id="stormTitle">🌀 Storm Signal — Loading</h3>
               </div>
-              <div class="status watch">Active</div>
+              <div class="status watch" id="stormStatus">Loading</div>
             </div>
-            <p class="signal-copy">
-              Kona storm conditions may continue for several hours with gusty winds and rough seas across parts of the state.
-            </p>
+            <p class="signal-copy" id="stormCopy">Waiting for validated storm signal data.</p>
             <div class="meta-row">
-              <span class="chip">NOAA</span>
-              <span class="chip">NWS</span>
-              <span class="chip">Updated 5 min ago</span>
+              <span class="chip" id="stormSourceChip">NWS Honolulu</span>
+              <span class="chip" id="stormFreshnessChip">Loading…</span>
             </div>
           </section>
 
@@ -832,21 +812,21 @@
             <div class="signal-top">
               <div>
                 <div class="signal-label">Signal 4</div>
-                <h3 class="signal-title">😷 Air Quality — Moderate</h3>
+                <h3 class="signal-title">😷 Air Quality — Context</h3>
               </div>
-              <div class="status moderate">AQI 61</div>
+              <div class="status moderate">Context</div>
             </div>
             <p class="signal-copy">
-              Air quality is currently moderate. Sensitive groups should monitor conditions if smoke or vog increases.
+              Air quality remains a secondary context layer on this homepage. Keep this card calm and non-blocking during Kona storm operations.
             </p>
             <div class="meta-row">
               <span class="chip">EPA AirNow</span>
-              <span class="chip">Last checked 14 min ago</span>
+              <span class="chip">Context layer</span>
             </div>
           </section>
         </div>
 
-        <div class="note">
+        <div class="note" id="systemNote">
           Kahu Ola provides public hazard situational awareness only. Always follow official county, state, and federal emergency instructions.
         </div>
       </article>
@@ -864,16 +844,14 @@
 
         <div class="map-box">
           <div class="map-grid"></div>
-
           <div class="map-island" style="left:8%;top:20%;">Kauaʻi</div>
           <div class="map-island" style="left:24%;top:38%;">Oʻahu</div>
           <div class="map-island" style="left:42%;top:49%;">Maui Nui</div>
           <div class="map-island" style="left:70%;top:62%;">Hawaiʻi Island</div>
-
-          <div class="map-badge ok" style="left:13%;top:29%;"></div>
-          <div class="map-badge ok" style="left:31%;top:47%;"></div>
-          <div class="map-badge flood" style="left:46%;top:46%;"></div>
-          <div class="map-badge ok" style="left:77%;top:70%;"></div>
+          <div class="map-badge ok" id="kauaiBadge" style="left:13%;top:29%;"></div>
+          <div class="map-badge ok" id="oahuBadge" style="left:31%;top:47%;"></div>
+          <div class="map-badge flood" id="mauiBadge" style="left:46%;top:46%;"></div>
+          <div class="map-badge ok" id="bigIslandBadge" style="left:77%;top:70%;"></div>
         </div>
 
         <div class="legend">
@@ -895,24 +873,24 @@
 
           <div class="context-strip">
             <div class="context-card">
-              <div class="context-label">Wind</div>
-              <div class="context-value">SE 24 mph</div>
-              <div class="context-sub">Gusty conditions in exposed areas</div>
+              <div class="context-label">Primary Event</div>
+              <div class="context-value" id="contextPrimary">Loading…</div>
+              <div class="context-sub">Derived from Kahu Ola event priority engine</div>
             </div>
             <div class="context-card">
-              <div class="context-label">AQI</div>
-              <div class="context-value">61 Moderate</div>
-              <div class="context-sub">Source: EPA AirNow</div>
+              <div class="context-label">Fire Count</div>
+              <div class="context-value" id="contextFireCount">—</div>
+              <div class="context-sub">Validated wildfire signals</div>
             </div>
             <div class="context-card">
-              <div class="context-label">Humidity</div>
-              <div class="context-value">78%</div>
-              <div class="context-sub">Moist storm profile statewide</div>
+              <div class="context-label">Flood Count</div>
+              <div class="context-value" id="contextFloodCount">—</div>
+              <div class="context-sub">Validated flood signals</div>
             </div>
             <div class="context-card">
-              <div class="context-label">Ocean</div>
-              <div class="context-value">Rough seas possible</div>
-              <div class="context-sub">PacIOOS / NOAA marine context</div>
+              <div class="context-label">Storm Count</div>
+              <div class="context-value" id="contextStormCount">—</div>
+              <div class="context-sub">Validated storm signals</div>
             </div>
           </div>
         </article>
@@ -927,40 +905,40 @@
             <div class="island-card">
               <div class="island-top">
                 <h4 class="island-name">Maui</h4>
-                <span class="status watch">Watch</span>
+                <span class="status watch" id="mauiStatus">Loading</span>
               </div>
-              <p class="island-copy">
-                Flood Watch active. Heavy rainfall may affect valleys and low roads.
+              <p class="island-copy" id="mauiCopy">
+                Waiting for validated statewide snapshot.
               </p>
             </div>
 
             <div class="island-card">
               <div class="island-top">
                 <h4 class="island-name">Oʻahu</h4>
-                <span class="status ok">Monitoring</span>
+                <span class="status ok" id="oahuStatus">Loading</span>
               </div>
-              <p class="island-copy">
-                No major hazard elevated in the current statewide snapshot.
+              <p class="island-copy" id="oahuCopy">
+                Waiting for validated statewide snapshot.
               </p>
             </div>
 
             <div class="island-card">
               <div class="island-top">
                 <h4 class="island-name">Hawaiʻi Island</h4>
-                <span class="status ok">Monitoring</span>
+                <span class="status ok" id="bigIslandStatus">Loading</span>
               </div>
-              <p class="island-copy">
-                Volcanic and air conditions remain under observation.
+              <p class="island-copy" id="bigIslandCopy">
+                Waiting for validated statewide snapshot.
               </p>
             </div>
 
             <div class="island-card">
               <div class="island-top">
                 <h4 class="island-name">Kauaʻi</h4>
-                <span class="status ok">Monitoring</span>
+                <span class="status ok" id="kauaiStatus">Loading</span>
               </div>
-              <p class="island-copy">
-                Routine hazard monitoring active with no elevated statewide signal.
+              <p class="island-copy" id="kauaiCopy">
+                Waiting for validated statewide snapshot.
               </p>
             </div>
           </div>
@@ -977,7 +955,7 @@
           </p>
 
           <div class="links">
-            <a class="link-card" href="#" target="_blank" rel="noopener noreferrer">
+            <a class="link-card" href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener noreferrer">
               <div>
                 <strong>Hawaiʻi Emergency Management Agency</strong>
                 <small>State emergency information and preparedness guidance</small>
@@ -985,7 +963,7 @@
               <span class="arrow">↗</span>
             </a>
 
-            <a class="link-card" href="#" target="_blank" rel="noopener noreferrer">
+            <a class="link-card" href="https://www.mauicounty.gov/983/Emergency-Management-Agency" target="_blank" rel="noopener noreferrer">
               <div>
                 <strong>Maui Emergency Management Agency</strong>
                 <small>County emergency instructions, alerts, and local safety information</small>
@@ -993,7 +971,7 @@
               <span class="arrow">↗</span>
             </a>
 
-            <a class="link-card" href="#" target="_blank" rel="noopener noreferrer">
+            <a class="link-card" href="https://www.weather.gov/hfo/watchwarn" target="_blank" rel="noopener noreferrer">
               <div>
                 <strong>National Weather Service Honolulu</strong>
                 <small>Official watches, warnings, and weather statements for Hawaiʻi</small>
@@ -1001,7 +979,7 @@
               <span class="arrow">↗</span>
             </a>
 
-            <a class="link-card" href="#" target="_blank" rel="noopener noreferrer">
+            <a class="link-card" href="https://ready.hawaii.gov/" target="_blank" rel="noopener noreferrer">
               <div>
                 <strong>Ready Hawaiʻi</strong>
                 <small>Preparedness and official emergency guidance</small>
@@ -1019,7 +997,7 @@
 
           <div class="community">
             <strong>Kūpuna & Keiki Safety</strong>
-            Kūpuna, keiki, and residents in flood-prone or smoke-affected areas should monitor official alerts and prepare essentials if conditions escalate.
+            Kūpuna, keiki, and residents in flood-prone or storm-affected areas should monitor official alerts and prepare essentials if conditions escalate.
             <br><br>
             <strong>E mālama pono.</strong>
           </div>
@@ -1042,5 +1020,241 @@
       </div>
     </section>
   </div>
+
+  <script>
+    const api = {
+      home: "/api/v1/home/summary",
+      fire: "/api/v1/hazards/fire",
+      flood: "/api/v1/context/flood?region=hawaii",
+      storm: "/api/v1/context/storm?region=hawaii"
+    };
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function setStatus(elId, kind, text) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.className = `status ${kind}`;
+      el.textContent = text;
+    }
+
+    function eventUi(primaryEvent) {
+      switch (primaryEvent) {
+        case "FIRE_ACTIVE":
+          return {
+            chip: "Fire Active",
+            title: "Fire signal detected in Hawaiʻi",
+            copy: "A validated wildfire signal is elevated in the current statewide snapshot. Follow county and NWS guidance for the affected island.",
+            bannerTitle: "🔥 Fire Signal Elevated",
+            bannerCopy: "Fire remains the highest-priority life-safety signal in the current Kahu Ola event model.",
+            stateClass: "rgba(255,122,0,.22)"
+          };
+        case "FLOOD_WARNING":
+          return {
+            chip: "Flood Warning",
+            title: "Flood Warning active",
+            copy: "Flooding may already be occurring or imminent in affected areas. Use official alerts for urgent decisions.",
+            bannerTitle: "🌧 Flood Warning Conditions",
+            bannerCopy: "Validated flood warning conditions are being returned by the worker and should be treated as the primary public hazard frame.",
+            stateClass: "rgba(77,168,255,.22)"
+          };
+        case "FLOOD_WATCH":
+          return {
+            chip: "Flood Watch",
+            title: "Statewide storm / flood watch",
+            copy: "Heavy rain and flood risk are elevated across parts of Hawaiʻi. Monitor official alerts as conditions change.",
+            bannerTitle: "🌧 Kona Storm Conditions Across Hawaiʻi",
+            bannerCopy: "Heavy rain, flood risk, and gusty winds may continue for several hours. Official weather alerts may change quickly.",
+            stateClass: "rgba(77,168,255,.22)"
+          };
+        case "STORM_ACTIVE":
+          return {
+            chip: "Storm Active",
+            title: "Storm conditions affecting Hawaiʻi",
+            copy: "Broad storm conditions remain elevated across the state. Flood and wind context may change quickly.",
+            bannerTitle: "🌀 Active Storm Context",
+            bannerCopy: "Kahu Ola is using storm context as the primary statewide civic signal at this time.",
+            stateClass: "rgba(77,168,255,.22)"
+          };
+        case "DEGRADED":
+          return {
+            chip: "Degraded",
+            title: "Hazard data temporarily limited",
+            copy: "Some hazard data sources are delayed. Kahu Ola is showing the safest available civic fallback and official resource links.",
+            bannerTitle: "⚠ Limited Hazard Data",
+            bannerCopy: "When data freshness is reduced, Kahu Ola prefers transparent degraded rendering over false confidence.",
+            stateClass: "rgba(255,94,123,.22)"
+          };
+        default:
+          return {
+            chip: "Monitoring",
+            title: "Hawaiʻi hazard monitoring",
+            copy: "No major hazard is elevated in the current validated statewide snapshot.",
+            bannerTitle: "✅ Monitoring Statewide Conditions",
+            bannerCopy: "Kahu Ola is actively checking fire, flood, storm, and other public hazard signals across Hawaiʻi.",
+            stateClass: "rgba(103,194,126,.22)"
+          };
+      }
+    }
+
+    function relativeLabel(iso) {
+      if (!iso) return "Updated recently";
+      const t = new Date(iso).getTime();
+      if (Number.isNaN(t)) return "Updated recently";
+      const diffMin = Math.max(0, Math.round((Date.now() - t) / 60000));
+      if (diffMin < 1) return "Updated just now";
+      return `Updated ${diffMin} min ago`;
+    }
+
+    function summarizeFire(items) {
+      if (!items || !items.length) {
+        setStatus("fireStatus", "ok", "Clear");
+        setText("fireTitle", "🔥 Fire Signal — Monitoring");
+        setText("fireCopy", "No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.");
+        setText("fireFreshnessChip", "No active fire signal");
+        return;
+      }
+
+      const top = items[0];
+      const sev = top?.display?.severity || "WATCH";
+      const confidence = top?.display?.confidence_label || "Nominal";
+      const source = top?.source?.provider || "NASA FIRMS";
+      const lastChecked = top?.freshness?.last_checked_at || null;
+
+      setStatus("fireStatus", sev === "WARNING" || sev === "CRITICAL" ? "active" : "watch", sev);
+      setText("fireTitle", "🔥 Fire Signal — Active");
+      setText("fireCopy", `${top?.display?.headline || "Fire signal detected"} · ${top?.display?.summary || "Satellite hotspot detected."}`);
+      setText("fireSourceChip", source);
+      setText("fireFreshnessChip", `${confidence} confidence · ${relativeLabel(lastChecked)}`);
+    }
+
+    function summarizeFlood(items) {
+      if (!items || !items.length) {
+        setStatus("floodStatus", "ok", "Clear");
+        setText("floodTitle", "🌧 Flood Signal — Monitoring");
+        setText("floodCopy", "No validated flood watch or warning is currently returned by the worker.");
+        setText("floodFreshnessChip", "No active flood signal");
+        return;
+      }
+
+      const top = items[0];
+      const level = top?.properties?.alert_level || "watch";
+      const statusKind = level === "warning" ? "active" : "watch";
+      setStatus("floodStatus", statusKind, level.toUpperCase());
+      setText("floodTitle", `🌧 Flood Signal — ${level === "warning" ? "Warning" : "Watch"}`);
+      setText("floodCopy", top?.display?.summary || "Flood context elevated in the current snapshot.");
+      setText("floodSourceChip", top?.source?.provider || "NWS Honolulu");
+      setText("floodFreshnessChip", relativeLabel(top?.freshness?.last_checked_at || null));
+    }
+
+    function summarizeStorm(items) {
+      if (!items || !items.length) {
+        setStatus("stormStatus", "ok", "Clear");
+        setText("stormTitle", "🌀 Storm Signal — Monitoring");
+        setText("stormCopy", "No validated active storm alert is currently returned by the worker.");
+        setText("stormFreshnessChip", "No active storm signal");
+        return;
+      }
+
+      const top = items[0];
+      const sev = top?.display?.severity || "ELEVATED";
+      const kind = sev === "WARNING" ? "active" : "watch";
+      setStatus("stormStatus", kind, sev);
+      setText("stormTitle", "🌀 Storm Signal — Active");
+      setText("stormCopy", top?.display?.summary || "Storm context elevated in the current snapshot.");
+      setText("stormSourceChip", top?.source?.provider || "NWS Honolulu");
+      setText("stormFreshnessChip", relativeLabel(top?.freshness?.last_checked_at || null));
+    }
+
+    function applyHero(home) {
+      const ui = eventUi(home?.primary_event);
+      setText("heroTitle", ui.title);
+      setText("heroCopy", ui.copy);
+      setText("heroBannerTitle", ui.bannerTitle);
+      setText("heroBannerCopy", ui.bannerCopy);
+      setText("stateChip", ui.chip);
+      setText("updatedPill", relativeLabel(new Date().toISOString()));
+      setText("freshnessChip", home?.primary_event ? `${home.primary_event} · live summary` : "snapshot pending");
+      setText("contextPrimary", home?.primary_event || "MONITORING");
+      setText("contextFireCount", String(home?.fire_count ?? 0));
+      setText("contextFloodCount", String(home?.flood_count ?? 0));
+      setText("contextStormCount", String(home?.storm_count ?? 0));
+
+      const note = document.getElementById("systemNote");
+      if (note && home?.primary_event === "DEGRADED") {
+        note.textContent = "Some hazard data sources are delayed. Kahu Ola is showing the safest available civic fallback. Always follow official emergency instructions.";
+      }
+    }
+
+    function applyIslandCards(home, floods, storms) {
+      const floodActive = Array.isArray(floods) && floods.length > 0;
+      const stormActive = Array.isArray(storms) && storms.length > 0;
+
+      setStatus("mauiStatus", floodActive ? "watch" : "ok", floodActive ? "Watch" : "Monitoring");
+      setText("mauiCopy", floodActive
+        ? "Flood-related context is elevated in the current snapshot."
+        : "No major Maui hazard is elevated in the current statewide snapshot.");
+
+      setStatus("oahuStatus", stormActive ? "watch" : "ok", stormActive ? "Storm" : "Monitoring");
+      setText("oahuCopy", stormActive
+        ? "Storm context remains elevated statewide and may affect Oʻahu."
+        : "No major Oʻahu hazard is elevated in the current statewide snapshot.");
+
+      setStatus("bigIslandStatus", stormActive ? "watch" : "ok", stormActive ? "Storm" : "Monitoring");
+      setText("bigIslandCopy", stormActive
+        ? "Storm and wind context may affect Hawaiʻi Island."
+        : "Routine monitoring remains active.");
+
+      setStatus("kauaiStatus", floodActive || stormActive ? "watch" : "ok", floodActive || stormActive ? "Watch" : "Monitoring");
+      setText("kauaiCopy", floodActive || stormActive
+        ? "Statewide storm / flood context may affect Kauaʻi."
+        : "Routine monitoring remains active.");
+
+      // Mini map emphasis
+      document.getElementById("mauiBadge").className = `map-badge ${floodActive ? "flood" : "ok"}`;
+      document.getElementById("oahuBadge").className = `map-badge ${stormActive ? "flood" : "ok"}`;
+      document.getElementById("bigIslandBadge").className = `map-badge ${stormActive ? "flood" : "ok"}`;
+      document.getElementById("kauaiBadge").className = `map-badge ${floodActive || stormActive ? "flood" : "ok"}`;
+    }
+
+    async function getJson(url) {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { "accept": "application/json" },
+        cache: "no-store"
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      return res.json();
+    }
+
+    async function boot() {
+      try {
+        const [home, fire, flood, storm] = await Promise.all([
+          getJson(api.home),
+          getJson(api.fire).catch(() => ({ items: [] })),
+          getJson(api.flood).catch(() => ({ items: [] })),
+          getJson(api.storm).catch(() => ({ items: [] }))
+        ]);
+
+        applyHero(home);
+        summarizeFire(fire.items || []);
+        summarizeFlood(flood.items || []);
+        summarizeStorm(storm.items || []);
+        applyIslandCards(home, flood.items || [], storm.items || []);
+      } catch (err) {
+        console.error("Kahu Ola homepage bootstrap failed:", err);
+        applyHero({ primary_event: "DEGRADED", fire_count: 0, flood_count: 0, storm_count: 0 });
+        summarizeFire([]);
+        summarizeFlood([]);
+        summarizeStorm([]);
+        applyIslandCards({ primary_event: "DEGRADED" }, [], []);
+      }
+    }
+
+    boot();
+  </script>
 </body>
 </html>
