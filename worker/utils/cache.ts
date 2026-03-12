@@ -1,3 +1,13 @@
+export interface CacheLike {
+  get(key: string): Promise<string | null>;
+  put(
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number },
+  ): Promise<void>;
+  delete?(key: string): Promise<void>;
+}
+
 export type CacheJson =
   | Record<string, unknown>
   | unknown[]
@@ -7,7 +17,7 @@ export type CacheJson =
   | null;
 
 export async function readJsonCache<T>(
-  cache: KVNamespace,
+  cache: CacheLike,
   key: string,
 ): Promise<T | null> {
   const raw = await cache.get(key);
@@ -22,7 +32,7 @@ export async function readJsonCache<T>(
 }
 
 export async function writeJsonCache<T extends CacheJson>(
-  cache: KVNamespace,
+  cache: CacheLike,
   key: string,
   value: T,
   ttlSeconds: number,
@@ -33,12 +43,18 @@ export async function writeJsonCache<T extends CacheJson>(
 }
 
 export async function deleteCacheKey(
-  cache: KVNamespace,
+  cache: CacheLike,
   key: string,
 ): Promise<void> {
-  await cache.delete(key);
+  if (cache.delete) {
+    await cache.delete(key);
+  }
 }
 
-export function cacheKey(scope: "hazard" | "home" | "health", type: string, region: string): string {
+export function cacheKey(
+  scope: "hazard" | "home" | "health",
+  type: string,
+  region: string,
+): string {
   return `${scope}:${type}:${region}`;
 }
