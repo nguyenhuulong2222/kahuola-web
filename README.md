@@ -379,3 +379,14 @@ Start with:
 docs/architecture/V4_8_MASTER_INDEX.md
 
 All system behavior must follow the V4 doctrine and associated runtime specifications.
+
+# Production Continuity Rules
+ All production Kahu Ola pages must use real upstream hazard data only. Mock data, placeholder endpoints, and demo states are forbidden in production. Browser clients must never call upstream hazard APIs directly. All signals must pass through validation, freshness classification, and cache before rendering. Stale or degraded data must always be labeled. No future contributor may reintroduce known V4-fixed bugs:
+   - wrong popup identity
+   - hidden layers still receiving clicks
+   - unlabeled stale data
+   - fake production states Any architectural change must update:
+   - README
+   - V4_8_MASTER_INDEX.md
+   - CURRENT_PRODUCTION_STATUS.md
+   - relevant spec files
