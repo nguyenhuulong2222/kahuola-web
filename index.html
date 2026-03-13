@@ -147,8 +147,8 @@
       background:var(--ok);
       box-shadow:0 0 0 6px rgba(103,194,126,.12);
     }
-    
-    .pill .dot.degraded {
+
+    .pill .dot.degraded{
       background:var(--warn);
       box-shadow:0 0 0 6px rgba(255,204,102,.12);
     }
@@ -226,66 +226,86 @@
       border-radius:50%;
       background:var(--ok);
     }
-    
-    .freshness.stale {
-        border:1px solid rgba(255,204,102,.22);
-        background:var(--warn-soft);
-        color:#ffebbe;
-    }
-    .freshness.stale .dot {
-        background:var(--warn);
+
+    .freshness.stale{
+      border:1px solid rgba(255,204,102,.22);
+      background:var(--warn-soft);
+      color:#ffebbe;
     }
 
-    /* Khối Primary Situation Banner (Thay bằng text ngắn gọn theo UX Spec) */
-    .primary-banner {
-        padding: 16px;
-        border-radius: 16px;
-        font-weight: 700;
-        font-size: 18px;
-        text-align: center;
-        letter-spacing: -0.01em;
-    }
-    
-    .primary-banner.storm-active {
-        background: radial-gradient(circle at center, rgba(108,188,255,.16), transparent 80%), var(--surface-2);
-        border: 1px solid rgba(108,188,255,.3);
-        color: #dbeeff;
-    }
-    
-    .primary-banner.fire-active {
-        background: radial-gradient(circle at center, rgba(255,122,0,.16), transparent 80%), var(--surface-2);
-        border: 1px solid rgba(255,122,0,.3);
-        color: #ffd8ba;
+    .freshness.stale .dot{
+      background:var(--warn);
     }
 
-    /* Khối Context Strip (Gió, Mưa, Nhiệt độ) */
-    .hero-context-strip {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+    .primary-banner{
+      padding:16px;
+      border-radius:16px;
+      font-weight:700;
+      font-size:18px;
+      text-align:center;
+      letter-spacing:-.01em;
     }
-    
-    .hero-context-item {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px;
-        text-align: center;
+
+    .primary-banner.storm-active{
+      background:radial-gradient(circle at center, rgba(108,188,255,.16), transparent 80%), var(--surface-2);
+      border:1px solid rgba(108,188,255,.3);
+      color:#dbeeff;
     }
-    
-    .hero-context-value {
-        font-size: 16px;
-        font-weight: 800;
-        color: var(--text);
+
+    .primary-banner.fire-active{
+      background:radial-gradient(circle at center, rgba(255,122,0,.16), transparent 80%), var(--surface-2);
+      border:1px solid rgba(255,122,0,.3);
+      color:#ffd8ba;
     }
-    
-    .hero-context-label {
-        font-size: 11px;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 4px;
-        font-family: var(--mono);
+
+    .primary-banner-source{
+      font-size:10px;
+      font-weight:500;
+      opacity:0.8;
+      margin-top:6px;
+      font-family:var(--mono);
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+    }
+
+    .hero-context-strip{
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:10px;
+    }
+
+    .hero-context-item{
+      background:rgba(255,255,255,0.03);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      text-align:center;
+    }
+
+    .hero-context-value{
+      font-size:16px;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    .hero-context-label{
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:0.05em;
+      margin-top:4px;
+      font-family:var(--mono);
+    }
+
+    .hero-context-source{
+      font-size:9px;
+      color:var(--muted);
+      font-family:var(--mono);
+      letter-spacing:0.05em;
+      margin-top:6px;
+      text-transform:uppercase;
+      border-top:1px solid rgba(255,255,255,0.05);
+      padding-top:4px;
     }
 
     .hero-actions{
@@ -306,11 +326,11 @@
       background:var(--surface-2);
       color:var(--text);
       font-weight:800;
-      transition: background 0.2s, transform 0.1s;
+      transition:background 0.2s, transform 0.1s;
     }
-    
-    .btn:active {
-        transform: scale(0.98);
+
+    .btn:active{
+      transform:scale(0.98);
     }
 
     .btn.primary{
@@ -318,8 +338,8 @@
       border-color:rgba(255,122,0,.28);
       color:#fff1e4;
     }
-    
-    .btn.primary.storm {
+
+    .btn.primary.storm{
       background:linear-gradient(180deg,rgba(108,188,255,.18),rgba(108,188,255,.11));
       border-color:rgba(108,188,255,.28);
       color:#dbeeff;
@@ -456,9 +476,8 @@
       font-size:13px;
       line-height:1.55;
     }
-    
-    /* Khối nhắc nhở Văn hóa (E mālama pono) */
-    .cultural-note {
+
+    .cultural-note{
       padding:14px 16px;
       border-radius:16px;
       border:1px solid rgba(103,194,126,.18);
@@ -466,12 +485,13 @@
       color:#dbf3e1;
       font-size:13px;
       line-height:1.55;
-      margin-top: 10px;
+      margin-top:10px;
     }
-    .cultural-note strong {
-        display: block;
-        margin-bottom: 4px;
-        color: #eefcf2;
+
+    .cultural-note strong{
+      display:block;
+      margin-bottom:4px;
+      color:#eefcf2;
     }
 
     .map-card{
@@ -511,7 +531,7 @@
         radial-gradient(circle at 76% 70%, rgba(77,168,255,.16), transparent 16%),
         linear-gradient(180deg,#0a141d,#101b27);
       overflow:hidden;
-      flex-grow: 1; /* Để map box chiếm hết không gian còn lại */
+      flex-grow:1;
     }
 
     .map-grid{
@@ -522,6 +542,7 @@
         linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
       background-size:34px 34px;
       opacity:.18;
+      pointer-events:none;
     }
 
     .map-island{
@@ -534,6 +555,25 @@
       padding:8px 12px;
       box-shadow:0 8px 24px rgba(0,0,0,.22);
       backdrop-filter:blur(2px);
+      transition:border-color .2s ease, background .2s ease, transform .2s ease;
+      cursor:pointer;
+      z-index:2;
+    }
+
+    .map-island:hover{
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,.22);
+      background:rgba(255,255,255,.07);
+    }
+
+    .map-island.active-fire{
+      border-color:rgba(255,122,0,.4);
+      background:rgba(255,122,0,.12);
+    }
+
+    .map-island.active-flood{
+      border-color:rgba(77,168,255,.4);
+      background:rgba(77,168,255,.12);
     }
 
     .map-badge{
@@ -542,11 +582,54 @@
       height:14px;
       border-radius:50%;
       box-shadow:0 0 0 10px rgba(255,255,255,.04);
+      z-index:3;
+      transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
     }
 
-    .map-badge.fire{background:var(--fire)}
-    .map-badge.flood{background:var(--flood)}
-    .map-badge.ok{background:var(--ok)}
+    .map-badge.fire{
+      background:var(--fire);
+      box-shadow:0 0 0 10px rgba(255,122,0,.10), 0 0 18px rgba(255,122,0,.28);
+    }
+
+    .map-badge.flood{
+      background:var(--flood);
+      box-shadow:0 0 0 10px rgba(77,168,255,.10), 0 0 18px rgba(77,168,255,.28);
+    }
+
+    .map-badge.mixed{
+      background:linear-gradient(135deg, var(--fire) 0 50%, var(--flood) 50% 100%);
+      box-shadow:0 0 0 10px rgba(255,255,255,.05), 0 0 18px rgba(255,255,255,.12);
+    }
+
+    .map-badge.ok{
+      background:var(--ok);
+      box-shadow:0 0 0 10px rgba(103,194,126,.10), 0 0 16px rgba(103,194,126,.22);
+    }
+
+    .map-summary{
+      position:absolute;
+      left:14px;
+      right:14px;
+      bottom:14px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      z-index:4;
+    }
+
+    .map-summary-chip{
+      min-height:30px;
+      padding:0 12px;
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      border:1px solid var(--line-strong);
+      background:rgba(8,17,26,.76);
+      color:#e5eef8;
+      font:700 11px var(--mono);
+      backdrop-filter:blur(8px);
+      white-space:nowrap;
+    }
 
     .legend{
       display:flex;
@@ -558,13 +641,16 @@
     }
 
     .section{ margin-top:18px; }
+
     .section-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:18px;
     }
 
-    .section-card{ padding:20px; }
+    .section-card{
+      padding:20px;
+    }
 
     .section-title{
       margin:0 0 10px;
@@ -578,7 +664,7 @@
       font-size:14px;
       line-height:1.6;
     }
-    
+
     .links{
       display:grid;
       gap:10px;
@@ -594,11 +680,11 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      transition: background 0.2s;
+      transition:background 0.2s;
     }
-    
-    .link-card:hover {
-        background: rgba(255,255,255,0.05);
+
+    .link-card:hover{
+      background:rgba(255,255,255,0.05);
     }
 
     .link-card small{
@@ -648,17 +734,18 @@
       line-height:1.62;
     }
 
-    @media (max-width: 1120px){
+    @media (max-width:1120px){
       .hero-grid,.section-grid{grid-template-columns:1fr}
-      .map-box { min-height: 300px; }
+      .map-box{min-height:300px}
     }
-    @media (max-width: 720px){
+
+    @media (max-width:720px){
       .app{padding:14px 12px 28px}
       .topbar{flex-direction:column;align-items:flex-start}
       .hero-head{flex-direction:column}
       .hero-title{font-size:31px;max-width:none}
       .hero-card,.section-card{padding:18px}
-      .hero-context-strip { grid-template-columns: 1fr; }
+      .hero-context-strip{grid-template-columns:1fr}
       .hero-actions{grid-template-columns:1fr}
       .map-head{padding:16px}
       .brand-title{font-size:24px}
@@ -682,7 +769,7 @@
       <div class="top-actions">
         <div class="pill" id="updatedPill">
           <span class="dot"></span>
-          Updated 3 min ago
+          Loading latest snapshot…
         </div>
         <a class="pill link" href="#official-links">Official Alerts</a>
         <a class="pill link" href="live-map.v4.8.html">Live Map</a>
@@ -700,27 +787,31 @@
           </div>
           <div class="freshness" id="freshnessChip">
             <span class="dot"></span>
-            STORM_ACTIVE
+            LOADING
           </div>
         </div>
 
         <div class="primary-banner storm-active" id="primaryBanner">
-            🌀 Kona Storm Conditions Active Across Hawaiʻi
+          <div>🌀 Kona Storm Conditions Active Across Hawaiʻi</div>
+          <div class="primary-banner-source" id="primaryBannerSource">Source Authority: NWS Honolulu & NOAA</div>
         </div>
-        
+
         <div class="hero-context-strip">
-            <div class="hero-context-item">
-                <div class="hero-context-value">25 - 40 mph</div>
-                <div class="hero-context-label">Wind Gusts</div>
-            </div>
-            <div class="hero-context-item">
-                <div class="hero-context-value">2.5 inches</div>
-                <div class="hero-context-label">Rain (24hr)</div>
-            </div>
-            <div class="hero-context-item">
-                <div class="hero-context-value">Elevated</div>
-                <div class="hero-context-label">Flood Risk</div>
-            </div>
+          <div class="hero-context-item">
+            <div class="hero-context-value" id="windValue">25 - 40 mph</div>
+            <div class="hero-context-label">Wind Gusts</div>
+            <div class="hero-context-source">NWS / RAWS</div>
+          </div>
+          <div class="hero-context-item">
+            <div class="hero-context-value" id="rainValue">2.5 inches</div>
+            <div class="hero-context-label">Rain (24hr)</div>
+            <div class="hero-context-source">NOAA MRMS</div>
+          </div>
+          <div class="hero-context-item">
+            <div class="hero-context-value" id="floodRiskValue">Elevated</div>
+            <div class="hero-context-label">Flood Risk</div>
+            <div class="hero-context-source">PacIOOS Terrain</div>
+          </div>
         </div>
 
         <div class="hero-actions">
@@ -729,18 +820,18 @@
         </div>
 
         <div class="signal-stack">
-          <section class="signal-card">
+          <section class="signal-card fire">
             <div class="signal-top">
               <div>
                 <div class="signal-label">Signal 1</div>
                 <h3 class="signal-title" id="fireTitle">🔥 Fire Signal — Monitoring</h3>
               </div>
-              <div class="status ok" id="fireStatus">Clear</div>
+              <div class="status ok" id="fireStatus">CLEAR</div>
             </div>
             <p class="signal-copy" id="fireCopy">No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.</p>
             <div class="meta-row">
               <span class="chip" id="fireSourceChip">NASA FIRMS</span>
-              <span class="chip" id="fireFreshnessChip">Updated 5 min ago</span>
+              <span class="chip" id="fireFreshnessChip">Loading…</span>
             </div>
           </section>
 
@@ -754,8 +845,8 @@
             </div>
             <p class="signal-copy" id="floodCopy">Flood Watch active for parts of Maui. Heavy rain may cause streams to rise quickly.</p>
             <div class="meta-row">
-              <span class="chip" id="floodSourceChip">NWS Honolulu</span> 
-              <span class="chip" id="floodFreshnessChip">Updated 12 min ago</span>
+              <span class="chip" id="floodSourceChip">NWS Honolulu / PacIOOS</span>
+              <span class="chip" id="floodFreshnessChip">Loading…</span>
             </div>
           </section>
         </div>
@@ -775,29 +866,37 @@
           <div>
             <h2>Mini Hawaiʻi Map</h2>
             <p>
-              Visual confirmation of statewide hazard context. Tap through to the live map for deeper situational detail.
+              Visual confirmation of statewide fire and flood context from validated Worker snapshots. Tap an island chip or open the full live map for detail.
             </p>
           </div>
-          <div class="chip">Map Preview</div>
+          <div class="chip" id="mapPreviewChip">Map Preview</div>
         </div>
 
-        <div class="map-box">
+        <div class="map-box" id="miniMapBox" aria-label="Mini Hawaiʻi hazard map">
           <div class="map-grid"></div>
-          <div class="map-island" style="left:8%;top:20%;">Kauaʻi</div>
-          <div class="map-island" style="left:24%;top:38%;">Oʻahu</div>
-          <div class="map-island" style="left:42%;top:49%;">Maui Nui</div>
-          <div class="map-island" style="left:70%;top:62%;">Hawaiʻi Island</div>
-          <div class="map-badge ok" id="kauaiBadge" style="left:13%;top:29%;"></div>
-          <div class="map-badge ok" id="oahuBadge" style="left:31%;top:47%;"></div>
-          <div class="map-badge flood" id="mauiBadge" style="left:46%;top:46%;"></div> 
-          <div class="map-badge ok" id="bigIslandBadge" style="left:77%;top:70%;"></div>
+
+          <a class="map-island" id="kauaiIsland" href="live-map.v4.8.html#kauai" style="left:8%;top:20%;">Kauaʻi</a>
+          <a class="map-island" id="oahuIsland" href="live-map.v4.8.html#oahu" style="left:24%;top:38%;">Oʻahu</a>
+          <a class="map-island" id="mauiIsland" href="live-map.v4.8.html#maui" style="left:42%;top:49%;">Maui Nui</a>
+          <a class="map-island" id="bigIslandIsland" href="live-map.v4.8.html#hawaii-island" style="left:70%;top:62%;">Hawaiʻi Island</a>
+
+          <div class="map-badge ok" id="kauaiBadge" style="left:13%;top:29%;" title="Kauaʻi monitoring"></div>
+          <div class="map-badge ok" id="oahuBadge" style="left:31%;top:47%;" title="Oʻahu monitoring"></div>
+          <div class="map-badge ok" id="mauiBadge" style="left:46%;top:46%;" title="Maui Nui monitoring"></div>
+          <div class="map-badge ok" id="bigIslandBadge" style="left:77%;top:70%;" title="Hawaiʻi Island monitoring"></div>
+
+          <div class="map-summary">
+            <div class="map-summary-chip" id="mapSummaryFire">Fire: 0 active</div>
+            <div class="map-summary-chip" id="mapSummaryFlood">Flood: 0 elevated</div>
+            <div class="map-summary-chip" id="mapSummaryMode">Worker snapshot</div>
+          </div>
         </div>
 
         <div class="legend">
-          <span class="chip">🔥 Fire hotspot</span>
-          <span class="chip">🌧 Flood / rain context</span>
+          <span class="chip">🔥 Fire signal</span>
+          <span class="chip">🌧 Flood context</span>
+          <span class="chip">🔥🌧 Mixed</span>
           <span class="chip">✅ Monitoring</span>
-          <span class="chip">Tap for full live map</span>
         </div>
       </aside>
     </section>
@@ -860,5 +959,570 @@
       </div>
     </section>
   </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const ENDPOINTS = {
+        homeSummary: "/v1/home/summary",
+        fire: "/v1/hazards/fire",
+        floodPrimary: "/v1/context/flood",
+        floodFallback: "/v1/context",
+        systemStatus: "/v1/system/status",
+        systemHealth: "/v1/system/health"
+      };
+
+      const ISLANDS = {
+        kauai: {
+          key: "kauai",
+          label: "Kauaʻi",
+          badgeId: "kauaiBadge",
+          islandId: "kauaiIsland",
+          bbox: { minLon: -160.35, maxLon: -159.20, minLat: 21.70, maxLat: 22.40 }
+        },
+        oahu: {
+          key: "oahu",
+          label: "Oʻahu",
+          badgeId: "oahuBadge",
+          islandId: "oahuIsland",
+          bbox: { minLon: -158.40, maxLon: -157.55, minLat: 21.20, maxLat: 21.80 }
+        },
+        maui: {
+          key: "maui",
+          label: "Maui Nui",
+          badgeId: "mauiBadge",
+          islandId: "mauiIsland",
+          bbox: { minLon: -156.95, maxLon: -155.15, minLat: 20.45, maxLat: 21.25 }
+        },
+        bigisland: {
+          key: "bigisland",
+          label: "Hawaiʻi Island",
+          badgeId: "bigIslandBadge",
+          islandId: "bigIslandIsland",
+          bbox: { minLon: -156.10, maxLon: -154.70, minLat: 18.80, maxLat: 20.40 }
+        }
+      };
+
+      const state = {
+        homeSummary: null,
+        fireRaw: null,
+        floodRaw: null,
+        systemStatus: null,
+        systemHealth: null,
+        fireByIsland: createBlankIslandState(),
+        floodByIsland: createBlankIslandState()
+      };
+
+      const els = {
+        updatedPill: document.getElementById("updatedPill"),
+        freshnessChip: document.getElementById("freshnessChip"),
+        heroTitle: document.getElementById("heroTitle"),
+        heroCopy: document.getElementById("heroCopy"),
+        primaryBanner: document.getElementById("primaryBanner"),
+        primaryBannerSource: document.getElementById("primaryBannerSource"),
+        windValue: document.getElementById("windValue"),
+        rainValue: document.getElementById("rainValue"),
+        floodRiskValue: document.getElementById("floodRiskValue"),
+        fireTitle: document.getElementById("fireTitle"),
+        fireCopy: document.getElementById("fireCopy"),
+        fireStatus: document.getElementById("fireStatus"),
+        fireSourceChip: document.getElementById("fireSourceChip"),
+        fireFreshnessChip: document.getElementById("fireFreshnessChip"),
+        floodTitle: document.getElementById("floodTitle"),
+        floodCopy: document.getElementById("floodCopy"),
+        floodStatus: document.getElementById("floodStatus"),
+        floodSourceChip: document.getElementById("floodSourceChip"),
+        floodFreshnessChip: document.getElementById("floodFreshnessChip"),
+        systemNote: document.getElementById("systemNote"),
+        mapPreviewChip: document.getElementById("mapPreviewChip"),
+        mapSummaryFire: document.getElementById("mapSummaryFire"),
+        mapSummaryFlood: document.getElementById("mapSummaryFlood"),
+        mapSummaryMode: document.getElementById("mapSummaryMode")
+      };
+
+      function createBlankIslandState() {
+        return {
+          kauai: { count: 0, status: "ok" },
+          oahu: { count: 0, status: "ok" },
+          maui: { count: 0, status: "ok" },
+          bigisland: { count: 0, status: "ok" }
+        };
+      }
+
+      function setText(idOrEl, value) {
+        const el = typeof idOrEl === "string" ? document.getElementById(idOrEl) : idOrEl;
+        if (el && typeof value === "string") el.textContent = value;
+      }
+
+      function timeAgo(input) {
+        if (!input) return "Updated recently";
+        const dt = new Date(input);
+        if (Number.isNaN(dt.getTime())) return "Updated recently";
+        const diffMs = Date.now() - dt.getTime();
+        const diffMin = Math.max(0, Math.round(diffMs / 60000));
+        if (diffMin < 1) return "Updated just now";
+        if (diffMin < 60) return `Updated ${diffMin} min ago`;
+        const diffHr = Math.round(diffMin / 60);
+        if (diffHr < 24) return `Updated ${diffHr} hr ago`;
+        const diffDay = Math.round(diffHr / 24);
+        return `Updated ${diffDay} day ago`;
+      }
+
+      function withTimeout(url, timeoutMs = 9000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+        return fetch(url, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json"
+          },
+          signal: controller.signal,
+          credentials: "same-origin"
+        }).finally(() => clearTimeout(timer));
+      }
+
+      async function fetchJson(url) {
+        const response = await withTimeout(url);
+        if (!response.ok) {
+          throw new Error(`${url} -> ${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function safeFetchJson(url) {
+        try {
+          return await fetchJson(url);
+        } catch {
+          return null;
+        }
+      }
+
+      function arrayify(value) {
+        if (Array.isArray(value)) return value;
+        if (!value) return [];
+        return [value];
+      }
+
+      function firstNonEmpty(...values) {
+        for (const value of values) {
+          if (value !== null && value !== undefined && value !== "") return value;
+        }
+        return null;
+      }
+
+      function getFeatureCollectionItems(payload) {
+        if (!payload) return [];
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload.signals)) return payload.signals;
+        if (Array.isArray(payload.items)) return payload.items;
+        if (Array.isArray(payload.features)) return payload.features;
+        if (payload.data && Array.isArray(payload.data.signals)) return payload.data.signals;
+        if (payload.data && Array.isArray(payload.data.features)) return payload.data.features;
+        return [];
+      }
+
+      function readCoords(item) {
+        const geometry = item?.geometry || item?.feature?.geometry || null;
+        if (!geometry || !geometry.type) return null;
+
+        if (geometry.type === "Point" && Array.isArray(geometry.coordinates)) {
+          const [lon, lat] = geometry.coordinates;
+          if (Number.isFinite(lon) && Number.isFinite(lat)) return { lon, lat };
+        }
+
+        if (geometry.type === "Polygon" && Array.isArray(geometry.coordinates?.[0]?.[0])) {
+          const [lon, lat] = geometry.coordinates[0][0];
+          if (Number.isFinite(lon) && Number.isFinite(lat)) return { lon, lat };
+        }
+
+        if (geometry.type === "MultiPolygon" && Array.isArray(geometry.coordinates?.[0]?.[0]?.[0])) {
+          const [lon, lat] = geometry.coordinates[0][0][0];
+          if (Number.isFinite(lon) && Number.isFinite(lat)) return { lon, lat };
+        }
+
+        return null;
+      }
+
+      function resolveIslandFromCoords(coords) {
+        if (!coords) return null;
+        const { lon, lat } = coords;
+
+        for (const island of Object.values(ISLANDS)) {
+          const { minLon, maxLon, minLat, maxLat } = island.bbox;
+          if (lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat) {
+            return island.key;
+          }
+        }
+        return null;
+      }
+
+      function resolveIslandFromText(text) {
+        const value = String(text || "").toLowerCase();
+        if (!value) return null;
+        if (value.includes("kauai") || value.includes("kauaʻi")) return "kauai";
+        if (value.includes("oahu") || value.includes("oʻahu")) return "oahu";
+        if (value.includes("maui")) return "maui";
+        if (value.includes("hawaii island") || value.includes("hawaiʻi island") || value.includes("big island")) return "bigisland";
+        return null;
+      }
+
+      function getItemIslandKey(item) {
+        const byCoords = resolveIslandFromCoords(readCoords(item));
+        if (byCoords) return byCoords;
+
+        const props = item?.properties || item?.meta || {};
+        return (
+          resolveIslandFromText(props.island) ||
+          resolveIslandFromText(props.region) ||
+          resolveIslandFromText(props.county) ||
+          resolveIslandFromText(item?.island) ||
+          resolveIslandFromText(item?.region) ||
+          null
+        );
+      }
+
+      function getSeverity(item) {
+        const severity = firstNonEmpty(
+          item?.severity?.level,
+          item?.properties?.severity,
+          item?.properties?.risk,
+          item?.status,
+          item?.level
+        );
+        return String(severity || "").toUpperCase();
+      }
+
+      function getFreshness(payload) {
+        return firstNonEmpty(
+          payload?.freshness,
+          payload?.data_freshness,
+          payload?.state,
+          payload?.status,
+          payload?.freshness_state
+        );
+      }
+
+      function getGeneratedAt(payload) {
+        return firstNonEmpty(
+          payload?.generated_at,
+          payload?.updated_at,
+          payload?.fetched_at,
+          payload?.last_updated,
+          payload?.timestamp
+        );
+      }
+
+      function countFireByIsland(payload) {
+        const output = createBlankIslandState();
+        const items = getFeatureCollectionItems(payload);
+
+        items.forEach((item) => {
+          const islandKey = getItemIslandKey(item);
+          if (!islandKey || !output[islandKey]) return;
+          output[islandKey].count += 1;
+          output[islandKey].status = "fire";
+        });
+
+        return output;
+      }
+
+      function countFloodByIsland(payload) {
+        const output = createBlankIslandState();
+        const items = getFeatureCollectionItems(payload);
+
+        items.forEach((item) => {
+          const islandKey = getItemIslandKey(item);
+          if (!islandKey || !output[islandKey]) return;
+
+          const severity = getSeverity(item);
+          const shouldCount =
+            severity.includes("WATCH") ||
+            severity.includes("WARNING") ||
+            severity.includes("FLOOD") ||
+            severity.includes("ELEVATED") ||
+            severity.includes("MODERATE") ||
+            severity.includes("HIGH") ||
+            severity.includes("ACTIVE") ||
+            (!severity && !!readCoords(item));
+
+          if (!shouldCount) return;
+
+          output[islandKey].count += 1;
+          output[islandKey].status = "flood";
+        });
+
+        return output;
+      }
+
+      function combineStatus(fireEntry, floodEntry) {
+        const fireCount = fireEntry?.count || 0;
+        const floodCount = floodEntry?.count || 0;
+
+        if (fireCount > 0 && floodCount > 0) return "mixed";
+        if (fireCount > 0) return "fire";
+        if (floodCount > 0) return "flood";
+        return "ok";
+      }
+
+      function applyIslandVisualState(islandKey, combinedStatus, fireCount, floodCount) {
+        const island = ISLANDS[islandKey];
+        if (!island) return;
+
+        const badge = document.getElementById(island.badgeId);
+        const chip = document.getElementById(island.islandId);
+        if (!badge || !chip) return;
+
+        badge.className = `map-badge ${combinedStatus}`;
+        chip.classList.remove("active-fire", "active-flood");
+
+        if (combinedStatus === "fire") chip.classList.add("active-fire");
+        if (combinedStatus === "flood") chip.classList.add("active-flood");
+        if (combinedStatus === "mixed") {
+          chip.classList.add("active-fire");
+          chip.classList.add("active-flood");
+        }
+
+        const label = island.label;
+        const parts = [];
+        if (fireCount > 0) parts.push(`${fireCount} fire`);
+        if (floodCount > 0) parts.push(`${floodCount} flood`);
+        badge.title = parts.length ? `${label}: ${parts.join(" · ")}` : `${label}: monitoring`;
+      }
+
+      function normalizeHomeSummary(payload) {
+        if (!payload || typeof payload !== "object") return null;
+        return {
+          primaryEvent: firstNonEmpty(payload.primary_event, payload.primaryEvent, payload.state, "Monitoring"),
+          fireCount: Number(firstNonEmpty(payload.fire_count, payload.fireCount, 0)) || 0,
+          floodCount: Number(firstNonEmpty(payload.flood_count, payload.floodCount, 0)) || 0,
+          stormCount: Number(firstNonEmpty(payload.storm_count, payload.stormCount, 0)) || 0,
+          generatedAt: getGeneratedAt(payload),
+          wind: firstNonEmpty(payload.wind_gusts, payload.wind, payload.context?.wind_gusts, null),
+          rain: firstNonEmpty(payload.rain_24hr, payload.rain, payload.context?.rain_24hr, null),
+          floodRisk: firstNonEmpty(payload.flood_risk, payload.context?.flood_risk, null)
+        };
+      }
+
+      function formatPrimaryEventLabel(value) {
+        const key = String(value || "Monitoring").replace(/_/g, " ").trim();
+        return key
+          .toLowerCase()
+          .replace(/\b\w/g, (m) => m.toUpperCase());
+      }
+
+      function setFreshnessUi(payload) {
+        const freshness = String(getFreshness(payload) || "").toUpperCase();
+        const generatedAt = getGeneratedAt(payload);
+        const text = freshness || "FRESH";
+
+        els.freshnessChip.classList.remove("stale");
+        els.freshnessChip.innerHTML = `<span class="dot"></span>${text}`;
+
+        if (freshness.includes("STALE") || freshness.includes("DEGRADED")) {
+          els.freshnessChip.classList.add("stale");
+        }
+
+        const pillDot = els.updatedPill.querySelector(".dot");
+        if (pillDot) {
+          pillDot.classList.remove("degraded");
+          if (freshness.includes("STALE") || freshness.includes("DEGRADED")) {
+            pillDot.classList.add("degraded");
+          }
+        }
+        setText(els.updatedPill, timeAgo(generatedAt));
+        if (pillDot) {
+          els.updatedPill.prepend(pillDot);
+          els.updatedPill.insertBefore(document.createTextNode(" "), pillDot.nextSibling);
+        }
+      }
+
+      function renderHomeSummary(summary) {
+        if (!summary) return;
+
+        const primaryEvent = String(summary.primaryEvent || "Monitoring").toUpperCase();
+        const primaryLabel = formatPrimaryEventLabel(primaryEvent);
+
+        if (primaryEvent.includes("FIRE")) {
+          setText(els.heroTitle, "Wildfire conditions affecting Hawaiʻi");
+          setText(els.heroCopy, "Active wildfire context is elevated in at least one Hawaiʻi region. Use the live map and official alerts for local detail.");
+          els.primaryBanner.className = "primary-banner fire-active";
+          els.primaryBanner.innerHTML = `
+            <div>🔥 Wildfire Signal Active Across Parts of Hawaiʻi</div>
+            <div class="primary-banner-source">Source Authority: NASA FIRMS & County / State Alerts</div>
+          `;
+        } else {
+          setText(els.heroTitle, "Storm conditions affecting Hawaiʻi");
+          setText(els.heroCopy, "Broad storm and rainfall context remain elevated across the state. Flood and wind conditions may change quickly.");
+          els.primaryBanner.className = "primary-banner storm-active";
+          els.primaryBanner.innerHTML = `
+            <div>🌀 Kona Storm Conditions Active Across Hawaiʻi</div>
+            <div class="primary-banner-source">Source Authority: NWS Honolulu & NOAA</div>
+          `;
+        }
+
+        els.freshnessChip.innerHTML = `<span class="dot"></span>${primaryLabel.toUpperCase().replace(/\s+/g, "_")}`;
+
+        if (summary.wind) setText(els.windValue, String(summary.wind));
+        if (summary.rain) setText(els.rainValue, String(summary.rain));
+        if (summary.floodRisk) setText(els.floodRiskValue, String(summary.floodRisk));
+
+        const mapLabel = [];
+        if (summary.fireCount > 0) mapLabel.push(`${summary.fireCount} fire`);
+        if (summary.floodCount > 0) mapLabel.push(`${summary.floodCount} flood`);
+        if (summary.stormCount > 0) mapLabel.push(`${summary.stormCount} storm`);
+        setText(els.mapPreviewChip, mapLabel.length ? mapLabel.join(" · ") : "Monitoring");
+      }
+
+      function renderFireCard(payload) {
+        const items = getFeatureCollectionItems(payload);
+        const count = items.length;
+        const generatedAt = getGeneratedAt(payload);
+
+        if (count > 0) {
+          setText(els.fireTitle, `🔥 Fire Signal — ${count} Active`);
+          setText(els.fireCopy, `${count} wildfire signal${count === 1 ? "" : "s"} detected in the current statewide Worker snapshot. Open the live map for island-level detail.`);
+          els.fireStatus.className = "status active";
+          setText(els.fireStatus, count >= 5 ? "ACTIVE" : "ELEVATED");
+        } else {
+          setText(els.fireTitle, "🔥 Fire Signal — Monitoring");
+          setText(els.fireCopy, "No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.");
+          els.fireStatus.className = "status ok";
+          setText(els.fireStatus, "CLEAR");
+        }
+
+        setText(els.fireSourceChip, "NASA FIRMS");
+        setText(els.fireFreshnessChip, timeAgo(generatedAt));
+        setText(els.mapSummaryFire, `Fire: ${count} active`);
+      }
+
+      function renderFloodCard(payload) {
+        const items = getFeatureCollectionItems(payload);
+        const count = items.length;
+        const generatedAt = getGeneratedAt(payload);
+
+        if (count > 0) {
+          setText(els.floodTitle, `🌧 Flood Signal — ${count} Elevated`);
+          setText(els.floodCopy, `${count} flood context feature${count === 1 ? "" : "s"} detected in the current statewide snapshot. Heavy rain may cause streams and low-lying roads to change quickly.`);
+          els.floodStatus.className = "status watch";
+          setText(els.floodStatus, count >= 5 ? "ACTIVE" : "WATCH");
+          if (!els.floodRiskValue.textContent || els.floodRiskValue.textContent === "Elevated") {
+            setText(els.floodRiskValue, count >= 5 ? "High" : "Elevated");
+          }
+        } else {
+          setText(els.floodTitle, "🌧 Flood Signal — Monitoring");
+          setText(els.floodCopy, "No elevated flood context is currently visible in the statewide Worker snapshot.");
+          els.floodStatus.className = "status ok";
+          setText(els.floodStatus, "CLEAR");
+          if (!els.floodRiskValue.textContent) setText(els.floodRiskValue, "Normal");
+        }
+
+        setText(els.floodSourceChip, "PacIOOS / NWS / NOAA");
+        setText(els.floodFreshnessChip, timeAgo(generatedAt));
+        setText(els.mapSummaryFlood, `Flood: ${count} elevated`);
+      }
+
+      function renderMiniMap() {
+        let totalFire = 0;
+        let totalFlood = 0;
+
+        Object.keys(ISLANDS).forEach((key) => {
+          const fireEntry = state.fireByIsland[key];
+          const floodEntry = state.floodByIsland[key];
+          const status = combineStatus(fireEntry, floodEntry);
+          totalFire += fireEntry.count;
+          totalFlood += floodEntry.count;
+          applyIslandVisualState(key, status, fireEntry.count, floodEntry.count);
+        });
+
+        setText(els.mapSummaryFire, `Fire: ${totalFire} active`);
+        setText(els.mapSummaryFlood, `Flood: ${totalFlood} elevated`);
+      }
+
+      function renderSystemNote() {
+        const degraded =
+          String(getFreshness(state.homeSummary) || "").toUpperCase().includes("STALE") ||
+          String(state.systemStatus?.status || "").toUpperCase().includes("DEGRADED") ||
+          String(state.systemHealth?.status || "").toUpperCase().includes("DEGRADED");
+
+        if (degraded) {
+          setText(
+            els.systemNote,
+            "Some hazard data sources may be delayed. Showing the last verified snapshot where possible. Always verify urgent conditions with official authorities."
+          );
+        } else {
+          setText(
+            els.systemNote,
+            "Kahu Ola provides public hazard situational awareness only. Always follow official county, state, and federal emergency instructions."
+          );
+        }
+
+        setText(
+          els.mapSummaryMode,
+          degraded ? "Worker snapshot · degraded labeled" : "Worker snapshot · active"
+        );
+      }
+
+      async function loadAll() {
+        const [
+          homeSummaryPayload,
+          firePayload,
+          floodPrimaryPayload,
+          systemStatusPayload,
+          systemHealthPayload
+        ] = await Promise.all([
+          safeFetchJson(ENDPOINTS.homeSummary),
+          safeFetchJson(ENDPOINTS.fire),
+          safeFetchJson(ENDPOINTS.floodPrimary),
+          safeFetchJson(ENDPOINTS.systemStatus),
+          safeFetchJson(ENDPOINTS.systemHealth)
+        ]);
+
+        const floodPayload = floodPrimaryPayload || await safeFetchJson(ENDPOINTS.floodFallback);
+
+        state.homeSummary = homeSummaryPayload;
+        state.fireRaw = firePayload;
+        state.floodRaw = floodPayload;
+        state.systemStatus = systemStatusPayload;
+        state.systemHealth = systemHealthPayload;
+
+        state.fireByIsland = countFireByIsland(firePayload);
+        state.floodByIsland = countFloodByIsland(floodPayload);
+
+        renderHomeSummary(normalizeHomeSummary(homeSummaryPayload));
+        renderFireCard(firePayload);
+        renderFloodCard(floodPayload);
+        setFreshnessUi(homeSummaryPayload || firePayload || floodPayload || {});
+        renderMiniMap();
+        renderSystemNote();
+      }
+
+      function initFallbackUi() {
+        setText(els.updatedPill, "Updated recently");
+        const dot = document.createElement("span");
+        dot.className = "dot degraded";
+        els.updatedPill.innerHTML = "";
+        els.updatedPill.appendChild(dot);
+        els.updatedPill.appendChild(document.createTextNode(" Snapshot loading…"));
+
+        els.freshnessChip.classList.add("stale");
+        els.freshnessChip.innerHTML = `<span class="dot"></span>LOADING`;
+      }
+
+      initFallbackUi();
+      loadAll().catch(() => {
+        els.freshnessChip.classList.add("stale");
+        els.freshnessChip.innerHTML = `<span class="dot"></span>DEGRADED`;
+        setText(els.updatedPill, "Snapshot temporarily delayed");
+        const dot = document.createElement("span");
+        dot.className = "dot degraded";
+        els.updatedPill.innerHTML = "";
+        els.updatedPill.appendChild(dot);
+        els.updatedPill.appendChild(document.createTextNode(" Snapshot temporarily delayed"));
+        renderSystemNote();
+      });
+    })();
+  </script>
 </body>
 </html>
