@@ -65,3 +65,54 @@ export async function handleContext(request: Request, env: Env): Promise<Respons
 
   return new Response("Not Found", { status: 404 });
 }
+
+
+  if (url.pathname === "/v1/context/storm") {
+    const nwsUrl = "https://api.weather.gov/alerts/active?area=HI";
+
+    try {
+      const nwsResponse = await fetch(nwsUrl, {
+        headers: {
+          "User-Agent": "(kahuola.org, frankynguyen8@gmail.com)",
+          "Accept": "application/geo+json",
+        },
+      });
+
+      if (!nwsResponse.ok) {
+        throw new Error(`NWS upstream error: ${nwsResponse.status}`);
+      }
+
+      const hazardData = await nwsResponse.json();
+
+      return new Response(JSON.stringify({
+        status: "ok",
+        region: "hawaii",
+        source: "NWS",
+        items: hazardData.features ?? [],
+        raw: hazardData,
+      }), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "s-maxage=300",
+        },
+      });
+    } catch (error) {
+      console.error("NWS context error:", error);
+
+      return new Response(JSON.stringify({
+        status: "DEGRADED",
+        region: "hawaii",
+        message: "NWS data delayed",
+        items: [],
+      }), {
+        status: 502,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+  }
+
+  return new Response("Not Found", { status: 404 });
+}
