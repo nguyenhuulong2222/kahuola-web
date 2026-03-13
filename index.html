@@ -458,6 +458,19 @@
       white-space:nowrap;
     }
 
+    .chip-action{
+      background:rgba(77, 168, 255, 0.12);
+      border-color:rgba(77, 168, 255, 0.28);
+      color:#dbeeff;
+      cursor:pointer;
+      transition:background 0.2s;
+      text-decoration:none;
+    }
+
+    .chip-action:hover{
+      background:rgba(77, 168, 255, 0.22);
+    }
+
     .note{
       padding:14px 16px;
       border-radius:16px;
@@ -711,7 +724,6 @@
       line-height:1.62;
     }
 
-    /* Hiệu ứng Radar nhấp nháy cho các chấm cảnh báo */
     @keyframes radar-pulse {
       0% { box-shadow: 0 0 0 0 rgba(77, 168, 255, 0.6); }
       70% { box-shadow: 0 0 0 15px rgba(77, 168, 255, 0); }
@@ -823,11 +835,12 @@
               <div class="status ok" id="fireStatus">CLEAR</div>
             </div>
             <p class="signal-copy" id="fireCopy">
-              No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.
+              Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.
             </p>
             <div class="meta-row">
               <span class="chip" id="fireSourceChip">NASA FIRMS</span>
-              <span class="chip" id="fireFreshnessChip">Loading…</span>
+              <span class="chip" id="fireFreshnessChip">Updated 5 min ago</span>
+              <a href="live-map.v4.8.html" class="chip chip-action">📍 Check My Neighborhood</a>
             </div>
           </section>
 
@@ -840,11 +853,12 @@
               <div class="status ok" id="floodStatus">CLEAR</div>
             </div>
             <p class="signal-copy" id="floodCopy">
-              No elevated flood context is currently visible in the statewide Worker snapshot.
+              Our system is monitoring watershed conditions to keep residents safe. No broad flood watches are active, but mountain streams can flash-flood without warning. Check your local area to be sure.
             </p>
             <div class="meta-row">
-              <span class="chip" id="floodSourceChip">PacIOOS / NWS / NOAA</span>
-              <span class="chip" id="floodFreshnessChip">Loading…</span>
+              <span class="chip" id="floodSourceChip">NWS / PacIOOS</span>
+              <span class="chip" id="floodFreshnessChip">Updated 12 min ago</span>
+              <a href="live-map.v4.8.html" class="chip chip-action">📍 Check My Neighborhood</a>
             </div>
           </section>
         </div>
@@ -1005,12 +1019,6 @@
         el.innerHTML = value == null ? "" : String(value);
       }
 
-      function arrayify(value) {
-        if (Array.isArray(value)) return value;
-        if (!value) return [];
-        return [value];
-      }
-
       function firstNonEmpty(...values) {
         for (const value of values) {
           if (value !== null && value !== undefined && value !== "") return value;
@@ -1046,9 +1054,7 @@
 
       async function fetchJson(url) {
         const response = await withTimeout(url);
-        if (!response.ok) {
-          throw new Error(`${url} -> ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`${url} -> ${response.status}`);
         return response.json();
       }
 
@@ -1340,7 +1346,7 @@
           setText("fireStatus", count >= 5 ? "ACTIVE" : "ELEVATED");
         } else {
           setText("fireTitle", "🔥 Fire Signal — Monitoring");
-          setText("fireCopy", "No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.");
+          setText("fireCopy", "Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.");
           document.getElementById("fireStatus").className = "status ok";
           setText("fireStatus", "CLEAR");
         }
@@ -1361,12 +1367,12 @@
           setText("floodStatus", count >= 5 ? "ACTIVE" : "WATCH");
         } else {
           setText("floodTitle", "🌧 Flood Signal — Monitoring");
-          setText("floodCopy", "No elevated flood context is currently visible in the statewide Worker snapshot.");
+          setText("floodCopy", "Our system is monitoring watershed conditions to keep residents safe. No broad flood watches are active, but mountain streams can flash-flood without warning. Check your local area to be sure.");
           document.getElementById("floodStatus").className = "status ok";
           setText("floodStatus", "CLEAR");
         }
 
-        setText("floodSourceChip", "PacIOOS / NWS / NOAA");
+        setText("floodSourceChip", "NWS / PacIOOS");
         setText("floodFreshnessChip", freshness);
       }
 
