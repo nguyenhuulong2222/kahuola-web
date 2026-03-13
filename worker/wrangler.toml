@@ -7,6 +7,16 @@ workers_dev = false
 pattern = "kahuola.org/api/*"
 zone_name = "kahuola.org"
 
+[vars]
+PROJECT_NAME = "Kahu Ola"
+PROJECT_VERSION = "4.8"
+ENVIRONMENT = "production"
+REGION = "hawaii"
+
+NASA_FIRMS_DATASET = "VIIRS_SNPP_NRT"
+NASA_FIRMS_BBOX = "-161,18,-154,23"
+NASA_FIRMS_DAY_RANGE = "1"
+
 # Secrets already set in Cloudflare dashboard:
-# NASA_FIRMS_MAP_KEY ✅
-# To add AirNow key later: npx wrangler secret put AIRNOW_API_KEY
+# FIRMS_MAP_KEY
+# AIRNOW_API_KEY
