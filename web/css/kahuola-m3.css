@@ -106,3 +106,88 @@ body {
     font-size: 1.65rem;
   }
 }
+.hero-context {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.freshness-block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.freshness-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: var(--muted);
+}
+
+.freshness-list li {
+  margin: 0.35rem 0;
+}
+
+.mini-map-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.mini-map-card h4 {
+  margin: 0 0 0.6rem;
+}
+
+.mini-map-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mini-map-row {
+  display: grid;
+  grid-template-columns: 12px 120px 1fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mini-map-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #4e6a5c;
+}
+
+.mini-map-dot.fire {
+  background: #b83d2f;
+}
+
+.mini-map-dot.flood {
+  background: #c59b23;
+}
+
+.mini-map-dot.storm {
+  background: #2e62ad;
+}
+
+.mini-map-dot.monitoring {
+  background: #4e6a5c;
+}
+
+.mini-map-name {
+  font-weight: 600;
+}
+
+.mini-map-state {
+  color: var(--muted);
+}
+
+.mini-map-note {
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
