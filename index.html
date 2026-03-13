@@ -1023,10 +1023,11 @@
 
   <script>
     const api = {
-      home: "/api/v1/home/summary",
-      fire: "/api/v1/hazards/fire",
-      flood: "/api/v1/context/flood?region=hawaii",
-      storm: "/api/v1/context/storm?region=hawaii"
+      health: "/api/health",
+      fire: "/api/firms/hotspots?bbox=-161,18,-154,23&days=1",
+      flood: "/api/hazards/flash-flood",
+      rain: "/api/hazards/rain-radar",
+      floodContext: "/api/hazards/flood-context"
     };
 
     function setText(id, value) {
@@ -1041,25 +1042,97 @@
       el.textContent = text;
     }
 
+    function relativeLabel(iso) {
+      if (!iso) return "Updated recently";
+      const t = new Date(iso).getTime();
+      if (Number.isNaN(t)) return "Updated recently";
+      const diffMin = Math.max(0, Math.round((Date.now() - t) / 60000));
+      if (diffMin < 1) return "Updated just now";
+      if (diffMin < 60) return `Updated ${diffMin} min ago`;
+      const diffHr = Math.round(diffMin / 60);
+      return `Updated ${diffHr} hr ago`;
+    }
+
+    function getFeatures(payload) {
+      if (!payload || typeof payload !== "object") return [];
+      if (Array.isArray(payload.features)) return payload.features;
+      if (Array.isArray(payload.signals)) return payload.signals;
+      if (Array.isArray(payload.items)) return payload.items;
+      return [];
+    }
+
+    function generatedAt(payload) {
+      return payload?.generated_at || payload?.properties?.generated_at || payload?.summary?.generated_at || null;
+    }
+
+    function lowerJson(payload) {
+      try { return JSON.stringify(payload).toLowerCase(); }
+      catch { return ""; }
+    }
+
+    function hasWarningText(payload) {
+      const s = lowerJson(payload);
+      return s.includes("flash flood warning") || s.includes('"warning"') || s.includes(" warning ");
+    }
+
+    function hasWatchText(payload) {
+      const s = lowerJson(payload);
+      return s.includes("flash flood watch") || s.includes('"watch"') || s.includes(" watch ");
+    }
+
+    function hazardCounts({ firePayload, floodPayload, rainPayload, floodContextPayload }) {
+      const fireCount = getFeatures(firePayload).length;
+      const floodCount = getFeatures(floodPayload).length;
+      const rainCount = getFeatures(rainPayload).length;
+      const floodContextCount = getFeatures(floodContextPayload).length;
+      return {
+        fireCount,
+        floodCount,
+        stormCount: rainCount > 0 ? rainCount : floodContextCount,
+        rainCount,
+        floodContextCount,
+      };
+    }
+
+    function computePrimaryEvent({ healthPayload, firePayload, floodPayload, rainPayload, floodContextPayload }) {
+      const healthOk = healthPayload?.status === "ok";
+      if (!healthOk) return "DEGRADED";
+
+      const fireCount = getFeatures(firePayload).length;
+      if (fireCount > 0) return "FIRE_ACTIVE";
+
+      if (hasWarningText(floodPayload)) return "FLOOD_WARNING";
+      if (hasWatchText(floodPayload)) return "FLOOD_WATCH";
+
+      const floodContextJson = lowerJson(floodContextPayload);
+      if (floodContextJson.includes('"risk_index":"high"') || floodContextJson.includes('"risk_index":"elevated"')) {
+        return "FLOOD_WATCH";
+      }
+
+      if (getFeatures(rainPayload).length > 0 || getFeatures(floodContextPayload).length > 0) {
+        return "STORM_ACTIVE";
+      }
+
+      return "MONITORING";
+    }
+
     function eventUi(primaryEvent) {
       switch (primaryEvent) {
         case "FIRE_ACTIVE":
           return {
             chip: "Fire Active",
             title: "Fire signal detected in Hawaiʻi",
-            copy: "A validated wildfire signal is elevated in the current statewide snapshot. Follow county and NWS guidance for the affected island.",
+            copy: "A live NASA FIRMS hotspot is present in the current statewide snapshot. Follow official county and NWS guidance for the affected island.",
             bannerTitle: "🔥 Fire Signal Elevated",
             bannerCopy: "Fire remains the highest-priority life-safety signal in the current Kahu Ola event model.",
-            stateClass: "rgba(255,122,0,.22)"
           };
         case "FLOOD_WARNING":
           return {
             chip: "Flood Warning",
-            title: "Flood Warning active",
-            copy: "Flooding may already be occurring or imminent in affected areas. Use official alerts for urgent decisions.",
+            title: "Flood warning in effect",
+            copy: "Flash flood warnings are reported in Hawaiʻi. Use official alerts for urgent decisions and avoid flooded roads and stream crossings.",
             bannerTitle: "🌧 Flood Warning Conditions",
-            bannerCopy: "Validated flood warning conditions are being returned by the worker and should be treated as the primary public hazard frame.",
-            stateClass: "rgba(77,168,255,.22)"
+            bannerCopy: "Live NWS flash-flood warning geometry is active in the current worker snapshot.",
           };
         case "FLOOD_WATCH":
           return {
@@ -1068,16 +1141,14 @@
             copy: "Heavy rain and flood risk are elevated across parts of Hawaiʻi. Monitor official alerts as conditions change.",
             bannerTitle: "🌧 Kona Storm Conditions Across Hawaiʻi",
             bannerCopy: "Heavy rain, flood risk, and gusty winds may continue for several hours. Official weather alerts may change quickly.",
-            stateClass: "rgba(77,168,255,.22)"
           };
         case "STORM_ACTIVE":
           return {
             chip: "Storm Active",
             title: "Storm conditions affecting Hawaiʻi",
-            copy: "Broad storm conditions remain elevated across the state. Flood and wind context may change quickly.",
+            copy: "Broad storm and rainfall context remain elevated across the state. Flood and wind conditions may change quickly.",
             bannerTitle: "🌀 Active Storm Context",
-            bannerCopy: "Kahu Ola is using storm context as the primary statewide civic signal at this time.",
-            stateClass: "rgba(77,168,255,.22)"
+            bannerCopy: "Kahu Ola is using live rain radar and statewide flood context as the primary civic signal at this time.",
           };
         case "DEGRADED":
           return {
@@ -1085,8 +1156,7 @@
             title: "Hazard data temporarily limited",
             copy: "Some hazard data sources are delayed. Kahu Ola is showing the safest available civic fallback and official resource links.",
             bannerTitle: "⚠ Limited Hazard Data",
-            bannerCopy: "When data freshness is reduced, Kahu Ola prefers transparent degraded rendering over false confidence.",
-            stateClass: "rgba(255,94,123,.22)"
+            bannerCopy: "When source freshness is reduced, Kahu Ola prefers transparent degraded rendering over false confidence.",
           };
         default:
           return {
@@ -1095,107 +1165,125 @@
             copy: "No major hazard is elevated in the current validated statewide snapshot.",
             bannerTitle: "✅ Monitoring Statewide Conditions",
             bannerCopy: "Kahu Ola is actively checking fire, flood, storm, and other public hazard signals across Hawaiʻi.",
-            stateClass: "rgba(103,194,126,.22)"
           };
       }
     }
 
-    function relativeLabel(iso) {
-      if (!iso) return "Updated recently";
-      const t = new Date(iso).getTime();
-      if (Number.isNaN(t)) return "Updated recently";
-      const diffMin = Math.max(0, Math.round((Date.now() - t) / 60000));
-      if (diffMin < 1) return "Updated just now";
-      return `Updated ${diffMin} min ago`;
-    }
-
-    function summarizeFire(items) {
-      if (!items || !items.length) {
+    function summarizeFire(payload) {
+      const features = getFeatures(payload);
+      if (!features.length) {
         setStatus("fireStatus", "ok", "Clear");
         setText("fireTitle", "🔥 Fire Signal — Monitoring");
         setText("fireCopy", "No active wildfire signal is elevated near populated Hawaiʻi areas in the current snapshot.");
-        setText("fireFreshnessChip", "No active fire signal");
+        setText("fireSourceChip", "NASA FIRMS");
+        setText("fireFreshnessChip", relativeLabel(generatedAt(payload)));
         return;
       }
 
-      const top = items[0];
-      const sev = top?.display?.severity || "WATCH";
-      const confidence = top?.display?.confidence_label || "Nominal";
-      const source = top?.source?.provider || "NASA FIRMS";
-      const lastChecked = top?.freshness?.last_checked_at || null;
+      const top = features[0]?.properties || {};
+      const confidence = String(top.confidence || "nominal").toUpperCase();
+      const frp = top.frp ? ` · FRP ${top.frp}` : "";
+      const when = top.acq_date && top.acq_time ? `${top.acq_date} ${top.acq_time} UTC` : relativeLabel(generatedAt(payload));
 
-      setStatus("fireStatus", sev === "WARNING" || sev === "CRITICAL" ? "active" : "watch", sev);
+      setStatus("fireStatus", "active", `${features.length} hotspot${features.length === 1 ? "" : "s"}`);
       setText("fireTitle", "🔥 Fire Signal — Active");
-      setText("fireCopy", `${top?.display?.headline || "Fire signal detected"} · ${top?.display?.summary || "Satellite hotspot detected."}`);
-      setText("fireSourceChip", source);
-      setText("fireFreshnessChip", `${confidence} confidence · ${relativeLabel(lastChecked)}`);
+      setText("fireCopy", `Satellite hotspot detection returned by NASA FIRMS.${frp} Not a confirmed wildfire report.`);
+      setText("fireSourceChip", `NASA FIRMS · ${confidence}`);
+      setText("fireFreshnessChip", when);
     }
 
-    function summarizeFlood(items) {
-      if (!items || !items.length) {
+    function summarizeFlood(payload, contextPayload) {
+      const features = getFeatures(payload);
+      const contextFeatures = getFeatures(contextPayload);
+      const statusText = lowerJson(payload);
+      const contextText = lowerJson(contextPayload);
+
+      if (hasWarningText(payload)) {
+        setStatus("floodStatus", "active", "WARNING");
+        setText("floodTitle", "🌧 Flood Signal — Warning");
+        setText("floodCopy", payload?.summary?.message || "Flash flood warnings reported in Hawaiʻi.");
+      } else if (hasWatchText(payload) || contextText.includes('"risk_index":"high"') || contextText.includes('"risk_index":"elevated"')) {
+        setStatus("floodStatus", "watch", "WATCH");
+        setText("floodTitle", "🌧 Flood Signal — Watch");
+        setText("floodCopy", payload?.summary?.message || contextPayload?.summary?.message || "Flood watch or elevated flood context is active across parts of Hawaiʻi.");
+      } else {
         setStatus("floodStatus", "ok", "Clear");
         setText("floodTitle", "🌧 Flood Signal — Monitoring");
         setText("floodCopy", "No validated flood watch or warning is currently returned by the worker.");
-        setText("floodFreshnessChip", "No active flood signal");
-        return;
       }
 
-      const top = items[0];
-      const level = top?.properties?.alert_level || "watch";
-      const statusKind = level === "warning" ? "active" : "watch";
-      setStatus("floodStatus", statusKind, level.toUpperCase());
-      setText("floodTitle", `🌧 Flood Signal — ${level === "warning" ? "Warning" : "Watch"}`);
-      setText("floodCopy", top?.display?.summary || "Flood context elevated in the current snapshot.");
-      setText("floodSourceChip", top?.source?.provider || "NWS Honolulu");
-      setText("floodFreshnessChip", relativeLabel(top?.freshness?.last_checked_at || null));
+      setText("floodSourceChip", features.length ? "NWS Honolulu" : "PacIOOS context");
+      setText("floodFreshnessChip", relativeLabel(generatedAt(payload) || generatedAt(contextPayload)));
     }
 
-    function summarizeStorm(items) {
-      if (!items || !items.length) {
+    function summarizeStorm(rainPayload, contextPayload) {
+      const rainFeatures = getFeatures(rainPayload);
+      const ctxFeatures = getFeatures(contextPayload);
+      const summary = rainPayload?.summary || {};
+      const heavyCount = summary.heavy_count ?? 0;
+      const moderateCount = summary.moderate_count ?? 0;
+      const ctxSummary = contextPayload?.summary || {};
+
+      if (rainFeatures.length || ctxFeatures.length) {
+        setStatus("stormStatus", "watch", "ACTIVE");
+        setText("stormTitle", "🌀 Storm Signal — Active");
+        setText(
+          "stormCopy",
+          rainPayload?.summary?.message ||
+          contextPayload?.summary?.message ||
+          "Rain radar and statewide flood context indicate active storm conditions across Hawaiʻi."
+        );
+        const detail = [];
+        if (heavyCount) detail.push(`${heavyCount} heavy cells`);
+        if (moderateCount) detail.push(`${moderateCount} moderate cells`);
+        if (!detail.length && ctxSummary.high_count) detail.push(`${ctxSummary.high_count} high-risk flood zones`);
+        setText("stormSourceChip", detail.length ? `NOAA · ${detail.join(" · ")}` : "NOAA radar context");
+        setText("stormFreshnessChip", relativeLabel(generatedAt(rainPayload) || generatedAt(contextPayload)));
+      } else {
         setStatus("stormStatus", "ok", "Clear");
         setText("stormTitle", "🌀 Storm Signal — Monitoring");
         setText("stormCopy", "No validated active storm alert is currently returned by the worker.");
-        setText("stormFreshnessChip", "No active storm signal");
-        return;
+        setText("stormSourceChip", "NOAA");
+        setText("stormFreshnessChip", relativeLabel(generatedAt(rainPayload) || generatedAt(contextPayload)));
       }
-
-      const top = items[0];
-      const sev = top?.display?.severity || "ELEVATED";
-      const kind = sev === "WARNING" ? "active" : "watch";
-      setStatus("stormStatus", kind, sev);
-      setText("stormTitle", "🌀 Storm Signal — Active");
-      setText("stormCopy", top?.display?.summary || "Storm context elevated in the current snapshot.");
-      setText("stormSourceChip", top?.source?.provider || "NWS Honolulu");
-      setText("stormFreshnessChip", relativeLabel(top?.freshness?.last_checked_at || null));
     }
 
-    function applyHero(home) {
-      const ui = eventUi(home?.primary_event);
+    function applyHero(primaryEvent, counts, freshnessLabel) {
+      const ui = eventUi(primaryEvent);
       setText("heroTitle", ui.title);
       setText("heroCopy", ui.copy);
       setText("heroBannerTitle", ui.bannerTitle);
       setText("heroBannerCopy", ui.bannerCopy);
       setText("stateChip", ui.chip);
-      setText("updatedPill", relativeLabel(new Date().toISOString()));
-      setText("freshnessChip", home?.primary_event ? `${home.primary_event} · live summary` : "snapshot pending");
-      setText("contextPrimary", home?.primary_event || "MONITORING");
-      setText("contextFireCount", String(home?.fire_count ?? 0));
-      setText("contextFloodCount", String(home?.flood_count ?? 0));
-      setText("contextStormCount", String(home?.storm_count ?? 0));
+      setText("updatedPill", freshnessLabel || "Updated recently");
+      setText("freshnessChip", `${primaryEvent} · live worker endpoints`);
+      setText("contextPrimary", primaryEvent);
+      setText("contextFireCount", String(counts.fireCount));
+      setText("contextFloodCount", String(counts.floodCount));
+      setText("contextStormCount", String(counts.stormCount));
 
       const note = document.getElementById("systemNote");
-      if (note && home?.primary_event === "DEGRADED") {
+      if (!note) return;
+      if (primaryEvent === "DEGRADED") {
         note.textContent = "Some hazard data sources are delayed. Kahu Ola is showing the safest available civic fallback. Always follow official emergency instructions.";
+      } else if (primaryEvent === "FLOOD_WARNING") {
+        note.textContent = "Flash flood warnings are active. Avoid flooded roads, stream crossings, and low-lying areas. Follow official county and NWS instructions.";
+      } else if (primaryEvent === "FLOOD_WATCH" || primaryEvent === "STORM_ACTIVE") {
+        note.textContent = "Kona storm conditions may change quickly. Monitor official alerts, prepare essentials, and avoid unnecessary travel in flood-prone areas.";
+      } else {
+        note.textContent = "Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.";
       }
     }
 
-    function applyIslandCards(home, floods, storms) {
-      const floodActive = Array.isArray(floods) && floods.length > 0;
-      const stormActive = Array.isArray(storms) && storms.length > 0;
+    function applyIslandCards(primaryEvent, floodPayload, rainPayload, floodContextPayload) {
+      const floodWatch = hasWatchText(floodPayload) || hasWarningText(floodPayload);
+      const stormActive = getFeatures(rainPayload).length > 0;
+      const floodContextText = lowerJson(floodContextPayload);
+      const elevatedContext = floodContextText.includes('"risk_index":"high"') || floodContextText.includes('"risk_index":"elevated"');
 
-      setStatus("mauiStatus", floodActive ? "watch" : "ok", floodActive ? "Watch" : "Monitoring");
-      setText("mauiCopy", floodActive
-        ? "Flood-related context is elevated in the current snapshot."
+      setStatus("mauiStatus", floodWatch || elevatedContext ? "watch" : "ok", floodWatch ? "Watch" : elevatedContext ? "Elevated" : "Monitoring");
+      setText("mauiCopy", floodWatch || elevatedContext
+        ? "Flood-related context is elevated in the current statewide snapshot."
         : "No major Maui hazard is elevated in the current statewide snapshot.");
 
       setStatus("oahuStatus", stormActive ? "watch" : "ok", stormActive ? "Storm" : "Monitoring");
@@ -1208,53 +1296,60 @@
         ? "Storm and wind context may affect Hawaiʻi Island."
         : "Routine monitoring remains active.");
 
-      setStatus("kauaiStatus", floodActive || stormActive ? "watch" : "ok", floodActive || stormActive ? "Watch" : "Monitoring");
-      setText("kauaiCopy", floodActive || stormActive
+      setStatus("kauaiStatus", floodWatch || stormActive ? "watch" : "ok", floodWatch || stormActive ? "Watch" : "Monitoring");
+      setText("kauaiCopy", floodWatch || stormActive
         ? "Statewide storm / flood context may affect Kauaʻi."
         : "Routine monitoring remains active.");
 
-      // Mini map emphasis
-      document.getElementById("mauiBadge").className = `map-badge ${floodActive ? "flood" : "ok"}`;
+      document.getElementById("mauiBadge").className = `map-badge ${floodWatch || elevatedContext ? "flood" : "ok"}`;
       document.getElementById("oahuBadge").className = `map-badge ${stormActive ? "flood" : "ok"}`;
       document.getElementById("bigIslandBadge").className = `map-badge ${stormActive ? "flood" : "ok"}`;
-      document.getElementById("kauaiBadge").className = `map-badge ${floodActive || stormActive ? "flood" : "ok"}`;
+      document.getElementById("kauaiBadge").className = `map-badge ${floodWatch || stormActive ? "flood" : "ok"}`;
     }
 
-    async function getJson(url) {
-      const res = await fetch(url, {
-        method: "GET",
-        headers: { "accept": "application/json" },
-        cache: "no-store"
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-      return res.json();
-    }
-
-    async function boot() {
+    async function getJsonSafe(url) {
       try {
-        const [home, fire, flood, storm] = await Promise.all([
-          getJson(api.home),
-          getJson(api.fire).catch(() => ({ items: [] })),
-          getJson(api.flood).catch(() => ({ items: [] })),
-          getJson(api.storm).catch(() => ({ items: [] }))
-        ]);
-
-        applyHero(home);
-        summarizeFire(fire.items || []);
-        summarizeFlood(flood.items || []);
-        summarizeStorm(storm.items || []);
-        applyIslandCards(home, flood.items || [], storm.items || []);
+        const res = await fetch(url, {
+          method: "GET",
+          headers: { accept: "application/json, application/geo+json" },
+          cache: "no-store"
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
       } catch (err) {
-        console.error("Kahu Ola homepage bootstrap failed:", err);
-        applyHero({ primary_event: "DEGRADED", fire_count: 0, flood_count: 0, storm_count: 0 });
-        summarizeFire([]);
-        summarizeFlood([]);
-        summarizeStorm([]);
-        applyIslandCards({ primary_event: "DEGRADED" }, [], []);
+        console.warn("Kahu Ola endpoint failed:", url, err);
+        return null;
       }
     }
 
-    boot();
+    async function boot() {
+      const [healthPayload, firePayload, floodPayload, rainPayload, floodContextPayload] = await Promise.all([
+        getJsonSafe(api.health),
+        getJsonSafe(api.fire),
+        getJsonSafe(api.flood),
+        getJsonSafe(api.rain),
+        getJsonSafe(api.floodContext)
+      ]);
+
+      const counts = hazardCounts({ firePayload, floodPayload, rainPayload, floodContextPayload });
+      const primaryEvent = computePrimaryEvent({ healthPayload, firePayload, floodPayload, rainPayload, floodContextPayload });
+      const freshest = generatedAt(healthPayload) || generatedAt(firePayload) || generatedAt(floodPayload) || generatedAt(rainPayload) || generatedAt(floodContextPayload);
+
+      applyHero(primaryEvent, counts, relativeLabel(freshest));
+      summarizeFire(firePayload);
+      summarizeFlood(floodPayload, floodContextPayload);
+      summarizeStorm(rainPayload, floodContextPayload);
+      applyIslandCards(primaryEvent, floodPayload, rainPayload, floodContextPayload);
+    }
+
+    boot().catch((err) => {
+      console.error("Kahu Ola homepage bootstrap failed:", err);
+      applyHero("DEGRADED", { fireCount: 0, floodCount: 0, stormCount: 0 }, "Updated recently");
+      summarizeFire(null);
+      summarizeFlood(null, null);
+      summarizeStorm(null, null);
+      applyIslandCards("DEGRADED", null, null, null);
+    });
   </script>
 </body>
 </html>
