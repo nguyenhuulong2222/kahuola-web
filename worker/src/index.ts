@@ -336,6 +336,69 @@ async function handleRainRadar(url: URL, cors: CorsHeaders): Promise<Response> {
   );
 }
 
+async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
+  const region = resolveRegion(url);
+  const now = new Date().toISOString();
+
+  /**
+   * DEV / TEST MODE
+   * Tạm trả dữ liệu MRMS giả lập để frontend hết "Unavailable".
+   * Khi có upstream thật thì thay block này bằng fetch thật.
+   */
+  const signals: Feature[] = [
+    {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [-156.55, 20.92],
+          [-156.20, 20.92],
+          [-156.20, 20.62],
+          [-156.55, 20.62],
+          [-156.55, 20.92],
+        ]],
+      },
+      properties: {
+        id: 'mrms-maui-test-1',
+        source: 'NOAA_MRMS',
+        source_provider: 'NOAA_MRMS',
+        source_label: 'NOAA MRMS',
+        band: '3H',
+        qpe_mm: 42.8,
+        qpe_in: 1.69,
+        risk_index: 'ELEVATED',
+        severity: 'ELEVATED',
+        event_time: now,
+        fetched_at: now,
+        note: 'Test MRMS rainfall context polygon for Maui.',
+      },
+    },
+  ];
+
+  return jsonResp(
+    buildHazardEnvelope(
+      'mrms-rain',
+      'NOAA_MRMS',
+      region,
+      signals,
+      {
+        status: signals.length ? 'detected' : 'none',
+        count: signals.length,
+        message: signals.length
+          ? 'MRMS rainfall context is available in this snapshot.'
+          : 'No MRMS rainfall polygons were returned in this snapshot.',
+      },
+      {
+        authority: 'contextual',
+        note: 'MRMS supports rainfall accumulation context and is advisory, not authoritative flood warning geometry.',
+      },
+    ),
+    200,
+    cors,
+  );
+}
+
+
 function buildFloodContextSignals(region: string, officialSignals: Feature[]): Feature[] {
   const officialMultiplier = officialSignals.length > 0 ? 3 : 0;
   return SMART_HAWAII_CELLS
@@ -429,6 +492,7 @@ export default {
     if (path === '/api/hazards/flash-flood' || path === '/hazards/flash-flood') return handleFlashFlood(url, cors);
     if (path === '/api/hazards/flood-context' || path === '/hazards/flood-context') return handleFloodContext(url, cors);
     if (path === '/api/hazards/rain-radar' || path === '/hazards/rain-radar') return handleRainRadar(url, cors);
+    if (path === '/api/hazards/mrms-qpe' || path === '/hazards/mrms-qpe') return handleMrmsQpe(url, cors);
     if (path === '/api/firms/hotspots') return handleFirmsHotspots(url, env, cors);
 
     const wmsMatch = path.match(/^\/api\/tiles\/wms\/([a-z_]+)$/);
