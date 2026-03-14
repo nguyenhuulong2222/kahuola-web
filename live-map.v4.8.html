@@ -2413,7 +2413,7 @@ function openWindRiskPopup(feature, lngLat) {
 function openFlashFloodPopup(feature, lngLat) {
   const p = feature.properties || {};
   const severity = p.severity || "WATCH";
-  const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T"," ").slice(0,16) + " UTC" : "Unavailable";
+  const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T"," ").slice(0,16) + " UTC" : "See Signal text";
   if (activePopup) activePopup.remove();
   const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 Flash Flood Watch</div><div class="popup-coords">${escapeHtml(p.source || "NWS")}</div></div><div class="popup-severity normal">${escapeHtml(severity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || "Flash Flood Watch")}</div></div><div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${escapeHtml(p.advisory || "Follow official county and NWS guidance first.")}</div></div>`;
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html).addTo(map);
@@ -2594,3 +2594,4 @@ map.on("load", async () => {
 
 </body>
 </html>
+
