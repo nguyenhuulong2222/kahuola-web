@@ -20,4 +20,6 @@ interface Env {
   // Optional API keys/secrets for upstream systems
   NASA_FIRMS_API_KEY?: string;
   AIRNOW_API_KEY?: string;
+  MRMS_QPE_URL?: string;
+  MRMS_QPE_TOKEN?: string;
 }
