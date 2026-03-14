@@ -61,7 +61,7 @@ export default {
         return withCors(response);
       }
 
-      if (path === "/api/hazards/mrms-qpe" || path === "/v1/hazards/mrms-qpe") {
+      if (path === "/hazards/mrms-qpe" || path === "/v1/hazards/mrms-qpe") {
         response = await handleMrmsQpe(request, env);
         return withCors(response);
       }
