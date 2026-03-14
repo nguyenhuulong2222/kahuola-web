@@ -5,7 +5,6 @@ import { handleHealth } from "./routes/health";
 import { handleStatus } from "./routes/status";
 import { handleMrmsQpe } from "./routes/mrms-qpe";
 
-
 function normalizePath(pathname: string): string {
   return pathname.startsWith("/api/") ? pathname.slice(4) : pathname;
 }
@@ -35,6 +34,11 @@ export default {
         return withCors(response);
       }
 
+      if (path === "/hazards/mrms-qpe" || path === "/v1/hazards/mrms-qpe") {
+        response = await handleMrmsQpe(request, env);
+        return withCors(response);
+      }
+
       if (path.startsWith("/v1/hazards")) {
         response = await handleHazards(
           new Request(new URL(path + url.search, url.origin), request),
@@ -58,11 +62,6 @@ export default {
 
       if (path === "/v1/system/status") {
         response = await handleStatus(request, env);
-        return withCors(response);
-      }
-
-      if (path === "/hazards/mrms-qpe" || path === "/v1/hazards/mrms-qpe") {
-        response = await handleMrmsQpe(request, env);
         return withCors(response);
       }
 
