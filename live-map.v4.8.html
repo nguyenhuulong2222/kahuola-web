@@ -842,6 +842,19 @@
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
     }
 
+    .action-btn.wind-btn{
+      background:rgba(255,152,0,.08);
+      border-color:rgba(255,152,0,.22);
+      color:#ffd8ae;
+    }
+
+    .action-btn.wind-btn.active{
+      background:rgba(255,152,0,.14);
+      border-color:rgba(255,152,0,.34);
+      color:#fff1dd;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+
     .blueprint-footnote{
       margin-top:8px;
       color:var(--muted);
@@ -1341,7 +1354,8 @@
               <button class="action-btn satellite-btn" id="satellite-btn-mobile" type="button">Satellite</button>
               <button class="action-btn smoke-btn" id="smoke-btn-mobile" type="button">Smoke Layer: On</button>
               <button class="action-btn" id="perimeter-btn-mobile" type="button">Perimeters: On</button>
-              <button class="action-btn flood-btn" id="flood-btn-mobile" type="button">Flood Watch: On</button>
+              <button class="action-btn flood-btn" id="flood-btn-mobile" type="button">Flood Layers: On</button>
+              <button class="action-btn wind-btn" id="wind-btn-mobile" type="button">Fire Weather: On</button>
               <a class="action-btn" href="/support.html">Support</a>
             </div>
           </div>
@@ -1517,21 +1531,21 @@
               <div class="mini-module-title">MRMS Rainfall</div>
               <div class="mini-module-note" id="mrms-rain-note">1h / 3h / 24h rainfall context</div>
             </div>
-            <div class="status-badge status-planned" id="mrms-rain-badge">Unavailable</div>
+            <div class="status-badge status-planned" id="mrms-rain-badge">Loading</div>
           </div>
           <div class="mini-module" id="rain-radar-card" tabindex="0" role="button" aria-label="Rain radar details">
             <div>
               <div class="mini-module-title">Rain Radar</div>
               <div class="mini-module-note" id="rain-radar-note">Live NOAA raster radar</div>
             </div>
-            <div class="status-badge status-planned" id="rain-radar-badge">Off</div>
+            <div class="status-badge status-detected" id="rain-radar-badge">Active</div>
           </div>
-          <div class="mini-module js-hazard-detail" data-hazard-title="Wind Risk" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Wind risk matters for both wildfire spread and mountain microclimates. This module should eventually fuse RAWS and summit conditions into a civic-grade watch layer without overstating severity." tabindex="0" role="button" aria-label="Wind Risk details">
+          <div class="mini-module" id="wind-risk-card" tabindex="0" role="button" aria-label="Fire Weather details">
             <div>
-              <div class="mini-module-title">Wind Risk</div>
-              <div class="mini-module-note">Fire spread context</div>
+              <div class="mini-module-title">Fire Weather</div>
+              <div class="mini-module-note" id="wind-risk-note">Wind + humidity spread context</div>
             </div>
-            <div class="status-badge status-planned">Blueprint</div>
+            <div class="status-badge status-planned" id="wind-risk-badge">Blueprint</div>
           </div>
           <div class="mini-module js-hazard-detail" data-hazard-title="Tsunami Alerts" data-hazard-status="Blueprint" data-hazard-note="Blueprint scaffold only — endpoint not active yet." data-hazard-detail="Tsunami belongs in the future multi-hazard stack, but it should remain visually secondary on Maui unless an alert is active. The panel should only escalate when official warning products are present." tabindex="0" role="button" aria-label="Tsunami Alerts details">
             <div>
@@ -1567,7 +1581,8 @@
       <button class="action-btn satellite-btn" id="satellite-btn-panel" type="button">Satellite</button>
       <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke Layer: On</button>
       <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
-      <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Watch: On</button>
+      <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Layers: On</button>
+      <button class="action-btn wind-btn" id="wind-btn-panel" type="button">Fire Weather: On</button>
     </div>
   </template>
 
@@ -1624,7 +1639,8 @@ let perimeterVisible = true;
 let flashFloodVisible = true;
 let floodContextVisible = true;
 let mrmsVisible = true;
-let rainRadarVisible = false;
+let rainRadarVisible = true;
+let windRiskVisible = true;
 
 const appState = {
   diagnostics: {
@@ -1977,6 +1993,34 @@ function normalizeMrmsFeatures(rawSignals) {
   }).filter(Boolean);
 }
 
+function normalizeWindRiskFeatures(rawSignals) {
+  return safeArray(rawSignals).map((raw, index) => {
+    const signal = normalizeBasePolygonSignal(raw, index, { type: "FireWeatherSignal", idPrefix: "fire-weather", provider: "NWS_RAWS", product: "FIRE_WEATHER_CONTEXT", official: false, fallbackSeverity: "LOW", ttlSeconds: 900 });
+    if (!signal) return null;
+    const props = signal.properties || {};
+    const rawLevel = String(props.risk_index || props.severity || signal.severity.level || "LOW").toUpperCase();
+    const allowed = ["LOW", "MODERATE", "ELEVATED", "HIGH", "CRITICAL"];
+    const level = allowed.includes(rawLevel) ? rawLevel : "LOW";
+    return {
+      type: "Feature", geometry: signal.geometry,
+      properties: {
+        id: signal.id,
+        risk_index: level,
+        severity: level,
+        wind_gust_mph: Number.isFinite(props.wind_gust_mph) ? props.wind_gust_mph : null,
+        sustained_wind_mph: Number.isFinite(props.sustained_wind_mph) ? props.sustained_wind_mph : null,
+        humidity_pct: Number.isFinite(props.humidity_pct) ? props.humidity_pct : null,
+        dryness_index: typeof props.dryness_index === "string" ? props.dryness_index.toUpperCase() : null,
+        reason_codes: safeArray(props.reason_codes).filter((v) => typeof v === "string"),
+        source: signal.source.provider || "NWS_RAWS",
+        source_label: "NWS / RAWS",
+        advisory: typeof props.advisory === "string" && props.advisory.trim() ? props.advisory : "Fire weather spread context only. Follow official alerts for emergency action.",
+        event_time: signal.event_time
+      }
+    };
+  }).filter(Boolean);
+}
+
 const HAZARD_REGISTRY = {
   fire: {
     key: "fire",
@@ -2032,7 +2076,13 @@ const HAZARD_REGISTRY = {
     parsePayload(){ return { features: [], sourceTime: new Date(), sourceLabel: "NOAA Radar Tiles" }; },
     ensureLayers, applyData(){}, onFetchComplete(){}, visible(){ return rainRadarVisible; }
   },
-  windRisk: { key:"windRisk", endpoint:"", enabled:false, affectsGlobalHealth:false, parsePayload(){return {features:[]};}, ensureLayers, applyData(){}, visible(){return false;} },
+  windRisk: {
+    key: "windRisk",
+    endpoint: IS_LOCAL ? "./fire-weather-test.json" : "https://kahuola.org/api/hazards/fire-weather?region=hawaii",
+    enabled: true, affectsGlobalHealth: false,
+    parsePayload(json){ const raw = parseCanonicalSignals(json, "windRisk"); return { features: normalizeWindRiskFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "NWS / RAWS" }; },
+    ensureLayers, applyData(features){ updateWindRiskSource(features); }, onFetchComplete(){ updateWindRiskStatusUI(getState("windRisk")); renderUnifiedPanels(); }, visible(){ return windRiskVisible; }
+  },
   tsunami: { key:"tsunami", endpoint:"", enabled:false, affectsGlobalHealth:false, parsePayload(){return {features:[]};}, ensureLayers, applyData(){}, visible(){return false;} },
   hurricane: { key:"hurricane", endpoint:"", enabled:false, affectsGlobalHealth:false, parsePayload(){return {features:[]};}, ensureLayers, applyData(){}, visible(){return false;} },
   landslide: { key:"landslide", endpoint:"", enabled:false, affectsGlobalHealth:false, parsePayload(){return {features:[]};}, ensureLayers, applyData(){}, visible(){return false;} }
@@ -2090,6 +2140,7 @@ function ensureLayers() {
   ensureFloodContextLayers();
   ensureMrmsLayers();
   ensureRainRadarLayers();
+  ensureWindRiskLayers();
   ensureFireLayers();
 }
 function ensureSmokeLayers() {
@@ -2133,6 +2184,17 @@ function setupRainRadar() {
   ensureLayer({ id:"noaa-radar-layer", type:"raster", source:"noaa-radar", layout:{ visibility: rainRadarVisible ? "visible" : "none" }, paint:{ "raster-opacity":0.75, "raster-fade-duration":400, "raster-resampling":"linear" } }, "waterway");
 }
 function ensureRainRadarLayers() { setupRainRadar(); }
+function ensureWindRiskLayers() {
+  ensureSource("wind-risk", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
+  ensureLayer({ id:"wind-risk-fill", type:"fill", source:"wind-risk", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"CRITICAL","#ff6a00","HIGH","#ff8a00","ELEVATED","#ffb74d","MODERATE","#ffd180","LOW","#ffe0b2","#ffe0b2"], "fill-opacity": windRiskVisible ? ["match",["get","risk_index"],"CRITICAL",0.16,"HIGH",0.12,"ELEVATED",0.09,"MODERATE",0.06,"LOW",0.035,0.04] : 0 }});
+  ensureLayer({ id:"wind-risk-outline", type:"line", source:"wind-risk", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":["match",["get","risk_index"],"CRITICAL","#ffd5b5","HIGH","#ffd8ad","ELEVATED","#ffe0be","MODERATE","#ffebd2","LOW","#fff2e4","#fff2e4"], "line-width":1.5, "line-opacity": windRiskVisible ? 0.62 : 0 }});
+  if (!map.__windRiskHoverBound) {
+    map.__windRiskHoverBound = true;
+    map.on("mouseenter","wind-risk-fill",()=>{ map.getCanvas().style.cursor="pointer"; });
+    map.on("mouseleave","wind-risk-fill",()=>{ map.getCanvas().style.cursor=""; });
+  }
+  syncWindRiskLayerVisibility();
+}
 function ensureFireLayers() {
   ensureSource("fires", { type:"geojson", data:{ type:"FeatureCollection", features:[] }, cluster:true, clusterMaxZoom:9, clusterRadius:52 });
   ensureLayer({ id:"clusters", type:"circle", source:"fires", filter:["has","point_count"], paint:{ "circle-color":["step",["get","point_count"],"#ff8a00",8,"#ff6a00",20,"#ff3d00"], "circle-radius":["step",["get","point_count"],16,8,22,20,28], "circle-opacity":0.95, "circle-stroke-width":2, "circle-stroke-color":"rgba(255,140,0,0.26)" }});
@@ -2147,6 +2209,7 @@ function updatePerimeterSource(features){ const s=map.getSource("perimeters"); i
 function updateFlashFloodSource(features){ const s=map.getSource("flash-flood"); if (s) s.setData({ type:"FeatureCollection", features }); }
 function updateFloodContextSource(features){ const s=map.getSource("flood-context"); if (s) s.setData({ type:"FeatureCollection", features }); }
 function updateMrmsSource(features){ const s=map.getSource("mrms-rain"); if (s) s.setData({ type:"FeatureCollection", features }); }
+function updateWindRiskSource(features){ const s=map.getSource("wind-risk"); if (s) s.setData({ type:"FeatureCollection", features }); }
 
 function syncFlashFloodLayerVisibility() {
   setLayerVisibility("flash-flood-fill", flashFloodVisible);
@@ -2170,6 +2233,13 @@ function syncMrmsLayerVisibility() {
   if (map.getLayer("mrms-rain-outline")) map.setPaintProperty("mrms-rain-outline","line-opacity", mrmsVisible ? 0.5 : 0);
 }
 function syncRainRadarLayerVisibility() { setLayerVisibility("noaa-radar-layer", rainRadarVisible); }
+function syncWindRiskLayerVisibility() {
+  setLayerVisibility("wind-risk-fill", windRiskVisible);
+  setLayerVisibility("wind-risk-outline", windRiskVisible);
+  if (map.getLayer("wind-risk-fill")) map.setPaintProperty("wind-risk-fill","fill-opacity", windRiskVisible ? ["match",["get","risk_index"],"CRITICAL",0.16,"HIGH",0.12,"ELEVATED",0.09,"MODERATE",0.06,"LOW",0.035,0.04] : 0);
+  if (map.getLayer("wind-risk-outline")) map.setPaintProperty("wind-risk-outline","line-opacity", windRiskVisible ? 0.62 : 0);
+  ["wind-btn-panel-desktop","wind-btn-panel-mobile","wind-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = windRiskVisible ? "Fire Weather: On" : "Fire Weather: Off"; el.classList.toggle("active", windRiskVisible); });
+}
 function syncPerimeterLayerVisibility() {
   setLayerVisibility("perimeter-fill", perimeterVisible);
   setLayerVisibility("perimeter-outline", perimeterVisible);
@@ -2188,7 +2258,8 @@ function syncSmokeButtons(){ ["smoke-btn-panel-desktop","smoke-btn-panel-mobile"
 function syncPerimeterButtons(){ ["perimeter-btn-panel-desktop","perimeter-btn-panel-mobile","perimeter-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = perimeterVisible ? "Perimeters: On" : "Perimeters: Off"; el.classList.toggle("active", perimeterVisible); });}
 function toggleSmokeLayer(){ smokeVisible=!smokeVisible; getState("smoke").visible=smokeVisible; syncSmokeLayerVisibility(); updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length); renderUnifiedPanels(); }
 function togglePerimeterLayer(){ perimeterVisible=!perimeterVisible; getState("perimeter").visible=perimeterVisible; syncPerimeterLayerVisibility(); updatePerimeterStatusUI(getState("perimeter").sourceStatus, getState("perimeter").features.length); renderUnifiedPanels(); }
-function toggleFlashFloodLayer(){ flashFloodVisible=!flashFloodVisible; floodContextVisible=flashFloodVisible; mrmsVisible=flashFloodVisible; rainRadarVisible=flashFloodVisible; getState("flashFlood").visible=flashFloodVisible; getState("floodContext").visible=floodContextVisible; getState("mrmsRain").visible=mrmsVisible; syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility(); updateFlashFloodStatusUI(getState("flashFlood").sourceStatus, getState("flashFlood").features.length); updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }
+function toggleFlashFloodLayer(){ flashFloodVisible=!flashFloodVisible; floodContextVisible=flashFloodVisible; mrmsVisible=flashFloodVisible; getState("flashFlood").visible=flashFloodVisible; getState("floodContext").visible=floodContextVisible; getState("mrmsRain").visible=mrmsVisible; syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); updateFlashFloodStatusUI(getState("flashFlood").sourceStatus, getState("flashFlood").features.length); updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }
+function toggleWindRiskLayer(){ windRiskVisible=!windRiskVisible; getState("windRisk").visible=windRiskVisible; syncWindRiskLayerVisibility(); updateWindRiskStatusUI(getState("windRisk")); renderUnifiedPanels(); }
 
 function updateSmokeStatusUI(state, count=0) {
   ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`smoke-status-badge-${suffix}`); const note=document.getElementById(`smoke-status-note-${suffix}`); const sub=document.getElementById(`smoke-status-subnote-${suffix}`); const metric=document.getElementById(`smoke-status-text-${suffix}`); if (badge) badge.className="status-badge";
@@ -2220,13 +2291,20 @@ function updateFloodContextStatusUI(state) {
 }
 function updateMrmsStatusUI(state) {
   ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`mrms-rain-badge-${suffix}`); const note=document.getElementById(`mrms-rain-note-${suffix}`); if(!badge) return; badge.className="status-badge"; const count=state.features.length;
-    if (state.sourceStatus==="detected"){ badge.classList.add("status-detected"); badge.textContent = count > 0 ? `MRMS · ${count}` : "MRMS"; if(note) note.textContent = "MRMS rainfall accumulation context is available."; }
+    if (state.sourceStatus==="detected"){ badge.classList.add("status-detected"); badge.textContent = count > 0 ? `MRMS · ${count}` : "MRMS"; if(note) note.textContent = "NOAA MRMS rainfall context is active."; }
     else if (state.sourceStatus==="none"){ badge.classList.add("status-none"); badge.textContent = "No MRMS"; if(note) note.textContent = "No MRMS rainfall polygons were returned."; }
-    else { badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; if(note) note.textContent = "MRMS rainfall layer is scaffolded; endpoint may not be active yet."; }
+    else { badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; if(note) note.textContent = "MRMS rainfall endpoint is unavailable or stale right now."; }
+  });
+}
+function updateWindRiskStatusUI(state) {
+  ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`wind-risk-badge-${suffix}`); const note=document.getElementById(`wind-risk-note-${suffix}`); if(!badge) return; badge.className="status-badge"; const count=state.features.length;
+    if (state.sourceStatus==="detected"){ badge.classList.add("status-detected"); badge.textContent = count > 0 ? `Active · ${count}` : "Active"; if(note) note.textContent = "Wind gust + humidity spread context is active."; }
+    else if (state.sourceStatus==="none"){ badge.classList.add("status-none"); badge.textContent = "Monitoring"; if(note) note.textContent = "No elevated fire weather cells were returned."; }
+    else { badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; if(note) note.textContent = "Fire weather context could not be confirmed."; }
   });
 }
 function updateRainRadarStatusUI() {
-  ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`rain-radar-badge-${suffix}`); const note=document.getElementById(`rain-radar-note-${suffix}`); if(!badge) return; badge.className="status-badge"; badge.classList.add(rainRadarVisible ? "status-detected" : "status-none"); badge.textContent = rainRadarVisible ? "Radar On" : "Radar Off"; if(note) note.textContent = rainRadarVisible ? "Live NOAA raster radar is visible." : "NOAA radar tiles are available and can be toggled on."; });
+  ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`rain-radar-badge-${suffix}`); const note=document.getElementById(`rain-radar-note-${suffix}`); if(!badge) return; badge.className="status-badge"; badge.classList.add(rainRadarVisible ? "status-detected" : "status-none"); badge.textContent = rainRadarVisible ? "Active" : "Off"; if(note) note.textContent = rainRadarVisible ? "NOAA rain radar is active for storm visualization." : "NOAA radar tiles are available and can be toggled on."; });
 }
 
 function renderUnifiedPanels() {
@@ -2276,7 +2354,7 @@ function renderUnifiedPanels() {
       else summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across Hawaiʻi.`;
     }
     const summarySource = document.getElementById(`summary-source-${suffix}`);
-    if (summarySource) summarySource.textContent = `Source: ${(fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker")} · Delivered by Kahu Ola civic aggregator · Flood official: ${flashFlood.sourceLabel || "NWS"} · Local context: ${floodContext.sourceLabel || "PacIOOS"} · MRMS: ${mrms.sourceLabel || "MRMS"} · Radar: NOAA`;
+    if (summarySource) summarySource.textContent = `Source: ${(fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker")} · Delivered by Kahu Ola civic aggregator · Flood official: ${flashFlood.sourceLabel || "NWS"} · Local context: ${floodContext.sourceLabel || "PacIOOS"} · MRMS: ${mrms.sourceLabel || "MRMS"} · Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} · Radar: NOAA`;
     const summaryUpdated = document.getElementById(`summary-updated-${suffix}`);
     if (summaryUpdated) summaryUpdated.textContent = `Updated: ${fire.sourceTime ? hstTime(fire.sourceTime) : "—"}`;
     const summaryPrivacy = document.getElementById(`summary-privacy-${suffix}`);
@@ -2300,10 +2378,12 @@ function openFloodModuleDetail(kind) {
   const flood = getState("flashFlood");
   const context = getState("floodContext");
   const mrms = getState("mrmsRain");
+  const wind = getState("windRisk");
   if (kind === "flood") return openHazardDetail({ title:"Flash Flood", status: flood.sourceStatus === "detected" ? "Official flood status active" : flood.sourceStatus === "none" ? "No active flash flood watch" : "Official flood status unavailable", note:"Official source: National Weather Service.", body:"Official flood polygons come from the National Weather Service. PacIOOS, MRMS, and NOAA radar remain supporting context layers." });
   if (kind === "context") return openHazardDetail({ title:"Flood Context", status: context.sourceStatus === "detected" ? "Estimated local flood context available" : context.sourceStatus === "none" ? "No local flood context returned" : "Local flood context unavailable", note:"Source: PacIOOS-linked local Hawaiʻi observations and watershed indicators.", body:"This layer is estimated local context only." });
-  if (kind === "mrms") return openHazardDetail({ title:"MRMS Rainfall", status: mrms.sourceStatus === "detected" ? "MRMS rainfall context available" : mrms.sourceStatus === "none" ? "No MRMS polygons returned" : "MRMS rainfall unavailable", note:"Source: MRMS rainfall accumulation products.", body:"This module is scaffolded for 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
-  return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Source: NOAA raster radar tiles.", body:"Rain Radar is a raster situational layer for visual precipitation context. It is not used as the popup identity for fire points." });
+  if (kind === "mrms") return openHazardDetail({ title:"MRMS Rainfall", status: mrms.sourceStatus === "detected" ? "MRMS rainfall context available" : mrms.sourceStatus === "none" ? "No MRMS polygons returned" : "MRMS rainfall unavailable", note:"Source: NOAA MRMS rainfall accumulation products.", body:"MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
+  if (kind === "radar") return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Source: NOAA raster radar tiles.", body:"Rain Radar is a raster situational layer for visual precipitation context. It is not used as the popup identity for fire points." });
+  return openHazardDetail({ title:"Fire Weather", status: wind.sourceStatus === "detected" ? "Fire weather spread context active" : wind.sourceStatus === "none" ? "No elevated fire weather cells returned" : "Fire weather context unavailable", note:"Source: NWS + RAWS wind and humidity context.", body:"Fire Weather combines wind gust, sustained wind, humidity, and dry exposure into a civic spread-risk context layer. It is contextual, not an evacuation order." });
 }
 function openHazardDetailFromElement(el) {
   if (!el || !hazardDetailSheet) return;
@@ -2323,10 +2403,17 @@ function openMrmsPopup(feature, lngLat) {
   const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌧 MRMS Rainfall</div><div class="popup-coords">${escapeHtml(p.source || "MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.band || "QPE")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Window</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">Accumulation</div><div class="popup-metric-value">${escapeHtml(p.qpe_mm ?? "—")}${p.qpe_mm != null ? " mm" : ""}</div></div></div><div class="popup-note">MRMS rainfall accumulation is contextual and should be paired with official alerts.</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
+function openWindRiskPopup(feature, lngLat) {
+  const p = feature.properties || {};
+  if (activePopup) activePopup.remove();
+  const reasons = Array.isArray(p.reason_codes) && p.reason_codes.length ? p.reason_codes.join(" · ") : "Wind + humidity spread context";
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌬 Fire Weather</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NWS / RAWS")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Context")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Wind Gust</div><div class="popup-metric-value">${escapeHtml(p.wind_gust_mph ?? "—")}${p.wind_gust_mph != null ? " mph" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">Humidity</div><div class="popup-metric-value">${escapeHtml(p.humidity_pct ?? "—")}${p.humidity_pct != null ? "%" : ""}</div></div></div><div class="popup-note">${escapeHtml(reasons)}. ${escapeHtml(p.advisory || "Context only.")}</div></div>`;
+  activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
+}
 function openFlashFloodPopup(feature, lngLat) {
   const p = feature.properties || {};
   const severity = p.severity || "WATCH";
-  const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T"," ").slice(0,16) + " UTC" : "See Signal text";
+  const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T"," ").slice(0,16) + " UTC" : "Unavailable";
   if (activePopup) activePopup.remove();
   const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 Flash Flood Watch</div><div class="popup-coords">${escapeHtml(p.source || "NWS")}</div></div><div class="popup-severity normal">${escapeHtml(severity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || "Flash Flood Watch")}</div></div><div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${escapeHtml(p.advisory || "Follow official county and NWS guidance first.")}</div></div>`;
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html).addTo(map);
@@ -2379,7 +2466,7 @@ function zoomToCluster(feature) {
   source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
 }
 function raiseFireLayersAboveOverlays() {
-  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
+  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
     if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) {} }
   });
   ["clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
@@ -2397,6 +2484,7 @@ function bindGlobalCanvasClickRouter() {
     if (flashFloodVisible) { const flash = queryTopFeature(e.point, ["flash-flood-point","flash-flood-fill"]); if (flash) { openFlashFloodPopup(flash, e.lngLat); return; } }
     if (floodContextVisible) { const flood = queryTopFeature(e.point, ["flood-context-fill"]); if (flood) { openFloodContextPopup(flood, e.lngLat); return; } }
     if (mrmsVisible) { const mrms = queryTopFeature(e.point, ["mrms-rain-fill"]); if (mrms) { openMrmsPopup(mrms, e.lngLat); return; } }
+    if (windRiskVisible) { const wind = queryTopFeature(e.point, ["wind-risk-fill"]); if (wind) { openWindRiskPopup(wind, e.lngLat); return; } }
     if (smokeVisible) { const smoke = queryTopFeature(e.point, ["smoke-fill"]); if (smoke) { openSmokePopup(smoke, e.lngLat); return; } }
     if (perimeterVisible) { const perimeter = queryTopFeature(e.point, ["perimeter-fill"]); if (perimeter) openPerimeterPopup(perimeter, e.lngLat); }
   });
@@ -2426,8 +2514,13 @@ function bindButtons() {
   document.getElementById("flood-context-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("context"));
   document.getElementById("mrms-rain-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
   document.getElementById("mrms-rain-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
-  document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); });
-  document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); });
+  document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
+  document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
+  document.getElementById("wind-risk-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("wind"));
+  document.getElementById("wind-risk-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("wind"));
+  document.getElementById("wind-btn-panel-desktop")?.addEventListener("click", toggleWindRiskLayer);
+  document.getElementById("wind-btn-panel-mobile")?.addEventListener("click", toggleWindRiskLayer);
+  document.getElementById("wind-btn-mobile")?.addEventListener("click", toggleWindRiskLayer);
 }
 function setSheetOpen(open) { if (window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details"; setTimeout(safeMapResize, 280); }
 function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
@@ -2437,11 +2530,13 @@ syncDiag();
 syncSatelliteButtons();
 syncSmokeButtons();
 syncPerimeterButtons();
+syncWindRiskLayerVisibility();
 updateSmokeStatusUI("unknown", 0);
 updatePerimeterStatusUI("unknown", 0);
 updateFlashFloodStatusUI("unknown", 0);
 updateFloodContextStatusUI(getState("floodContext"));
 updateMrmsStatusUI(getState("mrmsRain"));
+updateWindRiskStatusUI(getState("windRisk"));
 renderUnifiedPanels();
 
 diagBtn?.addEventListener("click", () => {
@@ -2476,7 +2571,7 @@ map.on("style.load", () => {
   bindGlobalCanvasClickRouter();
   raiseFireLayersAboveOverlays();
   Object.keys(HAZARD_REGISTRY).forEach((key) => { HAZARD_REGISTRY[key].applyData(getState(key).features); });
-  syncSatelliteButtons(); syncSmokeButtons(); syncPerimeterButtons(); syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility();
+  syncSatelliteButtons(); syncSmokeButtons(); syncPerimeterButtons(); syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility(); syncWindRiskLayerVisibility();
   setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
   if (userMarker && lastKnownUserCoord) updateUserMarker(lastKnownUserCoord);
   safeMapResize();
@@ -2496,8 +2591,6 @@ map.on("load", async () => {
   pollHandle = setInterval(async () => { await refreshEnabledHazards({ silent:true }); raiseFireLayersAboveOverlays(); }, POLL_MS);
 });
 </script>
-</script>
 
 </body>
 </html>
-
