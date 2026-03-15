@@ -1538,7 +1538,7 @@
               <div class="mini-module-title">Rain Radar</div>
               <div class="mini-module-note" id="rain-radar-note">Live NOAA raster radar</div>
             </div>
-            <div class="status-badge status-detected" id="rain-radar-badge">Active</div>
+            <div class="status-badge status-none" id="rain-radar-badge">Off</div>
           </div>
           <div class="mini-module" id="wind-risk-card" tabindex="0" role="button" aria-label="Fire Weather details">
             <div>
@@ -1639,7 +1639,7 @@ let perimeterVisible = true;
 let flashFloodVisible = true;
 let floodContextVisible = true;
 let mrmsVisible = true;
-let rainRadarVisible = true;
+let rainRadarVisible = false; // Default OFF — user toggles on when needed
 let windRiskVisible = true;
 
 const appState = {
@@ -2059,7 +2059,7 @@ const HAZARD_REGISTRY = {
     endpoint: IS_LOCAL ? "./flash-flood-test.json" : "https://kahuola.org/api/hazards/flash-flood?region=hawaii",
     enabled: true, affectsGlobalHealth: false,
     parsePayload(json){ const raw = parseCanonicalSignals(json, "flashFlood"); return { features: normalizeFlashFloodFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "National Weather Service" }; },
-    ensureLayers, applyData(features){ updateFlashFloodSource(features); }, onFetchComplete(){ const s=getState("flashFlood"); updateFlashFloodStatusUI(s.sourceStatus, s.features.length); renderUnifiedPanels(); }, visible(){ return flashFloodVisible; }
+    ensureLayers, applyData(features){ updateFlashFloodSource(features); }, onFetchComplete(){ const s=getState("flashFlood"); updateFlashFloodStatusUI(s.sourceStatus, s.features.length); if (s.sourceStatus==="detected" && s.features.length>0 && !rainRadarVisible){ rainRadarVisible=true; syncRainRadarLayerVisibility(); } renderUnifiedPanels(); }, visible(){ return flashFloodVisible; }
   },
   floodContext: {
     key: "floodContext",
@@ -2196,8 +2196,8 @@ function ensureFloodContextLayers() {
 }
 function ensureMrmsLayers() {
   ensureSource("mrms-rain", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
-  ensureLayer({ id:"mrms-rain-fill", type:"fill", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","severity"],"HIGH","#0c6fbf","ELEVATED","#2d8cff","MODERATE","#74b5ff","LOW","#b7daff","#b7daff"], "fill-opacity": mrmsVisible ? ["match",["get","severity"],"HIGH",0.14,"ELEVATED",0.10,"MODERATE",0.07,"LOW",0.04,0.04] : 0 }});
-  ensureLayer({ id:"mrms-rain-outline", type:"line", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":"#bfe0ff", "line-width":1.3, "line-opacity": mrmsVisible ? 0.5 : 0 }});
+  ensureLayer({ id:"mrms-rain-fill", type:"fill", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","severity"],"HIGH","#006064","ELEVATED","#00838f","MODERATE","#00bcd4","LOW","#80deea","#80deea"], "fill-opacity": mrmsVisible ? ["match",["get","severity"],"HIGH",0.14,"ELEVATED",0.10,"MODERATE",0.07,"LOW",0.04,0.04] : 0 }});
+  ensureLayer({ id:"mrms-rain-outline", type:"line", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":"#80deea", "line-width":1.3, "line-opacity": mrmsVisible ? 0.5 : 0 }});
   if (!map.__mrmsHoverBound) { map.__mrmsHoverBound = true; map.on("mouseenter","mrms-rain-fill",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","mrms-rain-fill",()=>{map.getCanvas().style.cursor="";}); }
   syncMrmsLayerVisibility();
 }
@@ -2429,7 +2429,7 @@ function openFloodContextPopup(feature, lngLat) {
 function openMrmsPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌧 MRMS Rainfall</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NOAA MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.severity || p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">Island · Zone</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " · " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">Window</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">Accumulation</div><div class="popup-metric-value">${p.qpe_mm != null ? p.qpe_mm + " mm" : "—"}${p.qpe_in != null ? " (" + p.qpe_in + " in)" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">Risk Level</div><div class="popup-metric-value">${escapeHtml(p.risk_index || "—")}</div></div></div><div class="popup-note">MRMS rainfall is contextual. Pair with official NWS alerts.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔵 MRMS Rainfall</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NOAA MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.severity || p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">Island · Zone</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " · " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">Window</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">Accumulation</div><div class="popup-metric-value">${p.qpe_mm != null ? p.qpe_mm + " mm" : "—"}${p.qpe_in != null ? " (" + p.qpe_in + " in)" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">Risk Level</div><div class="popup-metric-value">${escapeHtml(p.risk_index || "—")}</div></div></div><div class="popup-note">MRMS rainfall is contextual. Pair with official NWS alerts.</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openWindRiskPopup(feature, lngLat) {
@@ -2629,3 +2629,4 @@ map.on("load", async () => {
 
 </body>
 </html>
+
