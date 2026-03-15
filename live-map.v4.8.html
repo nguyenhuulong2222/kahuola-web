@@ -2692,6 +2692,16 @@ function bindGlobalCanvasClickRouter() {
   });
 }
 
+// Helper — update badge for any module key (Bước B từ ChatGPT, corrected)
+function updateModuleBadge(key, text, cls) {
+  ["desktop","mobile"].forEach(sfx => {
+    const el = document.getElementById(`${key}-badge-${sfx}`);
+    if (el) { el.className = `status-badge ${cls}`; el.textContent = text; }
+  });
+  const el = document.getElementById(`${key}-badge`);
+  if (el) { el.className = `status-badge ${cls}`; el.textContent = text; }
+}
+
 function bindButtons() {
   document.getElementById("refresh-btn-desktop")?.addEventListener("click", () => refreshEnabledHazards({ silent:false }));
   document.getElementById("refresh-btn-mobile")?.addEventListener("click", () => refreshEnabledHazards({ silent:false }));
@@ -2727,12 +2737,12 @@ function updateTsunamiStatusUI(state) {
     const b = document.getElementById("tsunami-badge");
     const n = document.getElementById("tsunami-note");
     const count = state.features?.length || 0;
-    const cls   = state.sourceStatus === "active" ? "status-detected" :
-                  state.sourceStatus === "none"   ? "status-none" : "status-unavailable";
-    const txt   = state.sourceStatus === "active" ? `ALERT · ${count}` :
-                  state.sourceStatus === "none"   ? "Clear" : "Unavailable";
-    const ntxt  = state.sourceStatus === "active" ? "⚠ Tsunami warning active — follow official guidance." :
-                  state.sourceStatus === "none"   ? "No active tsunami warnings." : "NWS data unavailable.";
+    const cls   = state.sourceStatus === "detected" ? "status-detected" :
+                  state.sourceStatus === "none"     ? "status-none" : "status-unavailable";
+    const txt   = state.sourceStatus === "detected" ? `ALERT · ${count}` :
+                  state.sourceStatus === "none"     ? "Clear" : "Unavailable";
+    const ntxt  = state.sourceStatus === "detected" ? "⚠ Tsunami warning active — follow official guidance." :
+                  state.sourceStatus === "none"     ? "No active tsunami warnings." : "NWS data unavailable.";
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     [note, n].forEach(el => { if (el) el.textContent = ntxt; });
   });
@@ -2821,10 +2831,22 @@ function lazyLoadModule(key, detailConfig) {
   const model = HAZARD_REGISTRY[key];
   if (!model) return;
   if (!model.enabled) {
+    // First click — enable and fetch
     model.enabled = true;
-    const b = document.getElementById(`${key}-badge`);
-    if (b) { b.className = "status-badge status-none"; b.textContent = "Loading…"; }
-    refreshHazard(key, { silent: true });
+    updateModuleBadge(key, "Loading…", "status-none");
+    refreshHazard(key, { silent: true }).then(() => {
+      // Re-open detail after fetch completes
+      const st = getState(key);
+      openHazardDetail(detailConfig(st));
+    });
+    // Show loading state immediately while fetch runs
+    openHazardDetail({
+      title: key.charAt(0).toUpperCase() + key.slice(1),
+      status: "Fetching data…",
+      note: "Loading from Kahu Ola aggregator.",
+      body: "Please wait a moment while data is retrieved."
+    });
+    return;
   }
   const st = getState(key);
   openHazardDetail(detailConfig(st));
@@ -2833,11 +2855,10 @@ function setSheetOpen(open) { if (window.innerWidth > MOBILE_BREAKPOINT) return;
 function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
 bindButtons();
-// Init lazy module badges after bindButtons attaches listeners
+// Init lazy module badges — "TAP" indicates ready, not loading
 ["tsunami","hurricane","landslide"].forEach(key => {
-  const badge = document.getElementById(`${key}-badge`);
-  const note  = document.getElementById(`${key}-note`);
-  if (badge) { badge.className = "status-badge status-none"; badge.textContent = "Tap"; }
+  updateModuleBadge(key, "TAP", "status-none");
+  const note = document.getElementById(`${key}-note`);
   if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
   if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
   if (note && key === "landslide") note.textContent = "Terrain + rainfall context";
