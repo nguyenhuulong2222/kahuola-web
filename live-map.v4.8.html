@@ -1536,7 +1536,7 @@
           <div class="mini-module" id="rain-radar-card" tabindex="0" role="button" aria-label="Rain radar details">
             <div>
               <div class="mini-module-title">Rain Radar</div>
-              <div class="mini-module-note" id="rain-radar-note">Global · Click to toggle</div>
+              <div class="mini-module-note" id="rain-radar-note">NEXRAD · USA + territories</div>
             </div>
             <div class="status-badge status-none" id="rain-radar-badge">Off</div>
             <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;">
@@ -2207,97 +2207,33 @@ function ensureMrmsLayers() {
   if (!map.__mrmsHoverBound) { map.__mrmsHoverBound = true; map.on("mouseenter","mrms-rain-fill",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","mrms-rain-fill",()=>{map.getCanvas().style.cursor="";}); }
   syncMrmsLayerVisibility();
 }
-// ══════════════════════════════════════════════════════════════
-// DUAL-SOURCE RADAR STRATEGY — 2 LAYERS SIMULTANEOUSLY
-//
-// Layer 1: noaa-radar-nexrad  — Mesonet NEXRAD (USA + territories)
-//   Tiles only exist where/when it rains → transparent elsewhere
-//   Route: kahuola.org/api/tiles/radar/{z}/{x}/{y}.png (Worker proxy)
-//
-// Layer 2: noaa-radar-global  — RainViewer (worldwide fill)
-//   Covers entire globe, lower resolution
-//   Dynamic timestamp refreshed every 5 min
-//
-// Both layers visible simultaneously.
-// NEXRAD paints over RainViewer where USA radar data exists.
-// ══════════════════════════════════════════════════════════════
-
-let _rainviewerTs  = null;
-let _rainviewerUrl = null;
-
-async function fetchRainviewerTimestamp() {
-  // Via Kahu Ola Worker proxy — avoids CSP block (connect-src)
-  try {
-    const resp = await fetch("https://kahuola.org/api/rainviewer/timestamps",
-      { signal: AbortSignal.timeout(8000) });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    return data?.latest ?? null;
-  } catch { return null; }
-}
-
+// ── NEXRAD Rain Radar — USA + territories (Iowa Mesonet proxy) ──────────
+// Tiles are transparent where no precipitation — that IS correct behavior.
+// Kahu Ola Worker proxies Mesonet to avoid CSP: kahuola.org/api/tiles/radar/*
 async function setupRainRadar() {
-  // ── Layer 1: RainViewer global (bottom layer) ─────────────────
-  const frame = await fetchRainviewerTimestamp();
-  if (frame) {
-    _rainviewerTs  = frame.time;
-    const path     = frame.path || `/v2/radar/${frame.time}`;
-    // Extract timestamp from path (e.g. /v2/radar/1234567890 → 1234567890)
-    const tsNum = String(_rainviewerTs);
-    _rainviewerUrl = `https://kahuola.org/api/tiles/rainviewer/${tsNum}/{z}/{x}/{y}.png`;
-    const ageMin   = Math.round((Date.now() / 1000 - frame.time) / 60);
-
-    if (map.getSource("noaa-radar-global")) {
-      map.getSource("noaa-radar-global").setTiles([_rainviewerUrl]);
-    } else {
-      ensureSource("noaa-radar-global", {
-        type: "raster", tiles: [_rainviewerUrl],
-        tileSize: 256, attribution: "RainViewer · Global"
-      });
-      ensureLayer({
-        id: "noaa-radar-global-layer", type: "raster",
-        source: "noaa-radar-global",
-        layout: { visibility: rainRadarVisible ? "visible" : "none" },
-        paint: { "raster-opacity": 0.55, "raster-fade-duration": 400 }
-      }, "waterway");
-    }
-
-    // Update note — explain that transparent = no rain
-    const note = ageMin < 20
-      ? `Global · ${ageMin}min ago · NEXRAD USA`
-      : `Global · ${ageMin}min ago (may be stale)`;
-    ["desktop","mobile"].forEach(sfx => {
-      const el = document.getElementById(`rain-radar-note-${sfx}`);
-      if (el) el.textContent = note;
-    });
-    const elMain = document.getElementById("rain-radar-note");
-    if (elMain) elMain.textContent = note;
-  }
-
-  // ── Layer 2: Mesonet NEXRAD USA (top layer, higher res) ───────
-  // Only has tiles where actual radar echo exists → transparent elsewhere
-  if (!map.getSource("noaa-radar-nexrad")) {
-    ensureSource("noaa-radar-nexrad", {
+  if (!map.getSource("noaa-radar")) {
+    ensureSource("noaa-radar", {
       type: "raster",
       tiles: ["https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution: "NOAA NEXRAD · Iowa Mesonet"
+      attribution: "NOAA NEXRAD · Iowa Mesonet · Via Kahu Ola"
     });
     ensureLayer({
-      id: "noaa-radar-layer",   // keep original id — visibility sync uses this
-      type: "raster",
-      source: "noaa-radar-nexrad",
+      id: "noaa-radar-layer", type: "raster", source: "noaa-radar",
       layout: { visibility: rainRadarVisible ? "visible" : "none" },
-      paint: { "raster-opacity": 0.85, "raster-fade-duration": 400 }
+      paint: { "raster-opacity": 0.80, "raster-fade-duration": 400, "raster-resampling": "linear" }
     }, "waterway");
   }
+  // Update card note
+  const note = "NEXRAD · USA + Territories";
+  ["desktop","mobile"].forEach(sfx => {
+    const el = document.getElementById(`rain-radar-note-${sfx}`);
+    if (el) el.textContent = note;
+  });
+  const elMain = document.getElementById("rain-radar-note");
+  if (elMain) elMain.textContent = note;
 }
-
-// Alias — legacy calls still work
 function ensureRainRadarLayers() { setupRainRadar(); }
-
-// Refresh RainViewer timestamp every 5 min when radar ON
-setInterval(() => { if (rainRadarVisible) setupRainRadar(); }, 5 * 60 * 1000);
 function ensureWindRiskLayers() {
   ensureSource("wind-risk", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
   ensureLayer({ id:"wind-risk-fill", type:"fill", source:"wind-risk", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"CRITICAL","#ff6a00","HIGH","#ff8a00","ELEVATED","#ffb74d","MODERATE","#ffd180","LOW","#ffe0b2","#ffe0b2"], "fill-opacity": windRiskVisible ? ["match",["get","risk_index"],"CRITICAL",0.16,"HIGH",0.12,"ELEVATED",0.09,"MODERATE",0.06,"LOW",0.035,0.04] : 0 }});
@@ -2347,8 +2283,7 @@ function syncMrmsLayerVisibility() {
   if (map.getLayer("mrms-rain-outline")) map.setPaintProperty("mrms-rain-outline","line-opacity", mrmsVisible ? 0.85 : 0);
 }
 function syncRainRadarLayerVisibility() {
-  setLayerVisibility("noaa-radar-layer", rainRadarVisible);        // NEXRAD USA
-  setLayerVisibility("noaa-radar-global-layer", rainRadarVisible); // RainViewer global
+  setLayerVisibility("noaa-radar-layer", rainRadarVisible); // NEXRAD USA + territories
 }
 function syncWindRiskLayerVisibility() {
   setLayerVisibility("wind-risk-fill", windRiskVisible);
@@ -2499,7 +2434,7 @@ function openFloodModuleDetail(kind) {
   if (kind === "flood") return openHazardDetail({ title:"Flash Flood", status: flood.sourceStatus === "detected" ? "Official flood status active" : flood.sourceStatus === "none" ? "No active flash flood watch" : "Official flood status unavailable", note:"Official source: National Weather Service.", body:"Official flood polygons come from the National Weather Service. PacIOOS, MRMS, and NOAA radar remain supporting context layers." });
   if (kind === "context") return openHazardDetail({ title:"Flood Context", status: context.sourceStatus === "detected" ? "Estimated local flood context available" : context.sourceStatus === "none" ? "No local flood context returned" : "Local flood context unavailable", note:"Source: NWS alerts + Kahu Ola terrain logic. Context only, not official flood geometry.", body:"This layer is estimated local context only." });
   if (kind === "mrms") return openHazardDetail({ title:"MRMS Rainfall", status: mrms.sourceStatus === "detected" ? "MRMS rainfall context available" : mrms.sourceStatus === "none" ? "No MRMS polygons returned" : "MRMS rainfall unavailable", note:"Source: NOAA MRMS rainfall accumulation products.", body:"MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
-  if (kind === "radar") return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Sources: RainViewer (global) + NOAA NEXRAD via Iowa Mesonet (USA + territories).", body:"Rain Radar shows two overlapping layers. RainViewer covers the entire world. NOAA NEXRAD adds higher-resolution USA coverage on top — transparent tiles simply mean no radar echo detected, which means no significant rain in that area right now." });
+  if (kind === "radar") return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Source: NOAA NEXRAD via Iowa Mesonet · Proxied by Kahu Ola (USA + territories).", body:"NEXRAD shows real-time precipitation radar for Hawaiʻi and other US territories. Transparent areas mean no radar echo — no significant rain. Data refreshes every 2–5 minutes." });
   return openHazardDetail({ title:"Fire Weather", status: wind.sourceStatus === "detected" ? "Fire weather spread context active" : wind.sourceStatus === "none" ? "No elevated fire weather cells returned" : "Fire weather context unavailable", note:"Source: NWS + RAWS wind and humidity context.", body:"Fire Weather combines wind gust, sustained wind, humidity, and dry exposure into a civic spread-risk context layer. It is contextual, not an evacuation order." });
 }
 function openHazardDetailFromElement(el) {
@@ -2589,7 +2524,7 @@ function zoomToCluster(feature) {
   source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
 }
 function raiseFireLayersAboveOverlays() {
-  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","noaa-radar-global-layer","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
+  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
     if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) {} }
   });
   ["clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
