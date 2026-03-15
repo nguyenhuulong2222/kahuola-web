@@ -2785,18 +2785,7 @@ function openLandslidePopup(feature, lngLat) {
 }
 
   document.getElementById("wind-risk-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("wind"));
-  document.getElementById("tsunami-card")?.addEventListener("click", () => {
-    const st = getState("tsunami");
-    openHazardDetail({ title:"Tsunami Alerts", status: st.sourceStatus==="active" ? "⚠ Active tsunami warning" : "No active warnings", note:"Source: NWS Tsunami Warning Center (official).", body:"Tsunami alerts come directly from the NWS Pacific Tsunami Warning Center. If an alert is active, follow official evacuation instructions immediately." });
-  });
-  document.getElementById("hurricane-card")?.addEventListener("click", () => {
-    const st = getState("hurricane");
-    openHazardDetail({ title:"Hurricane Tracks", status: st.features.length > 0 ? `${st.features.length} active storm(s)` : "No active Pacific storms", note:"Source: NOAA National Hurricane Center.", body:"Hurricane track shows active Pacific basin storms from the NHC. Becomes primary only during tropical systems affecting Hawaiʻi. Transparent when no active storms." });
-  });
-  document.getElementById("landslide-card")?.addEventListener("click", () => {
-    const st = getState("landslide");
-    openHazardDetail({ title:"Landslide Risk", status: st.features.length > 0 ? "Context available" : "Low risk", note:"Source: Kahu Ola terrain + NWS alert context.", body:"Landslide susceptibility is estimated conservatively from slope, terrain type, and runoff potential. Risk is elevated when NWS flash flood or debris flow alerts are active." });
-  });
+  // tsunami / hurricane / landslide listeners → lazy-load section below
   document.getElementById("wind-risk-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("wind"));
   document.getElementById("wind-btn-panel-desktop")?.addEventListener("click", toggleWindRiskLayer);
   document.getElementById("wind-btn-panel-mobile")?.addEventListener("click", toggleWindRiskLayer);
