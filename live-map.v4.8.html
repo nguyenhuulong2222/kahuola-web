@@ -2194,7 +2194,12 @@ function ensureMrmsLayers() {
   syncMrmsLayerVisibility();
 }
 function setupRainRadar() {
-  ensureSource("noaa-radar", { type:"raster", tiles:["https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity/MapServer/tile/{z}/{y}/{x}"], tileSize:256 });
+  ensureSource("noaa-radar", {
+  type: "raster",
+  tiles: ["https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png"],
+  tileSize: 256,
+  attribution: "NOAA/NWS Radar · Iowa Mesonet"
+});
   ensureLayer({ id:"noaa-radar-layer", type:"raster", source:"noaa-radar", layout:{ visibility: rainRadarVisible ? "visible" : "none" }, paint:{ "raster-opacity":0.75, "raster-fade-duration":400, "raster-resampling":"linear" } }, "waterway");
 }
 function ensureRainRadarLayers() { setupRainRadar(); }
