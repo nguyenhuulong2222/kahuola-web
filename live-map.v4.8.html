@@ -1296,17 +1296,6 @@
   .priority-title { font-size:17px; }
 }
 
-#local-hazards-card,
-#local-hazards-card-desktop,
-#local-hazards-card-mobile{
-  cursor:default;
-}
-#local-hazards-card:hover,
-#local-hazards-card-desktop:hover,
-#local-hazards-card-mobile:hover{
-  transform:none;
-  box-shadow:none;
-}
 
 </style>
 </head>
@@ -1586,13 +1575,6 @@
             </div>
             <div class="status-badge status-none" id="landslide-badge">Loading</div>
           </div>
-          <div class="mini-module" id="local-hazards-card" aria-label="Local hazard reports status">
-            <div>
-              <div class="mini-module-title">Local Hazards</div>
-              <div class="mini-module-note" id="local-hazards-note">NWS Honolulu local storm reports</div>
-            </div>
-            <div class="status-badge status-none" id="local-hazards-badge">Loading</div>
-          </div>
         </div></div>
         <div class="blueprint-footnote">Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.</div>
       </div>
@@ -1669,7 +1651,7 @@ let windRiskVisible  = true;
 let tsunamiVisible   = true;
 let hurricaneVisible = true;
 let landslideVisible = true;
-let localHazardsVisible = true;
+let localHazardsVisible = false;
 
 const appState = {
   diagnostics: {
@@ -2176,7 +2158,9 @@ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visibl
     ensureLayers,
     applyData(features) { updateLocalHazardsSource(features); },
     onFetchComplete() {
-      updateLocalHazardStatusUI(getState("localHazards"));
+      const st = getState("localHazards");
+      updateLocalHazardStatusUI(st);
+      raiseFireLayersAboveOverlays();
       renderUnifiedPanels();
     },
     visible() { return localHazardsVisible; }
@@ -2943,33 +2927,10 @@ function updateLandslideStatusUI(state) {
 }
 
 function updateLocalHazardStatusUI(state) {
-  const s = state?.sourceStatus || "unknown";
   const count = Array.isArray(state?.features) ? state.features.length : 0;
-
-  let badgeText = "Unavailable";
-  let badgeClass = "status-unavailable";
-  let note = "Local storm reports are currently unavailable.";
-
-  if (s === "detected" && count > 0) {
-    badgeText = count > 1 ? `Active · ${count}` : "Active";
-    badgeClass = "status-detected";
-    note = `${count} recent NWS Honolulu local hazard report${count === 1 ? "" : "s"} in this snapshot.`;
-  } else if (s === "none") {
-    badgeText = "Clear";
-    badgeClass = "status-none";
-    note = "No recent NWS Honolulu local hazard reports were returned in this snapshot.";
-  }
-
-  updateModuleBadge("local-hazards", badgeText, badgeClass);
-
-  ["desktop","mobile"].forEach((sfx) => {
-    const noteEl = document.getElementById(`local-hazards-note-${sfx}`);
-    if (noteEl) noteEl.textContent = note;
-  });
-  const noteEl = document.getElementById("local-hazards-note");
-  if (noteEl) noteEl.textContent = note;
+  localHazardsVisible = count > 0;
+  syncLocalHazardLayerVisibility();
 }
-
 
 if (typeof window.updateLocalHazardStatusUI !== "function" && typeof updateLocalHazardStatusUI === "function") {
   window.updateLocalHazardStatusUI = updateLocalHazardStatusUI;
@@ -3095,19 +3056,10 @@ function openLandslidePopup(feature, lngLat) {
     note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
     body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
   })));
-  document.getElementById("local-hazards-card")?.addEventListener("click", () => openLocalHazardsDetail());
-  document.getElementById("local-hazards-card")?.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLocalHazardsDetail(); } });
 }
 
 function openLocalHazardsDetail() {
-  // Local Hazards should not open a blocking full-screen detail sheet.
-  // Keep this module lightweight: status stays in the card, details open from map symbols only.
   closeHazardDetail();
-  const card =
-    document.getElementById("local-hazards-card-desktop") ||
-    document.getElementById("local-hazards-card-mobile") ||
-    document.getElementById("local-hazards-card");
-  card?.blur?.();
 }
 
 // ── lazyLoadModule — enable + fetch on first click ────────────
@@ -3140,13 +3092,12 @@ function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); 
 
 bindButtons();
 // Init lazy module badges
-["tsunami","hurricane","landslide","localHazards"].forEach(key => {
+["tsunami","hurricane","landslide"].forEach(key => {
   updateModuleBadge(key, "·", "status-none");
   const note = document.getElementById(`${key}-note`);
   if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
   if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
   if (note && key === "landslide") note.textContent = "Terrain + rainfall context";
-  if (note && key === "localHazards") note.textContent = "NWS Honolulu local storm reports";
 });
 syncDiag();
 syncSatelliteButtons();
