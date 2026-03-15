@@ -2179,9 +2179,24 @@ function ensurePerimeterLayers() {
 }
 function ensureFlashFloodLayers() {
   ensureSource("flash-flood", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
-  ensureLayer({ id:"flash-flood-fill", type:"fill", source:"flash-flood", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","severity"],"WARNING","#2d7dff","WATCH","#58a6ff","#8bc4ff"], "fill-opacity": flashFloodVisible ? ["match",["get","severity"],"WARNING",0.11,"WATCH",0.08,0.06] : 0 }});
-  ensureLayer({ id:"flash-flood-outline", type:"line", source:"flash-flood", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":["match",["get","severity"],"WARNING","#8bc4ff","WATCH","#b1d9ff","#b1d9ff"], "line-width":1.8, "line-opacity": flashFloodVisible ? 0.72 : 0 }});
-  ensureLayer({ id:"flash-flood-point", type:"circle", source:"flash-flood", filter:["==",["geometry-type"],"Point"], paint:{ "circle-radius":7, "circle-color":["match",["get","severity"],"WARNING","#2d7dff","WATCH","#58a6ff","#8bc4ff"], "circle-stroke-width":1.5, "circle-stroke-color":"#e9f4ff", "circle-opacity": flashFloodVisible ? 1 : 0, "circle-stroke-opacity": flashFloodVisible ? 1 : 0 }});
+  
+  ensureLayer({ id:"flash-flood-fill", type:"fill", source:"flash-flood", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ 
+    // BẢN VÁ UX: Cảnh báo Warning chuyển sang màu Đỏ (#ff1744)
+    "fill-color":["match",["get","severity"],"WARNING","#ff1744","WATCH","#58a6ff","#8bc4ff"], 
+    // Tăng độ đậm (opacity) của Vùng Đỏ lên 0.25 để nổi bật hẳn so với vùng xanh
+    "fill-opacity": flashFloodVisible ? ["match",["get","severity"],"WARNING",0.25,"WATCH",0.08,0.06] : 0 
+  }});
+  
+  ensureLayer({ id:"flash-flood-outline", type:"line", source:"flash-flood", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ 
+    // Viền của Vùng Đỏ cũng chuyển sang Đỏ sáng
+    "line-color":["match",["get","severity"],"WARNING","#ff4d6d","WATCH","#b1d9ff","#b1d9ff"], 
+    // Làm viền Vùng Đỏ dày hơn (2.5px)
+    "line-width":["match",["get","severity"],"WARNING",2.5,"WATCH",1.8,1.8], 
+    "line-opacity": flashFloodVisible ? ["match",["get","severity"],"WARNING",0.9,0.72,0.72] : 0 
+  }});
+  
+  ensureLayer({ id:"flash-flood-point", type:"circle", source:"flash-flood", filter:["==",["geometry-type"],"Point"], paint:{ "circle-radius":7, "circle-color":["match",["get","severity"],"WARNING","#ff1744","WATCH","#58a6ff","#8bc4ff"], "circle-stroke-width":1.5, "circle-stroke-color":"#e9f4ff", "circle-opacity": flashFloodVisible ? 1 : 0, "circle-stroke-opacity": flashFloodVisible ? 1 : 0 }});
+  
   if (!map.__flashFloodHoverBound) { map.__flashFloodHoverBound = true; ["flash-flood-fill","flash-flood-point"].forEach((id)=>{map.on("mouseenter",id,()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave",id,()=>{map.getCanvas().style.cursor="";});});}
   syncFlashFloodLayerVisibility();
 }
@@ -2242,8 +2257,14 @@ function syncFlashFloodLayerVisibility() {
   setLayerVisibility("flash-flood-fill", flashFloodVisible);
   setLayerVisibility("flash-flood-outline", flashFloodVisible);
   setLayerVisibility("flash-flood-point", flashFloodVisible);
-  if (map.getLayer("flash-flood-fill")) map.setPaintProperty("flash-flood-fill","fill-opacity", flashFloodVisible ? ["match",["get","severity"],"WARNING",0.11,"WATCH",0.08,0.06] : 0);
-  if (map.getLayer("flash-flood-outline")) map.setPaintProperty("flash-flood-outline","line-opacity", flashFloodVisible ? 0.72 : 0);
+  
+  if (map.getLayer("flash-flood-fill")) {
+      map.setPaintProperty("flash-flood-fill","fill-opacity", flashFloodVisible ? ["match",["get","severity"],"WARNING",0.25,"WATCH",0.08,0.06] : 0);
+  }
+  if (map.getLayer("flash-flood-outline")) {
+      // Đồng bộ hiệu ứng viền sáng
+      map.setPaintProperty("flash-flood-outline","line-opacity", flashFloodVisible ? ["match",["get","severity"],"WARNING",0.9,0.72,0.72] : 0);
+  }
   if (map.getLayer("flash-flood-point")) { map.setPaintProperty("flash-flood-point","circle-opacity", flashFloodVisible ? 1 : 0); map.setPaintProperty("flash-flood-point","circle-stroke-opacity", flashFloodVisible ? 1 : 0); }
   ["flood-btn-panel-desktop","flood-btn-panel-mobile","flood-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = flashFloodVisible ? "Flood Layers: On" : "Flood Layers: Off"; el.classList.toggle("active", flashFloodVisible); });
 }
