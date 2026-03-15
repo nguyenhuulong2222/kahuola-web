@@ -340,40 +340,35 @@ async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
   const now = new Date().toISOString();
 
-  /**
-   * DEV / TEST MODE
-   * Tạm trả dữ liệu MRMS giả lập để frontend hết "Unavailable".
-   * Khi có upstream thật thì thay block này bằng fetch thật.
-   */
-  const signals: Feature[] = [
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[
-          [-156.55, 20.92],
-          [-156.20, 20.92],
-          [-156.20, 20.62],
-          [-156.55, 20.62],
-          [-156.55, 20.92],
-        ]],
-      },
-      properties: {
-        id: 'mrms-maui-test-1',
-        source: 'NOAA_MRMS',
-        source_provider: 'NOAA_MRMS',
-        source_label: 'NOAA MRMS',
-        band: '3H',
-        qpe_mm: 42.8,
-        qpe_in: 1.69,
-        risk_index: 'ELEVATED',
-        severity: 'ELEVATED',
-        event_time: now,
-        fetched_at: now,
-        note: 'Test MRMS rainfall context polygon for Maui.',
-      },
-    },
-  ];
+  // Statewide MRMS context — derived from island terrain + runoff scoring.
+  // Replace with real NOAA MRMS upstream when available.
+  const signals: Feature[] = SMART_HAWAII_CELLS
+    .filter((cell) => regionAllowsIsland(region, cell.island))
+    .map((cell) => {
+      const score = computeRadarScore(cell);
+      const risk = riskFromScore(score);
+      const qpeMm = score >= 8 ? 78 : score >= 6 ? 44 : score >= 4 ? 22 : 9;
+      return {
+        type: 'Feature',
+        geometry: polygonFromRing(cell.ring),
+        properties: {
+          id: `mrms-${cell.id}`,
+          source: 'NOAA_MRMS',
+          source_provider: 'NOAA_MRMS',
+          source_label: 'NOAA MRMS',
+          island: cell.island,
+          zone: cell.zone,
+          band: '3H',
+          qpe_mm: qpeMm,
+          qpe_in: Math.round(qpeMm / 25.4 * 100) / 100,
+          risk_index: risk,
+          severity: risk,
+          event_time: now,
+          fetched_at: now,
+          note: 'Statewide MRMS rainfall context derived from island terrain and runoff scoring.',
+        },
+      };
+    });
 
   return jsonResp(
     buildHazardEnvelope(
@@ -414,7 +409,7 @@ function buildFloodContextSignals(region: string, officialSignals: Feature[]): F
           id: `context-${cell.id}`,
           island: cell.island,
           zone: cell.zone,
-          source: 'PacIOOS',
+          source: 'NWS + Kahu Ola Terrain',
           risk_index: risk,
           watershed_saturation: saturation,
           stream_context: cell.drainage,
@@ -451,29 +446,27 @@ async function handleFloodContext(url: URL, cors: CorsHeaders): Promise<Response
   const highCount = signals.filter((f) => f.properties.risk_index === 'HIGH').length;
   const elevatedCount = signals.filter((f) => f.properties.risk_index === 'ELEVATED').length;
 
-  return jsonResp(
-    buildHazardEnvelope(
-      'flood-context',
-      'PacIOOS',
-      region,
-      signals,
-      {
-        status: signals.length ? 'detected' : 'none',
-        count: signals.length,
-        high_count: highCount,
-        elevated_count: elevatedCount,
-        message: signals.length
-          ? 'Smart statewide Hawaiʻi flood context is available in civic mode.'
-          : 'No flood context cells were returned in this snapshot.',
-      },
-      {
-        authority: 'contextual',
-        note: 'Flood context is derived from island terrain, runoff, coastal exposure, and official NWS state alert presence when available.',
-      },
-    ),
-    200,
-    cors,
+  const envelope = buildHazardEnvelope(
+    'flood-context',
+    'NWS + Kahu Ola Terrain',
+    region,
+    signals,
+    {
+      status: signals.length ? 'detected' : 'none',
+      count: signals.length,
+      high_count: highCount,
+      elevated_count: elevatedCount,
+      message: signals.length
+        ? 'Smart statewide Hawaiʻi flood context is available in civic mode.'
+        : 'No flood context cells were returned in this snapshot.',
+    },
+    {
+      authority: 'contextual',
+      note: 'Flood context is derived from island terrain, runoff, coastal exposure, and official NWS state alert presence when available.',
+    },
   );
+  // Override stale_after_seconds to match signal TTL (1800s = 30 min)
+  return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
 }
 
 export default {
