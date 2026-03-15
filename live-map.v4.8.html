@@ -1574,6 +1574,13 @@
             </div>
             <div class="status-badge status-none" id="landslide-badge">Loading</div>
           </div>
+          <div class="mini-module" id="local-hazards-card" tabindex="0" role="button" aria-label="Local hazard reports status">
+            <div>
+              <div class="mini-module-title">Local Hazards</div>
+              <div class="mini-module-note" id="local-hazards-note">NWS Honolulu local storm reports</div>
+            </div>
+            <div class="status-badge status-none" id="local-hazards-badge">Loading</div>
+          </div>
         </div></div>
         <div class="blueprint-footnote">Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.</div>
       </div>
@@ -1650,6 +1657,7 @@ let windRiskVisible  = true;
 let tsunamiVisible   = true;
 let hurricaneVisible = true;
 let landslideVisible = true;
+let localHazardsVisible = true;
 
 const appState = {
   diagnostics: {
@@ -1670,7 +1678,8 @@ const appState = {
     windRisk: createHazardState("windRisk"),
     tsunami: createHazardState("tsunami"),
     hurricane: createHazardState("hurricane"),
-    landslide: createHazardState("landslide")
+    landslide: createHazardState("landslide"),
+    localHazards: createHazardState("localHazards")
   }
 };
 
@@ -2138,6 +2147,27 @@ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visibl
     ensureLayers, applyData(features){ updateLandslideSource(features); },
     onFetchComplete(){ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); },
     visible(){ return landslideVisible; }
+  },
+  localHazards: {
+    key: "localHazards",
+    endpoint: IS_LOCAL ? "./local-hazards-test.json" : "https://kahuola.org/api/hazards/local-hazards?region=hawaii",
+    enabled: true,
+    affectsGlobalHealth: false,
+    parsePayload(json) {
+      const raw = parseCanonicalSignals(json, "localHazards");
+      return {
+        features: normalizeLocalHazardFeatures(raw),
+        sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceLabel: json.source || json.provider || "NWS Honolulu / IEM"
+      };
+    },
+    ensureLayers,
+    applyData(features) { updateLocalHazardsSource(features); },
+    onFetchComplete() {
+      updateLocalHazardStatusUI(getState("localHazards"));
+      renderUnifiedPanels();
+    },
+    visible() { return localHazardsVisible; }
   }
 };
 
@@ -2211,6 +2241,44 @@ function normalizeLandslideFeatures(rawSignals) {
     };
   }).filter(Boolean);
 }
+function normalizeLocalHazardFeatures(rawSignals) {
+  return safeArray(rawSignals).map((raw, index) => {
+    const geometry = raw?.geometry;
+    const props = raw?.properties || {};
+    if (!geometry || !["Point","MultiPoint","Polygon","MultiPolygon","LineString","MultiLineString"].includes(geometry.type)) return null;
+
+    const reportType = typeof props.typetext === "string" && props.typetext.trim()
+      ? props.typetext.trim()
+      : (typeof props.report_type === "string" && props.report_type.trim() ? props.report_type.trim() : "REPORT");
+
+    return {
+      type: "Feature",
+      geometry,
+      properties: {
+        id: props.id || raw.id || `local-hazard-${index}`,
+        report_type: reportType,
+        typetext: reportType,
+        remark: typeof props.remark === "string" ? props.remark.trim() : "",
+        city: typeof props.city === "string" ? props.city.trim() : "",
+        county: typeof props.county === "string" ? props.county.trim() : "",
+        state: typeof props.state === "string" ? props.state.trim() : "",
+        magnitude: Number.isFinite(Number(props.magnitude)) ? Number(props.magnitude) : null,
+        unit: typeof props.unit === "string" ? props.unit.trim() : "",
+        valid: typeof props.valid === "string" ? props.valid : "",
+        utcvalid: typeof props.utcvalid === "string" ? props.utcvalid : "",
+        wfo: typeof props.wfo === "string" ? props.wfo : "HFO",
+        severity: "INFO",
+        source: props.source || "NWS Honolulu / IEM",
+        source_label: props.source_label || "NWS Local Storm Reports",
+        event_time: props.valid || props.utcvalid || null,
+        note: typeof props.note === "string" && props.note.trim()
+          ? props.note.trim()
+          : "Official local storm report distributed through Iowa State Mesonet for NWS Honolulu."
+      }
+    };
+  }).filter(Boolean);
+}
+
 function activeHazardKeys() {
   return Object.values(HAZARD_REGISTRY).filter((m) => m.enabled).map((m) => m.key);
 }
@@ -2275,6 +2343,7 @@ function ensureLayers() {
   ensureWindRiskLayers();
   ensureTsunamiLayers();       // official tsunami — red (high priority)
   ensureHurricaneLayers();     // NHC storm points
+  ensureLocalHazardLayers();   // official NWS Honolulu local reports
   ensureFireLayers();          // fire always topmost
 }
 function ensureSmokeLayers() {
@@ -2374,6 +2443,71 @@ function ensureLandslideLayers() {
   ensureLayer({ id:"landslide-outline", type:"line", source:"landslide", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":"#bcaaa4", "line-width":1.4, "line-opacity": landslideVisible ? 0.65 : 0 }});
   if (!map.__landslideHoverBound) { map.__landslideHoverBound=true; map.on("mouseenter","landslide-fill",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","landslide-fill",()=>{map.getCanvas().style.cursor="";}); }
 }
+function ensureLocalHazardLayers() {
+  ensureSource("local-hazards", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
+
+  ensureLayer({
+    id:"local-hazards-line",
+    type:"line",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"LineString"],["==",["geometry-type"],"MultiLineString"]],
+    paint:{
+      "line-color":"#ffb74d",
+      "line-width":2.2,
+      "line-opacity": localHazardsVisible ? 0.88 : 0
+    }
+  });
+
+  ensureLayer({
+    id:"local-hazards-fill",
+    type:"fill",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]],
+    paint:{
+      "fill-color":"#ffb74d",
+      "fill-opacity": localHazardsVisible ? 0.14 : 0
+    }
+  });
+
+  ensureLayer({
+    id:"local-hazards-outline",
+    type:"line",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]],
+    paint:{
+      "line-color":"#ffd699",
+      "line-width":1.6,
+      "line-opacity": localHazardsVisible ? 0.82 : 0
+    }
+  });
+
+  ensureLayer({
+    id:"local-hazards-point",
+    type:"circle",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"Point"],["==",["geometry-type"],"MultiPoint"]],
+    paint:{
+      "circle-radius": 10,
+      "circle-color":"#ffb74d",
+      "circle-stroke-width":2,
+      "circle-stroke-color":"#ffffff",
+      "circle-opacity": localHazardsVisible ? 0.95 : 0,
+      "circle-stroke-opacity": localHazardsVisible ? 1 : 0
+    }
+  });
+
+  if (!map.__localHazardsHoverBound) {
+    map.__localHazardsHoverBound = true;
+    ["local-hazards-point","local-hazards-fill","local-hazards-line"].forEach((id) => {
+      if (!map.getLayer(id)) return;
+      map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+    });
+  }
+
+  syncLocalHazardLayerVisibility();
+}
+
 function ensureFireLayers() {
   ensureSource("fires", { type:"geojson", data:{ type:"FeatureCollection", features:[] }, cluster:true, clusterMaxZoom:9, clusterRadius:52 });
   ensureLayer({ id:"clusters", type:"circle", source:"fires", filter:["has","point_count"], paint:{ "circle-color":["step",["get","point_count"],"#ff8a00",8,"#ff6a00",20,"#ff3d00"], "circle-radius":["step",["get","point_count"],16,8,22,20,28], "circle-opacity":0.95, "circle-stroke-width":2, "circle-stroke-color":"rgba(255,140,0,0.26)" }});
@@ -2392,6 +2526,7 @@ function updateWindRiskSource(features){ const s=map.getSource("wind-risk"); if 
 function updateTsunamiSource(features){ const s=map.getSource("tsunami"); if (s) s.setData({ type:"FeatureCollection", features }); }
 function updateHurricaneSource(features){ const s=map.getSource("hurricane"); if (s) s.setData({ type:"FeatureCollection", features }); }
 function updateLandslideSource(features){ const s=map.getSource("landslide"); if (s) s.setData({ type:"FeatureCollection", features }); }
+function updateLocalHazardsSource(features){ const s=map.getSource("local-hazards"); if (s) s.setData({ type:"FeatureCollection", features }); }
 
 function syncFlashFloodLayerVisibility() {
   setLayerVisibility("flash-flood-fill", flashFloodVisible);
@@ -2432,6 +2567,26 @@ function syncHurricaneLayerVisibility() {
 }
 function syncLandslideLayerVisibility() {
   ["landslide-fill","landslide-outline"].forEach(id => setLayerVisibility(id, landslideVisible));
+}
+function syncLocalHazardLayerVisibility() {
+  setLayerVisibility("local-hazards-line", localHazardsVisible);
+  setLayerVisibility("local-hazards-fill", localHazardsVisible);
+  setLayerVisibility("local-hazards-outline", localHazardsVisible);
+  setLayerVisibility("local-hazards-point", localHazardsVisible);
+
+  if (map.getLayer("local-hazards-line")) {
+    map.setPaintProperty("local-hazards-line", "line-opacity", localHazardsVisible ? 0.88 : 0);
+  }
+  if (map.getLayer("local-hazards-fill")) {
+    map.setPaintProperty("local-hazards-fill", "fill-opacity", localHazardsVisible ? 0.14 : 0);
+  }
+  if (map.getLayer("local-hazards-outline")) {
+    map.setPaintProperty("local-hazards-outline", "line-opacity", localHazardsVisible ? 0.82 : 0);
+  }
+  if (map.getLayer("local-hazards-point")) {
+    map.setPaintProperty("local-hazards-point", "circle-opacity", localHazardsVisible ? 0.95 : 0);
+    map.setPaintProperty("local-hazards-point", "circle-stroke-opacity", localHazardsVisible ? 1 : 0);
+  }
 }
 function syncPerimeterLayerVisibility() {
   setLayerVisibility("perimeter-fill", perimeterVisible);
@@ -2665,7 +2820,7 @@ function zoomToCluster(feature) {
   source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
 }
 function raiseFireLayersAboveOverlays() {
-  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","tsunami-fill","tsunami-outline","tsunami-point","hurricane-point","landslide-fill","landslide-outline","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
+  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","tsunami-fill","tsunami-outline","tsunami-point","hurricane-point","landslide-fill","landslide-outline","local-hazards-line","local-hazards-fill","local-hazards-outline","local-hazards-point","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
     if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) {} }
   });
   ["clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
@@ -2687,6 +2842,7 @@ function bindGlobalCanvasClickRouter() {
     if (tsunamiVisible) { const tsu = queryTopFeature(e.point, ["tsunami-fill","tsunami-point"]); if (tsu) { openTsunamiPopup(tsu, e.lngLat); return; } }
     if (hurricaneVisible) { const hur = queryTopFeature(e.point, ["hurricane-point"]); if (hur) { openHurricanePopup(hur, e.lngLat); return; } }
     if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
+    if (localHazardsVisible) { const localHazard = queryTopFeature(e.point, ["local-hazards-point","local-hazards-fill","local-hazards-line"]); if (localHazard) { openLocalHazardPopup(localHazard, e.lngLat); return; } }
     if (smokeVisible) { const smoke = queryTopFeature(e.point, ["smoke-fill"]); if (smoke) { openSmokePopup(smoke, e.lngLat); return; } }
     if (perimeterVisible) { const perimeter = queryTopFeature(e.point, ["perimeter-fill"]); if (perimeter) openPerimeterPopup(perimeter, e.lngLat); }
   });
@@ -2774,7 +2930,105 @@ function updateLandslideStatusUI(state) {
   });
 }
 
+function updateLocalHazardStatusUI(state) {
+  const s = state?.sourceStatus || "unknown";
+  const count = Array.isArray(state?.features) ? state.features.length : 0;
+
+  let badgeText = "Unavailable";
+  let badgeClass = "status-unavailable";
+  let note = "Local storm reports are currently unavailable.";
+
+  if (s === "detected" && count > 0) {
+    badgeText = count > 1 ? `Active · ${count}` : "Active";
+    badgeClass = "status-detected";
+    note = `${count} recent NWS Honolulu local hazard report${count === 1 ? "" : "s"} in this snapshot.`;
+  } else if (s === "none") {
+    badgeText = "Clear";
+    badgeClass = "status-none";
+    note = "No recent NWS Honolulu local hazard reports were returned in this snapshot.";
+  }
+
+  updateModuleBadge("local-hazards", badgeText, badgeClass);
+
+  ["desktop","mobile"].forEach((sfx) => {
+    const noteEl = document.getElementById(`local-hazards-note-${sfx}`);
+    if (noteEl) noteEl.textContent = note;
+  });
+  const noteEl = document.getElementById("local-hazards-note");
+  if (noteEl) noteEl.textContent = note;
+}
+
+function formatLocalHazardTime(value) {
+  const d = parseDateMaybe(value);
+  if (!d) return "Unavailable";
+  try {
+    return d.toLocaleString("en-US", {
+      timeZone: "Pacific/Honolulu",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }) + " HST";
+  } catch (_) {
+    return "Unavailable";
+  }
+}
+
 // ── Popups ────────────────────────────────────────────────
+function openLocalHazardPopup(feature, lngLat) {
+  const p = feature?.properties || {};
+  if (activePopup) activePopup.remove();
+
+  const reportType = p.typetext || p.report_type || "REPORT";
+  const details = p.remark || "No specific details provided in this official report.";
+  const city = p.city || "—";
+  const county = p.county || "—";
+  const magnitude = Number.isFinite(Number(p.magnitude))
+    ? `${Number(p.magnitude)}${p.unit ? ` ${p.unit}` : ""}`
+    : "—";
+  const timeStr = formatLocalHazardTime(p.valid || p.utcvalid || p.event_time);
+
+  const html = `<div class="popup-card">
+    <div class="popup-top">
+      <div>
+        <div class="popup-title">⚠️ ${escapeHtml(reportType)}</div>
+        <div class="popup-coords">${escapeHtml(p.source_label || "NWS Local Storm Reports")}</div>
+      </div>
+      <div class="popup-severity normal">OFFICIAL REPORT</div>
+    </div>
+    <div class="popup-grid">
+      <div class="popup-metric">
+        <div class="popup-metric-label">City</div>
+        <div class="popup-metric-value">${escapeHtml(city)}</div>
+      </div>
+      <div class="popup-metric">
+        <div class="popup-metric-label">County</div>
+        <div class="popup-metric-value">${escapeHtml(county)}</div>
+      </div>
+      <div class="popup-metric">
+        <div class="popup-metric-label">Magnitude</div>
+        <div class="popup-metric-value">${escapeHtml(magnitude)}</div>
+      </div>
+      <div class="popup-metric">
+        <div class="popup-metric-label">WFO</div>
+        <div class="popup-metric-value">${escapeHtml(p.wfo || "HFO")}</div>
+      </div>
+    </div>
+    <div class="popup-metric">
+      <div class="popup-metric-label">Details</div>
+      <div class="popup-metric-value" style="white-space:normal;font-size:13px;line-height:1.45;">${escapeHtml(details)}</div>
+    </div>
+    <div class="popup-note">Reported at: ${escapeHtml(timeStr)}. This is an official local storm report for situational awareness and does not replace emergency instructions.</div>
+  </div>`;
+
+  activePopup = new maplibregl.Popup({
+    closeButton: true,
+    closeOnMove: false,
+    offset: 14,
+    maxWidth: "340px"
+  }).setLngLat(lngLat).setHTML(html).addTo(map);
+}
+
 function openTsunamiPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
@@ -2824,6 +3078,23 @@ function openLandslidePopup(feature, lngLat) {
     note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
     body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
   })));
+  document.getElementById("local-hazards-card-desktop")?.addEventListener("click", () => openLocalHazardsDetail());
+  document.getElementById("local-hazards-card-mobile")?.addEventListener("click", () => openLocalHazardsDetail());
+}
+
+function openLocalHazardsDetail() {
+  const st = getState("localHazards");
+  const count = st.features?.length || 0;
+  openHazardDetail({
+    title: "Local Hazards",
+    status: st.sourceStatus === "detected" ? `${count} recent official report${count === 1 ? "" : "s"}` : st.sourceStatus === "none" ? "Clear — no recent reports" : "Unavailable",
+    note: "Source: NWS Honolulu local storm reports via Kahu Ola worker.",
+    body: st.sourceStatus === "detected"
+      ? "Official local storm reports are available in this snapshot for situational awareness. Tap map symbols for event details."
+      : st.sourceStatus === "none"
+        ? "No recent NWS Honolulu local storm reports were returned in this snapshot."
+        : "Local storm reports are temporarily unavailable right now."
+  });
 }
 
 // ── lazyLoadModule — enable + fetch on first click ────────────
@@ -2856,12 +3127,13 @@ function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); 
 
 bindButtons();
 // Init lazy module badges
-["tsunami","hurricane","landslide"].forEach(key => {
+["tsunami","hurricane","landslide","localHazards"].forEach(key => {
   updateModuleBadge(key, "·", "status-none");
   const note = document.getElementById(`${key}-note`);
   if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
   if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
   if (note && key === "landslide") note.textContent = "Terrain + rainfall context";
+  if (note && key === "localHazards") note.textContent = "NWS Honolulu local storm reports";
 });
 syncDiag();
 syncSatelliteButtons();
@@ -2874,6 +3146,7 @@ updateFlashFloodStatusUI("unknown", 0);
 updateFloodContextStatusUI(getState("floodContext"));
 updateMrmsStatusUI(getState("mrmsRain"));
 updateWindRiskStatusUI(getState("windRisk"));
+updateLocalHazardStatusUI(getState("localHazards"));
 renderUnifiedPanels();
 
 diagBtn?.addEventListener("click", () => {
@@ -2942,7 +3215,7 @@ map.on("style.load", () => {
   bindGlobalCanvasClickRouter();
   raiseFireLayersAboveOverlays();
   Object.keys(HAZARD_REGISTRY).forEach((key) => { HAZARD_REGISTRY[key].applyData(getState(key).features); });
-  syncSatelliteButtons(); syncSmokeButtons(); syncPerimeterButtons(); syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility(); syncWindRiskLayerVisibility(); syncTsunamiLayerVisibility(); syncHurricaneLayerVisibility(); syncLandslideLayerVisibility();
+  syncSatelliteButtons(); syncSmokeButtons(); syncPerimeterButtons(); syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility(); syncWindRiskLayerVisibility(); syncTsunamiLayerVisibility(); syncHurricaneLayerVisibility(); syncLandslideLayerVisibility(); syncLocalHazardLayerVisibility();
   setText("basemap-mode", currentBasemap === "dark" ? "Dark" : "Satellite");
   if (userMarker && lastKnownUserCoord) updateUserMarker(lastKnownUserCoord);
   safeMapResize();
