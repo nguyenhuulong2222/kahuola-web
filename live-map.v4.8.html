@@ -2790,11 +2790,58 @@ function openLandslidePopup(feature, lngLat) {
   document.getElementById("wind-btn-panel-desktop")?.addEventListener("click", toggleWindRiskLayer);
   document.getElementById("wind-btn-panel-mobile")?.addEventListener("click", toggleWindRiskLayer);
   document.getElementById("wind-btn-mobile")?.addEventListener("click", toggleWindRiskLayer);
+
+  // ── Lazy-load: Tsunami / Hurricane / Landslide ──────────────
+  document.getElementById("tsunami-card")?.addEventListener("click", () => lazyLoadModule("tsunami", (st) => ({
+    title: "Tsunami",
+    status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
+            st.sourceStatus === "none"     ? "Clear — no active warnings" :
+            st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
+    note: "Source: NWS Tsunami Warning Center (official).",
+    body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
+  })));
+  document.getElementById("hurricane-card")?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
+    title: "Hurricane Tracks",
+    status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
+            st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
+    note: "Source: National Hurricane Center (NHC).",
+    body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
+  })));
+  document.getElementById("landslide-card")?.addEventListener("click", () => lazyLoadModule("landslide", (st) => ({
+    title: "Landslide Risk",
+    status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
+            st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
+    note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
+    body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
+  })));
+}
+
+// ── lazyLoadModule — enable + fetch on first click ────────────
+function lazyLoadModule(key, detailConfig) {
+  const model = HAZARD_REGISTRY[key];
+  if (!model) return;
+  if (!model.enabled) {
+    model.enabled = true;
+    const b = document.getElementById(`${key}-badge`);
+    if (b) { b.className = "status-badge status-none"; b.textContent = "Loading…"; }
+    refreshHazard(key, { silent: true });
+  }
+  const st = getState(key);
+  openHazardDetail(detailConfig(st));
 }
 function setSheetOpen(open) { if (window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details"; setTimeout(safeMapResize, 280); }
 function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
 bindButtons();
+// Init lazy module badges after bindButtons attaches listeners
+["tsunami","hurricane","landslide"].forEach(key => {
+  const badge = document.getElementById(`${key}-badge`);
+  const note  = document.getElementById(`${key}-note`);
+  if (badge) { badge.className = "status-badge status-none"; badge.textContent = "Tap"; }
+  if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
+  if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
+  if (note && key === "landslide") note.textContent = "Terrain + rainfall context";
+});
 syncDiag();
 syncSatelliteButtons();
 syncSmokeButtons();
@@ -2830,59 +2877,7 @@ document.addEventListener("keydown", (event) => {
 hazardDetailClose?.addEventListener("click", closeHazardDetail);
 
 // ── Tsunami / Hurricane / Landslide card listeners ──────────────
-// ── Lazy-load modules: enable + fetch on first click ───────────
-function lazyLoadModule(key, detailConfig) {
-  const model = HAZARD_REGISTRY[key];
-  if (!model) return;
-  if (!model.enabled) {
-    // First click: enable and fetch
-    model.enabled = true;
-    const badge = document.getElementById(`${key}-badge`);
-    if (badge) { badge.className = "status-badge status-none"; badge.textContent = "Loading…"; }
-    refreshHazard(key, { silent: true });
-  }
-  const st = getState(key);
-  openHazardDetail(detailConfig(st));
-}
 
-document.getElementById("tsunami-card")?.addEventListener("click", () => {
-  lazyLoadModule("tsunami", (st) => ({
-    title: "Tsunami",
-    status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
-            st.sourceStatus === "none"     ? "Clear — no active warnings" :
-            st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
-    note: "Source: NWS Tsunami Warning Center (official).",
-    body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately. Kahu Ola shows official NWS geometry only."
-  }));
-});
-document.getElementById("hurricane-card")?.addEventListener("click", () => {
-  lazyLoadModule("hurricane", (st) => ({
-    title: "Hurricane Tracks",
-    status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
-            st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
-    note: "Source: National Hurricane Center (NHC).",
-    body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track, cone of uncertainty, and watches/warnings."
-  }));
-});
-document.getElementById("landslide-card")?.addEventListener("click", () => {
-  lazyLoadModule("landslide", (st) => ({
-    title: "Landslide Risk",
-    status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
-            st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
-    note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
-    body: "Landslide context is derived from terrain slope, runoff, and NWS heavy rain alert presence. Contextual only — not an official forecast."
-  }));
-});
-
-// Init status UI — show "Tap to load" for lazy modules
-["tsunami","hurricane","landslide"].forEach(key => {
-  const badge = document.getElementById(`${key}-badge`);
-  const note  = document.getElementById(`${key}-note`);
-  if (badge) { badge.className = "status-badge status-none"; badge.textContent = "Tap to load"; }
-  if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
-  if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
-  if (note && key === "landslide") note.textContent = "Tap to check terrain context";
-});
 
 window.addEventListener("resize", () => { safeMapResize(); updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length); if (window.innerWidth > MOBILE_BREAKPOINT) return; setSheetOpen(mobileSheet.classList.contains("open")); });
 window.addEventListener("orientationchange", () => setTimeout(safeMapResize, 200));
