@@ -2196,9 +2196,11 @@ function ensureMrmsLayers() {
 function setupRainRadar() {
   ensureSource("noaa-radar", {
   type: "raster",
-  tiles: ["https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png"],
+  tiles: [
+    "https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png"
+  ],
   tileSize: 256,
-  attribution: "NOAA/NWS Radar · Iowa Mesonet"
+  attribution: "NOAA/NWS Radar"
 });
   ensureLayer({ id:"noaa-radar-layer", type:"raster", source:"noaa-radar", layout:{ visibility: rainRadarVisible ? "visible" : "none" }, paint:{ "raster-opacity":0.75, "raster-fade-duration":400, "raster-resampling":"linear" } }, "waterway");
 }
