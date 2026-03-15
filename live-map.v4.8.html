@@ -2156,12 +2156,12 @@ function setLayerVisibility(layerId, isOn) { if (map.getLayer(layerId)) map.setL
 function ensureLayers() {
   ensureSmokeLayers();
   ensurePerimeterLayers();
-  ensureFlashFloodLayers();
-  ensureFloodContextLayers();
-  ensureMrmsLayers();
+  ensureFloodContextLayers();  // lowest — terrain context base
+  ensureFlashFloodLayers();    // official NWS alerts
+  ensureMrmsLayers();          // rainfall context on top — teal/cyan distinct color
   ensureRainRadarLayers();
   ensureWindRiskLayers();
-  ensureFireLayers();
+  ensureFireLayers();          // fire always topmost
 }
 function ensureSmokeLayers() {
   ensureSource("smoke", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
@@ -2189,15 +2189,15 @@ function ensureFlashFloodLayers() {
 }
 function ensureFloodContextLayers() {
   ensureSource("flood-context", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
-  ensureLayer({ id:"flood-context-fill", type:"fill", source:"flood-context", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"HIGH","#0c6fbf","ELEVATED","#2d8cff","MODERATE","#74b5ff","LOW","#b7daff","#9fcbff"], "fill-opacity": floodContextVisible ? ["match",["get","risk_index"],"HIGH",0.11,"ELEVATED",0.085,"MODERATE",0.06,"LOW",0.035,0.045] : 0 }});
+  ensureLayer({ id:"flood-context-fill", type:"fill", source:"flood-context", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"HIGH","#0c6fbf","ELEVATED","#2d8cff","MODERATE","#74b5ff","LOW","#b7daff","#9fcbff"], "fill-opacity": floodContextVisible ? ["match",["get","risk_index"],"HIGH",0.07,"ELEVATED",0.055,"MODERATE",0.04,"LOW",0.025,0.03] : 0 }});
   ensureLayer({ id:"flood-context-outline", type:"line", source:"flood-context", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":["match",["get","risk_index"],"HIGH","#7fd5ff","ELEVATED","#9cd8ff","MODERATE","#b9e4ff","LOW","#d2efff","#d2efff"], "line-width":1.4, "line-opacity": floodContextVisible ? 0.58 : 0 }});
   if (!map.__floodHoverBound) { map.__floodHoverBound = true; map.on("mouseenter","flood-context-fill",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","flood-context-fill",()=>{map.getCanvas().style.cursor="";}); }
   syncFloodContextLayerVisibility();
 }
 function ensureMrmsLayers() {
   ensureSource("mrms-rain", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
-  ensureLayer({ id:"mrms-rain-fill", type:"fill", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","severity"],"HIGH","#006064","ELEVATED","#00838f","MODERATE","#00bcd4","LOW","#80deea","#80deea"], "fill-opacity": mrmsVisible ? ["match",["get","severity"],"HIGH",0.14,"ELEVATED",0.10,"MODERATE",0.07,"LOW",0.04,0.04] : 0 }});
-  ensureLayer({ id:"mrms-rain-outline", type:"line", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":"#80deea", "line-width":1.3, "line-opacity": mrmsVisible ? 0.5 : 0 }});
+  ensureLayer({ id:"mrms-rain-fill", type:"fill", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","severity"],"HIGH","#006064","ELEVATED","#00838f","MODERATE","#00bcd4","LOW","#80deea","#80deea"], "fill-opacity": mrmsVisible ? ["match",["get","severity"],"HIGH",0.32,"ELEVATED",0.26,"MODERATE",0.20,"LOW",0.14,0.14] : 0 }});
+  ensureLayer({ id:"mrms-rain-outline", type:"line", source:"mrms-rain", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "line-color":"#00e5ff", "line-width":2.0, "line-opacity": mrmsVisible ? 0.85 : 0 }});
   if (!map.__mrmsHoverBound) { map.__mrmsHoverBound = true; map.on("mouseenter","mrms-rain-fill",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","mrms-rain-fill",()=>{map.getCanvas().style.cursor="";}); }
   syncMrmsLayerVisibility();
 }
@@ -2258,8 +2258,8 @@ function syncFloodContextLayerVisibility() {
 function syncMrmsLayerVisibility() {
   setLayerVisibility("mrms-rain-fill", mrmsVisible);
   setLayerVisibility("mrms-rain-outline", mrmsVisible);
-  if (map.getLayer("mrms-rain-fill")) map.setPaintProperty("mrms-rain-fill","fill-opacity", mrmsVisible ? ["match",["get","severity"],"HIGH",0.14,"ELEVATED",0.10,"MODERATE",0.07,"LOW",0.04,0.04] : 0);
-  if (map.getLayer("mrms-rain-outline")) map.setPaintProperty("mrms-rain-outline","line-opacity", mrmsVisible ? 0.5 : 0);
+  if (map.getLayer("mrms-rain-fill")) map.setPaintProperty("mrms-rain-fill","fill-opacity", mrmsVisible ? ["match",["get","severity"],"HIGH",0.32,"ELEVATED",0.26,"MODERATE",0.20,"LOW",0.14,0.14] : 0);
+  if (map.getLayer("mrms-rain-outline")) map.setPaintProperty("mrms-rain-outline","line-opacity", mrmsVisible ? 0.85 : 0);
 }
 function syncRainRadarLayerVisibility() { setLayerVisibility("noaa-radar-layer", rainRadarVisible); }
 function syncWindRiskLayerVisibility() {
