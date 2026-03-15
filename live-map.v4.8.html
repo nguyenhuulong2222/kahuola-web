@@ -2226,14 +2226,13 @@ let _rainviewerTs  = null;
 let _rainviewerUrl = null;
 
 async function fetchRainviewerTimestamp() {
+  // Via Kahu Ola Worker proxy — avoids CSP block (connect-src)
   try {
-    const resp = await fetch("https://api.rainviewer.com/public/weather-maps.json",
-      { signal: AbortSignal.timeout(6000) });
+    const resp = await fetch("https://kahuola.org/api/rainviewer/timestamps",
+      { signal: AbortSignal.timeout(8000) });
     if (!resp.ok) return null;
     const data = await resp.json();
-    const frames = data?.radar?.past;
-    if (!Array.isArray(frames) || frames.length === 0) return null;
-    return frames[frames.length - 1];
+    return data?.latest ?? null;
   } catch { return null; }
 }
 
@@ -2243,7 +2242,9 @@ async function setupRainRadar() {
   if (frame) {
     _rainviewerTs  = frame.time;
     const path     = frame.path || `/v2/radar/${frame.time}`;
-    _rainviewerUrl = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`;
+    // Extract timestamp from path (e.g. /v2/radar/1234567890 → 1234567890)
+    const tsNum = String(_rainviewerTs);
+    _rainviewerUrl = `https://kahuola.org/api/tiles/rainviewer/${tsNum}/{z}/{x}/{y}.png`;
     const ageMin   = Math.round((Date.now() / 1000 - frame.time) / 60);
 
     if (map.getSource("noaa-radar-global")) {
@@ -2261,8 +2262,10 @@ async function setupRainRadar() {
       }, "waterway");
     }
 
-    // Update note
-    const note = `Global · ${ageMin}min ago  +  NEXRAD USA`;
+    // Update note — explain that transparent = no rain
+    const note = ageMin < 20
+      ? `Global · ${ageMin}min ago · NEXRAD USA`
+      : `Global · ${ageMin}min ago (may be stale)`;
     ["desktop","mobile"].forEach(sfx => {
       const el = document.getElementById(`rain-radar-note-${sfx}`);
       if (el) el.textContent = note;
@@ -2496,7 +2499,7 @@ function openFloodModuleDetail(kind) {
   if (kind === "flood") return openHazardDetail({ title:"Flash Flood", status: flood.sourceStatus === "detected" ? "Official flood status active" : flood.sourceStatus === "none" ? "No active flash flood watch" : "Official flood status unavailable", note:"Official source: National Weather Service.", body:"Official flood polygons come from the National Weather Service. PacIOOS, MRMS, and NOAA radar remain supporting context layers." });
   if (kind === "context") return openHazardDetail({ title:"Flood Context", status: context.sourceStatus === "detected" ? "Estimated local flood context available" : context.sourceStatus === "none" ? "No local flood context returned" : "Local flood context unavailable", note:"Source: NWS alerts + Kahu Ola terrain logic. Context only, not official flood geometry.", body:"This layer is estimated local context only." });
   if (kind === "mrms") return openHazardDetail({ title:"MRMS Rainfall", status: mrms.sourceStatus === "detected" ? "MRMS rainfall context available" : mrms.sourceStatus === "none" ? "No MRMS polygons returned" : "MRMS rainfall unavailable", note:"Source: NOAA MRMS rainfall accumulation products.", body:"MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
-  if (kind === "radar") return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Source: NOAA raster radar tiles.", body:"Rain Radar is a raster situational layer for visual precipitation context. It is not used as the popup identity for fire points." });
+  if (kind === "radar") return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Sources: RainViewer (global) + NOAA NEXRAD via Iowa Mesonet (USA + territories).", body:"Rain Radar shows two overlapping layers. RainViewer covers the entire world. NOAA NEXRAD adds higher-resolution USA coverage on top — transparent tiles simply mean no radar echo detected, which means no significant rain in that area right now." });
   return openHazardDetail({ title:"Fire Weather", status: wind.sourceStatus === "detected" ? "Fire weather spread context active" : wind.sourceStatus === "none" ? "No elevated fire weather cells returned" : "Fire weather context unavailable", note:"Source: NWS + RAWS wind and humidity context.", body:"Fire Weather combines wind gust, sustained wind, humidity, and dry exposure into a civic spread-risk context layer. It is contextual, not an evacuation order." });
 }
 function openHazardDetailFromElement(el) {
