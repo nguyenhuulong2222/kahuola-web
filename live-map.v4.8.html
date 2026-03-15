@@ -2116,7 +2116,7 @@ updateHurricaneStatusUI(getState("hurricane"));
 updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visible(){ return windRiskVisible; }
   },
   tsunami: {
-    key:"tsunami", enabled:true, affectsGlobalHealth:true,
+    key:"tsunami", enabled:false, affectsGlobalHealth:true, // lazy — enabled on user request or seismic alert
     endpoint: IS_LOCAL ? "./tsunami-test.json" : "https://kahuola.org/api/hazards/tsunami",
     parsePayload(json){ const raw = parseCanonicalSignals(json,"tsunami"); return { features: normalizeTsunamiFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "NWS TWC" }; },
     ensureLayers, applyData(features){ updateTsunamiSource(features); },
@@ -2124,7 +2124,7 @@ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visibl
     visible(){ return tsunamiVisible; }
   },
   hurricane: {
-    key:"hurricane", enabled:true, affectsGlobalHealth:false,
+    key:"hurricane", enabled:false, affectsGlobalHealth:false, // lazy — enabled on user request
     endpoint: IS_LOCAL ? "./hurricane-test.json" : "https://kahuola.org/api/hazards/hurricane",
     parsePayload(json){ const raw = parseCanonicalSignals(json,"hurricane"); return { features: normalizeHurricaneFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "NHC" }; },
     ensureLayers, applyData(features){ updateHurricaneSource(features); },
@@ -2132,7 +2132,7 @@ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visibl
     visible(){ return hurricaneVisible; }
   },
   landslide: {
-    key:"landslide", enabled:true, affectsGlobalHealth:false,
+    key:"landslide", enabled:false, affectsGlobalHealth:false, // lazy — enabled on user request
     endpoint: IS_LOCAL ? "./landslide-test.json" : "https://kahuola.org/api/hazards/landslide?region=hawaii",
     parsePayload(json){ const raw = parseCanonicalSignals(json,"landslide"); return { features: normalizeLandslideFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "Terrain Context" }; },
     ensureLayers, applyData(features){ updateLandslideSource(features); },
@@ -2243,7 +2243,14 @@ async function refreshHazard(key, { silent = false } = {}) {
   }
 }
 async function refreshEnabledHazards(options = {}) {
-  for (const key of activeHazardKeys()) await refreshHazard(key, options);
+  // Parallel fetch — critical hazards first, context layers concurrent
+  const keys = activeHazardKeys();
+  const critical = ["fire", "flashFlood", "tsunami"];
+  const context  = keys.filter(k => !critical.includes(k));
+  // Fire + flash flood + tsunami fetch first (safety-critical)
+  await Promise.allSettled(critical.filter(k=>keys.includes(k)).map(k => refreshHazard(k, options)));
+  // All context layers fetch in parallel
+  await Promise.allSettled(context.map(k => refreshHazard(k, options)));
 }
 
 const map = new maplibregl.Map({
@@ -2834,40 +2841,59 @@ document.addEventListener("keydown", (event) => {
 hazardDetailClose?.addEventListener("click", closeHazardDetail);
 
 // ── Tsunami / Hurricane / Landslide card listeners ──────────────
+// ── Lazy-load modules: enable + fetch on first click ───────────
+function lazyLoadModule(key, detailConfig) {
+  const model = HAZARD_REGISTRY[key];
+  if (!model) return;
+  if (!model.enabled) {
+    // First click: enable and fetch
+    model.enabled = true;
+    const badge = document.getElementById(`${key}-badge`);
+    if (badge) { badge.className = "status-badge status-none"; badge.textContent = "Loading…"; }
+    refreshHazard(key, { silent: true });
+  }
+  const st = getState(key);
+  openHazardDetail(detailConfig(st));
+}
+
 document.getElementById("tsunami-card")?.addEventListener("click", () => {
-  const st = getState("tsunami");
-  openHazardDetail({
+  lazyLoadModule("tsunami", (st) => ({
     title: "Tsunami",
-    status: st.sourceStatus === "active" ? "⚠ ACTIVE WARNING" : st.sourceStatus === "none" ? "Clear — no active warnings" : "Unavailable",
+    status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
+            st.sourceStatus === "none"     ? "Clear — no active warnings" :
+            st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
     note: "Source: NWS Tsunami Warning Center (official).",
     body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately. Kahu Ola shows official NWS geometry only."
-  });
+  }));
 });
 document.getElementById("hurricane-card")?.addEventListener("click", () => {
-  const st = getState("hurricane");
-  const count = st.features?.length || 0;
-  openHazardDetail({
+  lazyLoadModule("hurricane", (st) => ({
     title: "Hurricane Tracks",
-    status: count > 0 ? `${count} active Pacific storm(s)` : "Clear — no active Pacific storms",
+    status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
+            st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
     note: "Source: National Hurricane Center (NHC).",
-    body: "Hurricane data shows active Pacific basin storms. Kahu Ola displays storm center position and classification. Always monitor NHC for official track, cone of uncertainty, and watches/warnings."
-  });
+    body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track, cone of uncertainty, and watches/warnings."
+  }));
 });
 document.getElementById("landslide-card")?.addEventListener("click", () => {
-  const st = getState("landslide");
-  const count = st.features?.length || 0;
-  openHazardDetail({
+  lazyLoadModule("landslide", (st) => ({
     title: "Landslide Risk",
-    status: count > 0 ? `${count} susceptibility zones` : "Low risk — no elevated zones",
+    status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
+            st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
     note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
-    body: "Landslide context is derived conservatively from slope type, runoff potential, and NWS heavy rain alert presence. Risk is elevated after prolonged rainfall or burn-scar events. This is situational context only — not an official landslide forecast."
-  });
+    body: "Landslide context is derived from terrain slope, runoff, and NWS heavy rain alert presence. Contextual only — not an official forecast."
+  }));
 });
 
-// Init status UI for 3 new modules
-updateTsunamiStatusUI(getState("tsunami"));
-updateHurricaneStatusUI(getState("hurricane"));
-updateLandslideStatusUI(getState("landslide"));
+// Init status UI — show "Tap to load" for lazy modules
+["tsunami","hurricane","landslide"].forEach(key => {
+  const badge = document.getElementById(`${key}-badge`);
+  const note  = document.getElementById(`${key}-note`);
+  if (badge) { badge.className = "status-badge status-none"; badge.textContent = "Tap to load"; }
+  if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
+  if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
+  if (note && key === "landslide") note.textContent = "Tap to check terrain context";
+});
 
 window.addEventListener("resize", () => { safeMapResize(); updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length); if (window.innerWidth > MOBILE_BREAKPOINT) return; setSheetOpen(mobileSheet.classList.contains("open")); });
 window.addEventListener("orientationchange", () => setTimeout(safeMapResize, 200));
