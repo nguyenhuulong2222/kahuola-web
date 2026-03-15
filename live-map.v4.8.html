@@ -2208,46 +2208,22 @@ function ensureMrmsLayers() {
   syncMrmsLayerVisibility();
 }
 // ══════════════════════════════════════════════════════════════
-// DUAL-SOURCE RADAR STRATEGY
+// DUAL-SOURCE RADAR STRATEGY — 2 LAYERS SIMULTANEOUSLY
 //
-// Source 1 — NOAA NEXRAD via Iowa Mesonet (USA + territories)
-//   Covers: Hawaii, Guam, Puerto Rico, USVI, American Samoa
-//   Proxy:  kahuola.org/api/tiles/radar/{z}/{x}/{y}.png
-//   CSP:    Safe — same-origin via Cloudflare Worker
+// Layer 1: noaa-radar-nexrad  — Mesonet NEXRAD (USA + territories)
+//   Tiles only exist where/when it rains → transparent elsewhere
+//   Route: kahuola.org/api/tiles/radar/{z}/{x}/{y}.png (Worker proxy)
 //
-// Source 2 — RainViewer (global coverage)
-//   Covers: Entire world — activated when map pans outside USA bbox
-//   Direct: tilecache.rainviewer.com — public, no API key
-//   Update: Dynamic timestamp fetched every 5 min
+// Layer 2: noaa-radar-global  — RainViewer (worldwide fill)
+//   Covers entire globe, lower resolution
+//   Dynamic timestamp refreshed every 5 min
 //
-// Priority logic:
-//   Zoom ≤ 5 OR outside USA bbox → RainViewer (global)
-//   Inside USA bbox              → Mesonet proxy (higher res NEXRAD)
+// Both layers visible simultaneously.
+// NEXRAD paints over RainViewer where USA radar data exists.
 // ══════════════════════════════════════════════════════════════
 
-// USA + territories bounding box (includes HI, GU, PR, USVI, AS)
-const USA_TERRITORIES_BBOX = {
-  west: -180, east: 180,   // full longitude for Pacific territories
-  north: 72,  south: -15,  // Alaska to American Samoa
-};
-
-// Track current radar source
-let _radarSource = null; // 'mesonet' | 'rainviewer'
-let _rainviewerTs = null;
-
-function isInsideUsaBbox(lng, lat) {
-  // Hawaii approx bbox
-  if (lng >= -162 && lng <= -154 && lat >= 18 && lat <= 23) return true;
-  // Continental USA
-  if (lng >= -125 && lng <= -66 && lat >= 24 && lat <= 50) return true;
-  // Alaska
-  if (lng >= -170 && lng <= -130 && lat >= 54 && lat <= 72) return true;
-  // Guam / CNMI
-  if (lng >= 144 && lng <= 146 && lat >= 13 && lat <= 16) return true;
-  // Puerto Rico / USVI
-  if (lng >= -68 && lng <= -64 && lat >= 17 && lat <= 19) return true;
-  return false;
-}
+let _rainviewerTs  = null;
+let _rainviewerUrl = null;
 
 async function fetchRainviewerTimestamp() {
   try {
@@ -2262,82 +2238,63 @@ async function fetchRainviewerTimestamp() {
 }
 
 async function setupRainRadar() {
-  const center = map.getCenter();
-  const zoom   = map.getZoom();
-  const inUsa  = isInsideUsaBbox(center.lng, center.lat);
+  // ── Layer 1: RainViewer global (bottom layer) ─────────────────
+  const frame = await fetchRainviewerTimestamp();
+  if (frame) {
+    _rainviewerTs  = frame.time;
+    const path     = frame.path || `/v2/radar/${frame.time}`;
+    _rainviewerUrl = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`;
+    const ageMin   = Math.round((Date.now() / 1000 - frame.time) / 60);
 
-  // ── Choose source based on location ──────────────────────────
-  const useNexrad = inUsa && zoom >= 4;  // Mesonet has better res at zoom 4+
-
-  let targetUrl;
-  let attribution;
-  let freshNote;
-
-  if (useNexrad) {
-    // Source 1: NOAA NEXRAD via Kahu Ola Worker proxy
-    targetUrl   = "https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png";
-    attribution = "NOAA NEXRAD · Iowa Mesonet · Via Kahu Ola";
-    freshNote   = "NEXRAD · USA + Territories";
-    _radarSource = "mesonet";
-  } else {
-    // Source 2: RainViewer global
-    const frame = await fetchRainviewerTimestamp();
-    if (frame) {
-      _rainviewerTs = frame.time;
-      const path  = frame.path || `/v2/radar/${frame.time}`;
-      targetUrl   = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`;
-      const ageMin = Math.round((Date.now() / 1000 - frame.time) / 60);
-      attribution = "RainViewer · Global Radar";
-      freshNote   = `Global radar · ${ageMin}min ago`;
-      _radarSource = "rainviewer";
+    if (map.getSource("noaa-radar-global")) {
+      map.getSource("noaa-radar-global").setTiles([_rainviewerUrl]);
     } else {
-      // RainViewer failed → fallback to mesonet anyway
-      targetUrl   = "https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png";
-      attribution = "NOAA NEXRAD · Kahu Ola";
-      freshNote   = "NEXRAD fallback";
-      _radarSource = "mesonet";
+      ensureSource("noaa-radar-global", {
+        type: "raster", tiles: [_rainviewerUrl],
+        tileSize: 256, attribution: "RainViewer · Global"
+      });
+      ensureLayer({
+        id: "noaa-radar-global-layer", type: "raster",
+        source: "noaa-radar-global",
+        layout: { visibility: rainRadarVisible ? "visible" : "none" },
+        paint: { "raster-opacity": 0.55, "raster-fade-duration": 400 }
+      }, "waterway");
     }
+
+    // Update note
+    const note = `Global · ${ageMin}min ago  +  NEXRAD USA`;
+    ["desktop","mobile"].forEach(sfx => {
+      const el = document.getElementById(`rain-radar-note-${sfx}`);
+      if (el) el.textContent = note;
+    });
+    const elMain = document.getElementById("rain-radar-note");
+    if (elMain) elMain.textContent = note;
   }
 
-  // ── Apply to map source ───────────────────────────────────────
-  if (map.getSource("noaa-radar")) {
-    map.getSource("noaa-radar").setTiles([targetUrl]);
-  } else {
-    ensureSource("noaa-radar", {
-      type: "raster", tiles: [targetUrl],
-      tileSize: 256, attribution
+  // ── Layer 2: Mesonet NEXRAD USA (top layer, higher res) ───────
+  // Only has tiles where actual radar echo exists → transparent elsewhere
+  if (!map.getSource("noaa-radar-nexrad")) {
+    ensureSource("noaa-radar-nexrad", {
+      type: "raster",
+      tiles: ["https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "NOAA NEXRAD · Iowa Mesonet"
     });
     ensureLayer({
-      id: "noaa-radar-layer", type: "raster", source: "noaa-radar",
+      id: "noaa-radar-layer",   // keep original id — visibility sync uses this
+      type: "raster",
+      source: "noaa-radar-nexrad",
       layout: { visibility: rainRadarVisible ? "visible" : "none" },
-      paint: { "raster-opacity": 0.75, "raster-fade-duration": 400, "raster-resampling": "linear" }
+      paint: { "raster-opacity": 0.85, "raster-fade-duration": 400 }
     }, "waterway");
   }
-
-  // ── Update card note ──────────────────────────────────────────
-  ["desktop","mobile"].forEach(sfx => {
-    const el = document.getElementById(`rain-radar-note-${sfx}`);
-    if (el) el.textContent = freshNote;
-  });
-  const elMain = document.getElementById("rain-radar-note");
-  if (elMain) elMain.textContent = freshNote;
 }
 
+// Alias — legacy calls still work
 function ensureRainRadarLayers() { setupRainRadar(); }
 
-// Refresh every 5 min when radar is ON (doctrine §15 floor)
+// Refresh RainViewer timestamp every 5 min when radar ON
 setInterval(() => { if (rainRadarVisible) setupRainRadar(); }, 5 * 60 * 1000);
-
-// Switch source when user pans significantly
-map.on("moveend", () => {
-  if (!rainRadarVisible) return;
-  const center  = map.getCenter();
-  const inUsa   = isInsideUsaBbox(center.lng, center.lat);
-  const nowNexrad = inUsa && map.getZoom() >= 4;
-  const wasNexrad = _radarSource === "mesonet";
-  // Only re-init if source type needs to change
-  if (nowNexrad !== wasNexrad) setupRainRadar();
-});
 function ensureWindRiskLayers() {
   ensureSource("wind-risk", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
   ensureLayer({ id:"wind-risk-fill", type:"fill", source:"wind-risk", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"CRITICAL","#ff6a00","HIGH","#ff8a00","ELEVATED","#ffb74d","MODERATE","#ffd180","LOW","#ffe0b2","#ffe0b2"], "fill-opacity": windRiskVisible ? ["match",["get","risk_index"],"CRITICAL",0.16,"HIGH",0.12,"ELEVATED",0.09,"MODERATE",0.06,"LOW",0.035,0.04] : 0 }});
@@ -2386,7 +2343,10 @@ function syncMrmsLayerVisibility() {
   if (map.getLayer("mrms-rain-fill")) map.setPaintProperty("mrms-rain-fill","fill-opacity", mrmsVisible ? ["match",["get","severity"],"HIGH",0.32,"ELEVATED",0.26,"MODERATE",0.20,"LOW",0.14,0.14] : 0);
   if (map.getLayer("mrms-rain-outline")) map.setPaintProperty("mrms-rain-outline","line-opacity", mrmsVisible ? 0.85 : 0);
 }
-function syncRainRadarLayerVisibility() { setLayerVisibility("noaa-radar-layer", rainRadarVisible); }
+function syncRainRadarLayerVisibility() {
+  setLayerVisibility("noaa-radar-layer", rainRadarVisible);        // NEXRAD USA
+  setLayerVisibility("noaa-radar-global-layer", rainRadarVisible); // RainViewer global
+}
 function syncWindRiskLayerVisibility() {
   setLayerVisibility("wind-risk-fill", windRiskVisible);
   setLayerVisibility("wind-risk-outline", windRiskVisible);
@@ -2626,7 +2586,7 @@ function zoomToCluster(feature) {
   source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
 }
 function raiseFireLayersAboveOverlays() {
-  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
+  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","noaa-radar-global-layer","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
     if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) {} }
   });
   ["clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
