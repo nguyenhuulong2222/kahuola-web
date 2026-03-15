@@ -1553,21 +1553,21 @@
             </div>
             <div class="status-badge status-none" id="wind-risk-badge">Loading</div>
           </div>
-          <div class="mini-module" id="tsunami-card" tabindex="0" role="button" aria-label="Tsunami alert status">
+          <div class="mini-module" id="tsunami-card" tabindex="0" role="button" aria-label="Tsunami alert status" onclick="handleMoreHazardCardClick('tsunami', event)" onkeydown="if(event.key==='Enter'||event.key===' '){handleMoreHazardCardClick('tsunami', event)}">
             <div>
               <div class="mini-module-title">Tsunami</div>
               <div class="mini-module-note" id="tsunami-note">NWS Tsunami Warning Center</div>
             </div>
             <div class="status-badge status-none" id="tsunami-badge">Loading</div>
           </div>
-          <div class="mini-module" id="hurricane-card" tabindex="0" role="button" aria-label="Hurricane track status">
+          <div class="mini-module" id="hurricane-card" tabindex="0" role="button" aria-label="Hurricane track status" onclick="handleMoreHazardCardClick('hurricane', event)" onkeydown="if(event.key==='Enter'||event.key===' '){handleMoreHazardCardClick('hurricane', event)}">
             <div>
               <div class="mini-module-title">Hurricane</div>
               <div class="mini-module-note" id="hurricane-note">NHC Pacific basin</div>
             </div>
             <div class="status-badge status-none" id="hurricane-badge">Loading</div>
           </div>
-          <div class="mini-module" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status">
+          <div class="mini-module" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status" onclick="handleMoreHazardCardClick('landslide', event)" onkeydown="if(event.key==='Enter'||event.key===' '){handleMoreHazardCardClick('landslide', event)}">
             <div>
               <div class="mini-module-title">Landslide</div>
               <div class="mini-module-note" id="landslide-note">Terrain + rainfall context</div>
@@ -2866,43 +2866,42 @@ function moreHazardDetailPayload(key) {
 function openMoreHazardDetail(key) {
   openHazardDetail(moreHazardDetailPayload(key));
 }
-
-function bindMoreHazardsCards() {
-  const bindCard = (id, key) => {
-    const el = document.getElementById(id);
-    if (!el || el.dataset.bound === "1") return;
-    el.dataset.bound = "1";
-
-    const onOpen = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const model = HAZARD_REGISTRY[key];
-      if (!model) return;
-      if (!model.enabled) {
-        model.enabled = true;
-        updateModuleBadge(key, "Loading...", "status-none");
-        openHazardDetail({
-          title: key === "tsunami" ? "Tsunami" : key === "hurricane" ? "Hurricane" : "Landslide",
-          status: "Checking live data...",
-          note: key === "tsunami" ? "Source: NWS Tsunami Warning Center" : key === "hurricane" ? "Source: NHC Pacific basin" : "Source: Terrain + rainfall context",
-          body: "Please wait a moment while live hazard data is retrieved."
-        });
-        refreshHazard(key, { silent: true }).then(() => openMoreHazardDetail(key)).catch(() => openMoreHazardDetail(key));
-        return;
-      }
-      openMoreHazardDetail(key);
-    };
-
-    el.addEventListener("click", onOpen);
-    el.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") onOpen(event);
-    });
-  };
-
-  bindCard("tsunami-card", "tsunami");
-  bindCard("hurricane-card", "hurricane");
-  bindCard("landslide-card", "landslide");
+function handleMoreHazardCardClick(key, event) {
+  try {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const model = HAZARD_REGISTRY[key];
+    if (!model) return;
+    if (!model.enabled) {
+      model.enabled = true;
+      updateModuleBadge(key, "Loading...", "status-none");
+      openHazardDetail({
+        title: key === "tsunami" ? "Tsunami" : key === "hurricane" ? "Hurricane" : "Landslide",
+        status: "Checking live data...",
+        note: key === "tsunami" ? "Source: NWS Tsunami Warning Center" : key === "hurricane" ? "Source: NHC Pacific basin" : "Source: Terrain + rainfall context",
+        body: "Please wait a moment while live hazard data is retrieved."
+      });
+      refreshHazard(key, { silent: true })
+        .then(() => openMoreHazardDetail(key))
+        .catch(() => openMoreHazardDetail(key));
+      return;
+    }
+    openMoreHazardDetail(key);
+  } catch (err) {
+    console.error('More Hazards click handler failed:', err);
+    try {
+      openHazardDetail({
+        title: key === "tsunami" ? "Tsunami" : key === "hurricane" ? "Hurricane" : "Landslide",
+        status: "UNAVAILABLE",
+        note: key === "tsunami" ? "Source: NWS Tsunami Warning Center" : key === "hurricane" ? "Source: NHC Pacific basin" : "Source: Terrain + rainfall context",
+        body: "Hazard detail could not be opened right now. Monitoring will resume automatically."
+      });
+    } catch (_) {}
+  }
 }
+window.handleMoreHazardCardClick = handleMoreHazardCardClick;
+
+function bindMoreHazardsCards() { /* inline handlers are bound in HTML for reliability */ }
 function setSheetOpen(open) { if (window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details"; setTimeout(safeMapResize, 280); }
 function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
