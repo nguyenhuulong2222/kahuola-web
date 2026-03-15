@@ -1554,27 +1554,40 @@
             </div>
             <div class="status-badge status-none" id="wind-risk-badge">Loading</div>
           </div>
-          <div class="mini-module" id="tsunami-card" tabindex="0" role="button" aria-label="Tsunami alert status">
-            <div>
-              <div class="mini-module-title">Tsunami</div>
-              <div class="mini-module-note" id="tsunami-note">NWS Tsunami Warning Center</div>
+          <details class="more-hazards" id="more-hazards">
+            <summary class="more-hazards-summary" aria-label="More hazards">
+              <span class="more-hazards-kicker">
+                <span>More Hazards</span>
+                <span class="more-hazards-sub">Tsunami · Hurricane · Landslide</span>
+              </span>
+              <span class="more-hazards-pill">Tap to check</span>
+            </summary>
+            <div class="more-hazards-body">
+              <div class="mini-module-grid more-hazards-grid">
+                <div class="mini-module" id="tsunami-card" tabindex="0" role="button" aria-label="Tsunami alert status">
+                  <div>
+                    <div class="mini-module-title">Tsunami</div>
+                    <div class="mini-module-note" id="tsunami-note">NWS Tsunami Warning Center</div>
+                  </div>
+                  <div class="status-badge status-none" id="tsunami-badge">Monitoring</div>
+                </div>
+                <div class="mini-module" id="hurricane-card" tabindex="0" role="button" aria-label="Hurricane track status">
+                  <div>
+                    <div class="mini-module-title">Hurricane</div>
+                    <div class="mini-module-note" id="hurricane-note">NHC Pacific basin</div>
+                  </div>
+                  <div class="status-badge status-none" id="hurricane-badge">Monitoring</div>
+                </div>
+                <div class="mini-module" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status">
+                  <div>
+                    <div class="mini-module-title">Landslide</div>
+                    <div class="mini-module-note" id="landslide-note">Terrain + rainfall context</div>
+                  </div>
+                  <div class="status-badge status-none" id="landslide-badge">Monitoring</div>
+                </div>
+              </div>
             </div>
-            <div class="status-badge status-none" id="tsunami-badge">Loading</div>
-          </div>
-          <div class="mini-module" id="hurricane-card" tabindex="0" role="button" aria-label="Hurricane track status">
-            <div>
-              <div class="mini-module-title">Hurricane</div>
-              <div class="mini-module-note" id="hurricane-note">NHC Pacific basin</div>
-            </div>
-            <div class="status-badge status-none" id="hurricane-badge">Loading</div>
-          </div>
-          <div class="mini-module" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status">
-            <div>
-              <div class="mini-module-title">Landslide</div>
-              <div class="mini-module-note" id="landslide-note">Terrain + rainfall context</div>
-            </div>
-            <div class="status-badge status-none" id="landslide-badge">Loading</div>
-          </div>
+          </details>
         </div></div>
         <div class="blueprint-footnote">Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.</div>
       </div>
@@ -2883,46 +2896,72 @@ function bindButtons() {
 
 // ── Status UI functions ───────────────────────────────────
 function updateTsunamiStatusUI(state) {
+  const count = state.features?.length || 0;
+  const isTimeout = /timeout|abort/i.test(String(state?.error || ""));
+  const cls = state.sourceStatus === "detected" ? "status-detected" :
+              isTimeout ? "status-unavailable" :
+              state.sourceStatus === "none" ? "status-none" : "status-unavailable";
+  const txt = state.sourceStatus === "detected" ? `ACTIVE${count > 0 ? ` · ${count}` : ""}` :
+              isTimeout ? "TIMEOUT" :
+              state.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE";
+  const ntxt = state.sourceStatus === "detected"
+    ? "Active tsunami alert detected for Hawaiʻi. Follow official guidance from NWS."
+    : isTimeout
+      ? "Tsunami source did not respond in time. Monitoring will retry automatically."
+      : state.sourceStatus === "none"
+        ? "No active tsunami alerts for Hawaiʻi right now."
+        : "Tsunami source could not be verified right now. Monitoring will resume when the source becomes available.";
   ["desktop","mobile"].forEach(sfx => {
     const badge = document.getElementById(`tsunami-badge-${sfx}`);
     const note  = document.getElementById(`tsunami-note-${sfx}`);
-    const b = document.getElementById("tsunami-badge");
-    const n = document.getElementById("tsunami-note");
-    const count = state.features?.length || 0;
-    const cls   = state.sourceStatus === "detected" ? "status-detected" :
-                  state.sourceStatus === "none"     ? "status-none" : "status-unavailable";
-    const txt   = state.sourceStatus === "detected" ? `ALERT · ${count}` :
-                  state.sourceStatus === "none"     ? "Clear" : "Unavailable";
-    const ntxt  = state.sourceStatus === "detected" ? "⚠ Tsunami warning active — follow official guidance." :
-                  state.sourceStatus === "none"     ? "No active tsunami warnings." : "NWS data unavailable.";
-    [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
-    [note, n].forEach(el => { if (el) el.textContent = ntxt; });
+    [badge, document.getElementById("tsunami-badge")].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
+    [note, document.getElementById("tsunami-note")].forEach(el => { if (el) el.textContent = ntxt; });
   });
 }
 function updateHurricaneStatusUI(state) {
+  const count = state.features?.length || 0;
+  const isTimeout = /timeout|abort/i.test(String(state?.error || ""));
+  const cls = count > 0 ? "status-detected" :
+              isTimeout ? "status-unavailable" :
+              state.sourceStatus === "none" ? "status-none" : "status-unavailable";
+  const txt = count > 0 ? `ACTIVE · ${count}` :
+              isTimeout ? "TIMEOUT" :
+              state.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE";
+  const ntxt = count > 0
+    ? "Tropical cyclone activity detected in the Pacific basin. Monitoring potential impact to Hawaiʻi."
+    : isTimeout
+      ? "Hurricane source did not respond in time. Monitoring will retry automatically."
+      : state.sourceStatus === "none"
+        ? "No active tropical cyclone hazard affecting Hawaiʻi right now."
+        : "Hurricane source could not be verified right now. Monitoring will resume when the source becomes available.";
   ["desktop","mobile"].forEach(sfx => {
     const badge = document.getElementById(`hurricane-badge-${sfx}`);
-    const b = document.getElementById("hurricane-badge");
-    const n = document.getElementById("hurricane-note");
-    const count = state.features?.length || 0;
-    const cls   = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
-    const txt   = count > 0 ? `ACTIVE · ${count}` : state.sourceStatus === "unavailable" ? "Unavailable" : "Clear";
-    const ntxt  = count > 0 ? `${count} active Pacific storm(s). Monitor NHC.` : "No active Pacific storms near Hawaiʻi.";
-    [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
-    if (n) n.textContent = ntxt;
+    const note  = document.getElementById(`hurricane-note-${sfx}`);
+    [badge, document.getElementById("hurricane-badge")].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
+    [note, document.getElementById("hurricane-note")].forEach(el => { if (el) el.textContent = ntxt; });
   });
 }
 function updateLandslideStatusUI(state) {
+  const count = state.features?.length || 0;
+  const isTimeout = /timeout|abort/i.test(String(state?.error || ""));
+  const cls = count > 0 ? "status-detected" :
+              isTimeout ? "status-unavailable" :
+              state.sourceStatus === "none" ? "status-none" : "status-unavailable";
+  const txt = count > 0 ? `ACTIVE · ${count}` :
+              isTimeout ? "TIMEOUT" :
+              state.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE";
+  const ntxt = count > 0
+    ? "Elevated landslide probability detected due to terrain and rainfall conditions."
+    : isTimeout
+      ? "Landslide source did not respond in time. Monitoring will retry automatically."
+      : state.sourceStatus === "none"
+        ? "No elevated landslide signal is active right now."
+        : "Landslide source could not be verified right now. Monitoring will resume when the source becomes available.";
   ["desktop","mobile"].forEach(sfx => {
     const badge = document.getElementById(`landslide-badge-${sfx}`);
-    const b = document.getElementById("landslide-badge");
-    const n = document.getElementById("landslide-note");
-    const count = state.features?.length || 0;
-    const cls   = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
-    const txt   = count > 0 ? `CONTEXT · ${count}` : "Low risk";
-    const ntxt  = count > 0 ? "Landslide susceptibility context available." : "No elevated landslide risk detected.";
-    [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
-    if (n) n.textContent = ntxt;
+    const note  = document.getElementById(`landslide-note-${sfx}`);
+    [badge, document.getElementById("landslide-badge")].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
+    [note, document.getElementById("landslide-note")].forEach(el => { if (el) el.textContent = ntxt; });
   });
 }
 
@@ -3036,25 +3075,54 @@ function openLandslidePopup(feature, lngLat) {
   // ── Lazy-load: Tsunami / Hurricane / Landslide ──────────────
   document.getElementById("tsunami-card")?.addEventListener("click", () => lazyLoadModule("tsunami", (st) => ({
     title: "Tsunami",
-    status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
-            st.sourceStatus === "none"     ? "Clear — no active warnings" :
-            st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
-    note: "Source: NWS Tsunami Warning Center (official).",
-    body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
+    status: st.status === "loading" ? "Checking live data..." :
+            st.sourceStatus === "detected" ? "ACTIVE" :
+            /timeout|abort/i.test(String(st?.error || "")) ? "TIMEOUT" :
+            st.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE",
+    note: "Source: NWS Tsunami Warning Center",
+    body: st.status === "loading"
+      ? "Checking live tsunami data for Hawaiʻi."
+      : st.sourceStatus === "detected"
+        ? "Active tsunami alert detected for Hawaiʻi. Follow official guidance from NWS."
+        : /timeout|abort/i.test(String(st?.error || ""))
+          ? "Tsunami source did not respond in time. Monitoring will retry automatically."
+          : st.sourceStatus === "none"
+            ? "No active tsunami alerts for Hawaiʻi right now."
+            : "Tsunami source could not be verified right now. Monitoring will resume when the source becomes available."
   })));
   document.getElementById("hurricane-card")?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
-    title: "Hurricane Tracks",
-    status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
-            st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
-    note: "Source: National Hurricane Center (NHC).",
-    body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
+    title: "Hurricane",
+    status: st.status === "loading" ? "Checking live data..." :
+            st.features?.length > 0 ? "ACTIVE" :
+            /timeout|abort/i.test(String(st?.error || "")) ? "TIMEOUT" :
+            st.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE",
+    note: "Source: NHC Pacific basin",
+    body: st.status === "loading"
+      ? "Checking live tropical cyclone data for the Pacific basin."
+      : st.features?.length > 0
+        ? "Tropical cyclone activity detected in the Pacific basin. Monitoring potential impact to Hawaiʻi."
+        : /timeout|abort/i.test(String(st?.error || ""))
+          ? "Hurricane source did not respond in time. Monitoring will retry automatically."
+          : st.sourceStatus === "none"
+            ? "No active tropical cyclone hazard affecting Hawaiʻi right now."
+            : "Hurricane source could not be verified right now. Monitoring will resume when the source becomes available."
   })));
   document.getElementById("landslide-card")?.addEventListener("click", () => lazyLoadModule("landslide", (st) => ({
-    title: "Landslide Risk",
-    status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
-            st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
-    note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
-    body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
+    title: "Landslide",
+    status: st.status === "loading" ? "Checking live data..." :
+            st.features?.length > 0 ? "ACTIVE" :
+            /timeout|abort/i.test(String(st?.error || "")) ? "TIMEOUT" :
+            st.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE",
+    note: "Source: Terrain + rainfall context",
+    body: st.status === "loading"
+      ? "Checking terrain and rainfall context for landslide signals."
+      : st.features?.length > 0
+        ? "Elevated landslide probability detected due to terrain and rainfall conditions."
+        : /timeout|abort/i.test(String(st?.error || ""))
+          ? "Landslide source did not respond in time. Monitoring will retry automatically."
+          : st.sourceStatus === "none"
+            ? "No elevated landslide signal is active right now."
+            : "Landslide source could not be verified right now. Monitoring will resume when the source becomes available."
   })));
 }
 
@@ -3078,9 +3146,9 @@ function lazyLoadModule(key, detailConfig) {
     // Show loading state immediately while fetch runs
     openHazardDetail({
       title: key.charAt(0).toUpperCase() + key.slice(1),
-      status: "Fetching data…",
+      status: "Checking live data...",
       note: "Loading from Kahu Ola aggregator.",
-      body: "Please wait a moment while data is retrieved."
+      body: "Please wait a moment while live hazard data is retrieved."
     });
     return;
   }
@@ -3093,11 +3161,11 @@ function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); 
 bindButtons();
 // Init lazy module badges
 ["tsunami","hurricane","landslide"].forEach(key => {
-  updateModuleBadge(key, "·", "status-none");
+  updateModuleBadge(key, "Monitoring", "status-none");
   const note = document.getElementById(`${key}-note`);
-  if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
-  if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
-  if (note && key === "landslide") note.textContent = "Terrain + rainfall context";
+  if (note && key === "tsunami")   note.textContent = "No active tsunami alerts for Hawaiʻi right now.";
+  if (note && key === "hurricane") note.textContent = "No active tropical cyclone hazard affecting Hawaiʻi right now.";
+  if (note && key === "landslide") note.textContent = "No elevated landslide signal is active right now.";
 });
 syncDiag();
 syncSatelliteButtons();
@@ -3124,9 +3192,9 @@ sheetHandleWrap?.addEventListener("click", toggleSheet);
 
 // Lazy module config for event delegation
 const LAZY_MODULES = {
-  "tsunami-card":  { key:"tsunami",   title:"Tsunami",         note:"Source: NWS Tsunami Warning Center (official).", body:"Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately.", status:(st)=> st.sourceStatus==="detected" ? "⚠ ACTIVE WARNING" : st.sourceStatus==="none" ? "No active tsunami warnings for Hawaiʻi" : "Unavailable" },
-  "hurricane-card":{ key:"hurricane", title:"Hurricane Tracks",note:"Source: National Hurricane Center (NHC).",        body:"Shows active Pacific basin storms. Always monitor NHC for official track and watches.", status:(st)=> st.features?.length>0 ? `${st.features.length} active Pacific storm(s)` : st.sourceStatus==="none" ? "No active Pacific storms near Hawaiʻi" : "Unavailable" },
-  "landslide-card":{ key:"landslide", title:"Landslide Risk",  note:"Source: Kahu Ola terrain + NWS (contextual).",   body:"Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Not an official forecast.", status:(st)=> st.features?.length>0 ? `${st.features.length} susceptibility zones` : st.sourceStatus==="none" ? "No elevated landslide risk detected" : "Unavailable" }
+  "tsunami-card":  { key:"tsunami",   title:"Tsunami",   note:"Source: NWS Tsunami Warning Center", body:"No active tsunami alerts for Hawaiʻi right now.", status:(st)=> st.status==="loading" ? "Checking live data..." : st.sourceStatus==="detected" ? "ACTIVE" : /timeout|abort/i.test(String(st?.error || "")) ? "TIMEOUT" : st.sourceStatus==="none" ? "MONITORING" : "UNAVAILABLE" },
+  "hurricane-card":{ key:"hurricane", title:"Hurricane", note:"Source: NHC Pacific basin",          body:"No active tropical cyclone hazard affecting Hawaiʻi right now.", status:(st)=> st.status==="loading" ? "Checking live data..." : st.features?.length>0 ? "ACTIVE" : /timeout|abort/i.test(String(st?.error || "")) ? "TIMEOUT" : st.sourceStatus==="none" ? "MONITORING" : "UNAVAILABLE" },
+  "landslide-card":{ key:"landslide", title:"Landslide", note:"Source: Terrain + rainfall context", body:"No elevated landslide signal is active right now.", status:(st)=> st.status==="loading" ? "Checking live data..." : st.features?.length>0 ? "ACTIVE" : /timeout|abort/i.test(String(st?.error || "")) ? "TIMEOUT" : st.sourceStatus==="none" ? "MONITORING" : "UNAVAILABLE" }
 };
 
 document.addEventListener("click", (event) => {
