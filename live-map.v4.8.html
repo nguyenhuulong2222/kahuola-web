@@ -2065,9 +2065,23 @@ const HAZARD_REGISTRY = {
   mrmsRain: {
     key: "mrmsRain",
     endpoint: IS_LOCAL ? "./mrms-qpe-test.json" : "https://kahuola.org/api/hazards/mrms-qpe?region=hawaii",
-    enabled: true, affectsGlobalHealth: false,
-    parsePayload(json){ const raw = parseCanonicalSignals(json, "mrmsRain"); return { features: normalizeMrmsFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "MRMS" }; },
-    ensureLayers, applyData(features){ updateMrmsSource(features); }, onFetchComplete(){ updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }, visible(){ return mrmsVisible; }
+    enabled: true,
+    affectsGlobalHealth: false,
+    parsePayload(json) {
+      const raw = Array.isArray(json?.signals) ? json.signals : [];
+      return {
+        features: normalizeMrmsFeatures(raw),
+        sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceLabel: "NOAA MRMS"
+      };
+    },
+    ensureLayers,
+    applyData(features) { updateMrmsSource(features); },
+    onFetchComplete() {
+      updateMrmsStatusUI(getState("mrmsRain"));
+      renderUnifiedPanels();
+    },
+    visible() { return mrmsVisible; }
   },
   rainRadar: {
     key: "rainRadar",
