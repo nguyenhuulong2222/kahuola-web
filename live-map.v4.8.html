@@ -1536,9 +1536,15 @@
           <div class="mini-module" id="rain-radar-card" tabindex="0" role="button" aria-label="Rain radar details">
             <div>
               <div class="mini-module-title">Rain Radar</div>
-              <div class="mini-module-note" id="rain-radar-note">Live NOAA raster radar</div>
+              <div class="mini-module-note" id="rain-radar-note">Global · Click to toggle</div>
             </div>
             <div class="status-badge status-none" id="rain-radar-badge">Off</div>
+            <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;">
+              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#40e0d0;flex-shrink:0"></span>Light</span>
+              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#4caf50;flex-shrink:0"></span>Moderate</span>
+              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#ffeb3b;flex-shrink:0"></span>Heavy</span>
+              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#ff5722;flex-shrink:0"></span>Intense</span>
+            </div>
           </div>
           <div class="mini-module" id="wind-risk-card" tabindex="0" role="button" aria-label="Fire Weather details">
             <div>
@@ -2201,18 +2207,137 @@ function ensureMrmsLayers() {
   if (!map.__mrmsHoverBound) { map.__mrmsHoverBound = true; map.on("mouseenter","mrms-rain-fill",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","mrms-rain-fill",()=>{map.getCanvas().style.cursor="";}); }
   syncMrmsLayerVisibility();
 }
-function setupRainRadar() {
-  ensureSource("noaa-radar", {
-  type: "raster",
-  tiles: [
-    "https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png"
-  ],
-  tileSize: 256,
-  attribution: "NOAA/NWS Radar"
-});
-  ensureLayer({ id:"noaa-radar-layer", type:"raster", source:"noaa-radar", layout:{ visibility: rainRadarVisible ? "visible" : "none" }, paint:{ "raster-opacity":0.75, "raster-fade-duration":400, "raster-resampling":"linear" } }, "waterway");
+// ══════════════════════════════════════════════════════════════
+// DUAL-SOURCE RADAR STRATEGY
+//
+// Source 1 — NOAA NEXRAD via Iowa Mesonet (USA + territories)
+//   Covers: Hawaii, Guam, Puerto Rico, USVI, American Samoa
+//   Proxy:  kahuola.org/api/tiles/radar/{z}/{x}/{y}.png
+//   CSP:    Safe — same-origin via Cloudflare Worker
+//
+// Source 2 — RainViewer (global coverage)
+//   Covers: Entire world — activated when map pans outside USA bbox
+//   Direct: tilecache.rainviewer.com — public, no API key
+//   Update: Dynamic timestamp fetched every 5 min
+//
+// Priority logic:
+//   Zoom ≤ 5 OR outside USA bbox → RainViewer (global)
+//   Inside USA bbox              → Mesonet proxy (higher res NEXRAD)
+// ══════════════════════════════════════════════════════════════
+
+// USA + territories bounding box (includes HI, GU, PR, USVI, AS)
+const USA_TERRITORIES_BBOX = {
+  west: -180, east: 180,   // full longitude for Pacific territories
+  north: 72,  south: -15,  // Alaska to American Samoa
+};
+
+// Track current radar source
+let _radarSource = null; // 'mesonet' | 'rainviewer'
+let _rainviewerTs = null;
+
+function isInsideUsaBbox(lng, lat) {
+  // Hawaii approx bbox
+  if (lng >= -162 && lng <= -154 && lat >= 18 && lat <= 23) return true;
+  // Continental USA
+  if (lng >= -125 && lng <= -66 && lat >= 24 && lat <= 50) return true;
+  // Alaska
+  if (lng >= -170 && lng <= -130 && lat >= 54 && lat <= 72) return true;
+  // Guam / CNMI
+  if (lng >= 144 && lng <= 146 && lat >= 13 && lat <= 16) return true;
+  // Puerto Rico / USVI
+  if (lng >= -68 && lng <= -64 && lat >= 17 && lat <= 19) return true;
+  return false;
 }
+
+async function fetchRainviewerTimestamp() {
+  try {
+    const resp = await fetch("https://api.rainviewer.com/public/weather-maps.json",
+      { signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const frames = data?.radar?.past;
+    if (!Array.isArray(frames) || frames.length === 0) return null;
+    return frames[frames.length - 1];
+  } catch { return null; }
+}
+
+async function setupRainRadar() {
+  const center = map.getCenter();
+  const zoom   = map.getZoom();
+  const inUsa  = isInsideUsaBbox(center.lng, center.lat);
+
+  // ── Choose source based on location ──────────────────────────
+  const useNexrad = inUsa && zoom >= 4;  // Mesonet has better res at zoom 4+
+
+  let targetUrl;
+  let attribution;
+  let freshNote;
+
+  if (useNexrad) {
+    // Source 1: NOAA NEXRAD via Kahu Ola Worker proxy
+    targetUrl   = "https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png";
+    attribution = "NOAA NEXRAD · Iowa Mesonet · Via Kahu Ola";
+    freshNote   = "NEXRAD · USA + Territories";
+    _radarSource = "mesonet";
+  } else {
+    // Source 2: RainViewer global
+    const frame = await fetchRainviewerTimestamp();
+    if (frame) {
+      _rainviewerTs = frame.time;
+      const path  = frame.path || `/v2/radar/${frame.time}`;
+      targetUrl   = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`;
+      const ageMin = Math.round((Date.now() / 1000 - frame.time) / 60);
+      attribution = "RainViewer · Global Radar";
+      freshNote   = `Global radar · ${ageMin}min ago`;
+      _radarSource = "rainviewer";
+    } else {
+      // RainViewer failed → fallback to mesonet anyway
+      targetUrl   = "https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png";
+      attribution = "NOAA NEXRAD · Kahu Ola";
+      freshNote   = "NEXRAD fallback";
+      _radarSource = "mesonet";
+    }
+  }
+
+  // ── Apply to map source ───────────────────────────────────────
+  if (map.getSource("noaa-radar")) {
+    map.getSource("noaa-radar").setTiles([targetUrl]);
+  } else {
+    ensureSource("noaa-radar", {
+      type: "raster", tiles: [targetUrl],
+      tileSize: 256, attribution
+    });
+    ensureLayer({
+      id: "noaa-radar-layer", type: "raster", source: "noaa-radar",
+      layout: { visibility: rainRadarVisible ? "visible" : "none" },
+      paint: { "raster-opacity": 0.75, "raster-fade-duration": 400, "raster-resampling": "linear" }
+    }, "waterway");
+  }
+
+  // ── Update card note ──────────────────────────────────────────
+  ["desktop","mobile"].forEach(sfx => {
+    const el = document.getElementById(`rain-radar-note-${sfx}`);
+    if (el) el.textContent = freshNote;
+  });
+  const elMain = document.getElementById("rain-radar-note");
+  if (elMain) elMain.textContent = freshNote;
+}
+
 function ensureRainRadarLayers() { setupRainRadar(); }
+
+// Refresh every 5 min when radar is ON (doctrine §15 floor)
+setInterval(() => { if (rainRadarVisible) setupRainRadar(); }, 5 * 60 * 1000);
+
+// Switch source when user pans significantly
+map.on("moveend", () => {
+  if (!rainRadarVisible) return;
+  const center  = map.getCenter();
+  const inUsa   = isInsideUsaBbox(center.lng, center.lat);
+  const nowNexrad = inUsa && map.getZoom() >= 4;
+  const wasNexrad = _radarSource === "mesonet";
+  // Only re-init if source type needs to change
+  if (nowNexrad !== wasNexrad) setupRainRadar();
+});
 function ensureWindRiskLayers() {
   ensureSource("wind-risk", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
   ensureLayer({ id:"wind-risk-fill", type:"fill", source:"wind-risk", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"CRITICAL","#ff6a00","HIGH","#ff8a00","ELEVATED","#ffb74d","MODERATE","#ffd180","LOW","#ffe0b2","#ffe0b2"], "fill-opacity": windRiskVisible ? ["match",["get","risk_index"],"CRITICAL",0.16,"HIGH",0.12,"ELEVATED",0.09,"MODERATE",0.06,"LOW",0.035,0.04] : 0 }});
