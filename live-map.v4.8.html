@@ -2855,9 +2855,9 @@ function setSheetOpen(open) { if (window.innerWidth > MOBILE_BREAKPOINT) return;
 function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
 bindButtons();
-// Init lazy module badges — "TAP" indicates ready, not loading
+// Init lazy module badges
 ["tsunami","hurricane","landslide"].forEach(key => {
-  updateModuleBadge(key, "TAP", "status-none");
+  updateModuleBadge(key, "·", "status-none");
   const note = document.getElementById(`${key}-note`);
   if (note && key === "tsunami")   note.textContent = "NWS Tsunami Warning Center";
   if (note && key === "hurricane") note.textContent = "NHC Pacific basin";
@@ -2885,9 +2885,40 @@ document.getElementById("diag-close")?.addEventListener("click", () => { diag.cl
 sheetToggleBtn?.addEventListener("click", toggleSheet);
 sheetHandleWrap?.addEventListener("click", toggleSheet);
 
+// Lazy module config for event delegation
+const LAZY_MODULES = {
+  "tsunami-card":  { key:"tsunami",   title:"Tsunami",         note:"Source: NWS Tsunami Warning Center (official).", body:"Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately.", status:(st)=> st.sourceStatus==="detected" ? "⚠ ACTIVE WARNING" : st.sourceStatus==="none" ? "No active tsunami warnings for Hawaiʻi" : "Unavailable" },
+  "hurricane-card":{ key:"hurricane", title:"Hurricane Tracks",note:"Source: National Hurricane Center (NHC).",        body:"Shows active Pacific basin storms. Always monitor NHC for official track and watches.", status:(st)=> st.features?.length>0 ? `${st.features.length} active Pacific storm(s)` : st.sourceStatus==="none" ? "No active Pacific storms near Hawaiʻi" : "Unavailable" },
+  "landslide-card":{ key:"landslide", title:"Landslide Risk",  note:"Source: Kahu Ola terrain + NWS (contextual).",   body:"Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Not an official forecast.", status:(st)=> st.features?.length>0 ? `${st.features.length} susceptibility zones` : st.sourceStatus==="none" ? "No elevated landslide risk detected" : "Unavailable" }
+};
+
 document.addEventListener("click", (event) => {
+  // js-hazard-detail handler
   const trigger = event.target.closest(".js-hazard-detail");
   if (trigger) { openHazardDetailFromElement(trigger); return; }
+
+  // Lazy module card handler — catches clicks on card AND child elements
+  const card = event.target.closest("[id]");
+  if (card && LAZY_MODULES[card.id]) {
+    const cfg = LAZY_MODULES[card.id];
+    const model = HAZARD_REGISTRY[cfg.key];
+    if (!model) return;
+    if (!model.enabled) {
+      model.enabled = true;
+      updateModuleBadge(cfg.key, "Loading…", "status-none");
+      // Show immediate modal so user knows something happened
+      openHazardDetail({ title:cfg.title, status:"Fetching live data…", note:cfg.note, body:cfg.body });
+      refreshHazard(cfg.key, { silent:true }).then(() => {
+        const st = getState(cfg.key);
+        openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
+      });
+    } else {
+      const st = getState(cfg.key);
+      openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
+    }
+    return;
+  }
+
   if (event.target === hazardDetailSheet) closeHazardDetail();
 });
 document.addEventListener("keydown", (event) => {
