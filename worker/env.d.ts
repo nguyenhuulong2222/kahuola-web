@@ -22,6 +22,7 @@ interface Env {
   AIRNOW_API_KEY?: string;
   MEDIA_BRIEF_WEBHOOK?: string;
   MEDIA_BRIEF_WEBHOOK_TOKEN?: string;
+  MEDIA_BRIEF_TOKEN?: string;
   MRMS_QPE_URL?: string;
   MRMS_QPE_TOKEN?: string;
 }
