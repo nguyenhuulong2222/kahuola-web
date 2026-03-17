@@ -515,118 +515,115 @@
       padding:18px 20px 14px;
       border-bottom:1px solid var(--line);
     }
-
-    .map-head h2{
-      margin:0;
-      font-size:19px;
-      letter-spacing:-.02em;
-    }
-
-    .map-head p{
-      margin:4px 0 0;
-      color:var(--text-dim);
-      font-size:13px;
-      line-height:1.5;
-      max-width:46ch;
-    }
+    .map-head h2{margin:0;font-size:19px;letter-spacing:-.02em}
+    .map-head p{margin:4px 0 0;color:var(--text-dim);font-size:13px;line-height:1.5;max-width:46ch}
 
     .map-box{
       position:relative;
       min-height:400px;
       background:
-        radial-gradient(circle at 14% 28%, rgba(77,168,255,.14), transparent 14%),
-        radial-gradient(circle at 44% 48%, rgba(255,122,0,.18), transparent 8%),
-        radial-gradient(circle at 76% 70%, rgba(77,168,255,.16), transparent 16%),
-        linear-gradient(180deg,#0a141d,#101b27);
+        radial-gradient(ellipse at 16% 24%, rgba(14,165,233,.09) 0%, transparent 38%),
+        radial-gradient(ellipse at 80% 72%, rgba(14,165,233,.07) 0%, transparent 34%),
+        linear-gradient(160deg, #060f17 0%, #0b1825 55%, #0d2030 100%);
       overflow:hidden;
       flex-grow:1;
     }
 
-    .map-grid{
-      position:absolute;
-      inset:0;
+    .map-graticule{
+      position:absolute;inset:0;pointer-events:none;
       background-image:
-        linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-      background-size:34px 34px;
-      opacity:.18;
-      pointer-events:none;
+        repeating-linear-gradient(0deg,transparent,transparent 59px,rgba(255,255,255,.03) 59px,rgba(255,255,255,.03) 60px),
+        repeating-linear-gradient(90deg,transparent,transparent 79px,rgba(255,255,255,.022) 79px,rgba(255,255,255,.022) 80px);
     }
+    .map-ocean{
+      position:absolute;inset:0;pointer-events:none;
+      background:radial-gradient(ellipse at 50% 110%, rgba(14,165,233,.055) 0%, transparent 55%);
+    }
+    .map-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+    .map-island-shape{opacity:.58;transition:opacity .3s}
+    .map-box:hover .map-island-shape{opacity:.75}
 
     .map-island{
       position:absolute;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.04);
+      display:flex;align-items:center;gap:5px;
+      border:1px solid rgba(255,255,255,.09);
+      background:rgba(6,15,23,.78);
       border-radius:999px;
-      color:#dce8f4;
-      font-size:12px;
-      padding:8px 12px;
-      box-shadow:0 8px 24px rgba(0,0,0,.22);
-      backdrop-filter:blur(2px);
-      transition:border-color .2s ease, background .2s ease, transform .2s ease;
-      z-index:2;
+      color:#b8cfdf;
+      font-size:11px;font-weight:700;letter-spacing:.03em;
+      padding:5px 10px;
+      box-shadow:0 3px 12px rgba(0,0,0,.38);
+      backdrop-filter:blur(8px);
+      z-index:4;white-space:nowrap;pointer-events:none;
     }
+    .map-island-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
     .map-badge{
-      position:absolute;
-      width:14px;
-      height:14px;
-      border-radius:50%;
-      box-shadow:0 0 0 10px rgba(255,255,255,.04);
-      z-index:3;
-      transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+      position:absolute;width:11px;height:11px;border-radius:50%;
+      z-index:5;transition:transform .2s,box-shadow .2s,opacity .2s;
+    }
+    .map-badge.fire{background:var(--fire);box-shadow:0 0 0 4px rgba(255,122,0,.2),0 0 14px rgba(255,122,0,.55)}
+    .map-badge.flood{background:var(--flood);box-shadow:0 0 0 4px rgba(77,168,255,.2),0 0 14px rgba(77,168,255,.55)}
+    .map-badge.mixed{background:linear-gradient(135deg,var(--fire) 50%,var(--flood) 50%);box-shadow:0 0 0 4px rgba(255,255,255,.12),0 0 14px rgba(255,255,255,.22)}
+    .map-badge.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(103,194,126,.16),0 0 11px rgba(103,194,126,.38)}
+
+    .map-live{
+      position:absolute;top:11px;right:13px;
+      display:flex;align-items:center;gap:5px;
+      font-size:10px;font-weight:700;font-family:var(--mono);
+      letter-spacing:.08em;color:rgba(103,194,126,.75);
+      z-index:6;pointer-events:none;
+    }
+    .map-live-dot{
+      width:6px;height:6px;border-radius:50%;background:var(--ok);
+      box-shadow:0 0 0 4px rgba(103,194,126,.18);
+      animation:live-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes live-pulse{
+      0%,100%{box-shadow:0 0 0 4px rgba(103,194,126,.18)}
+      50%{box-shadow:0 0 0 8px rgba(103,194,126,.05)}
     }
 
-    .map-badge.fire{
-      background:var(--fire);
-      box-shadow:0 0 0 10px rgba(255,122,0,.10), 0 0 18px rgba(255,122,0,.28);
+    .map-scale{
+      position:absolute;bottom:12px;left:14px;
+      display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+      pointer-events:none;z-index:6;
     }
-
-    .map-badge.flood{
-      background:var(--flood);
-      box-shadow:0 0 0 10px rgba(77,168,255,.10), 0 0 18px rgba(77,168,255,.28);
+    .map-scale-bar{
+      width:56px;height:2px;
+      background:linear-gradient(90deg,rgba(255,255,255,.45) 50%,transparent 50%);
+      background-size:18px 100%;border-radius:2px;
     }
-
-    .map-badge.mixed{
-      background:linear-gradient(135deg, var(--fire) 0 50%, var(--flood) 50% 100%);
-      box-shadow:0 0 0 10px rgba(255,255,255,.05), 0 0 18px rgba(255,255,255,.12);
-    }
-
-    .map-badge.ok{
-      background:var(--ok);
-      box-shadow:0 0 0 10px rgba(103,194,126,.10), 0 0 16px rgba(103,194,126,.22);
-    }
+    .map-scale-label{font-size:9px;font-family:var(--mono);color:rgba(255,255,255,.3);letter-spacing:.05em}
 
     .map-explanation{
-      padding:12px 16px;
-      background:rgba(255,255,255,0.02);
+      padding:10px 16px;
+      background:rgba(255,255,255,0.018);
       border-top:1px solid var(--line);
-      border-bottom:1px solid var(--line);
-      font-size:12px;
-      line-height:1.5;
-      color:var(--text-dim);
+      font-size:12px;line-height:1.5;color:var(--text-dim);
+      display:flex;align-items:center;gap:8px;
     }
-
-    .map-explanation strong{
-      color:var(--text);
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-    }
-
-    .map-explanation-icon{
-      color:var(--ok);
-      font-size:14px;
-    }
+    .map-explanation strong{color:var(--text);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+    .map-explanation-icon{color:var(--ok);font-size:13px}
 
     .legend{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      padding:14px 18px 18px;
+      display:flex;flex-wrap:wrap;align-items:center;
+      gap:6px;padding:10px 16px 14px;
       border-top:1px solid var(--line);
-      background:rgba(255,255,255,.02);
+      background:rgba(255,255,255,.012);
     }
+    .legend-label{
+      font-size:10px;font-weight:700;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-right:2px;
+    }
+    .legend-item{
+      display:inline-flex;align-items:center;gap:5px;
+      min-height:22px;padding:0 8px;border-radius:999px;
+      border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.03);
+      color:var(--text-dim);font-size:11px;font-weight:600;
+    }
+    .legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 
     .section{
       margin-top:18px;
@@ -963,28 +960,84 @@
           <div class="chip">Map Preview</div>
         </div>
 
-        <a href="live-map.html" class="map-box" style="display:block;cursor:pointer;text-decoration:none;">
-          <div class="map-grid"></div>
-          <div class="map-island" style="left:8%;top:20%;">Kauaʻi</div>
-          <div class="map-island" style="left:24%;top:38%;">Oʻahu</div>
-          <div class="map-island" style="left:42%;top:49%;">Maui Nui</div>
-          <div class="map-island" style="left:70%;top:62%;">Hawaiʻi Island</div>
+        <a href="live-map.html" class="map-box" style="display:block;cursor:pointer;text-decoration:none;" aria-label="Open interactive live hazard map">
+          <!-- Ocean depth + graticule -->
+          <div class="map-graticule"></div>
+          <div class="map-ocean"></div>
 
-          <div class="map-badge ok" id="kauaiBadge" style="left:13%;top:29%;"></div>
-          <div class="map-badge ok" id="oahuBadge" style="left:31%;top:47%;"></div>
-          <div class="map-badge ok" id="mauiBadge" style="left:46%;top:46%;"></div>
-          <div class="map-badge ok" id="bigIslandBadge" style="left:77%;top:70%;"></div>
+          <!-- LIVE indicator -->
+          <div class="map-live" aria-hidden="true">
+            <div class="map-live-dot"></div>LIVE
+          </div>
+
+          <!-- SVG island silhouettes — approximate Hawaii archipelago shapes -->
+          <svg class="map-svg" viewBox="0 0 480 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <filter id="islandGlow">
+                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+            <!-- Kauaʻi — roughly circular, northwest -->
+            <ellipse class="map-island-shape" cx="68" cy="96" rx="22" ry="18"
+              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
+            <!-- Oʻahu — elongated east-west -->
+            <ellipse class="map-island-shape" cx="152" cy="162" rx="26" ry="15"
+              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
+            <!-- Molokaʻi — thin, east of Oahu -->
+            <ellipse class="map-island-shape" cx="226" cy="176" rx="20" ry="8"
+              fill="rgba(28,80,112,.50)" stroke="rgba(100,180,220,.18)" stroke-width="1"/>
+            <!-- Lānaʻi — small -->
+            <ellipse class="map-island-shape" cx="222" cy="200" rx="11" ry="9"
+              fill="rgba(26,76,108,.48)" stroke="rgba(100,180,220,.16)" stroke-width="1"/>
+            <!-- Maui — figure-8 shape approximated with two ellipses -->
+            <ellipse class="map-island-shape" cx="256" cy="196" rx="24" ry="14"
+              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
+            <ellipse class="map-island-shape" cx="277" cy="208" rx="14" ry="18"
+              fill="rgba(30,85,120,.52)" stroke="rgba(100,180,220,.18)" stroke-width="1"/>
+            <!-- Hawaiʻi Island — large triangle/oval, southeast -->
+            <ellipse class="map-island-shape" cx="382" cy="290" rx="52" ry="48"
+              fill="rgba(30,85,120,.58)" stroke="rgba(100,180,220,.24)" stroke-width="1" filter="url(#islandGlow)"/>
+          </svg>
+
+          <!-- Island labels with status dots -->
+          <div class="map-island" style="left:6%;top:16%;">
+            <div class="map-island-dot" id="kauaiDot" style="background:var(--ok)"></div>Kauaʻi
+          </div>
+          <div class="map-island" style="left:22%;top:34%;">
+            <div class="map-island-dot" id="oahuDot" style="background:var(--ok)"></div>Oʻahu
+          </div>
+          <div class="map-island" style="left:42%;top:43%;">
+            <div class="map-island-dot" id="mauiDot" style="background:var(--ok)"></div>Maui Nui
+          </div>
+          <div class="map-island" style="left:67%;top:61%;">
+            <div class="map-island-dot" id="bigIslandDot" style="background:var(--ok)"></div>Hawaiʻi Island
+          </div>
+
+          <!-- Status badges -->
+          <div class="map-badge ok" id="kauaiBadge" style="left:15%;top:27%;"></div>
+          <div class="map-badge ok" id="oahuBadge" style="left:33%;top:44%;"></div>
+          <div class="map-badge ok" id="mauiBadge" style="left:53%;top:48%;"></div>
+          <div class="map-badge ok" id="bigIslandBadge" style="left:80%;top:69%;"></div>
+
+          <!-- Scale bar -->
+          <div class="map-scale" aria-hidden="true">
+            <div class="map-scale-bar"></div>
+            <div class="map-scale-label">~100 mi</div>
+          </div>
         </a>
 
         <div class="map-explanation">
-          <strong><span class="map-explanation-icon">⚡</span> Low-Bandwidth Mode</strong><br>
-          This static preview is designed to load instantly during severe storms when island cellular networks are degraded or failing.
+          <strong><span class="map-explanation-icon">⚡</span>Low-Bandwidth Mode</strong>
+          Static preview — loads instantly during network outages.
+          <a href="live-map.html" style="color:var(--accent);margin-left:auto;white-space:nowrap;font-size:12px">Open Full Map ↗</a>
         </div>
 
         <div class="legend">
-          <span class="chip">🔥 Fire hotspot</span>
-          <span class="chip">🌧 Flood / rain context</span>
-          <span class="chip">✅ Monitoring</span>
+          <span class="legend-label">Signal</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span>Monitoring</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span>Fire Active</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span>Flood Alert</span>
         </div>
       </aside>
     </section>
@@ -1464,7 +1517,18 @@
         if (!badgeId) return;
         const badge = document.getElementById(badgeId);
         if (!badge) return;
-        badge.className = `map-badge ${badgeMode(entry)}`;
+        const mode = badgeMode(entry);
+        badge.className = `map-badge ${mode}`;
+
+        // Sync the island label dot
+        const dotMap = { kauai:"kauaiDot", oahu:"oahuDot", maui:"mauiDot", bigisland:"bigIslandDot" };
+        const dot = document.getElementById(dotMap[islandKey]);
+        if (dot) {
+          dot.style.background =
+            mode === "fire"  ? "var(--fire)"  :
+            mode === "flood" ? "var(--flood)" :
+            mode === "mixed" ? "var(--fire)"  : "var(--ok)";
+        }
       }
 
       function normalizeHomeSummary(payload, firePayload, floodPayload) {
