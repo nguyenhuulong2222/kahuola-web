@@ -1007,7 +1007,7 @@
           </div>
           <div class="freshness" id="freshnessChip">
             <span class="dot"></span>
-            <span id="freshnessLabel">Checking…</span>
+            <span id="freshnessLabel">Loading…</span>
           </div>
         </div>
 
@@ -1745,7 +1745,7 @@
         if (primaryEvent === "DEGRADED") {
           return {
             kicker: "DATA DELAYED",
-            title: "Checking latest conditions…",
+            title: "Latest data temporarily delayed",
             narrative: "Some data sources are delayed. Showing last known state. Always follow official emergency instructions.",
             bannerTitle: "⚠️ Degraded snapshot active",
             bannerCopy: "Fallback data — not current",
@@ -1924,7 +1924,7 @@
             FIRE_ACTIVE:   { html: '<span class="hero-title-key">Wildfire</span> detected in Hawaiʻi.',    cls: 'fire'  },
             FLOOD_WARNING: { html: 'Flash flood <span class="hero-title-key">warning</span> in effect.',   cls: 'flood' },
             FLOOD_WATCH:   { html: 'Flood <span class="hero-title-key">watch</span> conditions developing.', cls: 'flood' },
-            DEGRADED:      { html: 'Checking latest <span class="hero-title-key">conditions</span>…',      cls: 'warn'  },
+            DEGRADED:      { html: 'Latest data <span class="hero-title-key">temporarily delayed</span>.',      cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
           titleEl.innerHTML = titleData.html;
@@ -2135,6 +2135,8 @@
           titleEl.style.color      = "";
         }
       }
+
+      function setDegradedUi() {
         const chip = document.getElementById("freshnessChip");
         if (chip) {
           chip.classList.add("stale");
