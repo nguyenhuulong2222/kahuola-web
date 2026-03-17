@@ -756,7 +756,7 @@
       .brand-title{font-size:24px}
     }
 
-    /* ── NEW SECTIONS — V4.8 upgrade ─────────────────────── */
+    /* ── NEW SECTIONS ─────────────────────────────────────── */
     .new-section{padding:48px 0;border-top:1px solid var(--border)}
     .new-section .inner{max-width:900px;margin:0 auto;padding:0 20px}
     .ns-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
@@ -844,7 +844,7 @@
           Updated recently
         </div>
         <a class="pill link" href="#official-links">Official Alerts</a>
-        <a class="pill link" href="live-map.v4.8.html">Live Map</a>
+        <a class="pill link" href="live-map.html">Live Map</a>
         <a class="pill link" href="#how-it-works">How It Works</a>
         <a class="pill link" href="#mission">Mission</a>
         <a class="pill link" href="./privacy.html">Privacy</a>
@@ -892,7 +892,7 @@
         </div>
 
         <div class="hero-actions">
-          <a class="btn primary storm" href="live-map.v4.8.html">View Live Map</a>
+          <a class="btn primary storm" href="live-map.html">View Live Map</a>
           <a class="btn" href="#official-links">Check Official Alerts</a>
         </div>
 
@@ -911,7 +911,7 @@
             <div class="meta-row">
               <span class="chip" id="fireSourceChip">NASA FIRMS</span>
               <span class="chip" id="fireFreshnessChip">Updated 5 min ago</span>
-              <a href="live-map.v4.8.html" class="chip chip-action">📍 Check My Neighborhood</a>
+              <a href="live-map.html" class="chip chip-action">📍 Check My Neighborhood</a>
             </div>
           </section>
 
@@ -929,7 +929,7 @@
             <div class="meta-row">
               <span class="chip" id="floodSourceChip">NWS / PacIOOS</span>
               <span class="chip" id="floodFreshnessChip">Updated 12 min ago</span>
-              <a href="live-map.v4.8.html" class="chip chip-action">📍 Check My Neighborhood</a>
+              <a href="live-map.html" class="chip chip-action">📍 Check My Neighborhood</a>
             </div>
           </section>
         </div>
@@ -963,7 +963,7 @@
           <div class="chip">Map Preview</div>
         </div>
 
-        <a href="live-map.v4.8.html" class="map-box" style="display:block;cursor:pointer;text-decoration:none;">
+        <a href="live-map.html" class="map-box" style="display:block;cursor:pointer;text-decoration:none;">
           <div class="map-grid"></div>
           <div class="map-island" style="left:8%;top:20%;">Kauaʻi</div>
           <div class="map-island" style="left:24%;top:38%;">Oʻahu</div>
@@ -1190,7 +1190,7 @@
               <li>Fire weather + wind context</li>
               <li>FRESH / STALE data transparency</li>
             </ul>
-            <a class="btn primary" href="./live-map.v4.8.html">Open Live Map →</a>
+            <a class="btn primary" href="./live-map.html">Open Live Map →</a>
           </div>
           <div class="gscard">
             <div><span class="gs-badge soon">iOS · Coming Soon</span></div>
@@ -1215,10 +1215,10 @@
         <div style="font-size:13px;color:var(--text-dim);display:flex;gap:10px;align-items:center">
           <strong style="color:var(--text);font-weight:800">Kahu Ola</strong>
           <span>Guardian of Life</span>
-          <a href="mailto:long@kahuola.org" style="color:var(--accent)">long@kahuola.org</a>
+          <a href="/cdn-cgi/l/email-protection#482427262f082329203d27242966273a2f" style="color:var(--accent)"><span class="__cf_email__" data-cfemail="14787b7a73547f757c617b78753a7b6673">[email&#160;protected]</span></a>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:14px">
-          <a href="./live-map.v4.8.html" style="font-size:12px;color:var(--muted)">Live Map</a>
+          <a href="./live-map.html" style="font-size:12px;color:var(--muted)">Live Map</a>
           <a href="#how-it-works" style="font-size:12px;color:var(--muted)">How It Works</a>
           <a href="#mission" style="font-size:12px;color:var(--muted)">Mission</a>
           <a href="#data-infrastructure" style="font-size:12px;color:var(--muted)">Data Sources</a>
@@ -1231,7 +1231,7 @@
 
   </div>
 
-  <script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
 
@@ -1669,16 +1669,4 @@
         const islandCounts = countByIsland(firePayload, floodPayload);
         Object.entries(islandCounts).forEach(([key, entry]) => applyBadgeState(key, entry));
 
-        const chip = document.getElementById("freshnessChip");
-        if (chip && summary.primaryEvent === "DEGRADED") {
-          chip.classList.add("stale");
-        }
-      }
-
-      loadHomepage().catch(() => {
-        setDegradedUi();
-      });
-    })();
-  </script>
-</body>
-</html>
+        const chip = document.getElementById("fresh
