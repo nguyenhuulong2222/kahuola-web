@@ -1732,7 +1732,7 @@ let flashFloodVisible = true;
 let floodContextVisible = false; // Hidden by default — only shows when NWS flash flood alert is active
 let mrmsVisible = true;
 let rainRadarVisible = false; // Default OFF — user toggles on when needed
-let windRiskVisible  = true;
+let windRiskVisible  = false; // Hidden by default — only shows when NWS Red Flag Warning OR CRITICAL/HIGH risk is active
 let tsunamiVisible   = true;
 let hurricaneVisible = true;
 let landslideVisible = true;
@@ -2270,10 +2270,22 @@ const HAZARD_REGISTRY = {
     endpoint: IS_LOCAL ? "./fire-weather-test.json" : "https://kahuola.org/api/hazards/fire-weather?region=hawaii",
     enabled: true, affectsGlobalHealth: false,
     parsePayload(json){ const raw = parseCanonicalSignals(json, "windRisk"); return { features: normalizeWindRiskFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "NWS / RAWS" }; },
-    ensureLayers, applyData(features){ updateWindRiskSource(features); }, onFetchComplete(){ updateWindRiskStatusUI(getState("windRisk"));
-updateTsunamiStatusUI(getState("tsunami"));
-updateHurricaneStatusUI(getState("hurricane"));
-updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visible(){ return windRiskVisible; }
+    ensureLayers, applyData(features){ updateWindRiskSource(features); },
+    onFetchComplete(){
+      const ws = getState("windRisk");
+      // Only show fire-weather polygons when there is an actual NWS Red Flag Warning
+      // OR at least one CRITICAL/HIGH risk zone — not just permanent terrain ELEVATED
+      const hasRedFlag  = ws.features.some(f => f.properties?.red_flag_active === true);
+      const hasCritical = ws.features.some(f => ["CRITICAL","HIGH"].includes(f.properties?.risk_index));
+      windRiskVisible = hasRedFlag || hasCritical;
+      getState("windRisk").visible = windRiskVisible;
+      syncWindRiskLayerVisibility();
+      updateWindRiskStatusUI(ws);
+      updateTsunamiStatusUI(getState("tsunami"));
+      updateHurricaneStatusUI(getState("hurricane"));
+      updateLandslideStatusUI(getState("landslide"));
+      renderUnifiedPanels();
+    }, visible(){ return windRiskVisible; }
   },
   tsunami: {
     key:"tsunami", enabled:false, affectsGlobalHealth:true, // lazy — enabled on user request or seismic alert
@@ -2839,9 +2851,18 @@ function updateMrmsStatusUI(state) {
 }
 function updateWindRiskStatusUI(state) {
   ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`wind-risk-badge-${suffix}`); const note=document.getElementById(`wind-risk-note-${suffix}`); if(!badge) return; badge.className="status-badge"; const count=state.features.length;
-    if (state.sourceStatus==="detected"){ badge.classList.add("status-detected"); badge.textContent = count > 0 ? `Active · ${count}` : "Active"; if(note) note.textContent = "Wind gust + humidity spread context is active."; }
-    else if (state.sourceStatus==="none"){ badge.classList.add("status-none"); badge.textContent = "Monitoring"; if(note) note.textContent = "No elevated fire weather cells were returned."; }
-    else { badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; if(note) note.textContent = "Fire weather context could not be confirmed."; }
+    const hasRedFlag  = state.features?.some(f => f.properties?.red_flag_active === true);
+    const hasCritical = state.features?.some(f => ["CRITICAL","HIGH"].includes(f.properties?.risk_index));
+    if (hasRedFlag){
+      badge.classList.add("status-active"); badge.textContent = "Red Flag Active";
+      if(note) note.textContent = "NWS Red Flag Warning is active — fire weather zones are now visible on the map.";
+    } else if (hasCritical){
+      badge.classList.add("status-detected"); badge.textContent = `High Risk · ${count}`;
+      if(note) note.textContent = "HIGH or CRITICAL fire weather risk detected — zones are visible on the map.";
+    } else {
+      badge.classList.add("status-none"); badge.textContent = "Inactive";
+      if(note) note.textContent = "Fire weather zones hidden — only shown when NWS Red Flag Warning or HIGH risk is active.";
+    }
   });
 }
 function updateRainRadarStatusUI() {
