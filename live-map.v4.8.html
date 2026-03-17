@@ -3198,28 +3198,32 @@ function openLandslidePopup(feature, lngLat) {
   document.getElementById("wind-btn-mobile")?.addEventListener("click", toggleWindRiskLayer);
 
   // ── Lazy-load: Tsunami / Hurricane / Landslide ──────────────
-  document.getElementById("tsunami-card")?.addEventListener("click", () => lazyLoadModule("tsunami", (st) => ({
-    title: "Tsunami",
-    status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
-            st.sourceStatus === "none"     ? "Clear — no active warnings" :
-            st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
-    note: "Source: NWS Tsunami Warning Center (official).",
-    body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
-  })));
-  document.getElementById("hurricane-card")?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
-    title: "Hurricane Tracks",
-    status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
-            st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
-    note: "Source: National Hurricane Center (NHC).",
-    body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
-  })));
-  document.getElementById("landslide-card")?.addEventListener("click", () => lazyLoadModule("landslide", (st) => ({
-    title: "Landslide Risk",
-    status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
-            st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
-    note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
-    body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
-  })));
+  // Tsunami / Hurricane / Landslide — bind to both desktop and mobile cloned IDs
+  // (bare "tsunami-card" is inside <template> — inert, getElementById returns null)
+  ["desktop", "mobile"].forEach((sfx) => {
+    document.getElementById(`tsunami-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("tsunami", (st) => ({
+      title: "Tsunami",
+      status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
+              st.sourceStatus === "none"     ? "Clear — no active warnings" :
+              st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
+      note: "Source: NWS Tsunami Warning Center (official).",
+      body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
+    })));
+    document.getElementById(`hurricane-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
+      title: "Hurricane Tracks",
+      status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
+              st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
+      note: "Source: National Hurricane Center (NHC).",
+      body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
+    })));
+    document.getElementById(`landslide-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("landslide", (st) => ({
+      title: "Landslide Risk",
+      status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
+              st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
+      note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
+      body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
+    })));
+  });
 }
 
 // ── lazyLoadModule — enable + fetch on first click ────────────
@@ -3314,30 +3318,33 @@ document.addEventListener("click", (event) => {
   if (trigger) { openHazardDetailFromElement(trigger); return; }
 
   // Lazy module card handler — catches clicks on card AND child elements
+  // IDs are cloned with suffix: "tsunami-card-desktop" / "tsunami-card-mobile"
+  // Strip suffix to match LAZY_MODULES keys ("tsunami-card" etc.)
   const card = event.target.closest("[id]");
-  if (card && LAZY_MODULES[card.id]) {
-    const cfg = LAZY_MODULES[card.id];
-    const model = HAZARD_REGISTRY[cfg.key];
-    if (!model) return;
-    if (!model.enabled) {
-      model.enabled = true;
-      updateModuleBadge(cfg.key, "Loading…", "status-none");
-      // Show immediate modal so user knows something happened
-      openHazardDetail({ title:cfg.title, status:"Fetching live data…", note:cfg.note, body:cfg.body });
-      refreshHazard(cfg.key, { silent:true }).then(() => {
+  if (card) {
+    const bareId = card.id.replace(/-desktop$|-mobile$/, "");
+    const cfg = LAZY_MODULES[bareId];
+    if (cfg) {
+      const model = HAZARD_REGISTRY[cfg.key];
+      if (!model) return;
+      if (!model.enabled) {
+        model.enabled = true;
+        updateModuleBadge(cfg.key, "Loading…", "status-none");
+        openHazardDetail({ title:cfg.title, status:"Fetching live data…", note:cfg.note, body:cfg.body });
+        refreshHazard(cfg.key, { silent:true }).then(() => {
+          const st = getState(cfg.key);
+          if (cfg.key === "tsunami" || cfg.key === "hurricane") {
+            const noteEl = document.getElementById(`${cfg.key}-note`);
+            if (noteEl) noteEl.textContent = cfg.status(st);
+          }
+          openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
+        });
+      } else {
         const st = getState(cfg.key);
-        // Update priority-note text for Tsunami + Hurricane (they use priority-module HTML)
-        if (cfg.key === "tsunami" || cfg.key === "hurricane") {
-          const noteEl = document.getElementById(`${cfg.key}-note`);
-          if (noteEl) noteEl.textContent = cfg.status(st);
-        }
         openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
-      });
-    } else {
-      const st = getState(cfg.key);
-      openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
+      }
+      return;
     }
-    return;
   }
 
   if (event.target === hazardDetailSheet) closeHazardDetail();
