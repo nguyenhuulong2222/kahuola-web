@@ -297,13 +297,43 @@
     }
 
     .hero-title{
-      margin:0 0 8px;
-      font-size:40px;
-      line-height:1.02;
+      margin:0 0 0;
+      font-size:clamp(36px,5.5vw,58px);
+      line-height:1.00;
       letter-spacing:-.04em;
-      max-width:18ch;
+      font-weight:900;
+      color:var(--text);
+      max-width:none;
       text-wrap:balance;
     }
+
+    /* State-specific title colors */
+    .hero-title.calm   { color:#eef4fb }
+    .hero-title.fire   { color:#ffd8ba }
+    .hero-title.flood  { color:#dbeeff }
+    .hero-title.warn   { color:#ffe9b5 }
+
+    /* Animated underline on key word */
+    .hero-title-key{
+      position:relative;
+      display:inline;
+    }
+    .hero-title-key::after{
+      content:'';
+      position:absolute;
+      bottom:-3px;left:0;right:0;
+      height:3px;
+      border-radius:2px;
+      background:var(--ok);
+      animation:key-in .5s .2s ease both;
+    }
+    @keyframes key-in{
+      from{transform:scaleX(0);transform-origin:left}
+      to{transform:scaleX(1);transform-origin:left}
+    }
+    .hero-title.fire  .hero-title-key::after{ background:var(--fire) }
+    .hero-title.flood .hero-title-key::after{ background:var(--flood) }
+    .hero-title.warn  .hero-title-key::after{ background:var(--warn) }    }
 
     .primary-banner.fire-active{
       background:linear-gradient(180deg,rgba(255,122,0,.20),rgba(255,122,0,.10));
@@ -970,7 +1000,7 @@
         <div class="hero-head">
           <div style="min-width:0;flex:1">
             <div class="hero-state-kicker" id="heroKicker">SYSTEM NORMAL</div>
-            <h2 class="hero-title" id="heroTitle">Hawaiʻi is calm right now.</h2>
+            <h2 class="hero-title calm" id="heroTitle">Hawaiʻi is <span class="hero-title-key">calm</span> right now.</h2>
             <p class="hero-narrative" id="heroNarrative">
               No active watches, warnings, or satellite fire detections across the state.
             </p>
@@ -1875,7 +1905,7 @@
         }
       }
 
-      function applyHero(primaryEvent, counts, freshnessLabel, fireWeatherPayload, floodPayload) {
+      function applyHero(primaryEvent, counts, _freshStr, fireWeatherPayload, floodPayload) {
         const fireCount   = counts.fireCount || 0;
         const floodWarn   = floodPayload?.summary?.warning_count > 0;
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
@@ -1885,8 +1915,21 @@
         const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
 
-        // Narrative
-        setText("heroTitle", n.title);
+        // Narrative — title with key word highlight
+        const titleEl = document.getElementById("heroTitle");
+        if (titleEl) {
+          // Build title HTML with underlined key word
+          const titleMap = {
+            MONITORING:    { html: 'Hawaiʻi is <span class="hero-title-key">calm</span> right now.',        cls: 'calm'  },
+            FIRE_ACTIVE:   { html: '<span class="hero-title-key">Wildfire</span> detected in Hawaiʻi.',    cls: 'fire'  },
+            FLOOD_WARNING: { html: 'Flash flood <span class="hero-title-key">warning</span> in effect.',   cls: 'flood' },
+            FLOOD_WATCH:   { html: 'Flood <span class="hero-title-key">watch</span> conditions developing.', cls: 'flood' },
+            DEGRADED:      { html: 'Checking latest <span class="hero-title-key">conditions</span>…',      cls: 'warn'  },
+          };
+          const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
+          titleEl.innerHTML = titleData.html;
+          titleEl.className = `hero-title ${titleData.cls}`;
+        }
         setText("heroNarrative", n.narrative);
         setText("heroBannerTitle", n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
@@ -1912,16 +1955,20 @@
           deltaIcon.textContent = d.icon;
         }
 
-        // Freshness — update the pill và span bên trong
-        const freshStr = freshnessLabel || "Updated just now";
+        // Freshness — update pill and chip with live feel
+        const freshStr = _freshStr || "Updated just now";
         const updatedPill = document.getElementById("updatedPill");
         if (updatedPill) updatedPill.innerHTML = `<span class="dot"></span> ${freshStr}`;
-        // Update freshnessLabel span directly — không dùng setHtml để tránh duplicate id
         const freshLabelEl = document.getElementById("freshnessLabel");
         if (freshLabelEl) freshLabelEl.textContent = freshStr;
-        // Update dot color on freshnessChip
+        // Pulse the dot to signal live data just arrived
         const chipDot = document.querySelector("#freshnessChip .dot");
-        if (chipDot && primaryEvent === "DEGRADED") chipDot.style.background = "var(--warn)";
+        if (chipDot) {
+          chipDot.style.background = primaryEvent === "DEGRADED" ? "var(--warn)" : "var(--ok)";
+          chipDot.style.animation = "none";
+          void chipDot.offsetWidth; // reflow
+          chipDot.style.animation = "";
+        }
 
         // Signal detail toggle label
         const detailLabel = document.getElementById("signalDetailLabel");
