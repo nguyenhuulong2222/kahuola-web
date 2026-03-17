@@ -755,6 +755,73 @@
       .map-head{padding:16px}
       .brand-title{font-size:24px}
     }
+
+    /* ── NEW SECTIONS — V4.8 upgrade ─────────────────────── */
+    .new-section{padding:48px 0;border-top:1px solid var(--border)}
+    .new-section .inner{max-width:900px;margin:0 auto;padding:0 20px}
+    .ns-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+    .ns-title{font-size:clamp(22px,4vw,32px);font-weight:700;line-height:1.2;margin-bottom:14px;color:var(--fg)}
+    .ns-lead{font-size:15px;line-height:1.7;color:var(--fg-dim);max-width:640px;margin-bottom:32px}
+
+    /* How It Works */
+    .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    @media(max-width:700px){.how-steps{grid-template-columns:1fr}}
+    .how-step{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:24px 20px}
+    .how-num{font-size:36px;font-weight:800;opacity:.1;line-height:1;margin-bottom:12px;color:var(--fg)}
+    .how-icon{font-size:24px;margin-bottom:12px;display:block}
+    .how-step h3{font-size:15px;font-weight:700;margin-bottom:8px;color:var(--fg)}
+    .how-step p{font-size:13px;line-height:1.65;color:var(--fg-dim);margin-bottom:10px}
+    .how-meta{font-size:11px;color:var(--fg-dim);opacity:.55;letter-spacing:.04em;text-transform:uppercase}
+    .how-meta.mono{font-family:var(--mono);text-transform:none;letter-spacing:0;font-size:11px}
+
+    /* Mission */
+    .mission-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+    @media(max-width:700px){.mission-layout{grid-template-columns:1fr}}
+    .mission-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+    .mchip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;border:1px solid;display:inline-flex;align-items:center;gap:5px}
+    .mchip.fire{background:rgba(239,68,68,.12);color:#f87171;border-color:rgba(239,68,68,.25)}
+    .mchip.green{background:rgba(16,185,129,.1);color:#34d399;border-color:rgba(16,185,129,.22)}
+    .mchip.blue{background:rgba(59,130,246,.1);color:#60a5fa;border-color:rgba(59,130,246,.22)}
+    .mchip.amber{background:rgba(245,158,11,.1);color:#fbbf24;border-color:rgba(245,158,11,.22)}
+    .mission-values{display:flex;flex-direction:column;gap:12px}
+    .mval{background:var(--card-bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:14px 16px}
+    .mval h3{font-size:13px;font-weight:700;color:var(--fg);margin-bottom:5px}
+    .mval p{font-size:13px;line-height:1.6;color:var(--fg-dim);margin:0}
+
+    /* Privacy */
+    .privacy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+    @media(max-width:700px){.privacy-grid{grid-template-columns:1fr}}
+    .pcard{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:24px 20px;text-align:center}
+    .picon{font-size:28px;display:block;margin-bottom:12px}
+    .pcard h3{font-size:14px;font-weight:700;color:var(--fg);margin-bottom:8px}
+    .pcard p{font-size:13px;line-height:1.6;color:var(--fg-dim);margin:0}
+    .privacy-footnote{font-size:13px;color:var(--fg-dim);opacity:.6;text-align:center}
+    .privacy-footnote a{color:var(--accent);text-decoration:none}
+
+    /* Data Infrastructure */
+    .source-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+    @media(max-width:900px){.source-tiles{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:600px){.source-tiles{grid-template-columns:repeat(2,1fr)}}
+    .stile{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+    .stile-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+    .stile strong{font-size:13px;font-weight:700;color:var(--fg);display:block;margin-bottom:3px}
+    .stile span{font-size:11px;color:var(--fg-dim);opacity:.7;line-height:1.4}
+    .infra-note{background:rgba(14,165,164,.06);border:1px solid rgba(14,165,164,.2);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--fg-dim);line-height:1.6}
+
+    /* Get Started */
+    .gs-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+    @media(max-width:700px){.gs-cards{grid-template-columns:1fr}}
+    .gscard{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;gap:14px}
+    .gscard.primary{border-color:rgba(14,165,164,.35);background:rgba(14,165,164,.05)}
+    .gs-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:rgba(14,165,164,.15);color:var(--accent)}
+    .gs-badge.soon{background:rgba(245,158,11,.12);color:#fbbf24}
+    .gscard h3{font-size:18px;font-weight:700;color:var(--fg);margin:0}
+    .gscard p{font-size:13px;line-height:1.65;color:var(--fg-dim);margin:0}
+    .gs-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;flex:1}
+    .gs-list li{font-size:13px;color:var(--fg-dim);padding-left:18px;position:relative}
+    .gs-list li::before{content:"✓";position:absolute;left:0;color:var(--accent);font-weight:700}
+    .gs-disclaimer{font-size:12px;color:var(--fg-dim);opacity:.55;text-align:center;line-height:1.65;max-width:580px;margin:0 auto}
+    .gs-disclaimer a{color:var(--accent);text-decoration:none}
   </style>
 </head>
 <body>
@@ -778,6 +845,8 @@
         </div>
         <a class="pill link" href="#official-links">Official Alerts</a>
         <a class="pill link" href="live-map.v4.8.html">Live Map</a>
+        <a class="pill link" href="#how-it-works">How It Works</a>
+        <a class="pill link" href="#mission">Mission</a>
       </div>
     </header>
 
@@ -975,6 +1044,169 @@
         </article>
       </div>
     </section>
+
+    <!-- ── HOW IT WORKS ─────────────────────────────────────── -->
+    <section class="new-section" id="how-it-works">
+      <div class="inner">
+        <p class="ns-label">How It Works</p>
+        <h2 class="ns-title">Satellite data to plain language<br>— in under 15 minutes</h2>
+        <p class="ns-lead">Kahu Ola connects six government data systems and normalizes them into three human-readable signal types. No jargon. No raw feeds. Just clear, honest hazard status.</p>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-num">01</div>
+            <span class="how-icon">🛰</span>
+            <h3>Government sensors detect</h3>
+            <p>NASA FIRMS satellites orbit every 90 minutes. NOAA radar scans continuously. NWS meteorologists issue watches and warnings. These systems never stop.</p>
+            <div class="how-meta">NASA · NOAA · NWS · EPA · USGS · NIFC</div>
+          </div>
+          <div class="how-step">
+            <div class="how-num">02</div>
+            <span class="how-icon">⚙️</span>
+            <h3>Aggregator normalizes</h3>
+            <p>The Kahu Ola Aggregator ingests, validates, and caches every signal server-side. Raw government data becomes clean, versioned FireSignal · SmokeSignal · Perimeter. Keys never reach the client.</p>
+            <div class="how-meta mono">Via /api/hazards/* · keys server-side only</div>
+          </div>
+          <div class="how-step">
+            <div class="how-num">03</div>
+            <span class="how-icon">📱</span>
+            <h3>You see plain language</h3>
+            <p>The app displays honest, timestamped signals with clear freshness labels. Stale data is always marked. Estimated perimeters are never labeled official. Your location never leaves your device.</p>
+            <div class="how-meta">Zero PII · Edge geofencing · Fail-soft rendering</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── OUR MISSION ────────────────────────────────────────── -->
+    <section class="new-section" id="mission">
+      <div class="inner">
+        <p class="ns-label">Our Mission</p>
+        <div class="mission-layout">
+          <div>
+            <h2 class="ns-title">Built after Lahaina.<br>Built for everyone.</h2>
+            <p class="ns-lead">The 2023 Lahaina wildfire revealed a devastating gap: advanced satellites were tracking the fire in real-time while residents had no clear, accessible signal. Life-saving data existed — it just wasn't reaching people in plain language.</p>
+            <p style="font-size:14px;line-height:1.7;color:var(--fg-dim);margin-bottom:20px">Kahu Ola was built to close that gap. Not to replace official emergency services — but to give every resident of Hawaiʻi access to the same data that emergency managers use, translated into calm, understandable language before, during, and after a hazard.</p>
+            <div class="mission-chips">
+              <span class="mchip fire">🔥 Wildfire-First</span>
+              <span class="mchip green">🔒 Privacy-First</span>
+              <span class="mchip blue">⚡ Failure-Tolerant</span>
+              <span class="mchip amber">🏛 Grant-Ready</span>
+            </div>
+          </div>
+          <div class="mission-values">
+            <div class="mval">
+              <h3>Engineered for resilience</h3>
+              <p>Cache-first architecture with validated data snapshots. The app renders under 8 distinct failure conditions — including full network loss. A degraded signal is infinitely safer than a blank screen.</p>
+            </div>
+            <div class="mval">
+              <h3>Privacy as a design principle</h3>
+              <p>Safety should not require surveillance. Proximity awareness is computed on-device. No location history is built, stored, or transmitted — ever. No accounts. No ads. No data selling.</p>
+            </div>
+            <div class="mval">
+              <h3>Honest about uncertainty</h3>
+              <p>Every signal shows its source and age. Estimated fire perimeters are never labeled official. Stale data is always marked. Kahu Ola never fabricates or inflates hazard severity.</p>
+            </div>
+            <div class="mval">
+              <h3>Community-driven · Free public service</h3>
+              <p>An independent civic technology initiative — not a government agency, not a commercial product. Built to remain freely accessible to every resident of Hawaiʻi.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PRIVACY-FIRST ARCHITECTURE ────────────────────────── -->
+    <section class="new-section" id="privacy-arch">
+      <div class="inner">
+        <p class="ns-label">Privacy-First Architecture</p>
+        <h2 class="ns-title">Zero PII. Zero tracking.</h2>
+        <p class="ns-lead">We do not need to know who you are to help you stay safe. Kahu Ola is designed around a single rule: your data stays on your device.</p>
+        <div class="privacy-grid">
+          <div class="pcard">
+            <span class="picon">🚫</span>
+            <h3>No accounts required</h3>
+            <p>Core safety views are accessible without sign-in. No email. No phone number. No profile.</p>
+          </div>
+          <div class="pcard">
+            <span class="picon">📍</span>
+            <h3>On-device proximity</h3>
+            <p>Hazard distance checks compute locally on your device. Your GPS coordinates never cross the device boundary.</p>
+          </div>
+          <div class="pcard">
+            <span class="picon">🛡️</span>
+            <h3>No data selling · No ads</h3>
+            <p>No advertising profiles. No behavioral tracking. No brokered personal data. The platform is ad-free by design.</p>
+          </div>
+        </div>
+        <p class="privacy-footnote">Full detail for reviewers and auditors: <a href="./privacy.html">Privacy Policy</a>.</p>
+      </div>
+    </section>
+
+    <!-- ── DATA INFRASTRUCTURE ────────────────────────────────── -->
+    <section class="new-section" id="data-infrastructure">
+      <div class="inner">
+        <p class="ns-label">Data Infrastructure</p>
+        <h2 class="ns-title">16 open government sources.<br>One civic layer.</h2>
+        <p class="ns-lead">Every data source is public, open, and verifiable. Kahu Ola never creates its own hazard data — it normalizes, timestamps, and presents what government agencies already publish.</p>
+        <div class="source-tiles">
+          <div class="stile"><span class="stile-tag">Fire</span><strong>NASA FIRMS</strong><span>VIIRS + MODIS satellite detections</span></div>
+          <div class="stile"><span class="stile-tag">Fire</span><strong>NOAA HMS</strong><span>Smoke polygon detection</span></div>
+          <div class="stile"><span class="stile-tag">Fire</span><strong>NIFC WFIGS</strong><span>Official fire perimeters</span></div>
+          <div class="stile"><span class="stile-tag">Weather</span><strong>NWS Alerts</strong><span>Flash flood, tsunami, fire weather</span></div>
+          <div class="stile"><span class="stile-tag">Weather</span><strong>NOAA NEXRAD</strong><span>Live radar reflectivity (QPE)</span></div>
+          <div class="stile"><span class="stile-tag">Weather</span><strong>Iowa State Mesonet</strong><span>NEXRAD station observations</span></div>
+          <div class="stile"><span class="stile-tag">Air</span><strong>EPA AirNow</strong><span>Air quality index tiles</span></div>
+          <div class="stile"><span class="stile-tag">Ocean</span><strong>PacIOOS</strong><span>Coastal + ocean sensors</span></div>
+          <div class="stile"><span class="stile-tag">Storm</span><strong>NHC CurrentStorms</strong><span>Pacific hurricane tracks</span></div>
+          <div class="stile"><span class="stile-tag">Storm</span><strong>NWS TWC</strong><span>Tsunami Warning Center alerts</span></div>
+          <div class="stile"><span class="stile-tag">Terrain</span><strong>SMART Hawaiʻi</strong><span>12 island terrain + runoff cells</span></div>
+          <div class="stile"><span class="stile-tag">Maps</span><strong>MapTiler</strong><span>Base map rendering</span></div>
+          <div class="stile"><span class="stile-tag">Satellite</span><strong>NOAA GOES-West</strong><span>Infrared / WMS tiles</span></div>
+          <div class="stile"><span class="stile-tag">Hazard</span><strong>NWS LSR / IEM</strong><span>Local storm reports (HFO)</span></div>
+          <div class="stile"><span class="stile-tag">Fire</span><strong>RAWS MesoWest</strong><span>Wind + fuel moisture stations</span></div>
+          <div class="stile"><span class="stile-tag">Radar</span><strong>Mesonet Proxy</strong><span>PHMO · PHKM · PHWA · PHKI</span></div>
+        </div>
+        <div class="infra-note">All upstream calls are proxied server-side through the Kahu Ola Cloudflare Worker. The browser never contacts government APIs directly — a core architectural invariant that protects API keys and ensures rate-limit safety.</div>
+      </div>
+    </section>
+
+    <!-- ── GET STARTED ────────────────────────────────────────── -->
+    <section class="new-section" id="get-started">
+      <div class="inner">
+        <p class="ns-label">Get Started</p>
+        <h2 class="ns-title">Available now on web.<br>Mobile app coming soon.</h2>
+        <p class="ns-lead">Open Kahu Ola on any browser — no download, no account, no setup. The live hazard map loads instantly and works offline after first visit.</p>
+        <div class="gs-cards">
+          <div class="gscard primary">
+            <div><span class="gs-badge">Web · Available Now</span></div>
+            <h3>Kahu Ola Live Map</h3>
+            <p>Real-time wildfire detections, flash flood alerts, tsunami status, hurricane tracks, and rain radar — all in one civic dashboard. Works on any device, any browser.</p>
+            <ul class="gs-list">
+              <li>NASA FIRMS fire hotspots</li>
+              <li>NWS official flood + tsunami alerts</li>
+              <li>Live NEXRAD rain radar</li>
+              <li>Fire weather + wind context</li>
+              <li>FRESH / STALE data transparency</li>
+            </ul>
+            <a class="btn primary" href="./live-map.v4.8.html">Open Live Map →</a>
+          </div>
+          <div class="gscard">
+            <div><span class="gs-badge soon">iOS · Coming Soon</span></div>
+            <h3>Mobile App</h3>
+            <p>The Kahu Ola mobile app brings the full hazard intelligence dashboard to iOS with native notifications for critical alerts and offline-first resilience.</p>
+            <ul class="gs-list">
+              <li>Push alerts for active warnings</li>
+              <li>On-device proximity geofencing</li>
+              <li>Offline-first — works without signal</li>
+              <li>Zero PII · No account required</li>
+            </ul>
+            <a class="btn" href="./support.html">Get Notified at Launch</a>
+          </div>
+        </div>
+        <p class="gs-disclaimer">Kahu Ola provides situational awareness and does not replace official emergency directives. Always follow guidance from <a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">HIEMA</a>, county emergency management, and the <a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">National Weather Service Honolulu</a>.</p>
+      </div>
+    </section>
+
   </div>
 
   <script>
