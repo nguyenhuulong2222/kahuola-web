@@ -1,140 +1,329 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Support | Kahu Ola</title>
-  <meta name="description" content="Support and operational guidance for Kahu Ola.">
-  <link rel="icon" href="./assets/brand/exports/favicons/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="./assets/brand/exports/favicons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./assets/brand/exports/favicons/favicon-16.png">
-  <link rel="apple-touch-icon" href="./assets/brand/exports/favicons/apple-touch-icon.png">
-  <meta property="og:title" content="Kahu Ola — Guardian of Life">
-  <meta property="og:description" content="An independent civic hazard intelligence platform for Hawai'i.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://kahuola.org/support.html">
-  <meta property="og:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png">
-  <link rel="stylesheet" href="./styles.css">
+  <meta name="description" content="Support, FAQ, and operational guidance for Kahu Ola — civic hazard intelligence for Hawaiʻi." />
+  <meta property="og:title" content="Support | Kahu Ola" />
+  <meta property="og:description" content="An independent civic hazard intelligence platform for Hawaiʻi." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://kahuola.org/support.html" />
+  <style>
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#101b27;
+      --surface-2:#142232;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.14);
+      --text:#eef4fb;
+      --text-dim:#c4d2df;
+      --muted:#8ea3b7;
+      --ok:#67c27e;
+      --ok-soft:rgba(103,194,126,.10);
+      --warn:#ffcc66;
+      --warn-soft:rgba(255,204,102,.10);
+      --accent:#4da8ff;
+      --accent-soft:rgba(77,168,255,.12);
+      --radius-xl:28px;
+      --radius-lg:22px;
+      --radius-md:18px;
+      --radius-sm:14px;
+      --shadow:0 18px 46px rgba(0,0,0,.28);
+      --max:900px;
+      --font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%) fixed;
+      color:var(--text);font-family:var(--font);min-height:100vh;
+    }
+    a{text-decoration:none;color:inherit}
+
+    .app{width:min(100%,1280px);margin:0 auto;padding:16px 16px 60px}
+
+    /* ── Topbar ── */
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:6px 0 18px}
+    .brand{display:flex;gap:12px;min-width:0}
+    .brand-mark{width:42px;height:42px;flex:0 0 42px;border-radius:14px;display:grid;place-items:center;font-size:20px;background:linear-gradient(180deg,rgba(255,122,0,.18),rgba(255,122,0,.08));border:1px solid rgba(255,122,0,.22);box-shadow:0 10px 26px rgba(0,0,0,.24)}
+    .brand-kicker{color:var(--text-dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:4px}
+    .brand-title{margin:0;font-size:28px;line-height:1.02;letter-spacing:-.03em;font-weight:900}
+    .brand-sub{margin-top:4px;color:var(--muted);font-size:12px}
+    .top-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    .pill{min-height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:var(--text);font-size:12px;font-weight:800;white-space:nowrap}
+    .pill.link{color:var(--text-dim);background:rgba(255,255,255,.03)}
+    .pill.active{color:var(--accent);border-color:rgba(77,168,255,.28);background:var(--accent-soft)}
+
+    /* ── Layout ── */
+    .page-grid{display:grid;grid-template-columns:1fr 280px;gap:18px;align-items:start;max-width:var(--max);margin:0 auto}
+    @media(max-width:900px){.page-grid{grid-template-columns:1fr}}
+
+    /* ── Cards ── */
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden}
+    .hero-card{padding:28px 28px 24px}
+    .page-kicker{color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:10px}
+    .page-title{margin:0 0 14px;font-size:clamp(26px,4vw,36px);line-height:1.08;letter-spacing:-.03em;font-weight:900}
+    .page-lead{margin:0 0 18px;color:var(--text-dim);font-size:15px;line-height:1.65}
+    .page-lead a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+    .meta-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .chip{min-height:28px;padding:0 10px;display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:#dce8f4;font:700 11px var(--mono);white-space:nowrap}
+    .btn-row{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{min-height:44px;padding:0 18px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--text);font-weight:800;font-size:14px;transition:background .2s,transform .1s}
+    .btn:active{transform:scale(.98)}
+    .btn.primary{background:linear-gradient(180deg,rgba(255,122,0,.18),rgba(255,122,0,.11));border-color:rgba(255,122,0,.28);color:#fff1e4}
+    .btn.ghost{background:rgba(255,255,255,.04);border-color:var(--line)}
+
+    /* ── Support blocks ── */
+    .support-stack{display:flex;flex-direction:column;gap:14px}
+    .support-block{padding:20px 22px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-lg)}
+    .support-block h2{margin:0 0 14px;font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--text)}
+    .support-block p{margin:0 0 10px;color:var(--text-dim);font-size:14px;line-height:1.65}
+    .support-block p:last-child{margin-bottom:0}
+    .support-block a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+    .support-block.disclaimer{border-color:rgba(255,204,102,.18);background:var(--warn-soft)}
+    .support-block.disclaimer h2{color:#ffe9b5}
+    .support-block.disclaimer p{color:#ffe9b5;opacity:.88}
+
+    /* FAQ */
+    .faq-list{display:flex;flex-direction:column;gap:12px;list-style:none;padding:0;margin:0}
+    .faq-item{padding:14px 16px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface)}
+    .faq-item h3{margin:0 0 7px;font-size:14px;font-weight:700;color:var(--text)}
+    .faq-item p{margin:0;color:var(--text-dim);font-size:13px;line-height:1.6}
+
+    /* Checklist */
+    .checklist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+    .checklist li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text-dim);line-height:1.55}
+    .checklist li::before{content:"✓";color:var(--ok);font-weight:800;flex-shrink:0;margin-top:1px}
+    .checklist code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:6px;color:var(--text)}
+
+    /* Official links */
+    .official-links{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    .official-links li a{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:11px 14px;border-radius:12px;border:1px solid var(--line);
+      background:var(--surface-2);color:var(--text-dim);font-size:13px;
+      transition:background .15s,color .15s;
+    }
+    .official-links li a:hover{background:rgba(255,255,255,.05);color:var(--text)}
+    .official-links li a::after{content:"↗";color:var(--muted);font-size:14px}
+
+    /* Contact card */
+    .contact-card{
+      padding:18px;border-radius:var(--radius-md);
+      border:1px solid rgba(77,168,255,.22);background:var(--accent-soft);
+      display:flex;flex-direction:column;gap:6px;margin-top:12px;
+    }
+    .contact-card-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);opacity:.8}
+    .contact-card-email{font-size:16px;font-weight:800;color:#dbeeff}
+    .contact-card-note{font-size:12px;color:var(--text-dim);opacity:.7}
+
+    /* ── Sidebar ── */
+    .sidebar{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px}
+    .sidebar-card{padding:18px 20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-lg)}
+    .sidebar-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+    .sidebar-nav{display:flex;flex-direction:column;gap:4px}
+    .sidebar-link{padding:8px 10px;border-radius:10px;font-size:13px;color:var(--text-dim);transition:background .15s}
+    .sidebar-link:hover{background:rgba(255,255,255,.05);color:var(--text)}
+    .live-map-card{padding:16px;border-radius:var(--radius-md);border:1px solid rgba(255,122,0,.22);background:linear-gradient(180deg,rgba(255,122,0,.10),rgba(255,122,0,.05));display:flex;flex-direction:column;gap:8px}
+    .live-map-title{font-size:13px;font-weight:800;color:#ffd8ba}
+    .live-map-desc{font-size:12px;color:var(--text-dim);opacity:.75;line-height:1.5}
+    .live-map-btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:12px;background:linear-gradient(180deg,rgba(255,122,0,.22),rgba(255,122,0,.14));border:1px solid rgba(255,122,0,.3);color:#fff1e4;font-size:13px;font-weight:800;text-align:center}
+
+    /* ── Footer ── */
+    .footer{margin-top:40px;padding:20px 0 0;border-top:1px solid var(--line);max-width:var(--max);margin-left:auto;margin-right:auto}
+    .footer-inner{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .footer-brand{font-size:13px;color:var(--text-dim);display:flex;gap:10px;align-items:center}
+    .footer-brand strong{color:var(--text);font-weight:800}
+    .footer-links{display:flex;flex-wrap:wrap;gap:14px}
+    .footer-links a{font-size:12px;color:var(--muted);transition:color .15s}
+    .footer-links a:hover{color:var(--text)}
+    .footer-links a[aria-current]{color:var(--accent)}
+    .footer-legal{font-size:11px;color:var(--muted);line-height:1.6;opacity:.65;margin-top:10px}
+
+    @media(max-width:720px){
+      .app{padding:14px 12px 40px}
+      .topbar{flex-direction:column;align-items:flex-start}
+      .hero-card{padding:20px}
+      .brand-title{font-size:22px}
+    }
+  </style>
 </head>
-<body class="page-support">
-  <div class="site-shell">
-    <header class="site-header">
-      <div class="container">
-        <nav class="site-nav" aria-label="Primary">
-          <a href="./index.html" class="brand-logo" aria-label="Kahu Ola — Guardian of Life" style="text-decoration: none; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.5rem;" aria-hidden="true">🌺</span>
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 800; font-size: 1.25rem; color: #0f172a; line-height: 1;">Kahu Ola</span>
-              <span style="font-weight: 500; font-size: 0.75rem; color: #64748b; line-height: 1; margin-top: 2px;">Guardian of Life</span>
-            </div>
-          </a>
-          <div class="nav-stack">
-            <ul class="nav-links">
-              <li><a href="./index.html">Home</a></li>
-              <li><a href="./live-map.html">Live Map</a></li>
-            </ul>
-            <ul class="nav-utilities">
-              <li><a href="./privacy.html">Privacy</a></li>
-              <li><a href="./support.html" aria-current="page">Support</a></li>
-            </ul>
-          </div>
-        </nav>
+<body>
+  <div class="app">
+
+    <!-- ── Topbar ── -->
+    <header class="topbar">
+      <a class="brand" href="./index.html">
+        <div class="brand-mark">🌋</div>
+        <div>
+          <div class="brand-kicker">Kahu Ola · Guardian of Life</div>
+          <h1 class="brand-title">Hawaiʻi Hazard Signals</h1>
+          <div class="brand-sub">Support &amp; FAQ</div>
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="pill link" href="./index.html">← Home</a>
+        <a class="pill link" href="./live-map.v4.8.html">Live Map</a>
+        <a class="pill link" href="./privacy.html">Privacy</a>
+        <a class="pill active" href="./support.html" aria-current="page">Support</a>
       </div>
     </header>
 
-    <main class="document-shell">
-      <div class="container document-grid">
-        <section class="document-hero glass">
-          <p class="section-label">Support</p>
-          <h1 class="document-title">Support and operational guidance</h1>
-          <p class="lead">
-            Kahu Ola keeps support direct and review-friendly. For operational questions, compliance requests, or general help, contact <a href="mailto:long@kahuola.org">long@kahuola.org</a>.
-          </p>
-          <div class="meta-row document-meta">
-            <span class="chip">Support contact: long@kahuola.org</span>
-            <span class="chip">Independent civic tech for Maui</span>
-          </div>
-          <div class="doc-actions">
-            <a class="btn btn--secondary" href="./index.html">Back to Home</a>
-            <a class="btn btn--ghost" href="./privacy.html">Privacy</a>
-          </div>
-        </section>
+    <!-- ── Page grid ── -->
+    <div class="page-grid">
 
-        <div class="policy-stack">
-          <section class="policy-block">
-            <h2>FAQ</h2>
+      <!-- Main content -->
+      <div>
+
+        <!-- Hero -->
+        <article class="card hero-card" style="margin-bottom:18px">
+          <p class="page-kicker">Support</p>
+          <h2 class="page-title">Support and operational guidance</h2>
+          <p class="page-lead">Kahu Ola keeps support direct and review-friendly. For operational questions, compliance requests, or general help, contact <a href="mailto:long@kahuola.org">long@kahuola.org</a>.</p>
+          <div class="meta-chips">
+            <span class="chip">Support: long@kahuola.org</span>
+            <span class="chip">Independent civic tech · Hawaiʻi</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn primary" href="./index.html">← Back to Home</a>
+            <a class="btn ghost" href="./privacy.html">Privacy Policy</a>
+          </div>
+        </article>
+
+        <div class="support-stack">
+
+          <div class="support-block" id="faq">
+            <h2>Frequently Asked Questions</h2>
             <ul class="faq-list">
               <li class="faq-item">
                 <h3>Is Kahu Ola an official government app?</h3>
-                <p>No. Kahu Ola is an independent civic technology initiative and should be treated as a supplemental informational tool.</p>
+                <p>No. Kahu Ola is an independent civic technology initiative and should be treated as a supplemental informational tool. Always follow official emergency guidance from HIEMA, Maui County EMA, and NWS.</p>
               </li>
               <li class="faq-item">
-                <h3>Why do some module buttons remain disabled?</h3>
-                <p>The public portal shows the production roadmap, but interactive modules stay marked as coming soon until each workflow is ready for safe release.</p>
+                <h3>Does the homepage call government APIs in my browser?</h3>
+                <p>No. All upstream data calls are proxied server-side through the Kahu Ola Cloudflare Worker. The browser never contacts NASA, NOAA, NWS, or any upstream API directly — this is a core architectural invariant.</p>
               </li>
               <li class="faq-item">
-                <h3>Does the landing page call government APIs directly in my browser?</h3>
-                <p>No. The public landing page uses static presentation patterns for clarity and resilience. Live browser-side calls are intentionally limited on the public homepage.</p>
+                <h3>Why does the Live Map show "NEXRAD Unavailable"?</h3>
+                <p>Kahu Ola proxies NEXRAD data from Iowa State Mesonet via the Worker. If the upstream is temporarily down, the system falls back to terrain-based context and clearly labels the data source as "Terrain Context" rather than "NEXRAD Live".</p>
+              </li>
+              <li class="faq-item">
+                <h3>Is my location stored anywhere?</h3>
+                <p>No. Location data is processed entirely on your device. GPS coordinates never cross the device boundary. Kahu Ola has Zero PII architecture — no location history is built, stored, or transmitted.</p>
+              </li>
+              <li class="faq-item">
+                <h3>What does "FRESH / STALE / DEGRADED" mean?</h3>
+                <p>Every hazard signal shows its data age. FRESH = recently updated. STALE = older data shown as context only. DEGRADED = upstream source temporarily unavailable, civic fallback active. Stale data is always clearly labeled — never presented as current.</p>
+              </li>
+              <li class="faq-item">
+                <h3>When will the mobile app be available?</h3>
+                <p>The Kahu Ola iOS app is in development. Contact <a href="mailto:long@kahuola.org">long@kahuola.org</a> to be notified at launch. The web platform at kahuola.org is fully available now on any browser.</p>
               </li>
             </ul>
-          </section>
+          </div>
 
-          <section class="policy-block">
+          <div class="support-block" id="troubleshooting">
             <h2>Troubleshooting</h2>
             <ul class="checklist">
-              <li>Refresh the page to ensure the latest static build is loaded.</li>
-              <li>Confirm that <code>./styles.css</code> loads and that browser extensions are not blocking local assets.</li>
-              <li>Use the root production URLs only: <code>/</code>, <code>/privacy.html</code>, and <code>/support.html</code>.</li>
-              <li>If a module is labeled coming soon, that behavior is expected in the current release.</li>
+              <li>Hard-refresh the page (<code>Ctrl+Shift+R</code> or <code>Cmd+Shift+R</code>) to load the latest version.</li>
+              <li>Open in an Incognito / Private window to rule out browser extension conflicts (especially crypto wallet extensions).</li>
+              <li>Use production URLs only: <code>kahuola.org/</code>, <code>kahuola.org/live-map.v4.8</code>, <code>kahuola.org/privacy.html</code>, <code>kahuola.org/support.html</code>.</li>
+              <li>If the Live Map shows a blank screen, check browser console for errors — most issues are extension conflicts, not Kahu Ola code.</li>
+              <li>STALE or DEGRADED badges are expected behavior when upstream sources are temporarily slow — not errors.</li>
             </ul>
-          </section>
+          </div>
 
-          <section class="policy-block">
+          <div class="support-block" id="permissions">
             <h2>Permissions</h2>
-            <p><strong>Location:</strong> Location access should only be requested when a specific safety function needs it, such as shelter distance, route context, or proximity-based alerts. The intended model is contextual use rather than continuous background collection.</p>
-            <p><strong>Notifications:</strong> Notification access may be used on supported client platforms so residents can receive timely civic safety prompts. Users can disable notifications at any time in device settings.</p>
-          </section>
+            <p><strong style="color:var(--text)">Location:</strong> Location access is only requested when a specific safety function needs it — proximity-based alerts, shelter distance checks, or neighborhood hazard lookups. The intended model is contextual use on-demand, not continuous background collection.</p>
+            <p><strong style="color:var(--text)">Notifications:</strong> Notification access may be used on supported platforms so residents can receive timely civic safety prompts. Users can disable notifications at any time in device settings.</p>
+          </div>
 
-          <section class="policy-block disclaimer-block">
-            <h2>Not Official Government App</h2>
-            <p>Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
-          </section>
+          <div class="support-block" id="contact">
+            <h2>Contact</h2>
+            <p>For operational questions, compliance requests, data accuracy concerns, or general support:</p>
+            <div class="contact-card">
+              <div class="contact-card-label">Email Support</div>
+              <a href="mailto:long@kahuola.org" class="contact-card-email">long@kahuola.org</a>
+              <div class="contact-card-note">Response within 48 hours for non-emergency inquiries.</div>
+            </div>
+          </div>
 
-          <section class="policy-block">
+          <div class="support-block" id="official-sources">
             <h2>Official sources residents should follow</h2>
+            <p style="margin-bottom:12px">Kahu Ola provides situational awareness only. For emergency decisions, always follow these official authorities:</p>
             <ul class="official-links">
-              <li><a href="https://www.weather.gov/">weather.gov (NWS)</a></li>
-              <li><a href="https://www.ready.gov/">ready.gov</a></li>
-              <li><a href="https://www.tsunami.gov/">tsunami.gov</a></li>
-              <li><a href="https://www.usgs.gov/natural-hazards">usgs.gov (hazards)</a></li>
-              <li><a href="https://www.airnow.gov/">airnow.gov</a></li>
-              <li><a href="https://www.fema.gov/">fema.gov</a></li>
-              <li><a href="https://www.mauicounty.gov/">mauicounty.gov (local guidance)</a></li>
+              <li><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">Hawaiʻi Emergency Management Agency (HIEMA)</a></li>
+              <li><a href="https://www.mauicounty.gov/983/Emergency-Management-Agency" target="_blank" rel="noopener">Maui County Emergency Management Agency</a></li>
+              <li><a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">National Weather Service Honolulu</a></li>
+              <li><a href="https://www.tsunami.gov/" target="_blank" rel="noopener">U.S. Tsunami Warning System</a></li>
+              <li><a href="https://www.usgs.gov/natural-hazards" target="_blank" rel="noopener">USGS Natural Hazards</a></li>
+              <li><a href="https://www.airnow.gov/" target="_blank" rel="noopener">EPA AirNow — Air Quality</a></li>
+              <li><a href="https://www.fema.gov/" target="_blank" rel="noopener">FEMA</a></li>
             </ul>
-          </section>
+          </div>
+
+          <div class="support-block disclaimer" id="non-affiliation">
+            <h2>Not an Official Government App</h2>
+            <p>Kahu Ola is an independent civic technology initiative. It is not affiliated with, endorsed by, or officially connected to NASA, NOAA, USGS, FEMA, EPA, or any U.S. government agency. All referenced data is sourced through publicly available Open Data APIs.</p>
+          </div>
+
         </div>
       </div>
-    </main>
 
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-card">
+          <div class="sidebar-label">On This Page</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-link" href="#faq">FAQ</a>
+            <a class="sidebar-link" href="#troubleshooting">Troubleshooting</a>
+            <a class="sidebar-link" href="#permissions">Permissions</a>
+            <a class="sidebar-link" href="#contact">Contact</a>
+            <a class="sidebar-link" href="#official-sources">Official Sources</a>
+            <a class="sidebar-link" href="#non-affiliation">Non-Affiliation</a>
+          </nav>
+        </div>
+        <div class="sidebar-card">
+          <div class="live-map-card">
+            <div class="live-map-title">🗺 Live Hazard Map</div>
+            <div class="live-map-desc">Real-time wildfire, flood, tsunami, and rain radar for Hawaiʻi.</div>
+            <a class="live-map-btn" href="./live-map.v4.8.html">Open Live Map →</a>
+          </div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-label">Quick Links</div>
+          <div class="sidebar-nav">
+            <a class="sidebar-link" href="./index.html">← Home Dashboard</a>
+            <a class="sidebar-link" href="./privacy.html">Privacy Policy</a>
+            <a class="sidebar-link" href="mailto:long@kahuola.org">Email Support</a>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- Footer -->
     <footer class="footer">
-      <div class="container footer-inner">
-        <div class="footer-copy">
+      <div class="footer-inner">
+        <div class="footer-brand">
           <strong>Kahu Ola</strong>
           <span>Guardian of Life</span>
-          <span><a href="mailto:long@kahuola.org">long@kahuola.org</a></span>
+          <a href="mailto:long@kahuola.org" style="color:var(--accent)">long@kahuola.org</a>
         </div>
         <div class="footer-links">
           <a href="./index.html">Home</a>
-          <a href="./live-map.html">Live Map</a>
+          <a href="./live-map.v4.8.html">Live Map</a>
           <a href="./privacy.html">Privacy</a>
           <a href="./support.html" aria-current="page">Support</a>
         </div>
-        <p class="footer-legal">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
       </div>
+      <p class="footer-legal">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
     </footer>
+
   </div>
 </body>
 </html>
-
