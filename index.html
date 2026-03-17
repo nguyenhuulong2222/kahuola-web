@@ -1912,10 +1912,16 @@
           deltaIcon.textContent = d.icon;
         }
 
-        // Freshness
+        // Freshness — update the pill và span bên trong
+        const freshStr = freshnessLabel || "Updated just now";
         const updatedPill = document.getElementById("updatedPill");
-        if (updatedPill) updatedPill.innerHTML = `<span class="dot"></span> ${freshnessLabel || "Updated recently"}`;
-        setHtml("freshnessChip", `<span class="dot"></span><span id="freshnessLabel">${freshnessLabel || "Checking…"}</span>`);
+        if (updatedPill) updatedPill.innerHTML = `<span class="dot"></span> ${freshStr}`;
+        // Update freshnessLabel span directly — không dùng setHtml để tránh duplicate id
+        const freshLabelEl = document.getElementById("freshnessLabel");
+        if (freshLabelEl) freshLabelEl.textContent = freshStr;
+        // Update dot color on freshnessChip
+        const chipDot = document.querySelector("#freshnessChip .dot");
+        if (chipDot && primaryEvent === "DEGRADED") chipDot.style.background = "var(--warn)";
 
         // Signal detail toggle label
         const detailLabel = document.getElementById("signalDetailLabel");
@@ -2116,15 +2122,19 @@
         else if (floodWatch)                 primaryEvent = "FLOOD_WATCH";
         else if (fireItems.length > 0)       primaryEvent = "FIRE_ACTIVE";
 
-        // Derive freshness from most recent API call
-        const generatedAt = floodPayload?.generated_at || fireWeatherPayload?.generated_at || mrmsPayload?.generated_at;
-        const freshnessLabel = timeAgo(generatedAt);
+        // Derive freshness from most recent API call — check all possible timestamp fields
+        const generatedAt =
+          floodPayload?.generated_at ||
+          fireWeatherPayload?.generated_at ||
+          mrmsPayload?.generated_at ||
+          firePayload?.generated_at;
+        const freshnessStr = generatedAt ? timeAgo(generatedAt) : "Updated just now";
 
         applyHero(primaryEvent, {
           fireCount:  fireItems.length,
           floodCount: floodPayload?.summary?.count || 0,
           stormCount: 0
-        }, freshnessLabel, fireWeatherPayload, floodPayload);
+        }, freshnessStr, fireWeatherPayload, floodPayload);
 
         renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload);
         renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload);
