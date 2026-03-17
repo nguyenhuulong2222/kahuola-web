@@ -1330,13 +1330,12 @@
       <div class="brand" aria-label="Kahu Ola — Hawaiʻi Civic Hazard Intelligence">
         <div class="logo">
           🔥 Kahu Ola
-          <small>HAWAIʻI HAZARD INTELLIGENCE</small>
+          <small>V4.8 · HAWAIʻI HAZARD INTELLIGENCE</small>
         </div>
       </div>
 
       <div class="header-right">
         <nav class="menu-links" aria-label="Site links">
-          <a class="menu-link" href="/index.html">Home</a>
           <a class="menu-link" href="/privacy.html">Privacy</a>
           <a class="menu-link" href="/support.html">Support</a>
         </nav>
@@ -1685,7 +1684,7 @@
 "use strict";
 
 /*
-  Kahu Ola Live Map
+  Kahu Ola Live Map — V4.8
   -----------------------------------------
   - Wildfire-first click priority
   - Flood / MRMS / Radar modules split cleanly
@@ -1730,7 +1729,7 @@ let lastKnownUserCoord = null;
 let smokeVisible = true;
 let perimeterVisible = true;
 let flashFloodVisible = true;
-let floodContextVisible = true;
+let floodContextVisible = false; // Hidden by default — only shows when NWS flash flood alert is active
 let mrmsVisible = true;
 let rainRadarVisible = false; // Default OFF — user toggles on when needed
 let windRiskVisible  = true;
@@ -2201,7 +2200,12 @@ const HAZARD_REGISTRY = {
         rainRadarVisible = true;
         syncRainRadarLayerVisibility();
       }
-      // Fix 3: Show landslide card when flood is active (terrain risk elevated)
+      // Option A: sync flood-context terrain polygons — only show when NWS alert is active
+      const nwsNowActive = s.sourceStatus === "detected" && s.features.length > 0;
+      floodContextVisible = nwsNowActive;
+      getState("floodContext").visible = floodContextVisible;
+      if (typeof syncFloodContextLayerVisibility === "function") syncFloodContextLayerVisibility();
+      // Show landslide card when flood is active (terrain risk elevated)
       maybeShowLandslideCard();
       renderUnifiedPanels();
     },
@@ -2212,7 +2216,17 @@ const HAZARD_REGISTRY = {
     endpoint: IS_LOCAL ? "./flood-context-test.json" : "https://kahuola.org/api/hazards/flood-context?region=hawaii",
     enabled: true, affectsGlobalHealth: false,
     parsePayload(json){ const raw = parseCanonicalSignals(json, "floodContext"); return { features: normalizeFloodContextFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || "NWS + Kahu Ola" }; },
-    ensureLayers, applyData(features){ updateFloodContextSource(features); }, onFetchComplete(){ updateFloodContextStatusUI(getState("floodContext")); renderUnifiedPanels(); }, visible(){ return floodContextVisible; }
+    ensureLayers, applyData(features){ updateFloodContextSource(features); },
+    onFetchComplete(){
+      // Option A: only show flood-context terrain polygons when NWS has an active flash flood alert
+      const flashFloodState = getState("flashFlood");
+      const nwsActive = flashFloodState.sourceStatus === "detected" && flashFloodState.features.length > 0;
+      floodContextVisible = nwsActive;
+      getState("floodContext").visible = floodContextVisible;
+      syncFloodContextLayerVisibility();
+      updateFloodContextStatusUI(getState("floodContext"));
+      renderUnifiedPanels();
+    }, visible(){ return floodContextVisible; }
   },
   mrmsRain: {
     key: "mrmsRain",
@@ -2805,10 +2819,15 @@ function updateLocalHazardStatusUI(state) {
 }
 
 function updateFloodContextStatusUI(state) {
+  const nwsActive = floodContextVisible; // only visible when NWS alert is active (Option A)
   ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`flood-context-badge-${suffix}`); const note=document.getElementById(`flood-context-note-${suffix}`); if(!badge) return; badge.className="status-badge"; const count=state.features.length;
-    if (state.sourceStatus==="detected"){ badge.classList.add("status-detected"); badge.textContent = count > 0 ? `Context · ${count}` : "Context"; if(note) note.textContent = "PacIOOS-linked local Hawaiʻi flood context is available."; }
-    else if (state.sourceStatus==="none"){ badge.classList.add("status-none"); badge.textContent="No context"; if(note) note.textContent = "No local flood context polygons were returned."; }
-    else { badge.classList.add("status-unavailable"); badge.textContent="Unavailable"; if(note) note.textContent = "PacIOOS local flood context could not be confirmed."; }
+    if (nwsActive && state.sourceStatus==="detected" && count > 0){
+      badge.classList.add("status-detected"); badge.textContent = `Active · ${count}`;
+      if(note) note.textContent = "NWS flash flood alert active — terrain context zones are now visible.";
+    } else {
+      badge.classList.add("status-none"); badge.textContent = "Inactive";
+      if(note) note.textContent = "Terrain context is hidden — only shown when an official NWS flash flood alert is active.";
+    }
   });
 }
 function updateMrmsStatusUI(state) {
