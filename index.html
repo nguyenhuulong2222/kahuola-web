@@ -856,9 +856,9 @@
       <article class="card hero-card">
         <div class="hero-head">
           <div>
-            <h2 class="hero-title" id="heroTitle">Storm conditions affecting Hawaiʻi</h2>
+            <h2 class="hero-title" id="heroTitle">Monitoring conditions across Hawaiʻi</h2>
             <p class="hero-copy" id="heroCopy">
-              Broad storm and rainfall context remain elevated across the state. Flood and wind conditions may change quickly.
+              No top-priority statewide hazard signal is currently elevated. Continue monitoring official alerts and local conditions.
             </p>
           </div>
 
@@ -868,26 +868,26 @@
           </div>
         </div>
 
-        <div class="primary-banner storm-active" id="primaryBanner">
-          <div id="heroBannerTitle">🌀 Kona Storm Conditions Active Across Hawaiʻi</div>
-          <div class="primary-banner-source" id="heroBannerCopy">Source Authority: NWS Honolulu & NOAA</div>
+        <div class="primary-banner" id="primaryBanner">
+          <div id="heroBannerTitle">✅ Monitoring Statewide Conditions</div>
+          <div class="primary-banner-source" id="heroBannerCopy">Source Authority: Multi-source Worker snapshot</div>
         </div>
 
         <div class="hero-context-strip">
           <div class="hero-context-item">
-            <div class="hero-context-value" id="windValue">25 - 40 mph</div>
-            <div class="hero-context-label">Wind Gusts</div>
+            <div class="hero-context-value" id="windValue">—</div>
+            <div class="hero-context-label">Fire Weather</div>
             <div class="hero-context-source">NWS / RAWS</div>
           </div>
           <div class="hero-context-item">
-            <div class="hero-context-value" id="rainValue">2.5 inches</div>
-            <div class="hero-context-label">Rain (24hr)</div>
-            <div class="hero-context-source">NOAA MRMS</div>
+            <div class="hero-context-value" id="rainValue">—</div>
+            <div class="hero-context-label">Rainfall</div>
+            <div class="hero-context-source">NEXRAD / MRMS</div>
           </div>
           <div class="hero-context-item">
-            <div class="hero-context-value" id="floodRiskValue">Elevated</div>
+            <div class="hero-context-value" id="floodRiskValue">—</div>
             <div class="hero-context-label">Flood Risk</div>
-            <div class="hero-context-source">PacIOOS Terrain</div>
+            <div class="hero-context-source">NWS Official</div>
           </div>
         </div>
 
@@ -1236,10 +1236,11 @@
       "use strict";
 
       const ENDPOINTS = {
-        homeSummary: "/v1/home/summary",
-        fire: "/v1/hazards/fire",
-        floodPrimary: "/v1/context/flood",
-        floodFallback: "/v1/context"
+        fire:        "/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8",
+        flood:       "/api/hazards/flash-flood",
+        fireWeather: "/api/hazards/fire-weather",
+        mrms:        "/api/hazards/mrms-qpe",
+        health:      "/api/health"
       };
 
       const ISLANDS = {
@@ -1582,10 +1583,57 @@
         }
       }
 
-      function renderContextMetrics(summary) {
-        if (summary.wind) setText("windValue", summary.wind);
-        if (summary.rain) setText("rainValue", summary.rain);
-        if (summary.floodRisk) setText("floodRiskValue", summary.floodRisk);
+      function renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload) {
+        // Wind — from fire-weather summary (highest risk zone)
+        const fwSignals = getItems(fireWeatherPayload);
+        const highWind = fwSignals.find(s => s.properties?.risk_index === "CRITICAL" || s.properties?.risk_index === "HIGH");
+        const elevWind = fwSignals.find(s => s.properties?.risk_index === "ELEVATED");
+        const redFlag  = fireWeatherPayload?.summary?.red_flag_active;
+        if (redFlag) {
+          setText("windValue", "Red Flag");
+          document.getElementById("windValue").style.color = "var(--fire)";
+        } else if (highWind) {
+          setText("windValue", "High");
+        } else if (elevWind) {
+          setText("windValue", "Elevated");
+        } else if (fwSignals.length > 0) {
+          setText("windValue", "Moderate");
+        } else {
+          setText("windValue", "Normal");
+        }
+        document.querySelector(".hero-context-item:nth-child(1) .hero-context-label").textContent = "Fire Weather";
+        document.querySelector(".hero-context-item:nth-child(1) .hero-context-source").textContent = "NWS / RAWS";
+
+        // Rain — from MRMS/NEXRAD
+        const mrmsSignals = getItems(mrmsPayload);
+        const heavyRain   = mrmsSignals.find(s => s.properties?.intensity === "INTENSE" || s.properties?.intensity === "HEAVY");
+        const modRain     = mrmsSignals.find(s => s.properties?.intensity === "MODERATE");
+        if (heavyRain) {
+          setText("rainValue", "Heavy Rain");
+          document.getElementById("rainValue").style.color = "var(--flood)";
+        } else if (modRain) {
+          setText("rainValue", "Moderate Rain");
+        } else if (mrmsSignals.length > 0) {
+          setText("rainValue", "Light Rain");
+        } else {
+          setText("rainValue", "None");
+        }
+        document.querySelector(".hero-context-item:nth-child(2) .hero-context-label").textContent = "Rainfall";
+        document.querySelector(".hero-context-item:nth-child(2) .hero-context-source").textContent = "NEXRAD / MRMS";
+
+        // Flood Risk — from NWS flash flood
+        const floodSummary = floodPayload?.summary;
+        if (floodSummary?.warning_count > 0) {
+          setText("floodRiskValue", "Warning Active");
+          document.getElementById("floodRiskValue").style.color = "var(--danger)";
+        } else if (floodSummary?.watch_count > 0) {
+          setText("floodRiskValue", "Watch Active");
+          document.getElementById("floodRiskValue").style.color = "var(--warn)";
+        } else {
+          setText("floodRiskValue", "None Active");
+          document.getElementById("floodRiskValue").style.color = "";
+        }
+        document.querySelector(".hero-context-item:nth-child(3) .hero-context-source").textContent = "NWS Official";
       }
 
       function renderFireCard(payload) {
@@ -1646,27 +1694,52 @@
       }
 
       async function loadHomepage() {
-        const [homeSummary, firePayload, floodPrimary] = await Promise.all([
-          safeFetchJson(ENDPOINTS.homeSummary),
+        const [firePayload, floodPayload, fireWeatherPayload, mrmsPayload] = await Promise.all([
           safeFetchJson(ENDPOINTS.fire),
-          safeFetchJson(ENDPOINTS.floodPrimary)
+          safeFetchJson(ENDPOINTS.flood),
+          safeFetchJson(ENDPOINTS.fireWeather),
+          safeFetchJson(ENDPOINTS.mrms)
         ]);
 
-        const floodPayload = floodPrimary || await safeFetchJson(ENDPOINTS.floodFallback);
-        const summary = normalizeHomeSummary(homeSummary, firePayload, floodPayload);
-        const freshnessLabel = timeAgo(summary.generatedAt);
+        // Derive primary event from live data
+        const fireItems    = getItems(firePayload);
+        const floodWarning = floodPayload?.summary?.warning_count > 0;
+        const floodWatch   = floodPayload?.summary?.watch_count > 0;
+        const redFlag      = fireWeatherPayload?.summary?.red_flag_active;
 
-        applyHero(summary.primaryEvent, {
-          fireCount: summary.fireCount,
-          floodCount: summary.floodCount,
-          stormCount: summary.stormCount
+        let primaryEvent = "MONITORING";
+        if (fireItems.length >= 3 || redFlag) primaryEvent = "FIRE_ACTIVE";
+        else if (floodWarning)               primaryEvent = "FLOOD_WARNING";
+        else if (floodWatch)                 primaryEvent = "FLOOD_WATCH";
+        else if (fireItems.length > 0)       primaryEvent = "FIRE_ACTIVE";
+
+        // Derive freshness from most recent API call
+        const generatedAt = floodPayload?.generated_at || fireWeatherPayload?.generated_at || mrmsPayload?.generated_at;
+        const freshnessLabel = timeAgo(generatedAt);
+
+        applyHero(primaryEvent, {
+          fireCount:  fireItems.length,
+          floodCount: floodPayload?.summary?.count || 0,
+          stormCount: 0
         }, freshnessLabel);
 
-        renderContextMetrics(summary);
+        renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload);
         renderFireCard(firePayload);
         renderFloodCard(floodPayload);
 
         const islandCounts = countByIsland(firePayload, floodPayload);
         Object.entries(islandCounts).forEach(([key, entry]) => applyBadgeState(key, entry));
 
-        const chip = document.getElementById("fresh
+        const chip = document.getElementById("freshnessChip");
+        if (chip && primaryEvent === "DEGRADED") {
+          chip.classList.add("stale");
+        }
+      }
+
+      loadHomepage().catch(() => {
+        setDegradedUi();
+      });
+    })();
+  </script>
+</body>
+</html>
