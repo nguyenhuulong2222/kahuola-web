@@ -424,16 +424,49 @@
       background:rgba(255,255,255,.03);
     }
 
+    /* ── Accordion — 3-tier hierarchy ──────────────────────────
+       Tier 1: Active Hazards     — highest signal weight, open by default
+       Tier 2: Supporting Evidence — medium weight, collapsed by default
+       Tier 3: Context Layers      — lowest weight, collapsed, visually quieter
+    ─────────────────────────────────────────────────────────── */
+
     .accordion-card{
-      margin-top:12px;
+      margin-top:8px;
       border:1px solid var(--border);
       border-radius:14px;
       background:rgba(255,255,255,.03);
       overflow:hidden;
+      scroll-margin-top:12px;
+      transition:border-color .2s ease, background .2s ease;
     }
 
-    .accordion-card{
-      scroll-margin-top:12px;
+    /* Tier 1 — Active Hazards: elevated border, slightly brighter bg */
+    .accordion-card.tier-1{
+      border-color:rgba(255,255,255,.10);
+      background:rgba(255,255,255,.045);
+      margin-top:0;
+    }
+    .accordion-card.tier-1[open]{
+      border-color:rgba(255,255,255,.13);
+      background:rgba(255,255,255,.055);
+    }
+
+    /* Tier 2 — Supporting Evidence: standard weight */
+    .accordion-card.tier-2{
+      border-color:rgba(255,255,255,.07);
+      background:rgba(255,255,255,.025);
+    }
+    .accordion-card.tier-2[open]{
+      background:rgba(255,255,255,.035);
+    }
+
+    /* Tier 3 — Context Layers: quietest — lower opacity, softer border */
+    .accordion-card.tier-3{
+      border-color:rgba(255,255,255,.05);
+      background:rgba(255,255,255,.015);
+    }
+    .accordion-card.tier-3[open]{
+      background:rgba(255,255,255,.02);
     }
 
     .multi-hazard-card .accordion-content{
@@ -581,10 +614,6 @@
       line-height:1.55;
     }
 
-    .accordion-card[open]{
-      background:rgba(255,255,255,.04);
-    }
-
     .accordion-summary{
       list-style:none;
       display:flex;
@@ -594,14 +623,46 @@
       padding:10px 12px;
       cursor:pointer;
       user-select:none;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .accordion-summary::-webkit-details-marker{display:none}
+    .accordion-title-wrap{min-width:0;display:flex;flex-direction:column;gap:3px}
+    .accordion-summary .layer-status-head{margin:0}
+
+    /* Tier-specific summary padding */
+    .tier-1 .accordion-summary{ padding:11px 14px }
+    .tier-2 .accordion-summary{ padding:9px 12px }
+    .tier-3 .accordion-summary{ padding:8px 11px }
+
+    /* Tier-specific header text */
+    .tier-1 .accordion-summary .layer-status-head{
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.09em;
+      color:var(--text);
+      opacity:.9;
+    }
+    .tier-2 .accordion-summary .layer-status-head{
+      font-size:10px;
+      font-weight:600;
+      letter-spacing:.08em;
+      color:var(--text-dim);
+      opacity:.8;
+    }
+    .tier-3 .accordion-summary .layer-status-head{
+      font-size:10px;
+      font-weight:500;
+      letter-spacing:.07em;
+      color:var(--muted);
+      opacity:.7;
     }
 
-    .accordion-summary::-webkit-details-marker{display:none}
-
-    .accordion-title-wrap{min-width:0;display:flex;flex-direction:column;gap:4px}
-
-    .accordion-summary .layer-status-head{
-      margin:0;
+    /* Tier-1 left accent stripe when open */
+    .tier-1[open]{
+      border-left:2px solid rgba(255,255,255,.18);
+    }
+    .tier-1.has-active[open]{
+      border-left-color:var(--orange);
     }
 
     .accordion-subline{
@@ -612,21 +673,40 @@
       overflow:hidden;
       text-overflow:ellipsis;
       max-width:100%;
+      opacity:.7;
     }
+    .tier-3 .accordion-subline{ font-size:10px; opacity:.5 }
 
+    /* Chevron */
     .accordion-chevron{
       color:var(--muted);
       font-family:var(--font-mono);
       font-size:12px;
       flex:0 0 auto;
-      transition:transform .18s ease;
+      transition:transform .2s ease, opacity .2s ease;
+      opacity:.55;
     }
+    .tier-1 .accordion-chevron{ opacity:.7; font-size:13px }
+    .tier-3 .accordion-chevron{ opacity:.35; font-size:11px }
+    details[open] .accordion-chevron{transform:rotate(180deg);opacity:.85}
 
-    details[open] .accordion-chevron{transform:rotate(180deg)}
-
+    /* Content */
     .accordion-content{
       padding:0 12px 10px;
       border-top:1px solid var(--border);
+    }
+    .tier-3 .accordion-content{
+      border-top-color:rgba(255,255,255,.04);
+      opacity:.85;
+    }
+
+    /* Animated open/close height */
+    .accordion-content-inner{
+      animation:accordion-open .18s ease forwards;
+    }
+    @keyframes accordion-open{
+      from{opacity:0;transform:translateY(-4px)}
+      to{opacity:1;transform:translateY(0)}
     }
 
     .layer-status-head{
@@ -1522,7 +1602,7 @@
 
     <!-- ── TIER 1: PRIMARY HAZARDS ─────────────────────────────────── -->
     <!-- Flash Flood + Tsunami + Hurricane — official signals only -->
-    <details class="accordion-card multi-hazard-card" aria-label="Active Hazards" open>
+    <details class="accordion-card tier-1 multi-hazard-card" aria-label="Active Hazards" open>
       <summary class="accordion-summary">
         <div class="accordion-title-wrap">
           <div class="layer-status-head">Active Hazards · Hawaiʻi</div>
@@ -1580,7 +1660,7 @@
 
     <!-- ── TIER 2: SUPPORTING EVIDENCE ───────────────────────────────── -->
     <!-- Rain Radar + MRMS + Fire Weather — confidence amplifiers -->
-    <details class="accordion-card" aria-label="Supporting Evidence">
+    <details class="accordion-card tier-2" aria-label="Supporting Evidence">
       <summary class="accordion-summary">
         <div class="accordion-title-wrap">
           <div class="layer-status-head">Supporting Evidence</div>
@@ -1625,7 +1705,7 @@
     <!-- ── TIER 3: CONTEXT LAYERS ─────────────────────────────────────── -->
     <!-- Flood Context + Landslide + Local Hazards — decision context, low visual weight -->
     <!-- Landslide: hidden by default, shown only when MRMS heavy or Flash Flood active -->
-    <details class="accordion-card" aria-label="Context Layers">
+    <details class="accordion-card tier-3" aria-label="Context Layers">
       <summary class="accordion-summary">
         <div class="accordion-title-wrap">
           <div class="layer-status-head">Context Layers</div>
@@ -1836,6 +1916,12 @@ function updateAccordionPreviews() {
   // Secondary Layers (smoke/perimeter — unchanged)
   setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
   setAccordionText("secondary-preview-mobile",  `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
+
+  // Tier 1 has-active: highlight border when any primary hazard is detected
+  const hasActiveHazard = tier1Text !== "No active primary hazards";
+  document.querySelectorAll(".accordion-card.tier-1").forEach(el => {
+    el.classList.toggle("has-active", hasActiveHazard);
+  });
 }
 
 const activeSuffix = () => (window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop");
