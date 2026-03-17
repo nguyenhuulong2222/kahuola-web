@@ -1955,7 +1955,13 @@ function payloadError(json) {
 }
 function parseCanonicalSignals(json, kind) {
   const errText = payloadError(json);
-  if (errText) { const err = new Error(`${kind.toUpperCase()}_ENDPOINT_ERROR: ${errText}`); err.isParse = true; throw err; }
+  // Endpoint returned an error response — treat as network/upstream failure, NOT parse failure
+  // (parse failure = malformed JSON; endpoint error = upstream unavailable)
+  if (errText) {
+    const err = new Error(`${kind.toUpperCase()}_ENDPOINT_ERROR: ${errText}`);
+    err.isParse = false; // endpoint errors are not parse errors — won't trigger red banner
+    throw err;
+  }
   if (Array.isArray(json?.signals)) return json.signals;
   if (Array.isArray(json?.features)) return json.features;
   if (Array.isArray(json?.detections)) return json.detections;
@@ -2157,6 +2163,7 @@ const HAZARD_REGISTRY = {
     key: "fire",
     endpoint: IS_LOCAL ? "./fires-test.json" : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1",
     enabled: true,
+    affectsGlobalHealth: false, // fire endpoint errors shown per-signal, not as global red banner
     parsePayload(json) {
       const raw = parseCanonicalSignals(json, "fire");
       const features = normalizeFireFeatures(raw);
@@ -2167,14 +2174,14 @@ const HAZARD_REGISTRY = {
   },
   smoke: {
     key: "smoke",
-    endpoint: IS_LOCAL ? "./smoke-test.json" : "https://kahuola.org/hazards/smoke?region=hawaii",
+    endpoint: IS_LOCAL ? "./smoke-test.json" : "https://kahuola.org/api/hazards/smoke?region=hawaii",
     enabled: true,
     parsePayload(json){ const raw = parseCanonicalSignals(json, "smoke"); return { features: normalizeSmokeFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NOAA HMS" }; },
     ensureLayers, applyData(features){ updateSmokeSource(features); }, onFetchComplete(){ const s=getState("smoke"); updateSmokeStatusUI(s.sourceStatus, s.features.length); renderUnifiedPanels(); }, visible(){ return smokeVisible; }
   },
   perimeter: {
     key: "perimeter",
-    endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/hazards/perimeters?region=hawaii",
+    endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/api/hazards/perimeters?region=hawaii",
     enabled: true,
     parsePayload(json){ const raw = parseCanonicalSignals(json, "perimeter"); return { features: normalizePerimeterFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NIFC / County Perimeters" }; },
     ensureLayers, applyData(features){ updatePerimeterSource(features); }, onFetchComplete(){ const s=getState("perimeter"); updatePerimeterStatusUI(s.sourceStatus, s.features.length); renderUnifiedPanels(); }, visible(){ return perimeterVisible; }
