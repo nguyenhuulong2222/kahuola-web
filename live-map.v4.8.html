@@ -1239,12 +1239,26 @@
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255,255,255,0.04);
   cursor: pointer;
   transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  margin-bottom: 8px;
 }
 .priority-module:hover {
   transform: translateY(-1px);
   border-color: rgba(103, 176, 255, 0.30);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.05);
 }
+/* Secondary variant — Tsunami + Hurricane: smaller, lower visual weight than Flash Flood */
+.priority-module--secondary {
+  padding: 12px 14px 10px;
+  border-color: rgba(134, 188, 255, 0.09);
+  background: linear-gradient(180deg, rgba(11,18,31,0.82), rgba(11,18,31,0.72));
+  box-shadow: none;
+}
+.priority-module--secondary:hover {
+  border-color: rgba(103, 176, 255, 0.20);
+  box-shadow: none;
+}
+.priority-module--secondary .priority-title { font-size:15px; font-weight:600; }
+.priority-module--secondary .priority-note { color:rgba(194,206,228,0.75); font-size:12px; }
 .priority-module-head {
   display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px;
 }
@@ -1254,6 +1268,14 @@
 .priority-title { font-size:19px; font-weight:700; line-height:1.12; }
 .priority-note { color:rgba(241,246,255,0.96); line-height:1.5; margin-bottom:6px; }
 .priority-subnote { color:rgba(194,206,228,0.82); font-size:12px; line-height:1.45; }
+/* Context mini-module variant — lower contrast, softer than evidence modules */
+.mini-module--context {
+  border-color: rgba(134,188,255,0.07);
+  background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0.010));
+  opacity: 0.85;
+}
+.mini-module--context .mini-module-title { font-weight:500; color:rgba(194,206,228,0.80); }
+.mini-module--context .mini-module-note  { color:rgba(194,206,228,0.55); }
 .mini-module-grid {
   display:grid;
   grid-template-columns:1fr;
@@ -1301,10 +1323,10 @@
 <body>
   <div id="app">
     <header role="banner">
-      <div class="brand" aria-label="Kahu Ola — Civic Fire Detection Map">
+      <div class="brand" aria-label="Kahu Ola — Hawaiʻi Civic Hazard Intelligence">
         <div class="logo">
           🔥 Kahu Ola
-          <small>V4.4 · HAWAIʻI FIRE DETECTION MAP</small>
+          <small>V4.8 · HAWAIʻI HAZARD INTELLIGENCE</small>
         </div>
       </div>
 
@@ -1492,24 +1514,28 @@
       </div>
     </details>
 
-    <details class="accordion-card multi-hazard-card" aria-label="Flood Module for Maui" open>
+    <!-- ── TIER 1: PRIMARY HAZARDS ─────────────────────────────────── -->
+    <!-- Flash Flood + Tsunami + Hurricane — official signals only -->
+    <details class="accordion-card multi-hazard-card" aria-label="Active Hazards" open>
       <summary class="accordion-summary">
         <div class="accordion-title-wrap">
-          <div class="layer-status-head">Flood Module · Hawaiʻi</div>
-          <div class="accordion-subline"><span id="blueprint-preview">Official NWS alerts + statewide Hawaiʻi flood context + smart NOAA rain context.</span></div>
+          <div class="layer-status-head">Active Hazards · Hawaiʻi</div>
+          <div class="accordion-subline"><span id="blueprint-preview">Official NWS alerts + primary hazard signals.</span></div>
         </div>
         <span class="accordion-chevron">▾</span>
       </summary>
       <div class="accordion-content">
+
+        <!-- Flash Flood — Primary signal -->
         <div class="priority-module" id="flood-card" tabindex="0" role="button" aria-label="Flash Flood details">
           <div class="priority-module-head">
             <div>
-              <div class="priority-kicker">Primary statewide flood hazard</div>
+              <div class="priority-kicker">Official · National Weather Service</div>
               <div class="priority-title">Flash Flood</div>
             </div>
             <div class="status-badge status-none" id="flood-status-badge">No active watch</div>
           </div>
-          <div class="priority-note" id="flood-status-note">Official source: National Weather Service. Statewide Hawaiʻi civic flood context is estimated separately by Kahu Ola.</div>
+          <div class="priority-note" id="flood-status-note">Official source: National Weather Service. No active flash flood watch geometry was returned.</div>
           <div class="priority-subnote" id="flood-status-subnote">Statewide Hawaiʻi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.</div>
           <div class="summary-meta" style="margin-top:10px">
             <span class="chip v-blue" id="flood-official-chip">Official: NWS</span>
@@ -1518,34 +1544,66 @@
           </div>
         </div>
 
+        <!-- Tsunami — Primary signal, lazy -->
+        <div class="priority-module priority-module--secondary" id="tsunami-card" tabindex="0" role="button" aria-label="Tsunami alert status">
+          <div class="priority-module-head">
+            <div>
+              <div class="priority-kicker">Official · NWS Tsunami Warning Center</div>
+              <div class="priority-title">Tsunami</div>
+            </div>
+            <div class="status-badge status-none" id="tsunami-badge">·</div>
+          </div>
+          <div class="priority-note" id="tsunami-note">NWS Tsunami Warning Center — tap to load live status.</div>
+        </div>
+
+        <!-- Hurricane — Primary signal, lazy -->
+        <div class="priority-module priority-module--secondary" id="hurricane-card" tabindex="0" role="button" aria-label="Hurricane track status">
+          <div class="priority-module-head">
+            <div>
+              <div class="priority-kicker">Official · National Hurricane Center</div>
+              <div class="priority-title">Hurricane</div>
+            </div>
+            <div class="status-badge status-none" id="hurricane-badge">·</div>
+          </div>
+          <div class="priority-note" id="hurricane-note">NHC Pacific basin — tap to load live status.</div>
+        </div>
+
+        <div class="blueprint-footnote">Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.</div>
+      </div>
+    </details>
+
+    <!-- ── TIER 2: SUPPORTING EVIDENCE ───────────────────────────────── -->
+    <!-- Rain Radar + MRMS + Fire Weather — confidence amplifiers -->
+    <details class="accordion-card" aria-label="Supporting Evidence">
+      <summary class="accordion-summary">
+        <div class="accordion-title-wrap">
+          <div class="layer-status-head">Supporting Evidence</div>
+          <div class="accordion-subline"><span id="evidence-preview">Radar · MRMS · Fire weather context.</span></div>
+        </div>
+        <span class="accordion-chevron">▾</span>
+      </summary>
+      <div class="accordion-content">
         <div class="flood-module-scroll"><div class="mini-module-grid">
-          <div class="mini-module" id="flood-context-card" tabindex="0" role="button" aria-label="PacIOOS flood context details">
-            <div>
-              <div class="mini-module-title">Flood Context</div>
-              <div class="mini-module-note" id="flood-context-note">Statewide Hawaiʻi terrain + runoff context</div>
-            </div>
-            <div class="status-badge status-planned" id="flood-context-badge">Unavailable</div>
-          </div>
-          <div class="mini-module" id="mrms-rain-card" tabindex="0" role="button" aria-label="MRMS rainfall details">
-            <div>
-              <div class="mini-module-title">MRMS Rainfall</div>
-              <div class="mini-module-note" id="mrms-rain-note">1h / 3h / 24h rainfall context</div>
-            </div>
-            <div class="status-badge status-planned" id="mrms-rain-badge">Loading</div>
-          </div>
+
+          <!-- Rain Radar -->
           <div class="mini-module" id="rain-radar-card" tabindex="0" role="button" aria-label="Rain radar details">
             <div>
               <div class="mini-module-title">Rain Radar</div>
               <div class="mini-module-note" id="rain-radar-note">NEXRAD · USA + territories</div>
             </div>
-            <div class="status-badge status-detected" id="rain-radar-badge">Off</div>
-            <div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;">
-              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#40e0d0;flex-shrink:0"></span>Light</span>
-              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#4caf50;flex-shrink:0"></span>Moderate</span>
-              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#ffeb3b;flex-shrink:0"></span>Heavy</span>
-              <span style="display:flex;align-items:center;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--text-dim)"><span style="width:9px;height:9px;border-radius:2px;background:#ff5722;flex-shrink:0"></span>Intense</span>
-            </div>
+            <div class="status-badge status-none" id="rain-radar-badge">Off</div>
           </div>
+
+          <!-- MRMS Rainfall — only rendered when data is real -->
+          <div class="mini-module" id="mrms-rain-card" tabindex="0" role="button" aria-label="MRMS rainfall details">
+            <div>
+              <div class="mini-module-title">MRMS Rainfall</div>
+              <div class="mini-module-note" id="mrms-rain-note">NEXRAD QPE · Live when available</div>
+            </div>
+            <div class="status-badge status-none" id="mrms-rain-badge">Loading</div>
+          </div>
+
+          <!-- Fire Weather -->
           <div class="mini-module" id="wind-risk-card" tabindex="0" role="button" aria-label="Fire Weather details">
             <div>
               <div class="mini-module-title">Fire Weather</div>
@@ -1553,29 +1611,53 @@
             </div>
             <div class="status-badge status-none" id="wind-risk-badge">Loading</div>
           </div>
-          <div class="mini-module" id="tsunami-card" tabindex="0" role="button" aria-label="Tsunami alert status" onclick="handleMoreHazardCardClick('tsunami', event)" onkeydown="if(event.key==='Enter'||event.key===' '){handleMoreHazardCardClick('tsunami', event)}">
+
+        </div></div>
+      </div>
+    </details>
+
+    <!-- ── TIER 3: CONTEXT LAYERS ─────────────────────────────────────── -->
+    <!-- Flood Context + Landslide + Local Hazards — decision context, low visual weight -->
+    <!-- Landslide: hidden by default, shown only when MRMS heavy or Flash Flood active -->
+    <details class="accordion-card" aria-label="Context Layers">
+      <summary class="accordion-summary">
+        <div class="accordion-title-wrap">
+          <div class="layer-status-head">Context Layers</div>
+          <div class="accordion-subline"><span id="context-preview">Flood context · terrain risk.</span></div>
+        </div>
+        <span class="accordion-chevron">▾</span>
+      </summary>
+      <div class="accordion-content">
+        <div class="flood-module-scroll"><div class="mini-module-grid">
+
+          <!-- Flood Context — always available, low emphasis -->
+          <div class="mini-module mini-module--context" id="flood-context-card" tabindex="0" role="button" aria-label="Flood context details">
             <div>
-              <div class="mini-module-title">Tsunami</div>
-              <div class="mini-module-note" id="tsunami-note">NWS Tsunami Warning Center</div>
+              <div class="mini-module-title">Flood Context</div>
+              <div class="mini-module-note" id="flood-context-note">Statewide Hawaiʻi terrain + runoff context</div>
             </div>
-            <div class="status-badge status-none" id="tsunami-badge">Loading</div>
+            <div class="status-badge status-none" id="flood-context-badge">Unavailable</div>
           </div>
-          <div class="mini-module" id="hurricane-card" tabindex="0" role="button" aria-label="Hurricane track status" onclick="handleMoreHazardCardClick('hurricane', event)" onkeydown="if(event.key==='Enter'||event.key===' '){handleMoreHazardCardClick('hurricane', event)}">
+
+          <!-- Landslide — Fix 3: conditional visibility, hidden until MRMS heavy or Flood active -->
+          <div class="mini-module mini-module--context" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status" style="display:none">
             <div>
-              <div class="mini-module-title">Hurricane</div>
-              <div class="mini-module-note" id="hurricane-note">NHC Pacific basin</div>
-            </div>
-            <div class="status-badge status-none" id="hurricane-badge">Loading</div>
-          </div>
-          <div class="mini-module" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status" onclick="handleMoreHazardCardClick('landslide', event)" onkeydown="if(event.key==='Enter'||event.key===' '){handleMoreHazardCardClick('landslide', event)}">
-            <div>
-              <div class="mini-module-title">Landslide</div>
+              <div class="mini-module-title">Landslide Risk</div>
               <div class="mini-module-note" id="landslide-note">Terrain + rainfall context</div>
             </div>
-            <div class="status-badge status-none" id="landslide-badge">Loading</div>
+            <div class="status-badge status-none" id="landslide-badge">·</div>
           </div>
+
+          <!-- Local Hazards — secondary report feed, collapsed by default -->
+          <div class="mini-module mini-module--context" id="local-hazards-card" tabindex="0" role="button" aria-label="Local hazard reports status">
+            <div>
+              <div class="mini-module-title">Local Reports</div>
+              <div class="mini-module-note" id="local-hazards-note">NWS Honolulu local storm reports</div>
+            </div>
+            <div class="status-badge status-none" id="local-hazards-badge">Loading</div>
+          </div>
+
         </div></div>
-        <div class="blueprint-footnote">Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.</div>
       </div>
     </details>
 
@@ -1645,11 +1727,12 @@ let perimeterVisible = true;
 let flashFloodVisible = true;
 let floodContextVisible = true;
 let mrmsVisible = true;
-let rainRadarVisible = true; // Default OFF — user toggles on when needed
+let rainRadarVisible = false; // Default OFF — user toggles on when needed
 let windRiskVisible  = true;
 let tsunamiVisible   = true;
 let hurricaneVisible = true;
 let landslideVisible = true;
+let localHazardsVisible = true;
 
 const appState = {
   diagnostics: {
@@ -1665,12 +1748,13 @@ const appState = {
     perimeter: createHazardState("perimeter"),
     flashFlood: createHazardState("flashFlood"),
     floodContext: createHazardState("floodContext"),
-    mrmsRain: createHazardState("mrmsRain"),
+    localHazards: createHazardState("localHazards")
     rainRadar: createHazardState("rainRadar"),
     windRisk: createHazardState("windRisk"),
     tsunami: createHazardState("tsunami"),
     hurricane: createHazardState("hurricane"),
     landslide: createHazardState("landslide")
+    mrmsRain: createHazardState("mrmsRain"),
   }
 };
 
@@ -1708,16 +1792,43 @@ function setAccordionText(id, value) {
   if (el) el.textContent = value;
 }
 function updateAccordionPreviews() {
-  const smokeBadge = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || "Smoke";
+  const smokeBadge     = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || "Smoke";
   const perimeterBadge = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || "Perimeters";
-  const floodBadge = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
-  const contextBadge = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || "Context";
-  const mrmsBadge = document.getElementById("mrms-rain-badge-desktop")?.textContent || document.getElementById("mrms-rain-badge-mobile")?.textContent || "MRMS";
-  const radarBadge = document.getElementById("rain-radar-badge-desktop")?.textContent || document.getElementById("rain-radar-badge-mobile")?.textContent || "Radar";
+  const floodBadge     = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
+  const tsunamiBadge   = document.getElementById("tsunami-badge-desktop")?.textContent || document.getElementById("tsunami-badge-mobile")?.textContent || "·";
+  const hurricaneBadge = document.getElementById("hurricane-badge-desktop")?.textContent || document.getElementById("hurricane-badge-mobile")?.textContent || "·";
+  const radarBadge     = document.getElementById("rain-radar-badge-desktop")?.textContent || document.getElementById("rain-radar-badge-mobile")?.textContent || "Radar";
+  const mrmsBadge      = document.getElementById("mrms-rain-badge-desktop")?.textContent || document.getElementById("mrms-rain-badge-mobile")?.textContent || "MRMS";
+  const windBadge      = document.getElementById("wind-risk-badge-desktop")?.textContent || document.getElementById("wind-risk-badge-mobile")?.textContent || "Fire Weather";
+  const contextBadge   = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || "Context";
+
+  // Tier 1: Active Hazards — show most urgent badge only
+  const tier1Text = floodBadge !== "No active watch" ? `Flood: ${floodBadge}` :
+                    tsunamiBadge !== "·" && tsunamiBadge !== "None" ? `Tsunami: ${tsunamiBadge}` :
+                    hurricaneBadge !== "·" && hurricaneBadge !== "None" ? `Hurricane: ${hurricaneBadge}` :
+                    "No active primary hazards";
+  setAccordionText("blueprint-preview-desktop", tier1Text);
+  setAccordionText("blueprint-preview-mobile",  tier1Text);
+
+  // Tier 2: Supporting Evidence
+  const tier2Parts = [];
+  if (radarBadge !== "Off") tier2Parts.push(`Radar: ${radarBadge}`);
+  if (mrmsBadge !== "Loading" && mrmsBadge !== "Unavailable") tier2Parts.push(`MRMS: ${mrmsBadge}`);
+  if (windBadge !== "Loading") tier2Parts.push(`Fire Wx: ${windBadge}`);
+  const tier2Text = tier2Parts.length ? tier2Parts.join(" · ") : "Radar · MRMS · Fire weather context";
+  setAccordionText("evidence-preview-desktop", tier2Text);
+  setAccordionText("evidence-preview-mobile",  tier2Text);
+
+  // Tier 3: Context
+  const tier3Text = contextBadge !== "Unavailable" && contextBadge !== "Loading"
+    ? `Flood context: ${contextBadge}`
+    : "Flood context · terrain risk";
+  setAccordionText("context-preview-desktop", tier3Text);
+  setAccordionText("context-preview-mobile",  tier3Text);
+
+  // Secondary Layers (smoke/perimeter — unchanged)
   setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
-  setAccordionText("secondary-preview-mobile", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
-  setAccordionText("blueprint-preview-desktop", `Flood: ${floodBadge} · Context: ${contextBadge} · MRMS: ${mrmsBadge} · Radar: ${radarBadge}`);
-  setAccordionText("blueprint-preview-mobile", `Flood: ${floodBadge} · Context: ${contextBadge} · MRMS: ${mrmsBadge} · Radar: ${radarBadge}`);
+  setAccordionText("secondary-preview-mobile",  `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
 }
 
 const activeSuffix = () => (window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop");
@@ -2068,7 +2179,20 @@ const HAZARD_REGISTRY = {
     endpoint: IS_LOCAL ? "./flash-flood-test.json" : "https://kahuola.org/api/hazards/flash-flood?region=hawaii",
     enabled: true, affectsGlobalHealth: false,
     parsePayload(json){ const raw = parseCanonicalSignals(json, "flashFlood"); return { features: normalizeFlashFloodFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "National Weather Service" }; },
-    ensureLayers, applyData(features){ updateFlashFloodSource(features); }, onFetchComplete(){ const s=getState("flashFlood"); updateFlashFloodStatusUI(s.sourceStatus, s.features.length); if (s.sourceStatus==="detected" && s.features.length>0 && !rainRadarVisible){ rainRadarVisible=true; syncRainRadarLayerVisibility(); } renderUnifiedPanels(); }, visible(){ return flashFloodVisible; }
+    ensureLayers, applyData(features){ updateFlashFloodSource(features); },
+    onFetchComplete(){
+      const s = getState("flashFlood");
+      updateFlashFloodStatusUI(s.sourceStatus, s.features.length);
+      // Auto-enable rain radar when flood warning is active
+      if (s.sourceStatus === "detected" && s.features.length > 0 && !rainRadarVisible) {
+        rainRadarVisible = true;
+        syncRainRadarLayerVisibility();
+      }
+      // Fix 3: Show landslide card when flood is active (terrain risk elevated)
+      maybeShowLandslideCard();
+      renderUnifiedPanels();
+    },
+    visible(){ return flashFloodVisible; }
   },
   floodContext: {
     key: "floodContext",
@@ -2084,16 +2208,25 @@ const HAZARD_REGISTRY = {
     affectsGlobalHealth: false,
     parsePayload(json) {
       const raw = Array.isArray(json?.signals) ? json.signals : [];
+      // Read data_source from summary to know if this is real or fallback
+      const dataSource = json?.summary?.data_source || "UNKNOWN";
+      const sourceLabel = dataSource === "NEXRAD_LIVE" ? "NEXRAD QPE · Live"
+                        : dataSource === "UNAVAILABLE"  ? "NEXRAD QPE · Unavailable"
+                        : "NEXRAD QPE";
       return {
         features: normalizeMrmsFeatures(raw),
         sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
-        sourceLabel: "NOAA MRMS"
+        sourceLabel,
+        dataSource,
       };
     },
     ensureLayers,
     applyData(features) { updateMrmsSource(features); },
     onFetchComplete() {
-      updateMrmsStatusUI(getState("mrmsRain"));
+      const s = getState("mrmsRain");
+      updateMrmsStatusUI(s);
+      // Fix 3: Show landslide card when MRMS detects heavy rainfall
+      maybeShowLandslideCard();
       renderUnifiedPanels();
     },
     visible() { return mrmsVisible; }
@@ -2138,6 +2271,29 @@ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); }, visibl
     ensureLayers, applyData(features){ updateLandslideSource(features); },
     onFetchComplete(){ updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); },
     visible(){ return landslideVisible; }
+  },
+  localHazards: {
+    key: "localHazards",
+    endpoint: IS_LOCAL
+      ? "./local-hazards-test.json"
+      : "https://kahuola.org/api/hazards/local-hazards?region=hawaii",
+    enabled: true,
+    affectsGlobalHealth: false,
+    parsePayload(json) {
+      const raw = parseCanonicalSignals(json, "localHazards");
+      return {
+        features: normalizeLocalHazardFeatures(raw),
+        sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(),
+        sourceLabel: json.source || json.provider || "NWS Honolulu / IEM"
+      };
+    },
+    ensureLayers,
+    applyData(features) { updateLocalHazardsSource(features); },
+    onFetchComplete() {
+      updateLocalHazardStatusUI(getState("localHazards"));
+      renderUnifiedPanels();
+    },
+    visible() { return localHazardsVisible; }
   }
 };
 
@@ -2211,6 +2367,46 @@ function normalizeLandslideFeatures(rawSignals) {
     };
   }).filter(Boolean);
 }
+
+function normalizeLocalHazardFeatures(rawSignals) {
+  return safeArray(rawSignals).map((raw, index) => {
+    const geometry = raw?.geometry;
+    const props = raw?.properties || {};
+    if (!geometry || !["Point","MultiPoint","Polygon","MultiPolygon","LineString","MultiLineString"].includes(geometry.type)) return null;
+
+    const reportType = typeof props.typetext === "string" && props.typetext.trim()
+      ? props.typetext.trim()
+      : (typeof props.report_type === "string" && props.report_type.trim() ? props.report_type.trim() : "REPORT");
+
+    return {
+      type: "Feature",
+      geometry,
+      properties: {
+        id: props.id || raw.id || `local-hazard-${index}`,
+        report_type: reportType,
+        typetext: reportType,
+        remark: typeof props.remark === "string" ? props.remark.trim() : "",
+        city: typeof props.city === "string" ? props.city.trim() : "",
+        county: typeof props.county === "string" ? props.county.trim() : "",
+        state: typeof props.state === "string" ? props.state.trim() : "",
+        magnitude: Number.isFinite(Number(props.magnitude)) ? Number(props.magnitude) : null,
+        unit: typeof props.unit === "string" ? props.unit.trim() : "",
+        valid: typeof props.valid === "string" ? props.valid : "",
+        utcvalid: typeof props.utcvalid === "string" ? props.utcvalid : "",
+        wfo: typeof props.wfo === "string" ? props.wfo : "HFO",
+        severity: "INFO",
+        source: props.source || "NWS Honolulu / IEM",
+        source_label: props.source_label || "NWS Local Storm Reports",
+        event_time: props.valid || props.utcvalid || null,
+        note: typeof props.note === "string" && props.note.trim()
+          ? props.note.trim()
+          : "Official local storm report distributed through Iowa State Mesonet for NWS Honolulu."
+      }
+    };
+  }).filter(Boolean);
+}
+
+
 function activeHazardKeys() {
   return Object.values(HAZARD_REGISTRY).filter((m) => m.enabled).map((m) => m.key);
 }
@@ -2275,6 +2471,7 @@ function ensureLayers() {
   ensureWindRiskLayers();
   ensureTsunamiLayers();       // official tsunami — red (high priority)
   ensureHurricaneLayers();     // NHC storm points
+  ensureLocalHazardLayers();
   ensureFireLayers();          // fire always topmost
 }
 function ensureSmokeLayers() {
@@ -2368,6 +2565,71 @@ function ensureHurricaneLayers() {
   ensureLayer({ id:"hurricane-point", type:"circle", source:"hurricane", filter:["==",["geometry-type"],"Point"], paint:{ "circle-radius":14, "circle-color":"#ff6a00", "circle-stroke-width":2.5, "circle-stroke-color":"#ffd5b5", "circle-opacity": hurricaneVisible ? 0.9 : 0, "circle-stroke-opacity": hurricaneVisible ? 1 : 0 }});
   if (!map.__hurricaneHoverBound) { map.__hurricaneHoverBound=true; map.on("mouseenter","hurricane-point",()=>{map.getCanvas().style.cursor="pointer";}); map.on("mouseleave","hurricane-point",()=>{map.getCanvas().style.cursor="";}); }
 }
+function ensureLocalHazardLayers() {
+  ensureSource("local-hazards", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
+
+  ensureLayer({
+    id:"local-hazards-line",
+    type:"line",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"LineString"],["==",["geometry-type"],"MultiLineString"]],
+    paint:{
+      "line-color":"#ffb74d",
+      "line-width":2.2,
+      "line-opacity": localHazardsVisible ? 0.88 : 0
+    }
+  });
+
+  ensureLayer({
+    id:"local-hazards-fill",
+    type:"fill",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]],
+    paint:{
+      "fill-color":"#ffb74d",
+      "fill-opacity": localHazardsVisible ? 0.14 : 0
+    }
+  });
+
+  ensureLayer({
+    id:"local-hazards-outline",
+    type:"line",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]],
+    paint:{
+      "line-color":"#ffd699",
+      "line-width":1.6,
+      "line-opacity": localHazardsVisible ? 0.82 : 0
+    }
+  });
+
+  ensureLayer({
+    id:"local-hazards-point",
+    type:"circle",
+    source:"local-hazards",
+    filter:["any",["==",["geometry-type"],"Point"],["==",["geometry-type"],"MultiPoint"]],
+    paint:{
+      "circle-radius": 10,
+      "circle-color":"#ffb74d",
+      "circle-stroke-width":2,
+      "circle-stroke-color":"#ffffff",
+      "circle-opacity": localHazardsVisible ? 0.95 : 0,
+      "circle-stroke-opacity": localHazardsVisible ? 1 : 0
+    }
+  });
+
+  if (!map.__localHazardsHoverBound) {
+    map.__localHazardsHoverBound = true;
+    ["local-hazards-point","local-hazards-fill","local-hazards-line"].forEach((id) => {
+      if (!map.getLayer(id)) return;
+      map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+    });
+  }
+
+  syncLocalHazardLayerVisibility();
+}
+
 function ensureLandslideLayers() {
   ensureSource("landslide", { type:"geojson", data:{ type:"FeatureCollection", features:[] } });
   ensureLayer({ id:"landslide-fill", type:"fill", source:"landslide", filter:["any",["==",["geometry-type"],"Polygon"],["==",["geometry-type"],"MultiPolygon"]], paint:{ "fill-color":["match",["get","risk_index"],"HIGH","#795548","ELEVATED","#a1887f","MODERATE","#bcaaa4","#d7ccc8"], "fill-opacity": landslideVisible ? ["match",["get","risk_index"],"HIGH",0.22,"ELEVATED",0.16,"MODERATE",0.10,0.06] : 0 }});
@@ -2391,6 +2653,32 @@ function updateMrmsSource(features){ const s=map.getSource("mrms-rain"); if (s) 
 function updateWindRiskSource(features){ const s=map.getSource("wind-risk"); if (s) s.setData({ type:"FeatureCollection", features }); }
 function updateTsunamiSource(features){ const s=map.getSource("tsunami"); if (s) s.setData({ type:"FeatureCollection", features }); }
 function updateHurricaneSource(features){ const s=map.getSource("hurricane"); if (s) s.setData({ type:"FeatureCollection", features }); }
+function updateLocalHazardsSource(features){
+  const s = map.getSource("local-hazards");
+  if (s) s.setData({ type:"FeatureCollection", features });
+}
+
+function syncLocalHazardLayerVisibility() {
+  setLayerVisibility("local-hazards-line", localHazardsVisible);
+  setLayerVisibility("local-hazards-fill", localHazardsVisible);
+  setLayerVisibility("local-hazards-outline", localHazardsVisible);
+  setLayerVisibility("local-hazards-point", localHazardsVisible);
+
+  if (map.getLayer("local-hazards-line")) {
+    map.setPaintProperty("local-hazards-line", "line-opacity", localHazardsVisible ? 0.88 : 0);
+  }
+  if (map.getLayer("local-hazards-fill")) {
+    map.setPaintProperty("local-hazards-fill", "fill-opacity", localHazardsVisible ? 0.14 : 0);
+  }
+  if (map.getLayer("local-hazards-outline")) {
+    map.setPaintProperty("local-hazards-outline", "line-opacity", localHazardsVisible ? 0.82 : 0);
+  }
+  if (map.getLayer("local-hazards-point")) {
+    map.setPaintProperty("local-hazards-point", "circle-opacity", localHazardsVisible ? 0.95 : 0);
+    map.setPaintProperty("local-hazards-point", "circle-stroke-opacity", localHazardsVisible ? 1 : 0);
+  }
+}
+
 function updateLandslideSource(features){ const s=map.getSource("landslide"); if (s) s.setData({ type:"FeatureCollection", features }); }
 
 function syncFlashFloodLayerVisibility() {
@@ -2475,6 +2763,34 @@ function updateFlashFloodStatusUI(state, count=0) {
     if(badge){ badge.classList.add("status-unavailable"); badge.textContent = "Unavailable"; } if(note) note.textContent = "Official flood status could not be confirmed right now.";
   });
 }
+function updateLocalHazardStatusUI(state) {
+  const s = state?.sourceStatus || "unknown";
+  const count = Array.isArray(state?.features) ? state.features.length : 0;
+
+  let badgeText = "Unavailable";
+  let badgeClass = "status-unavailable";
+  let note = "Local storm reports are currently unavailable.";
+
+  if (s === "detected" && count > 0) {
+    badgeText = "Active";
+    badgeClass = "status-detected";
+    note = `${count} recent NWS Honolulu local hazard report${count === 1 ? "" : "s"} in this snapshot.`;
+  } else if (s === "none") {
+    badgeText = "Clear";
+    badgeClass = "status-none";
+    note = "No recent NWS Honolulu local hazard reports were returned in this snapshot.";
+  }
+
+  updateModuleBadge("local-hazards", badgeText, badgeClass);
+
+  ["desktop","mobile"].forEach((sfx) => {
+    const noteEl = document.getElementById(`local-hazards-note-${sfx}`);
+    if (noteEl) noteEl.textContent = note;
+  });
+  const noteEl = document.getElementById("local-hazards-note");
+  if (noteEl) noteEl.textContent = note;
+}
+
 function updateFloodContextStatusUI(state) {
   ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`flood-context-badge-${suffix}`); const note=document.getElementById(`flood-context-note-${suffix}`); if(!badge) return; badge.className="status-badge"; const count=state.features.length;
     if (state.sourceStatus==="detected"){ badge.classList.add("status-detected"); badge.textContent = count > 0 ? `Context · ${count}` : "Context"; if(note) note.textContent = "PacIOOS-linked local Hawaiʻi flood context is available."; }
@@ -2590,6 +2906,76 @@ function openFloodContextPopup(feature, lngLat) {
   const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌧 Flood Context</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NWS + Kahu Ola")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">Island · Zone</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " · " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">Watershed</div><div class="popup-metric-value">${escapeHtml(p.watershed_saturation || "Unavailable")}</div></div><div class="popup-metric"><div class="popup-metric-label">Stream</div><div class="popup-metric-value">${escapeHtml(p.stream_context || "Unavailable")}</div></div></div><div class="popup-note">Estimated local Hawaiʻi flood context. Source: NWS alerts + Kahu Ola terrain logic.</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
+function formatLocalHazardTime(value) {
+  const d = parseDateMaybe(value);
+  if (!d) return "Unavailable";
+  try {
+    return d.toLocaleString("en-US", {
+      timeZone: "Pacific/Honolulu",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }) + " HST";
+  } catch (_) {
+    return "Unavailable";
+  }
+}
+
+function openLocalHazardPopup(feature, lngLat) {
+  const p = feature?.properties || {};
+  if (activePopup) activePopup.remove();
+
+  const reportType = p.typetext || p.report_type || "REPORT";
+  const details = p.remark || "No specific details provided in this official report.";
+  const city = p.city || "—";
+  const county = p.county || "—";
+  const magnitude = Number.isFinite(Number(p.magnitude))
+    ? `${Number(p.magnitude)}${p.unit ? ` ${p.unit}` : ""}`
+    : "—";
+  const timeStr = formatLocalHazardTime(p.valid || p.utcvalid || p.event_time);
+
+  const html = `<div class="popup-card">
+    <div class="popup-top">
+      <div>
+        <div class="popup-title">⚠️ ${escapeHtml(reportType)}</div>
+        <div class="popup-coords">${escapeHtml(p.source_label || "NWS Local Storm Reports")}</div>
+      </div>
+      <div class="popup-severity normal">OFFICIAL REPORT</div>
+    </div>
+    <div class="popup-grid">
+      <div class="popup-metric">
+        <div class="popup-metric-label">City</div>
+        <div class="popup-metric-value">${escapeHtml(city)}</div>
+      </div>
+      <div class="popup-metric">
+        <div class="popup-metric-label">County</div>
+        <div class="popup-metric-value">${escapeHtml(county)}</div>
+      </div>
+      <div class="popup-metric">
+        <div class="popup-metric-label">Magnitude</div>
+        <div class="popup-metric-value">${escapeHtml(magnitude)}</div>
+      </div>
+      <div class="popup-metric">
+        <div class="popup-metric-label">WFO</div>
+        <div class="popup-metric-value">${escapeHtml(p.wfo || "HFO")}</div>
+      </div>
+    </div>
+    <div class="popup-metric">
+      <div class="popup-metric-label">Details</div>
+      <div class="popup-metric-value" style="white-space:normal;font-size:13px;line-height:1.45;">${escapeHtml(details)}</div>
+    </div>
+    <div class="popup-note">Reported at: ${escapeHtml(timeStr)}. This is an official local storm report for situational awareness and does not replace emergency instructions.</div>
+  </div>`;
+
+  activePopup = new maplibregl.Popup({
+    closeButton: true,
+    closeOnMove: false,
+    offset: 14,
+    maxWidth: "340px"
+  }).setLngLat(lngLat).setHTML(html).addTo(map);
+}
+
 function openMrmsPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
@@ -2665,7 +3051,7 @@ function zoomToCluster(feature) {
   source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
 }
 function raiseFireLayersAboveOverlays() {
-  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","tsunami-fill","tsunami-outline","tsunami-point","hurricane-point","landslide-fill","landslide-outline","noaa-radar-layer","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
+  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","tsunami-fill","tsunami-outline","tsunami-point","hurricane-point","landslide-fill","landslide-outline","noaa-radar-layer","local-hazards-line","local-hazards-fill","local-hazards-outline","local-hazards-point","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
     if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) {} }
   });
   ["clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
@@ -2687,6 +3073,11 @@ function bindGlobalCanvasClickRouter() {
     if (tsunamiVisible) { const tsu = queryTopFeature(e.point, ["tsunami-fill","tsunami-point"]); if (tsu) { openTsunamiPopup(tsu, e.lngLat); return; } }
     if (hurricaneVisible) { const hur = queryTopFeature(e.point, ["hurricane-point"]); if (hur) { openHurricanePopup(hur, e.lngLat); return; } }
     if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
+    if (localHazardsVisible) {
+      const localHazard = queryTopFeature(e.point, ["local-hazards-point","local-hazards-fill","local-hazards-line"]);
+      if (localHazard) { openLocalHazardPopup(localHazard, e.lngLat); return; }
+    }
+
     if (smokeVisible) { const smoke = queryTopFeature(e.point, ["smoke-fill"]); if (smoke) { openSmokePopup(smoke, e.lngLat); return; } }
     if (perimeterVisible) { const perimeter = queryTopFeature(e.point, ["perimeter-fill"]); if (perimeter) openPerimeterPopup(perimeter, e.lngLat); }
   });
@@ -2736,12 +3127,13 @@ function updateTsunamiStatusUI(state) {
     const note  = document.getElementById(`tsunami-note-${sfx}`);
     const b = document.getElementById("tsunami-badge");
     const n = document.getElementById("tsunami-note");
-    const err = String(state?.error || "").toLowerCase();
-    const timedOut = /timeout|abort/.test(err);
     const count = state.features?.length || 0;
-    const cls   = state.sourceStatus === "detected" ? "status-detected" : timedOut ? "status-timeout" : state.sourceStatus === "none" ? "status-none" : "status-unavailable";
-    const txt   = state.sourceStatus === "detected" ? `ACTIVE · ${count}` : timedOut ? "TIMEOUT" : state.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE";
-    const ntxt  = state.sourceStatus === "detected" ? "Active tsunami alert detected for Hawaiʻi." : timedOut ? "Tsunami source did not respond in time." : state.sourceStatus === "none" ? "No active tsunami alerts for Hawaiʻi right now." : "Tsunami source could not be verified right now.";
+    const cls   = state.sourceStatus === "detected" ? "status-detected" :
+                  state.sourceStatus === "none"     ? "status-none" : "status-unavailable";
+    const txt   = state.sourceStatus === "detected" ? `ALERT · ${count}` :
+                  state.sourceStatus === "none"     ? "Clear" : "Unavailable";
+    const ntxt  = state.sourceStatus === "detected" ? "⚠ Tsunami warning active — follow official guidance." :
+                  state.sourceStatus === "none"     ? "No active tsunami warnings." : "NWS data unavailable.";
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     [note, n].forEach(el => { if (el) el.textContent = ntxt; });
   });
@@ -2751,12 +3143,10 @@ function updateHurricaneStatusUI(state) {
     const badge = document.getElementById(`hurricane-badge-${sfx}`);
     const b = document.getElementById("hurricane-badge");
     const n = document.getElementById("hurricane-note");
-    const err = String(state?.error || "").toLowerCase();
-    const timedOut = /timeout|abort/.test(err);
     const count = state.features?.length || 0;
-    const cls   = count > 0 ? "status-detected" : timedOut ? "status-timeout" : state.sourceStatus === "none" ? "status-none" : "status-unavailable";
-    const txt   = count > 0 ? `ACTIVE · ${count}` : timedOut ? "TIMEOUT" : state.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE";
-    const ntxt  = count > 0 ? "Tropical cyclone activity detected in the Pacific basin. Monitoring potential impact to Hawaiʻi." : timedOut ? "Hurricane source did not respond in time." : state.sourceStatus === "none" ? "No active tropical cyclone hazard affecting Hawaiʻi right now." : "Hurricane source could not be verified right now.";
+    const cls   = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
+    const txt   = count > 0 ? `ACTIVE · ${count}` : state.sourceStatus === "unavailable" ? "Unavailable" : "Clear";
+    const ntxt  = count > 0 ? `${count} active Pacific storm(s). Monitor NHC.` : "No active Pacific storms near Hawaiʻi.";
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     if (n) n.textContent = ntxt;
   });
@@ -2766,12 +3156,10 @@ function updateLandslideStatusUI(state) {
     const badge = document.getElementById(`landslide-badge-${sfx}`);
     const b = document.getElementById("landslide-badge");
     const n = document.getElementById("landslide-note");
-    const err = String(state?.error || "").toLowerCase();
-    const timedOut = /timeout|abort/.test(err);
     const count = state.features?.length || 0;
-    const cls   = count > 0 ? "status-detected" : timedOut ? "status-timeout" : state.sourceStatus === "none" ? "status-none" : "status-unavailable";
-    const txt   = count > 0 ? `ACTIVE · ${count}` : timedOut ? "TIMEOUT" : state.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE";
-    const ntxt  = count > 0 ? "Elevated landslide probability detected due to terrain and rainfall conditions." : timedOut ? "Landslide source did not respond in time." : state.sourceStatus === "none" ? "No elevated landslide signal is active right now." : "Landslide source could not be verified right now.";
+    const cls   = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
+    const txt   = count > 0 ? `CONTEXT · ${count}` : "Low risk";
+    const ntxt  = count > 0 ? "Landslide susceptibility context available." : "No elevated landslide risk detected.";
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     if (n) n.textContent = ntxt;
   });
@@ -2804,109 +3192,60 @@ function openLandslidePopup(feature, lngLat) {
   document.getElementById("wind-btn-panel-mobile")?.addEventListener("click", toggleWindRiskLayer);
   document.getElementById("wind-btn-mobile")?.addEventListener("click", toggleWindRiskLayer);
 
+  // ── Lazy-load: Tsunami / Hurricane / Landslide ──────────────
+  document.getElementById("tsunami-card")?.addEventListener("click", () => lazyLoadModule("tsunami", (st) => ({
+    title: "Tsunami",
+    status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
+            st.sourceStatus === "none"     ? "Clear — no active warnings" :
+            st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
+    note: "Source: NWS Tsunami Warning Center (official).",
+    body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
+  })));
+  document.getElementById("hurricane-card")?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
+    title: "Hurricane Tracks",
+    status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
+            st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
+    note: "Source: National Hurricane Center (NHC).",
+    body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
+  })));
+  document.getElementById("landslide-card")?.addEventListener("click", () => lazyLoadModule("landslide", (st) => ({
+    title: "Landslide Risk",
+    status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
+            st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
+    note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
+    body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
+  })));
 }
 
-function moreHazardDetailPayload(key) {
+// ── lazyLoadModule — enable + fetch on first click ────────────
+function lazyLoadModule(key, detailConfig) {
+  const model = HAZARD_REGISTRY[key];
+  if (!model) return;
+  if (!model.enabled) {
+    // First click — enable and fetch
+    model.enabled = true;
+    updateModuleBadge(key, "Loading…", "status-none");
+    refreshHazard(key, { silent: true }).then(() => {
+      // Re-open detail after fetch completes
+      const st = getState(key);
+      openHazardDetail(detailConfig(st));
+    });
+    // Show loading state immediately while fetch runs
+    openHazardDetail({
+      title: key.charAt(0).toUpperCase() + key.slice(1),
+      status: "Fetching data…",
+      note: "Loading from Kahu Ola aggregator.",
+      body: "Please wait a moment while data is retrieved."
+    });
+    return;
+  }
   const st = getState(key);
-  const err = String(st?.error || "").toLowerCase();
-  const timedOut = /timeout|abort/.test(err);
-
-  if (key === "tsunami") {
-    return {
-      title: "Tsunami",
-      status: st.status === "loading" ? "Checking live data..." : st.sourceStatus === "detected" ? "ACTIVE" : timedOut ? "TIMEOUT" : st.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE",
-      note: "Source: NWS Tsunami Warning Center",
-      body: st.status === "loading"
-        ? "Checking live tsunami data for Hawaiʻi."
-        : st.sourceStatus === "detected"
-          ? "Active tsunami alert detected for Hawaiʻi. Follow official guidance from NWS."
-          : timedOut
-            ? "Tsunami source did not respond in time. Monitoring will retry automatically."
-            : st.sourceStatus === "none"
-              ? "No active tsunami alerts for Hawaiʻi right now."
-              : "Tsunami source could not be verified right now. Monitoring will resume when the source becomes available."
-    };
-  }
-
-  if (key === "hurricane") {
-    const active = (st.features?.length || 0) > 0;
-    return {
-      title: "Hurricane",
-      status: st.status === "loading" ? "Checking live data..." : active ? "ACTIVE" : timedOut ? "TIMEOUT" : st.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE",
-      note: "Source: NHC Pacific basin",
-      body: st.status === "loading"
-        ? "Checking live tropical cyclone data for the Pacific basin."
-        : active
-          ? "Tropical cyclone activity detected in the Pacific basin. Monitoring potential impact to Hawaiʻi."
-          : timedOut
-            ? "Hurricane source did not respond in time. Monitoring will retry automatically."
-            : st.sourceStatus === "none"
-              ? "No active tropical cyclone hazard affecting Hawaiʻi right now."
-              : "Hurricane source could not be verified right now. Monitoring will resume when the source becomes available."
-    };
-  }
-
-  const active = (st.features?.length || 0) > 0;
-  return {
-    title: "Landslide",
-    status: st.status === "loading" ? "Checking live data..." : active ? "ACTIVE" : timedOut ? "TIMEOUT" : st.sourceStatus === "none" ? "MONITORING" : "UNAVAILABLE",
-    note: "Source: Terrain + rainfall context",
-    body: st.status === "loading"
-      ? "Checking terrain and rainfall context for landslide signals."
-      : active
-        ? "Elevated landslide probability detected due to terrain and rainfall conditions."
-        : timedOut
-          ? "Landslide source did not respond in time. Monitoring will retry automatically."
-          : st.sourceStatus === "none"
-            ? "No elevated landslide signal is active right now."
-            : "Landslide source could not be verified right now. Monitoring will resume when the source becomes available."
-  };
+  openHazardDetail(detailConfig(st));
 }
-
-function openMoreHazardDetail(key) {
-  openHazardDetail(moreHazardDetailPayload(key));
-}
-function handleMoreHazardCardClick(key, event) {
-  try {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    const model = HAZARD_REGISTRY[key];
-    if (!model) return;
-    if (!model.enabled) {
-      model.enabled = true;
-      updateModuleBadge(key, "Loading...", "status-none");
-      openHazardDetail({
-        title: key === "tsunami" ? "Tsunami" : key === "hurricane" ? "Hurricane" : "Landslide",
-        status: "Checking live data...",
-        note: key === "tsunami" ? "Source: NWS Tsunami Warning Center" : key === "hurricane" ? "Source: NHC Pacific basin" : "Source: Terrain + rainfall context",
-        body: "Please wait a moment while live hazard data is retrieved."
-      });
-      refreshHazard(key, { silent: true })
-        .then(() => openMoreHazardDetail(key))
-        .catch(() => openMoreHazardDetail(key));
-      return;
-    }
-    openMoreHazardDetail(key);
-  } catch (err) {
-    console.error('More Hazards click handler failed:', err);
-    try {
-      openHazardDetail({
-        title: key === "tsunami" ? "Tsunami" : key === "hurricane" ? "Hurricane" : "Landslide",
-        status: "UNAVAILABLE",
-        note: key === "tsunami" ? "Source: NWS Tsunami Warning Center" : key === "hurricane" ? "Source: NHC Pacific basin" : "Source: Terrain + rainfall context",
-        body: "Hazard detail could not be opened right now. Monitoring will resume automatically."
-      });
-    } catch (_) {}
-  }
-}
-window.handleMoreHazardCardClick = handleMoreHazardCardClick;
-
-function bindMoreHazardsCards() { /* inline handlers are bound in HTML for reliability */ }
 function setSheetOpen(open) { if (window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? "Hide Details" : "Map Details"; setTimeout(safeMapResize, 280); }
 function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
 bindButtons();
-bindMoreHazardsCards();
 // Init lazy module badges
 ["tsunami","hurricane","landslide"].forEach(key => {
   updateModuleBadge(key, "·", "status-none");
@@ -2937,9 +3276,65 @@ document.getElementById("diag-close")?.addEventListener("click", () => { diag.cl
 sheetToggleBtn?.addEventListener("click", toggleSheet);
 sheetHandleWrap?.addEventListener("click", toggleSheet);
 
+// Lazy module config for event delegation
+// Fix 3 — Conditional landslide visibility
+// Landslide card stays hidden (display:none) until conditions are met:
+// - Flash Flood is active (official NWS warning present), OR
+// - MRMS detects HIGH severity rainfall (real NEXRAD data only)
+function maybeShowLandslideCard() {
+  const floodActive = getState("flashFlood").sourceStatus === "detected" &&
+                      getState("flashFlood").features.length > 0;
+  const mrmsHeavy   = getState("mrmsRain").features.some(
+    (f) => f?.properties?.severity === "HIGH" || f?.properties?.risk_index === "HIGH"
+  );
+  const shouldShow  = floodActive || mrmsHeavy;
+  const card = document.getElementById("landslide-card");
+  // Also update desktop/mobile clones inside panel-template
+  ["landslide-card-desktop", "landslide-card-mobile", "landslide-card"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = shouldShow ? "" : "none";
+  });
+}
+
+const LAZY_MODULES = {
+  // Tsunami + Hurricane now use priority-module HTML — keep key/endpoint same, modal behavior same
+  "tsunami-card":   { key:"tsunami",   title:"Tsunami",          note:"Source: NWS Tsunami Warning Center (official).", body:"Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately.", status:(st)=> st.sourceStatus==="detected" ? "⚠ ACTIVE WARNING" : st.sourceStatus==="none" ? "No active tsunami warnings for Hawaiʻi" : "Unavailable" },
+  "hurricane-card": { key:"hurricane", title:"Hurricane Tracks",  note:"Source: National Hurricane Center (NHC).",        body:"Shows active Pacific basin storms. Always monitor NHC for official track and watches.",                  status:(st)=> st.features?.length>0 ? `${st.features.length} active Pacific storm(s)` : st.sourceStatus==="none" ? "No active Pacific storms near Hawaiʻi" : "Unavailable" },
+  "landslide-card": { key:"landslide", title:"Landslide Risk",    note:"Source: Kahu Ola terrain + NWS (contextual).",   body:"Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Not an official forecast.",        status:(st)=> st.features?.length>0 ? `${st.features.length} susceptibility zones` : st.sourceStatus==="none" ? "No elevated landslide risk detected" : "Unavailable" }
+};
+
 document.addEventListener("click", (event) => {
+  // js-hazard-detail handler
   const trigger = event.target.closest(".js-hazard-detail");
   if (trigger) { openHazardDetailFromElement(trigger); return; }
+
+  // Lazy module card handler — catches clicks on card AND child elements
+  const card = event.target.closest("[id]");
+  if (card && LAZY_MODULES[card.id]) {
+    const cfg = LAZY_MODULES[card.id];
+    const model = HAZARD_REGISTRY[cfg.key];
+    if (!model) return;
+    if (!model.enabled) {
+      model.enabled = true;
+      updateModuleBadge(cfg.key, "Loading…", "status-none");
+      // Show immediate modal so user knows something happened
+      openHazardDetail({ title:cfg.title, status:"Fetching live data…", note:cfg.note, body:cfg.body });
+      refreshHazard(cfg.key, { silent:true }).then(() => {
+        const st = getState(cfg.key);
+        // Update priority-note text for Tsunami + Hurricane (they use priority-module HTML)
+        if (cfg.key === "tsunami" || cfg.key === "hurricane") {
+          const noteEl = document.getElementById(`${cfg.key}-note`);
+          if (noteEl) noteEl.textContent = cfg.status(st);
+        }
+        openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
+      });
+    } else {
+      const st = getState(cfg.key);
+      openHazardDetail({ title:cfg.title, status:cfg.status(st), note:cfg.note, body:cfg.body });
+    }
+    return;
+  }
+
   if (event.target === hazardDetailSheet) closeHazardDetail();
 });
 document.addEventListener("keydown", (event) => {
