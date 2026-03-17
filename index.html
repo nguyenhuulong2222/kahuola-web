@@ -934,9 +934,9 @@
           </section>
         </div>
 
-        <div class="cultural-note">
-          <strong>Kūpuna & Keiki Safety</strong>
-          Kūpuna, keiki, and residents in low-lying areas should monitor official alerts and avoid unnecessary travel during heavy rain. E mālama pono.
+        <div class="cultural-note" id="kupunaNote">
+          <strong id="kupunaTitle">Kūpuna &amp; Keiki Safety</strong>
+          <span id="kupunaBody">Statewide conditions are calm. Kūpuna, keiki, and those in low-lying areas should remain informed through official alerts. E mālama pono — care for one another.</span>
         </div>
 
         <div class="note" id="systemNote">
@@ -1678,7 +1678,49 @@
         setText("floodFreshnessChip", freshness);
       }
 
-      function setDegradedUi() {
+      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload) {
+        const titleEl = document.getElementById("kupunaTitle");
+        const bodyEl  = document.getElementById("kupunaBody");
+        const noteEl  = document.getElementById("kupunaNote");
+        if (!titleEl || !bodyEl || !noteEl) return;
+
+        const redFlag     = fireWeatherPayload?.summary?.red_flag_active;
+        const elevated    = fireWeatherPayload?.summary?.elevated_count > 0;
+        const floodWarn   = floodPayload?.summary?.warning_count > 0;
+        const floodWatch  = floodPayload?.summary?.watch_count > 0;
+
+        if (primaryEvent === "FIRE_ACTIVE" || redFlag) {
+          titleEl.textContent = "Kūpuna & Keiki Fire Safety";
+          bodyEl.textContent  = "Active wildfire signals detected. Kūpuna, keiki, and those with respiratory conditions should stay indoors with windows closed. Monitor official evacuation orders and keep go-bags ready. E mālama pono.";
+          noteEl.style.borderColor = "rgba(255,122,0,.28)";
+          noteEl.style.background  = "rgba(255,122,0,.08)";
+          titleEl.style.color      = "#ffd8ba";
+        } else if (floodWarn) {
+          titleEl.textContent = "Kūpuna & Keiki Flood Safety";
+          bodyEl.textContent  = "Flash flood warning is active. Kūpuna, keiki, and residents near streams or low-lying roads should move to higher ground immediately. Do not attempt to cross flooded roadways. Follow official NWS and county emergency instructions. E mālama pono.";
+          noteEl.style.borderColor = "rgba(77,168,255,.28)";
+          noteEl.style.background  = "rgba(77,168,255,.08)";
+          titleEl.style.color      = "#dbeeff";
+        } else if (floodWatch) {
+          titleEl.textContent = "Kūpuna & Keiki Flood Awareness";
+          bodyEl.textContent  = "A flood watch is in effect. Kūpuna, keiki, and those in low-lying or flood-prone areas should prepare for possible rapid water rises. Have an emergency plan ready and monitor official alerts. E mālama pono.";
+          noteEl.style.borderColor = "rgba(255,204,102,.22)";
+          noteEl.style.background  = "rgba(255,204,102,.07)";
+          titleEl.style.color      = "#ffe9b5";
+        } else if (elevated) {
+          titleEl.textContent = "Kūpuna & Keiki Safety";
+          bodyEl.textContent  = "Fire weather conditions are elevated across parts of Hawaiʻi. Kūpuna, keiki, and those with breathing concerns should stay informed and limit strenuous outdoor activity during dry, windy periods. E mālama pono.";
+          noteEl.style.borderColor = "";
+          noteEl.style.background  = "";
+          titleEl.style.color      = "";
+        } else {
+          titleEl.textContent = "Kūpuna & Keiki Safety";
+          bodyEl.textContent  = "Statewide conditions are calm. Kūpuna, keiki, and those in low-lying areas should remain informed through official alerts. E mālama pono — care for one another.";
+          noteEl.style.borderColor = "";
+          noteEl.style.background  = "";
+          titleEl.style.color      = "";
+        }
+      }
         const chip = document.getElementById("freshnessChip");
         if (chip) {
           chip.classList.add("stale");
@@ -1726,6 +1768,7 @@
         renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload);
         renderFireCard(firePayload);
         renderFloodCard(floodPayload);
+        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload);
 
         const islandCounts = countByIsland(firePayload, floodPayload);
         Object.entries(islandCounts).forEach(([key, entry]) => applyBadgeState(key, entry));
