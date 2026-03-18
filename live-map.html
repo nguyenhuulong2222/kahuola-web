@@ -74,14 +74,13 @@
     .hidden{display:none !important}
 
     #app{
-      position:fixed;
-      inset:0;
+      position:relative;
       width:100%;
-      height:100%;
+      height:100vh;
+      height:100svh;
+      height:100dvh;
       overflow:hidden;
       background:var(--bg);
-      padding-top:0;
-      padding-bottom:0;
     }
 
     header{
@@ -245,10 +244,9 @@
     .maplibregl-canvas-container,
     .maplibregl-canvas{
       position:absolute !important;
-      inset:0 !important;
+      inset:0;
       width:100% !important;
       height:100% !important;
-      min-height:100% !important;
     }
 
     .desktop-panel{
@@ -288,28 +286,53 @@
 
     .sheet-card{
       pointer-events:auto;
-      background:var(--panel-strong);
-      border:1px solid var(--border-hi);
-      border-radius:22px 22px 18px 18px;
-      box-shadow:0 -12px 36px rgba(0,0,0,.35);
-      overflow:hidden;
-      transform:translateY(calc(100% - var(--sheet-peek)));
-      transition:transform .26s ease;
-      max-height:76vh;
-      max-height:76svh;
-      max-height:76dvh;
+      background:transparent;
+      border:none;
+      box-shadow:none;
+      overflow:visible;
+      transform:none;
+      transition:none;
+      max-height:none;
       display:flex;
       flex-direction:column;
     }
 
     .sheet.open .sheet-card{
-      transform:translateY(0);
+      transform:none;
     }
 
     .sheet-topbar{
       padding:8px 10px 10px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      background:rgba(255,255,255,.01);
+      border:1px solid var(--border-hi);
+      border-radius:22px;
+      background:var(--panel-strong);
+      box-shadow:0 -12px 36px rgba(0,0,0,.35);
+    }
+
+    .panel-head,
+    .panel-body{
+      display:none;
+    }
+
+    .sheet.open .panel-head,
+    .sheet.open .panel-body{
+      display:block;
+    }
+
+    .sheet.open .panel-head{
+      margin-top:8px;
+      border:1px solid var(--border-hi);
+      border-bottom:none;
+      border-radius:22px 22px 0 0;
+      background:var(--panel-strong);
+    }
+
+    .sheet.open .panel-body{
+      border:1px solid var(--border-hi);
+      border-top:none;
+      border-radius:0 0 22px 22px;
+      background:var(--panel-strong);
+      max-height:52dvh;
     }
 
     .sheet-handle-wrap{
@@ -3525,10 +3548,6 @@ hazardDetailClose?.addEventListener("click", closeHazardDetail);
 
 window.addEventListener("resize", () => { safeMapResize(); updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length); if (window.innerWidth > MOBILE_BREAKPOINT) return; setSheetOpen(mobileSheet.classList.contains("open")); });
 window.addEventListener("orientationchange", () => setTimeout(safeMapResize, 200));
-if (window.visualViewport) {
-  window.visualViewport.addEventListener("resize", () => setTimeout(safeMapResize, 120));
-  window.visualViewport.addEventListener("scroll", () => setTimeout(safeMapResize, 120));
-}
 window.addEventListener("pageshow", (e) => {
   // Safari iOS: pageshow fires on back-forward cache restore — must hard resize
   const delay = e.persisted ? 300 : 120;
