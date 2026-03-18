@@ -1795,7 +1795,7 @@
           };
         }
         if (highWind) {
-          const isRedFlag = fireWeatherPayload?.summary?.red_flag_active;
+          const isRedFlag = !!redFlag;
           return {
             kicker: isRedFlag ? "RED FLAG WARNING" : "FIRE WEATHER WATCH",
             title: isRedFlag
@@ -2144,19 +2144,6 @@
           noteEl.style.background  = "";
           titleEl.style.color      = "";
         }
-      }
-        const chip = document.getElementById("freshnessChip");
-        if (chip) {
-          chip.classList.add("stale");
-          chip.innerHTML = `<span class="dot"></span>System Degraded`;
-        }
-
-        const updatedPill = document.getElementById("updatedPill");
-        if (updatedPill) {
-          updatedPill.innerHTML = `<span class="dot" style="background:var(--warn)"></span> Snapshot temporarily delayed`;
-        }
-
-        setText("systemNote", "Some hazard data sources are delayed. Kahu Ola is showing the safest available civic fallback. Always follow official emergency instructions.");
       }
 
       async function loadHomepage() {
