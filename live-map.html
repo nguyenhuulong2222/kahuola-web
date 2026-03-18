@@ -51,22 +51,27 @@
     *{box-sizing:border-box}
     *::before,*::after{box-sizing:border-box}
 
-    html,body{
+    html{
       margin:0;
       width:100%;
       height:100%;
+      /* Safari iOS: html must be 100% not 100vh */
+      overflow:hidden;
+    }
+
+    body{
+      margin:0;
+      width:100%;
+      height:100%;
+      /* Safari iOS: -webkit-fill-available = actual visible viewport
+         after browser chrome (address bar + bottom bar) */
+      height:-webkit-fill-available;
       background:var(--bg);
       color:var(--text);
       font-family:var(--font-body);
       -webkit-font-smoothing:antialiased;
       text-rendering:optimizeLegibility;
       overflow:hidden;
-    }
-
-    body{
-      min-height:100vh;
-      min-height:100svh;
-      min-height:100dvh;
     }
 
     a{color:inherit;text-decoration:none}
@@ -76,9 +81,9 @@
     #app{
       position:relative;
       width:100%;
-      height:100vh;
-      height:100svh;
-      height:100dvh;
+      height:100%;
+      /* Safari iOS: dùng 100% fill parent thay vì 100dvh
+         tránh conflict với browser chrome height calculation */
       overflow:hidden;
       background:var(--bg);
     }
@@ -229,14 +234,12 @@
       width:100%;
       height:100%;
       min-height:100%;
-      /* Safari iOS: explicit min-height prevents 0px canvas initialization */
-      min-height:-webkit-fill-available;
     }
-    /* Safari iOS fullscreen fix */
+    /* Safari iOS: map fills full container — no conflict with body height */
     @supports (-webkit-touch-callout: none) {
       #map-wrap, #map {
-        height: -webkit-fill-available;
-        min-height: -webkit-fill-available;
+        height: 100%;
+        min-height: 100%;
       }
     }
 
