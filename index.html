@@ -1007,7 +1007,7 @@
           </div>
           <div class="freshness" id="freshnessChip">
             <span class="dot"></span>
-            <span id="freshnessLabel">Loading…</span>
+            <span id="freshnessLabel">Checking…</span>
           </div>
         </div>
 
@@ -1745,7 +1745,7 @@
         if (primaryEvent === "DEGRADED") {
           return {
             kicker: "DATA DELAYED",
-            title: "Latest data temporarily delayed",
+            title: "Checking latest conditions…",
             narrative: "Some data sources are delayed. Showing last known state. Always follow official emergency instructions.",
             bannerTitle: "⚠️ Degraded snapshot active",
             bannerCopy: "Fallback data — not current",
@@ -1795,13 +1795,18 @@
           };
         }
         if (highWind) {
+          const isRedFlag = fireWeatherPayload?.summary?.red_flag_active;
           return {
-            kicker: "ELEVATED FIRE WEATHER",
-            title: "Dry and windy conditions across parts of Hawaiʻi.",
-            narrative: "Fire weather context is elevated on some islands this period. No active warnings — stay informed if you are near wildland areas.",
-            bannerTitle: "💨 Elevated Fire Weather Context",
-            bannerCopy: "Source: NWS / RAWS terrain analysis · contextual",
-            kicClass: "warn"
+            kicker: isRedFlag ? "RED FLAG WARNING" : "FIRE WEATHER WATCH",
+            title: isRedFlag
+              ? '<span class="hero-title-key">Red Flag</span> Warning in effect.'
+              : 'Fire Weather <span class="hero-title-key">Watch</span> in effect.',
+            narrative: isRedFlag
+              ? "NWS has issued a Red Flag Warning for parts of Hawaiʻi. Extreme fire weather conditions — avoid any outdoor burning and be ready to act."
+              : "NWS is monitoring fire weather conditions in parts of Hawaiʻi. Stay informed, avoid outdoor burning, and watch for official updates.",
+            bannerTitle: isRedFlag ? "🚨 NWS Red Flag Warning Active" : "⚠️ NWS Fire Weather Watch Active",
+            bannerCopy: "Source: National Weather Service · official alert",
+            kicClass: "fire"
           };
         }
         // Default: calm
@@ -1849,7 +1854,8 @@
         const floodWarning = floodPayload?.summary?.warning_count > 0;
         const floodWatch   = floodPayload?.summary?.watch_count > 0;
         const redFlag      = fireWeatherPayload?.summary?.red_flag_active;
-        const highWind     = fireWeatherPayload?.summary?.elevated_count > 0;
+        // highWind = only when NWS has issued actual Red Flag Warning or Fire Weather Watch
+        const highWind     = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
 
         // Fire strip
         const fireAns  = document.getElementById("fireStripAnswer");
@@ -1894,13 +1900,13 @@
             wxStat.className  = "signal-strip-status active";
             wxStat.textContent = "RED FLAG";
           } else if (highWind) {
-            wxAns.textContent = "Fire weather elevated on some islands";
+            wxAns.textContent = "Fire Weather Watch — NWS Official";
             wxStat.className  = "signal-strip-status watch";
-            wxStat.textContent = "ELEVATED";
+            wxStat.textContent = "WATCH";
           } else {
-            wxAns.textContent = "Fire weather within normal range";
+            wxAns.textContent = "No active fire weather warnings";
             wxStat.className  = "signal-strip-status ok";
-            wxStat.textContent = "NORMAL";
+            wxStat.textContent = "CLEAR";
           }
         }
       }
@@ -1910,7 +1916,9 @@
         const floodWarn   = floodPayload?.summary?.warning_count > 0;
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
         const redFlag     = fireWeatherPayload?.summary?.red_flag_active;
-        const highWind    = fireWeatherPayload?.summary?.elevated_count > 0;
+        // highWind chỉ true khi có NWS Red Flag Warning hoặc Fire Weather Watch thực sự
+        // elevated_count không dùng nữa vì terrain cells luôn ELEVATED
+        const highWind    = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
 
         const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
@@ -1924,7 +1932,7 @@
             FIRE_ACTIVE:   { html: '<span class="hero-title-key">Wildfire</span> detected in Hawaiʻi.',    cls: 'fire'  },
             FLOOD_WARNING: { html: 'Flash flood <span class="hero-title-key">warning</span> in effect.',   cls: 'flood' },
             FLOOD_WATCH:   { html: 'Flood <span class="hero-title-key">watch</span> conditions developing.', cls: 'flood' },
-            DEGRADED:      { html: 'Latest data <span class="hero-title-key">temporarily delayed</span>.',      cls: 'warn'  },
+            DEGRADED:      { html: 'Checking latest <span class="hero-title-key">conditions</span>…',      cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
           titleEl.innerHTML = titleData.html;
@@ -1998,25 +2006,26 @@
       }
 
             function renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload) {
-        // Wind — from fire-weather summary (highest risk zone)
+        // Fire Weather — only from real NWS alerts, not terrain estimates
         const fwSignals = getItems(fireWeatherPayload);
-        const highWind = fwSignals.find(s => s.properties?.risk_index === "CRITICAL" || s.properties?.risk_index === "HIGH");
-        const elevWind = fwSignals.find(s => s.properties?.risk_index === "ELEVATED");
-        const redFlag  = fireWeatherPayload?.summary?.red_flag_active;
+        const redFlag   = fireWeatherPayload?.summary?.red_flag_active;
+        const hasWatch  = (fireWeatherPayload?.summary?.watch_count > 0);
+        const hasAlert  = redFlag || hasWatch;
+        // Only surface HIGH/CRITICAL from real NWS alerts
+        const highAlert = fwSignals.find(s => s.properties?.red_flag_active || s.properties?.risk_index === "HIGH");
         if (redFlag) {
           setText("windValue", "Red Flag");
-          document.getElementById("windValue").style.color = "var(--fire)";
-        } else if (highWind) {
+          const el = document.getElementById("windValue");
+          if (el) el.style.color = "var(--fire)";
+        } else if (hasWatch) {
+          setText("windValue", "Watch");
+        } else if (highAlert) {
           setText("windValue", "High");
-        } else if (elevWind) {
-          setText("windValue", "Elevated");
-        } else if (fwSignals.length > 0) {
-          setText("windValue", "Moderate");
         } else {
           setText("windValue", "Normal");
         }
         document.querySelector(".hero-context-item:nth-child(1) .hero-context-label").textContent = "Fire Weather";
-        document.querySelector(".hero-context-item:nth-child(1) .hero-context-source").textContent = "NWS / RAWS";
+        document.querySelector(".hero-context-item:nth-child(1) .hero-context-source").textContent = "NWS Official";
 
         // Rain — from MRMS/NEXRAD
         const mrmsSignals = getItems(mrmsPayload);
@@ -2099,7 +2108,8 @@
         if (!titleEl || !bodyEl || !noteEl) return;
 
         const redFlag     = fireWeatherPayload?.summary?.red_flag_active;
-        const elevated    = fireWeatherPayload?.summary?.elevated_count > 0;
+        // elevated = only when NWS Red Flag or Watch — not terrain estimate
+        const elevated    = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
         const floodWarn   = floodPayload?.summary?.warning_count > 0;
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
 
@@ -2135,8 +2145,6 @@
           titleEl.style.color      = "";
         }
       }
-
-      function setDegradedUi() {
         const chip = document.getElementById("freshnessChip");
         if (chip) {
           chip.classList.add("stale");
