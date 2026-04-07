@@ -394,6 +394,48 @@ async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
 }
 
 
+// ── Stub hazard handlers ──────────────────────────────────────────────────────
+// Return safe empty envelopes consumed by the frontend normalizers.
+// Each returns { ok, layer, signals: [], summary: { status: 'none', count: 0 } }.
+// Frontend parseCanonicalSignals reads json.signals → [] → normalizer returns [] → no layer rendered.
+// These will be upgraded to live upstream calls when the matching pollers are wired.
+
+function handleSmoke(url: URL, cors: CorsHeaders): Response {
+  const region = resolveRegion(url);
+  return jsonResp(buildHazardEnvelope(
+    'smoke', 'NOAA HMS', region, [],
+    { status: 'none', count: 0, message: 'No active smoke polygons in this snapshot.' },
+    { authority: 'contextual' },
+  ), 200, cors);
+}
+
+function handlePerimeters(url: URL, cors: CorsHeaders): Response {
+  const region = resolveRegion(url);
+  return jsonResp(buildHazardEnvelope(
+    'perimeters', 'WFIGS/NIFC', region, [],
+    { status: 'none', count: 0, message: 'No active fire perimeters in this snapshot.' },
+    { authority: 'official' },
+  ), 200, cors);
+}
+
+function handleFireWeather(url: URL, cors: CorsHeaders): Response {
+  const region = resolveRegion(url);
+  return jsonResp(buildHazardEnvelope(
+    'fire-weather', 'NWS / RAWS', region, [],
+    { status: 'none', count: 0, message: 'No active fire weather signals in this snapshot.' },
+    { authority: 'contextual' },
+  ), 200, cors);
+}
+
+function handleLocalHazards(url: URL, cors: CorsHeaders): Response {
+  const region = resolveRegion(url);
+  return jsonResp(buildHazardEnvelope(
+    'local-hazards', 'NWS LSR', region, [],
+    { status: 'none', count: 0, message: 'No local storm reports in this snapshot.' },
+    { authority: 'contextual' },
+  ), 200, cors);
+}
+
 function buildFloodContextSignals(region: string, officialSignals: Feature[]): Feature[] {
   const officialMultiplier = officialSignals.length > 0 ? 3 : 0;
   return SMART_HAWAII_CELLS
@@ -486,6 +528,10 @@ export default {
     if (path === '/api/hazards/flood-context' || path === '/hazards/flood-context') return handleFloodContext(url, cors);
     if (path === '/api/hazards/rain-radar' || path === '/hazards/rain-radar') return handleRainRadar(url, cors);
     if (path === '/api/hazards/mrms-qpe' || path === '/hazards/mrms-qpe') return handleMrmsQpe(url, cors);
+    if (path === '/api/hazards/smoke' || path === '/hazards/smoke') return handleSmoke(url, cors);
+    if (path === '/api/hazards/perimeters' || path === '/hazards/perimeters') return handlePerimeters(url, cors);
+    if (path === '/api/hazards/fire-weather' || path === '/hazards/fire-weather') return handleFireWeather(url, cors);
+    if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
     if (path === '/api/firms/hotspots') return handleFirmsHotspots(url, env, cors);
 
     const wmsMatch = path.match(/^\/api\/tiles\/wms\/([a-z_]+)$/);
