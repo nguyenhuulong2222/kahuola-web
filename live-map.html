@@ -975,6 +975,60 @@
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
     }
 
+    .fire-scope-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      grid-column:1 / -1;
+      padding:2px 0 0;
+    }
+    .fire-scope-label{
+      font-size:10px;
+      font-weight:600;
+      font-family:var(--font-mono);
+      color:var(--muted);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+    .fire-scope-seg{
+      display:flex;
+      border:1px solid var(--border-hi);
+      border-radius:10px;
+      overflow:hidden;
+    }
+    .fire-scope-opt{
+      flex:1;
+      min-height:34px;
+      border:none;
+      background:transparent;
+      color:var(--text-dim);
+      cursor:pointer;
+      font-size:11px;
+      font-weight:600;
+      font-family:var(--font-mono);
+      letter-spacing:.04em;
+      padding:0 14px;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+    }
+    .fire-scope-opt:first-child{
+      border-right:1px solid var(--border-hi);
+    }
+    .fire-scope-opt.active{
+      background:rgba(255,100,40,.16);
+      color:#ffb088;
+    }
+    .fire-scope-hint{
+      padding:4px 14px 8px;
+      font-size:10px;
+      color:var(--muted);
+      font-family:var(--font-mono);
+      letter-spacing:.02em;
+      border-bottom:1px solid var(--border);
+    }
+
     .blueprint-footnote{
       margin-top:8px;
       color:var(--muted);
@@ -1482,6 +1536,7 @@
 
       <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
         <div class="panel-head" id="panel-head-desktop">Fire Signals · Hawaiʻi</div>
+        <div class="fire-scope-hint" id="fire-scope-hint-desktop">Showing satellite fire detections for Hawaiʻi only.</div>
         <div class="panel-body" id="panel-content-desktop"></div>
       </aside>
 
@@ -1504,6 +1559,7 @@
             </div>
           </div>
           <div class="panel-head" id="panel-head-mobile">Fire Signals · Hawaiʻi</div>
+          <div class="fire-scope-hint" id="fire-scope-hint-mobile">Showing satellite fire detections for Hawaiʻi only.</div>
           <div class="panel-body" id="panel-content-mobile"></div>
         </div>
       </section>
@@ -1793,7 +1849,13 @@
       <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
       <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Layers: On</button>
       <button class="action-btn wind-btn" id="wind-btn-panel" type="button">Fire Weather: On</button>
-      <button class="action-btn" id="fire-scope-btn" type="button">🌺 Hawaiʻi</button>
+      <div class="fire-scope-row" id="fire-scope-row">
+        <span class="fire-scope-label">Fire Scope</span>
+        <div class="fire-scope-seg">
+          <button class="fire-scope-opt active" id="fire-scope-opt-hawaii" type="button">Hawaiʻi</button>
+          <button class="fire-scope-opt" id="fire-scope-opt-usa" type="button">USA</button>
+        </div>
+      </div>
     </div>
   </template>
 
@@ -3072,13 +3134,19 @@ function updateRainRadarStatusUI() {
 
 function applyFireScope() {
   const isUSA = fireScope === "usa";
-  const label = isUSA ? "🌐 USA" : "🌺 Hawaiʻi";
   const headText = isUSA ? "Fire Signals · USA" : "Fire Signals · Hawaiʻi";
+  const hintText = isUSA
+    ? "Showing satellite fire detections across the USA."
+    : "Showing satellite fire detections for Hawaiʻi only.";
   ["desktop","mobile"].forEach(sfx => {
-    const btn = document.getElementById(`fire-scope-btn-${sfx}`);
-    if (btn) btn.textContent = label;
     const head = document.getElementById(`panel-head-${sfx}`);
     if (head) head.textContent = headText;
+    const hint = document.getElementById(`fire-scope-hint-${sfx}`);
+    if (hint) hint.textContent = hintText;
+    const optHawaii = document.getElementById(`fire-scope-opt-hawaii-${sfx}`);
+    if (optHawaii) optHawaii.classList.toggle("active", !isUSA);
+    const optUSA = document.getElementById(`fire-scope-opt-usa-${sfx}`);
+    if (optUSA) optUSA.classList.toggle("active", isUSA);
   });
 }
 function toggleFireScope() {
@@ -3413,8 +3481,10 @@ function bindButtons() {
   document.getElementById("mrms-rain-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
   document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
   document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
-  document.getElementById("fire-scope-btn-desktop")?.addEventListener("click", toggleFireScope);
-  document.getElementById("fire-scope-btn-mobile")?.addEventListener("click", toggleFireScope);
+  document.getElementById("fire-scope-opt-hawaii-desktop")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
+  document.getElementById("fire-scope-opt-hawaii-mobile")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
+  document.getElementById("fire-scope-opt-usa-desktop")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
+  document.getElementById("fire-scope-opt-usa-mobile")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
 
 // ── Status UI functions ───────────────────────────────────
 function updateTsunamiStatusUI(state) {
