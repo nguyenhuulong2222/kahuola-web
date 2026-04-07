@@ -568,8 +568,17 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
 
   const dataset = url.searchParams.get('dataset') || 'VIIRS_SNPP_NRT';
   const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '1', 10)));
-  const bboxRaw = url.searchParams.get('bbox') || '';
-  const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || '1000', 10)));
+
+  // scope=hawaii|usa — convenience aliases so the frontend doesn't need to know bbox values.
+  // An explicit ?bbox= param overrides scope for backward compat and advanced use.
+  const scope: 'hawaii' | 'usa' = url.searchParams.get('scope') === 'usa' ? 'usa' : 'hawaii';
+  const BBOX_HAWAII = '-161.5,18.5,-154.5,22.8';
+  const BBOX_USA    = '-180,15,-65,72';          // all 50 states (CONUS + HI + AK)
+  const bboxRaw = url.searchParams.get('bbox') || (scope === 'usa' ? BBOX_USA : BBOX_HAWAII);
+
+  // USA scope can return significantly more detections — raise the default cap accordingly
+  const defaultLimit = scope === 'usa' ? '5000' : '1000';
+  const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || defaultLimit, 10)));
 
   const parts = bboxRaw.split(',').map(Number);
   if (parts.length !== 4 || parts.some(isNaN)) return err(400, 'bbox must be WEST,SOUTH,EAST,NORTH', cors);
@@ -611,6 +620,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
       returnedRecords: geojson.features.length,
       dataset,
       days,
+      scope,
       bbox: { west, south, east, north },
       upstreamLatencyMs: Date.now() - t0,
       generated_at: new Date().toISOString(),
