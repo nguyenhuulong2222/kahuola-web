@@ -2103,30 +2103,82 @@ function parseFirmsTimestamp(acqDate, acqTime) {
   const timeStr = String(acqTime || "0000").padStart(4, "0");
   return parseDateMaybe(`${acqDate}T${timeStr.slice(0,2)}:${timeStr.slice(2,4)}:00Z`);
 }
+// Normalizes a raw fire record to FireSignalProps field names.
+// Handles both old FIRMS PascalCase fields and new lowercase FireSignalProps names.
+// Pure function — never throws, never drops items.
+function normalizeFireProps(raw) {
+  if (!raw || typeof raw !== "object") return {};
+  const confValid = ["low", "nominal", "high"];
+  const classValid = ["satellite_detection", "derived_signal", "confirmed_observation", "official_hazard"];
+  const stateValid = ["new", "active", "updating", "expired", "historical"];
+  const freshnessValid = ["FRESH", "STALE_OK", "STALE_DROP"];
+  const lat  = typeof raw.latitude  === "number" ? raw.latitude  : typeof raw.Latitude  === "number" ? raw.Latitude  : null;
+  const lng  = typeof raw.longitude === "number" ? raw.longitude : typeof raw.Longitude === "number" ? raw.Longitude : null;
+  const rawConf = raw.detection_confidence != null ? raw.detection_confidence : (raw.confidence != null ? raw.confidence : null);
+  const confNorm = typeof rawConf === "string" ? rawConf.toLowerCase() : null;
+  const detection_confidence = confValid.includes(confNorm) ? confNorm : null;
+  const satellite = (typeof raw.satellite === "string" && raw.satellite.trim()) ? raw.satellite.trim()
+    : (typeof raw.Satellite === "string" && raw.Satellite.trim()) ? raw.Satellite.trim() : null;
+  const distance_to_nearest_place_miles =
+    typeof raw.distance_to_nearest_place_miles === "number" ? raw.distance_to_nearest_place_miles
+    : typeof raw.Distance_miles === "number" ? raw.Distance_miles : null;
+  const acq_datetime_utc =
+    (typeof raw.acq_datetime_utc === "string" && raw.acq_datetime_utc.trim()) ? raw.acq_datetime_utc.trim()
+    : (typeof raw.Acq_datetime_utc === "string" && raw.Acq_datetime_utc.trim()) ? raw.Acq_datetime_utc.trim() : null;
+  const signal_id       = (typeof raw.signal_id === "string" && raw.signal_id.trim()) ? raw.signal_id.trim() : null;
+  const signal_class    = classValid.includes(raw.signal_class)    ? raw.signal_class    : "satellite_detection";
+  const signal_state    = stateValid.includes(raw.signal_state)    ? raw.signal_state    : "active";
+  const freshness_status = freshnessValid.includes(raw.freshness_status) ? raw.freshness_status : null;
+  const observed_at_utc  = (typeof raw.observed_at_utc === "string" && raw.observed_at_utc.trim()) ? raw.observed_at_utc.trim() : null;
+  let provenance = null;
+  try { provenance = typeof raw.provenance === "string" ? JSON.parse(raw.provenance) : (raw.provenance && typeof raw.provenance === "object" ? raw.provenance : null); } catch {}
+  const frp_mw = typeof raw.frp_mw === "number" ? raw.frp_mw : typeof raw.frp === "number" ? raw.frp : typeof raw.power === "number" ? raw.power : null;
+  return {
+    latitude: lat, longitude: lng,
+    detection_confidence, satellite, distance_to_nearest_place_miles, acq_datetime_utc,
+    signal_id, signal_class, signal_state, freshness_status, observed_at_utc, provenance,
+    frp_mw,
+    brightness: raw.brightness ?? raw.bright_ti4 ?? raw.bright_t31 ?? null,
+    acq_date: raw.acq_date || null,
+    acq_time: raw.acq_time || null,
+    id: raw.id || raw.signal_id || null,
+  };
+}
 function normalizeFireFeatures(rawRecords) {
   return (Array.isArray(rawRecords) ? rawRecords : []).map((record, index) => {
     const props = record.properties || record || {};
+    const n = normalizeFireProps(props);
     const coordinates = Array.isArray(record?.geometry?.coordinates) ? record.geometry.coordinates :
       Array.isArray(record?.coordinates) ? record.coordinates :
-      (Number.isFinite(Number(props.longitude)) && Number.isFinite(Number(props.latitude))) ? [Number(props.longitude), Number(props.latitude)] : null;
+      (n.longitude !== null && n.latitude !== null) ? [n.longitude, n.latitude] : null;
     if (!coordinates || coordinates.length < 2) return null;
     const [lng, lat] = [Number(coordinates[0]), Number(coordinates[1])];
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-    const frp = props.frp ?? props.frp_mw ?? props.power ?? null;
+    const frp = n.frp_mw;
     const severity = String(props.severity || props.severity_level || (Number(frp) >= 25 ? "CRITICAL" : Number(frp) >= 8 ? "ELEVATED" : "UNKNOWN")).toUpperCase();
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [lng, lat] },
       properties: {
-        id: props.id || record.id || `fire-${index}`,
+        id: n.id || record.id || `fire-${index}`,
         severity,
-        brightness: props.brightness ?? props.bright_ti4 ?? props.bright_t31 ?? null,
-        confidence: props.confidence ?? props.conf ?? null,
+        brightness: n.brightness,
+        detection_confidence: n.detection_confidence,
+        confidence: n.detection_confidence,   // backward-compat alias
         frp,
-        acq_date: props.acq_date || null,
-        acq_time: props.acq_time || null,
-        event_time: props.event_time || parseFirmsTimestamp(props.acq_date, props.acq_time)?.toISOString() || null,
-        source: props.provider || props.source || "NASA FIRMS"
+        acq_date: n.acq_date,
+        acq_time: n.acq_time,
+        acq_datetime_utc: n.acq_datetime_utc,
+        observed_at_utc: n.observed_at_utc,
+        event_time: props.event_time || parseFirmsTimestamp(n.acq_date, n.acq_time)?.toISOString() || n.acq_datetime_utc || null,
+        signal_class: n.signal_class,
+        signal_state: n.signal_state,
+        freshness_status: n.freshness_status,
+        signal_id: n.signal_id,
+        satellite: n.satellite,
+        distance_to_nearest_place_miles: n.distance_to_nearest_place_miles,
+        provenance: n.provenance ? JSON.stringify(n.provenance) : null,
+        source: props.provider || props.source || (n.provenance?.source_agency ? String(n.provenance.source_agency).replace(/_/g, " ") : "NASA FIRMS"),
       }
     };
   }).filter(Boolean);
@@ -3208,12 +3260,33 @@ function openPerimeterPopup(feature, lngLat) {
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"340px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openFirePopup(feature, lngLat) {
-  const coords = feature.geometry.coordinates.slice(); const p = feature.properties || {}; const lat = coords[1], lng = coords[0]; const severity = p.severity || "UNKNOWN"; const severityClass = severity === "CRITICAL" ? "critical" : "normal"; const detectedTime = formatDetectedTime(p.acq_date, p.acq_time); const frp = p.frp ?? "—"; const confidence = p.confidence ?? "—"; const milesFromYou = lastKnownUserCoord ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi" : "Enable location";
+  const coords = feature.geometry.coordinates.slice(); const p = feature.properties || {}; const lat = coords[1], lng = coords[0];
+  const milesFromYou = lastKnownUserCoord ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi" : "Enable location";
+  // Safe-parse provenance — MapLibre stringifies nested objects in queryRenderedFeatures
+  let pv = null; try { pv = typeof p.provenance === "string" ? JSON.parse(p.provenance) : (p.provenance && typeof p.provenance === "object" ? p.provenance : null); } catch {}
+  // Signal classification — must always be shown; never hide
+  const signalClassLabels = { satellite_detection: "Satellite detection", derived_signal: "Derived signal", confirmed_observation: "Confirmed observation", official_hazard: "Official hazard" };
+  const signalClassLabel = signalClassLabels[p.signal_class || "satellite_detection"] || String(p.signal_class || "satellite_detection");
+  // Detection confidence — label MUST say "Detection confidence", NOT "Fire risk" or "Severity"
+  const confLabels = { high: "High", nominal: "Nominal", low: "Low" };
+  const rawConf = p.detection_confidence != null ? p.detection_confidence : p.confidence;
+  const confLabel = confLabels[String(rawConf || "").toLowerCase()] || (rawConf != null ? String(rawConf) : "—");
+  // Freshness
+  const freshnessLabels = { FRESH: "Fresh (<15 min)", STALE_OK: "Stale (15–60 min)", STALE_DROP: "Outdated (>60 min)" };
+  const freshnessLabel = freshnessLabels[p.freshness_status] || (p.freshness_status ? String(p.freshness_status) : "—");
+  // Timestamps — prefer ISO acq_datetime_utc, fall back to legacy acq_date/acq_time pair
+  const acqTime = p.acq_datetime_utc ? String(p.acq_datetime_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : formatDetectedTime(p.acq_date, p.acq_time);
+  const observedTime = p.observed_at_utc ? String(p.observed_at_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : null;
+  const signalStateLabel = p.signal_state || "active";
+  const frp = p.frp != null ? `${p.frp} MW` : "—";
+  const satellite = p.satellite || (pv && pv.satellite) || "—";
+  const sourceLabel = (pv && pv.source_agency) ? String(pv.source_agency).replace(/_/g, " ") : (p.source || "NASA FIRMS");
   const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`; const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Wildfire%20Signal`; const googleDirections = lastKnownUserCoord ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
   map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔥 Wildfire Signal</div><div class="popup-coords">NASA FIRMS · ${lat.toFixed(4)}, ${lng.toFixed(4)}</div></div><div class="popup-severity ${severityClass}">${escapeHtml(severity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detectedTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">Distance From You</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">FRP</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">Confidence</div><div class="popup-metric-value">${escapeHtml(confidence)}</div></div></div><div class="popup-note">This point is a satellite wildfire detection signal, not an on-scene emergency instruction.</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a></div></div>`;
-  activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"320px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
+  const observedRow = observedTime ? `<div class="popup-metric"><div class="popup-metric-label">Observed at (UTC)</div><div class="popup-metric-value">${escapeHtml(observedTime)}</div></div>` : "";
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔥 Wildfire Detection Signal</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} · ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Signal type</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">Detection confidence</div><div class="popup-metric-value">${escapeHtml(confLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">Acquired (UTC)</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">Distance from you</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">Freshness</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">Signal state</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">FRP (radiative power)</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">Satellite</div><div class="popup-metric-value">${escapeHtml(satellite)}</div></div>${observedRow}</div><div class="popup-note">⚠️ This is a satellite fire detection observation — not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a></div></div>`;
+  activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"360px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
 }
 
 function updateUserMarker(coord) {
