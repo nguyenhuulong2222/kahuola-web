@@ -148,5 +148,19 @@ export async function handleHazards(request: Request, env: Env): Promise<Respons
     return responseFor(region, "WFIGS/NIFC", items);
   }
 
+  // fire-weather: NWS Red Flag / RAWS fire-weather context polygons
+  // Returns empty envelope when cache is unpopulated — safe for frontend normalizeWindRiskFeatures
+  if (url.pathname.endsWith("/hazards/fire-weather")) {
+    const items = await readHazardArray(env, region, "fire-weather");
+    return responseFor(region, "NWS / RAWS", items);
+  }
+
+  // local-hazards: NWS Local Storm Reports and point/polygon hazard overlays
+  // Returns empty envelope when cache is unpopulated — safe for frontend normalizeLocalHazardFeatures
+  if (url.pathname.endsWith("/hazards/local-hazards")) {
+    const items = await readHazardArray(env, region, "local-hazards");
+    return responseFor(region, "NWS LSR", items);
+  }
+
   return new Response("Not Found", { status: 404 });
 }

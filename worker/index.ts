@@ -39,7 +39,8 @@ export default {
         return withCors(response);
       }
 
-      if (path.startsWith("/v1/hazards")) {
+      // Match both /api/hazards/* (normalized to /hazards/*) and legacy /v1/hazards/*
+      if (path.startsWith("/hazards") || path.startsWith("/v1/hazards")) {
         response = await handleHazards(
           new Request(new URL(path + url.search, url.origin), request),
           env,
