@@ -1481,7 +1481,7 @@
       <div id="map" role="main" aria-label="Hawaiʻi wildfire detection map"></div>
 
       <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
-        <div class="panel-head">Fire Signals · Hawaiʻi</div>
+        <div class="panel-head" id="panel-head-desktop">Fire Signals · Hawaiʻi</div>
         <div class="panel-body" id="panel-content-desktop"></div>
       </aside>
 
@@ -1503,7 +1503,7 @@
               <a class="action-btn" href="/support.html">Support</a>
             </div>
           </div>
-          <div class="panel-head">Fire Signals · Hawaiʻi</div>
+          <div class="panel-head" id="panel-head-mobile">Fire Signals · Hawaiʻi</div>
           <div class="panel-body" id="panel-content-mobile"></div>
         </div>
       </section>
@@ -1793,6 +1793,7 @@
       <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
       <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Layers: On</button>
       <button class="action-btn wind-btn" id="wind-btn-panel" type="button">Fire Weather: On</button>
+      <button class="action-btn" id="fire-scope-btn" type="button">🌺 Hawaiʻi</button>
     </div>
   </template>
 
@@ -1821,6 +1822,14 @@ const IS_LOCAL =
   location.hostname === "127.0.0.1" ||
   location.hostname === "localhost" ||
   location.protocol === "file:";
+
+let fireScope = (() => { try { return localStorage.getItem("kahuola_fire_scope") === "usa" ? "usa" : "hawaii"; } catch(e) { return "hawaii"; } })();
+function getFireEndpoint() {
+  if (IS_LOCAL) return "./fires-test.json";
+  return fireScope === "usa"
+    ? "https://kahuola.org/api/firms/hotspots?scope=usa&days=1"
+    : "https://kahuola.org/api/firms/hotspots?scope=hawaii&days=1";
+}
 
 const HAWAII_BOUNDS = [[-160.9, 18.8], [-154.7, 22.5]];
 const HAWAII_CENTER = [-157.9, 20.5];
@@ -2343,14 +2352,15 @@ function normalizeWindRiskFeatures(rawSignals) {
 const HAZARD_REGISTRY = {
   fire: {
     key: "fire",
-    endpoint: IS_LOCAL ? "./fires-test.json" : "https://kahuola.org/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8&days=1",
+    get endpoint() { return getFireEndpoint(); },
     enabled: true,
     affectsGlobalHealth: false, // fire endpoint errors shown per-signal, not as global red banner
     parsePayload(json) {
       const raw = parseCanonicalSignals(json, "fire");
       const features = normalizeFireFeatures(raw);
       const newest = features.map((f) => parseDateMaybe(f.properties?.event_time) || parseFirmsTimestamp(f.properties?.acq_date, f.properties?.acq_time)).filter(Boolean).sort((a,b)=>b-a)[0] || null;
-      return { features, sourceTime: newest || parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local test dataset" : "NASA FIRMS · Kahu Ola Worker") };
+      const scopeLabel = (!IS_LOCAL && fireScope === "usa") ? "NASA FIRMS · USA" : "NASA FIRMS · Kahu Ola Worker";
+      return { features, sourceTime: newest || parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local test dataset" : scopeLabel) };
     },
     ensureLayers, applyData(features){ updateFireSource(features); }, onFetchComplete(){ renderUnifiedPanels(); }, visible(){ return true; }
   },
@@ -3060,6 +3070,24 @@ function updateRainRadarStatusUI() {
   ["desktop","mobile"].forEach((suffix)=>{ const badge=document.getElementById(`rain-radar-badge-${suffix}`); const note=document.getElementById(`rain-radar-note-${suffix}`); if(!badge) return; badge.className="status-badge"; badge.classList.add(rainRadarVisible ? "status-detected" : "status-none"); badge.textContent = rainRadarVisible ? "Active" : "Off"; if(note) note.textContent = rainRadarVisible ? "NOAA rain radar is active for storm visualization." : "NOAA radar tiles are available and can be toggled on."; });
 }
 
+function applyFireScope() {
+  const isUSA = fireScope === "usa";
+  const label = isUSA ? "🌐 USA" : "🌺 Hawaiʻi";
+  const headText = isUSA ? "Fire Signals · USA" : "Fire Signals · Hawaiʻi";
+  ["desktop","mobile"].forEach(sfx => {
+    const btn = document.getElementById(`fire-scope-btn-${sfx}`);
+    if (btn) btn.textContent = label;
+    const head = document.getElementById(`panel-head-${sfx}`);
+    if (head) head.textContent = headText;
+  });
+}
+function toggleFireScope() {
+  fireScope = fireScope === "usa" ? "hawaii" : "usa";
+  try { localStorage.setItem("kahuola_fire_scope", fireScope); } catch(e) {}
+  applyFireScope();
+  refreshHazard("fire");
+}
+
 function renderUnifiedPanels() {
   const fire = getState("fire");
   const smoke = getState("smoke");
@@ -3098,13 +3126,14 @@ function renderUnifiedPanels() {
     const summaryText = document.getElementById(`summary-text-${suffix}`);
     if (summaryText) {
       const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
+      const fireScopeRegion = fireScope === "usa" ? "the USA" : "Hawaiʻi";
       if (appState.diagnostics.isOffline) summaryText.textContent = "Cached hazard data is being shown while connectivity is degraded.";
       else if (fireFeatures.length === 0 && floodCount > 0) summaryText.textContent = `Flash flood watch geometry is active in ${floodCount} area${floodCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
       else if (fireFeatures.length === 0 && smokeCount > 0) summaryText.textContent = `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
-      else if (fireFeatures.length === 0) summaryText.textContent = "NASA FIRMS returned no current wildfire detections across Hawaiʻi in this snapshot.";
-      else if (criticalCount > 0 && Number.isFinite(nearest)) summaryText.textContent = `NASA FIRMS indicates critical wildfire detections in Hawaiʻi. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      else if (Number.isFinite(nearest)) summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across Hawaiʻi. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      else summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across Hawaiʻi.`;
+      else if (fireFeatures.length === 0) summaryText.textContent = `NASA FIRMS returned no current wildfire detections across ${fireScopeRegion} in this snapshot.`;
+      else if (criticalCount > 0 && Number.isFinite(nearest)) summaryText.textContent = `NASA FIRMS indicates critical wildfire detections in ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+      else if (Number.isFinite(nearest)) summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+      else summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}.`;
     }
     const summarySource = document.getElementById(`summary-source-${suffix}`);
     if (summarySource) summarySource.textContent = `Source: ${(fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker")} · Delivered by Kahu Ola civic aggregator · Flood official: ${flashFlood.sourceLabel || "NWS"} · Local context: ${floodContext.sourceLabel || "PacIOOS"} · MRMS: ${mrms.sourceLabel || "MRMS"} · Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} · Radar: NOAA`;
@@ -3384,6 +3413,8 @@ function bindButtons() {
   document.getElementById("mrms-rain-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
   document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
   document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
+  document.getElementById("fire-scope-btn-desktop")?.addEventListener("click", toggleFireScope);
+  document.getElementById("fire-scope-btn-mobile")?.addEventListener("click", toggleFireScope);
 
 // ── Status UI functions ───────────────────────────────────
 function updateTsunamiStatusUI(state) {
@@ -3535,6 +3566,7 @@ updateFloodContextStatusUI(getState("floodContext"));
 updateMrmsStatusUI(getState("mrmsRain"));
 updateWindRiskStatusUI(getState("windRisk"));
 renderUnifiedPanels();
+applyFireScope();
 
 diagBtn?.addEventListener("click", () => {
   const open = diag.classList.toggle("open");
