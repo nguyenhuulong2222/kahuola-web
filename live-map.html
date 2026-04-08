@@ -1594,22 +1594,22 @@
         <div class="hazard-detail-card" role="dialog" aria-modal="true" aria-labelledby="hazard-detail-title">
           <div class="hazard-detail-top">
             <div>
-              <div class="hazard-detail-kicker">Hazard Module</div>
-              <div class="hazard-detail-title" id="hazard-detail-title">Module details</div>
+              <div class="hazard-detail-kicker" data-i18n="map.detail_kicker">Hazard Module</div>
+              <div class="hazard-detail-title" id="hazard-detail-title" data-i18n="map.detail_title_default">Module details</div>
             </div>
             <button class="hazard-detail-close" id="hazard-detail-close" aria-label="Close hazard details">✕</button>
           </div>
           <div class="hazard-detail-body">
             <div class="hazard-detail-block">
-              <div class="hazard-detail-label">Status</div>
+              <div class="hazard-detail-label" data-i18n="map.detail_label_status">Status</div>
               <div class="hazard-detail-text" id="hazard-detail-status">—</div>
             </div>
             <div class="hazard-detail-block">
-              <div class="hazard-detail-label">Context</div>
+              <div class="hazard-detail-label" data-i18n="map.detail_label_context">Context</div>
               <div class="hazard-detail-text" id="hazard-detail-note">—</div>
             </div>
             <div class="hazard-detail-block">
-              <div class="hazard-detail-label">Design Direction</div>
+              <div class="hazard-detail-label" data-i18n="map.detail_label_design">Design Direction</div>
               <div class="hazard-detail-text" id="hazard-detail-body">—</div>
             </div>
           </div>
@@ -1701,19 +1701,19 @@
           <div class="layer-status-row js-hazard-detail" data-hazard-title="Smoke Presence" data-hazard-status="Secondary Layer" data-hazard-note="Smoke status reflects whether NOAA HMS smoke polygons are present in the current cached snapshot." data-hazard-detail="Smoke remains a secondary situational layer under wildfire-first hierarchy. A visible smoke layer does not mean smoke is currently detected; the status badge distinguishes detected, none, and unavailable states." tabindex="0" role="button" aria-label="Flash Flood Watch details">
             <div>
               <div class="layer-status-name" data-i18n="map.layer_smoke">Smoke</div>
-              <div class="layer-status-note" id="smoke-status-note">Waiting for the latest NOAA HMS snapshot.</div>
-              <div class="layer-status-note" id="smoke-status-subnote">Layer visibility does not mean smoke is detected.</div>
+              <div class="layer-status-note" id="smoke-status-note" data-i18n="map.wait_smoke">Waiting for the latest NOAA HMS snapshot.</div>
+              <div class="layer-status-note" id="smoke-status-subnote" data-i18n="map.smoke_layer_note">Layer visibility does not mean smoke is detected.</div>
               <span class="hidden" id="smoke-status-text">—</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="smoke-status-badge">No smoke</div><span class="detail-chev">›</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="smoke-status-badge" data-i18n="map.s_smoke_none">No smoke</div><span class="detail-chev">›</span></div>
           </div>
           <div class="layer-status-row js-hazard-detail" data-hazard-title="Perimeters" data-hazard-status="Secondary Layer" data-hazard-note="Perimeter data reflects incident boundaries when available." data-hazard-detail="Perimeters should remain directly under fire in the hierarchy. Estimated boundaries must never be presented as official, and unavailable perimeter feeds should fail safely without breaking the map." tabindex="0" role="button" aria-label="Perimeter details">
             <div>
               <div class="layer-status-name" data-i18n="map.layer_perimeters">Perimeters</div>
-              <div class="layer-status-note" id="perimeter-status-note">Waiting for the latest perimeter feed.</div>
+              <div class="layer-status-note" id="perimeter-status-note" data-i18n="map.wait_perim">Waiting for the latest perimeter feed.</div>
               <span class="hidden" id="perimeter-status-text">—</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="perimeter-status-badge">No perimeter</div><span class="detail-chev">›</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="status-badge status-none" id="perimeter-status-badge" data-i18n="map.s_perim_none_badge">No perimeter</div><span class="detail-chev">›</span></div>
           </div>
         </div>
       </div>
@@ -1738,10 +1738,10 @@
               <div class="priority-kicker" data-i18n="map.kicker_nws">Official · National Weather Service</div>
               <div class="priority-title" data-i18n="map.hazard_flood">Flash Flood</div>
             </div>
-            <div class="status-badge status-none" id="flood-status-badge">No active watch</div>
+            <div class="status-badge status-none" id="flood-status-badge" data-i18n="map.s_flood_none">No active watch</div>
           </div>
           <div class="priority-note" id="flood-status-note">Official source: National Weather Service. No active flash flood watch geometry was returned.</div>
-          <div class="priority-subnote" id="flood-status-subnote">Statewide Hawaiʻi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.</div>
+          <div class="priority-subnote" id="flood-status-subnote" data-i18n="map.flood_subnote">Statewide Hawaiʻi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.</div>
           <div class="summary-meta" style="margin-top:10px">
             <span class="chip v-blue" id="flood-official-chip">Official: NWS</span>
             <span class="chip v-blue" id="flood-context-chip">Context: PacIOOS</span>
@@ -1758,7 +1758,7 @@
             </div>
             <div class="status-badge status-none" id="tsunami-badge">·</div>
           </div>
-          <div class="priority-note" id="tsunami-note">NWS Tsunami Warning Center — tap to load live status.</div>
+          <div class="priority-note" id="tsunami-note" data-i18n="map.tsunami_tap_note">NWS Tsunami Warning Center — tap to load live status.</div>
         </div>
 
         <!-- Hurricane — Primary signal, lazy -->
@@ -1770,7 +1770,7 @@
             </div>
             <div class="status-badge status-none" id="hurricane-badge">·</div>
           </div>
-          <div class="priority-note" id="hurricane-note">NHC Pacific basin — tap to load live status.</div>
+          <div class="priority-note" id="hurricane-note" data-i18n="map.hurricane_tap_note">NHC Pacific basin — tap to load live status.</div>
         </div>
 
         <div class="blueprint-footnote" data-i18n="map.blueprint_footnote">Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.</div>
@@ -1794,7 +1794,7 @@
           <div class="mini-module" id="rain-radar-card" tabindex="0" role="button" aria-label="Rain radar details">
             <div>
               <div class="mini-module-title" data-i18n="map.layer_rain_radar">Rain Radar</div>
-              <div class="mini-module-note" id="rain-radar-note">NEXRAD · USA + territories</div>
+              <div class="mini-module-note" id="rain-radar-note" data-i18n="map.radar_note_init">NEXRAD · USA + territories</div>
             </div>
             <div class="status-badge status-none" id="rain-radar-badge">Off</div>
           </div>
@@ -1803,18 +1803,18 @@
           <div class="mini-module" id="mrms-rain-card" tabindex="0" role="button" aria-label="MRMS rainfall details">
             <div>
               <div class="mini-module-title" data-i18n="map.layer_mrms">MRMS Rainfall</div>
-              <div class="mini-module-note" id="mrms-rain-note">NEXRAD QPE · Live when available</div>
+              <div class="mini-module-note" id="mrms-rain-note" data-i18n="map.mrms_note_init">NEXRAD QPE · Live when available</div>
             </div>
-            <div class="status-badge status-none" id="mrms-rain-badge">Loading</div>
+            <div class="status-badge status-none" id="mrms-rain-badge" data-i18n="map.loading">Loading</div>
           </div>
 
           <!-- Fire Weather -->
           <div class="mini-module" id="wind-risk-card" tabindex="0" role="button" aria-label="Fire Weather details">
             <div>
               <div class="mini-module-title" data-i18n="map.layer_fire_weather">Fire Weather</div>
-              <div class="mini-module-note" id="wind-risk-note">Wind + humidity spread context</div>
+              <div class="mini-module-note" id="wind-risk-note" data-i18n="map.wind_note_init">Wind + humidity spread context</div>
             </div>
-            <div class="status-badge status-none" id="wind-risk-badge">Loading</div>
+            <div class="status-badge status-none" id="wind-risk-badge" data-i18n="map.loading">Loading</div>
           </div>
 
         </div></div>
@@ -1839,16 +1839,16 @@
           <div class="mini-module mini-module--context" id="flood-context-card" tabindex="0" role="button" aria-label="Flood context details">
             <div>
               <div class="mini-module-title" data-i18n="map.layer_flood_context">Flood Context</div>
-              <div class="mini-module-note" id="flood-context-note">Statewide Hawaiʻi terrain + runoff context</div>
+              <div class="mini-module-note" id="flood-context-note" data-i18n="map.flood_ctx_note_init">Statewide Hawaiʻi terrain + runoff context</div>
             </div>
-            <div class="status-badge status-none" id="flood-context-badge">Unavailable</div>
+            <div class="status-badge status-none" id="flood-context-badge" data-i18n="map.s_unavailable">Unavailable</div>
           </div>
 
           <!-- Landslide — Fix 3: conditional visibility, hidden until MRMS heavy or Flood active -->
           <div class="mini-module mini-module--context" id="landslide-card" tabindex="0" role="button" aria-label="Landslide risk status" style="display:none">
             <div>
               <div class="mini-module-title" data-i18n="map.layer_landslide">Landslide Risk</div>
-              <div class="mini-module-note" id="landslide-note">Terrain + rainfall context</div>
+              <div class="mini-module-note" id="landslide-note" data-i18n="map.s_landslide_context">Terrain + rainfall context</div>
             </div>
             <div class="status-badge status-none" id="landslide-badge">·</div>
           </div>
@@ -1857,9 +1857,9 @@
           <div class="mini-module mini-module--context" id="local-hazards-card" tabindex="0" role="button" aria-label="Local hazard reports status">
             <div>
               <div class="mini-module-title" data-i18n="map.layer_local_reports">Local Reports</div>
-              <div class="mini-module-note" id="local-hazards-note">NWS Honolulu local storm reports</div>
+              <div class="mini-module-note" id="local-hazards-note" data-i18n="map.local_note_init">NWS Honolulu local storm reports</div>
             </div>
-            <div class="status-badge status-none" id="local-hazards-badge">Loading</div>
+            <div class="status-badge status-none" id="local-hazards-badge" data-i18n="map.loading">Loading</div>
           </div>
 
         </div></div>
@@ -1894,6 +1894,7 @@
 // i18n helpers — null-safe wrappers; return null if engine not yet loaded
 const _t    = (key)       => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.t(key)         : null);
 const _tmpl = (key, vars) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.tmpl(key, vars) : null);
+const _L    = (key, fb)   => _t(key) || fb; // shorthand for popup template literals
 
 /*
   Kahu Ola Live Map — V4.8
@@ -2016,44 +2017,65 @@ function setAccordionText(id, value) {
   if (el) el.textContent = value;
 }
 function updateAccordionPreviews() {
-  const smokeBadge     = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || "Smoke";
-  const perimeterBadge = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || "Perimeters";
-  const floodBadge     = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || "Flash Flood";
-  const tsunamiBadge   = document.getElementById("tsunami-badge-desktop")?.textContent || document.getElementById("tsunami-badge-mobile")?.textContent || "·";
-  const hurricaneBadge = document.getElementById("hurricane-badge-desktop")?.textContent || document.getElementById("hurricane-badge-mobile")?.textContent || "·";
-  const radarBadge     = document.getElementById("rain-radar-badge-desktop")?.textContent || document.getElementById("rain-radar-badge-mobile")?.textContent || "Radar";
-  const mrmsBadge      = document.getElementById("mrms-rain-badge-desktop")?.textContent || document.getElementById("mrms-rain-badge-mobile")?.textContent || "MRMS";
-  const windBadge      = document.getElementById("wind-risk-badge-desktop")?.textContent || document.getElementById("wind-risk-badge-mobile")?.textContent || "Fire Weather";
-  const contextBadge   = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || "Context";
+  // Use state directly — avoids comparing translated badge text against English strings
+  const floodState   = getState("flashFlood").sourceStatus;
+  const tsunamiState = getState("tsunami");
+  const hurricaneState = getState("hurricane");
+  const radarOn      = rainRadarVisible;
+  const mrmsState    = getState("mrmsRain").sourceStatus;
+  const windState    = getState("windRisk").sourceStatus;
+  const ctxState     = getState("floodContext").sourceStatus;
+  const smokeState   = getState("smoke").sourceStatus;
+  const perimState   = getState("perimeter").sourceStatus;
 
-  // Tier 1: Active Hazards — show most urgent badge only
-  const tier1Text = floodBadge !== "No active watch" ? `Flood: ${floodBadge}` :
-                    tsunamiBadge !== "·" && tsunamiBadge !== "None" ? `Tsunami: ${tsunamiBadge}` :
-                    hurricaneBadge !== "·" && hurricaneBadge !== "None" ? `Hurricane: ${hurricaneBadge}` :
-                    "No active primary hazards";
+  // Translated badge text (for display in previews)
+  const floodBadge   = document.getElementById("flood-status-badge-desktop")?.textContent || document.getElementById("flood-status-badge-mobile")?.textContent || (_t("map.s_flood_none")||"No active watch");
+  const tsunamiBadge = document.getElementById("tsunami-badge-desktop")?.textContent || document.getElementById("tsunami-badge-mobile")?.textContent || "\xb7";
+  const hurricaneBadge = document.getElementById("hurricane-badge-desktop")?.textContent || document.getElementById("hurricane-badge-mobile")?.textContent || "\xb7";
+  const radarBadge   = document.getElementById("rain-radar-badge-desktop")?.textContent || document.getElementById("rain-radar-badge-mobile")?.textContent || (_t("map.s_off")||"Off");
+  const mrmsBadge    = document.getElementById("mrms-rain-badge-desktop")?.textContent || document.getElementById("mrms-rain-badge-mobile")?.textContent || (_t("map.loading")||"Loading");
+  const windBadge    = document.getElementById("wind-risk-badge-desktop")?.textContent || document.getElementById("wind-risk-badge-mobile")?.textContent || (_t("map.loading")||"Loading");
+  const contextBadge = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || (_t("map.s_unavailable")||"Unavailable");
+  const smokeBadge   = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || (_t("map.s_smoke_none")||"No smoke");
+  const perimBadge   = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || (_t("map.s_perim_none_badge")||"No perimeter");
+
+  const _lFlood = _t("map.prev_label_flood")||"Flood";
+  const _lTsunami = _t("map.prev_label_tsunami")||"Tsunami";
+  const _lHurricane = _t("map.prev_label_hurricane")||"Hurricane";
+  const _lRadar = _t("map.prev_label_radar")||"Radar";
+  const _lMrms = _t("map.prev_label_mrms")||"MRMS";
+  const _lFireWx = _t("map.prev_label_fire_wx")||"Fire Wx";
+  const _lSmoke = _t("map.prev_label_smoke")||"Smoke";
+  const _lPerim = _t("map.prev_label_perimeters")||"Perimeters";
+  const _lCtx = _t("map.prev_label_flood_ctx")||"Flood context";
+
+  // Tier 1: Active Hazards — use state, not badge text, for comparison
+  const tier1Text = floodState === "detected" ? `${_lFlood}: ${floodBadge}` :
+                    (tsunamiState?.enabled && tsunamiState.features?.length > 0) ? `${_lTsunami}: ${tsunamiBadge}` :
+                    (hurricaneState?.enabled && hurricaneState.features?.length > 0) ? `${_lHurricane}: ${hurricaneBadge}` :
+                    (_t("map.prev_no_hazards")||"No active primary hazards");
   setAccordionText("blueprint-preview-desktop", tier1Text);
   setAccordionText("blueprint-preview-mobile",  tier1Text);
 
-  // Tier 2: Supporting Evidence
+  // Tier 2: Supporting Evidence — use state for conditional logic
   const tier2Parts = [];
-  if (radarBadge !== "Off") tier2Parts.push(`Radar: ${radarBadge}`);
-  // Only surface MRMS in preview when it has active detections — silent when clear
-  if (mrmsBadge !== "Loading" && mrmsBadge !== "Unavailable" && mrmsBadge !== "Clear") tier2Parts.push(`MRMS: ${mrmsBadge}`);
-  if (windBadge !== "Loading" && windBadge !== "Unavailable") tier2Parts.push(`Fire Wx: ${windBadge}`);
-  const tier2Text = tier2Parts.length ? tier2Parts.join(" · ") : "Radar · Fire weather monitoring";
+  if (radarOn) tier2Parts.push(`${_lRadar}: ${radarBadge}`);
+  if (mrmsState === "detected") tier2Parts.push(`${_lMrms}: ${mrmsBadge}`);
+  if (windState !== "unavailable" && windState !== "loading") tier2Parts.push(`${_lFireWx}: ${windBadge}`);
+  const tier2Text = tier2Parts.length ? tier2Parts.join(" \xb7 ") : (_t("map.prev_radar_monitor")||"Radar \xb7 Fire weather monitoring");
   setAccordionText("evidence-preview-desktop", tier2Text);
   setAccordionText("evidence-preview-mobile",  tier2Text);
 
-  // Tier 3: Context
-  const tier3Text = contextBadge !== "Unavailable" && contextBadge !== "Loading"
-    ? `Flood context: ${contextBadge}`
-    : "Flood context · terrain risk";
+  // Tier 3: Context — use state for conditional logic
+  const tier3Text = (ctxState === "detected" || ctxState === "none")
+    ? `${_lCtx}: ${contextBadge}`
+    : (_t("map.prev_flood_terrain")||"Flood context \xb7 terrain risk");
   setAccordionText("context-preview-desktop", tier3Text);
   setAccordionText("context-preview-mobile",  tier3Text);
 
-  // Secondary Layers (smoke/perimeter — unchanged)
-  setAccordionText("secondary-preview-desktop", `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
-  setAccordionText("secondary-preview-mobile",  `Smoke: ${smokeBadge} · Perimeters: ${perimeterBadge}`);
+  // Secondary Layers
+  setAccordionText("secondary-preview-desktop", `${_lSmoke}: ${smokeBadge} \xb7 ${_lPerim}: ${perimBadge}`);
+  setAccordionText("secondary-preview-mobile",  `${_lSmoke}: ${smokeBadge} \xb7 ${_lPerim}: ${perimBadge}`);
 
   // Tier 1 has-active: highlight border when any primary hazard is detected
   const hasActiveHazard = tier1Text !== "No active primary hazards";
@@ -3230,20 +3252,20 @@ function renderUnifiedPanels() {
     if (sourceEl) sourceEl.textContent = [fire.sourceLabel, smoke.status !== "unavailable" ? smoke.sourceLabel : null, perimeter.status !== "unavailable" ? perimeter.sourceLabel : null, flashFlood.status !== "unavailable" ? flashFlood.sourceLabel : null, mrms.status !== "unavailable" ? mrms.sourceLabel : null, "NOAA Radar Tiles"].filter(Boolean).join(" · ");
     const summaryText = document.getElementById(`summary-text-${suffix}`);
     if (summaryText) {
-      const refLabel = lastKnownUserCoord ? "your device location" : "the reference view";
-      const fireScopeRegion = fireScope === "usa" ? "the USA" : "Hawaiʻi";
+      const refLabel = lastKnownUserCoord ? (_t("map.ref_label_you")||"your device location") : (_t("map.ref_label_view")||"the reference view");
+      const fireScopeRegion = fireScope === "usa" ? "the USA" : "Hawai\u02bbi";
       if (appState.diagnostics.isOffline) summaryText.textContent = _t("map.summary_offline")||"Cached hazard data is being shown while connectivity is degraded.";
-      else if (fireFeatures.length === 0 && floodCount > 0) summaryText.textContent = `Flash flood watch geometry is active in ${floodCount} area${floodCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
-      else if (fireFeatures.length === 0 && smokeCount > 0) summaryText.textContent = `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
-      else if (fireFeatures.length === 0) summaryText.textContent = `NASA FIRMS returned no current wildfire detections across ${fireScopeRegion} in this snapshot.`;
-      else if (criticalCount > 0 && Number.isFinite(nearest)) summaryText.textContent = `NASA FIRMS indicates critical wildfire detections in ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      else if (Number.isFinite(nearest)) summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-      else summaryText.textContent = `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}.`;
+      else if (fireFeatures.length === 0 && floodCount > 0) summaryText.textContent = _tmpl("map.fire_summary_flood_active",{n:floodCount,s:floodCount===1?"":"s"})||`Flash flood watch geometry is active in ${floodCount} area${floodCount===1?"":"s"}, while NASA FIRMS returned no current wildfire detections.`;
+      else if (fireFeatures.length === 0 && smokeCount > 0) summaryText.textContent = _tmpl("map.fire_summary_smoke_active",{n:smokeCount,s:smokeCount===1?"":"s"})||`NOAA HMS is showing ${smokeCount} smoke region${smokeCount===1?"":"s"}, while NASA FIRMS returned no current wildfire detections.`;
+      else if (fireFeatures.length === 0) summaryText.textContent = _tmpl("map.fire_summary_none",{region:fireScopeRegion})||`NASA FIRMS returned no current wildfire detections across ${fireScopeRegion} in this snapshot.`;
+      else if (criticalCount > 0 && Number.isFinite(nearest)) summaryText.textContent = _tmpl("map.fire_summary_critical",{region:fireScopeRegion,dist:nearest.toFixed(1),loc:refLabel})||`NASA FIRMS indicates critical wildfire detections in ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+      else if (Number.isFinite(nearest)) summaryText.textContent = _tmpl("map.fire_summary_n_nearest",{n:fireFeatures.length,s:fireFeatures.length===1?"":"s",region:fireScopeRegion,dist:nearest.toFixed(1),loc:refLabel})||`NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length===1?"":"s"} across ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+      else summaryText.textContent = _tmpl("map.fire_summary_n",{n:fireFeatures.length,s:fireFeatures.length===1?"":"s",region:fireScopeRegion})||`NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length===1?"":"s"} across ${fireScopeRegion}.`;
     }
     const summarySource = document.getElementById(`summary-source-${suffix}`);
-    if (summarySource) summarySource.textContent = `Source: ${(fire.sourceLabel || "NASA FIRMS · Kahu Ola Worker")} · Delivered by Kahu Ola civic aggregator · Flood official: ${flashFlood.sourceLabel || "NWS"} · Local context: ${floodContext.sourceLabel || "PacIOOS"} · MRMS: ${mrms.sourceLabel || "MRMS"} · Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} · Radar: NOAA`;
+    if (summarySource) summarySource.textContent = `${_t("map.source_colon")||"Source:"} ${(fire.sourceLabel || "NASA FIRMS \xb7 Kahu Ola Worker")} \xb7 Delivered by Kahu Ola civic aggregator \xb7 Flood official: ${flashFlood.sourceLabel || "NWS"} \xb7 Local context: ${floodContext.sourceLabel || "PacIOOS"} \xb7 MRMS: ${mrms.sourceLabel || "MRMS"} \xb7 Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} \xb7 Radar: NOAA`;
     const summaryUpdated = document.getElementById(`summary-updated-${suffix}`);
-    if (summaryUpdated) summaryUpdated.textContent = `Updated: ${fire.sourceTime ? hstTime(fire.sourceTime) : "—"}`;
+    if (summaryUpdated) summaryUpdated.textContent = _tmpl("map.updated_colon",{time:fire.sourceTime ? hstTime(fire.sourceTime) : "—"})||`Updated: ${fire.sourceTime ? hstTime(fire.sourceTime) : "—"}`;
     const summaryPrivacy = document.getElementById(`summary-privacy-${suffix}`);
     if (summaryPrivacy) summaryPrivacy.textContent = _t("map.summary_privacy")||"Kahu Ola aggregates public hazard signals and does not issue emergency orders.";
   });
@@ -3255,7 +3277,7 @@ function renderUnifiedPanels() {
 
 function openHazardDetail(payload) {
   if (!hazardDetailSheet) return;
-  document.getElementById("hazard-detail-title").textContent = payload.title || "Hazard module";
+  document.getElementById("hazard-detail-title").textContent = payload.title || (_t("map.detail_title_default")||"Hazard module");
   document.getElementById("hazard-detail-status").textContent = payload.status || "—";
   document.getElementById("hazard-detail-note").textContent = payload.note || "—";
   document.getElementById("hazard-detail-body").textContent = payload.body || "—";
@@ -3267,22 +3289,22 @@ function openFloodModuleDetail(kind) {
   const context = getState("floodContext");
   const mrms = getState("mrmsRain");
   const wind = getState("windRisk");
-  if (kind === "flood") return openHazardDetail({ title:"Flash Flood", status: flood.sourceStatus === "detected" ? "Official flood status active" : flood.sourceStatus === "none" ? "No active flash flood watch" : "Official flood status unavailable", note:"Official source: National Weather Service.", body:"Official flood polygons come from the National Weather Service. PacIOOS, MRMS, and NOAA radar remain supporting context layers." });
-  if (kind === "context") return openHazardDetail({ title:"Flood Context", status: context.sourceStatus === "detected" ? "Estimated local flood context available" : context.sourceStatus === "none" ? "No local flood context returned" : "Local flood context unavailable", note:"Source: NWS alerts + Kahu Ola terrain logic. Context only, not official flood geometry.", body:"This layer is estimated local context only." });
-  if (kind === "mrms") return openHazardDetail({ title:"MRMS Rainfall", status: mrms.sourceStatus === "detected" ? "MRMS rainfall context available" : mrms.sourceStatus === "none" ? "No MRMS polygons returned" : "MRMS rainfall unavailable", note:"Source: NOAA MRMS rainfall accumulation products.", body:"MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
-  if (kind === "radar") return openHazardDetail({ title:"Rain Radar", status: rainRadarVisible ? "Live NOAA radar visible" : "Radar is off", note:"Source: NOAA NEXRAD via Iowa Mesonet · Proxied by Kahu Ola (USA + territories).", body:"NEXRAD shows real-time precipitation radar for Hawaiʻi and other US territories. Transparent areas mean no radar echo — no significant rain. Data refreshes every 2–5 minutes." });
-  return openHazardDetail({ title:"Fire Weather", status: wind.sourceStatus === "detected" ? "Fire weather spread context active" : wind.sourceStatus === "none" ? "No elevated fire weather cells returned" : "Fire weather context unavailable", note:"Source: NWS + RAWS wind and humidity context.", body:"Fire Weather combines wind gust, sustained wind, humidity, and dry exposure into a civic spread-risk context layer. It is contextual, not an evacuation order." });
+  if (kind === "flood") return openHazardDetail({ title:_t("map.hd_flood_title")||"Flash Flood", status: flood.sourceStatus === "detected" ? (_t("map.hd_flood_st_active")||"Official flood status active") : flood.sourceStatus === "none" ? (_t("map.hd_flood_st_none")||"No active flash flood watch") : (_t("map.hd_flood_st_unavail")||"Official flood status unavailable"), note:_t("map.hd_flood_note")||"Official source: National Weather Service.", body:_t("map.hd_flood_body")||"Official flood polygons come from the National Weather Service. PacIOOS, MRMS, and NOAA radar remain supporting context layers." });
+  if (kind === "context") return openHazardDetail({ title:_t("map.hd_ctx_title")||"Flood Context", status: context.sourceStatus === "detected" ? (_t("map.hd_ctx_st_active")||"Estimated local flood context available") : context.sourceStatus === "none" ? (_t("map.hd_ctx_st_none")||"No local flood context returned") : (_t("map.hd_ctx_st_unavail")||"Local flood context unavailable"), note:_t("map.hd_ctx_note")||"Source: NWS alerts + Kahu Ola terrain logic. Context only, not official flood geometry.", body:_t("map.hd_ctx_body")||"This layer is estimated local context only." });
+  if (kind === "mrms") return openHazardDetail({ title:_t("map.hd_mrms_title")||"MRMS Rainfall", status: mrms.sourceStatus === "detected" ? (_t("map.hd_mrms_st_active")||"MRMS rainfall context available") : mrms.sourceStatus === "none" ? (_t("map.hd_mrms_st_none")||"No MRMS polygons returned") : (_t("map.hd_mrms_st_unavail")||"MRMS rainfall unavailable"), note:_t("map.hd_mrms_note")||"Source: NOAA MRMS rainfall accumulation products.", body:_t("map.hd_mrms_body")||"MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
+  if (kind === "radar") return openHazardDetail({ title:_t("map.hd_radar_title")||"Rain Radar", status: rainRadarVisible ? (_t("map.hd_radar_st_active")||"Live NOAA radar visible") : (_t("map.hd_radar_st_off")||"Radar is off"), note:_t("map.hd_radar_note")||"Source: NOAA NEXRAD via Iowa Mesonet \xb7 Proxied by Kahu Ola (USA + territories).", body:_t("map.hd_radar_body")||"NEXRAD shows real-time precipitation radar for Hawai\u02bfi and other US territories. Transparent areas mean no radar echo \u2014 no significant rain. Data refreshes every 2\u20135 minutes." });
+  return openHazardDetail({ title:_t("map.hd_wind_title")||"Fire Weather", status: wind.sourceStatus === "detected" ? (_t("map.hd_wind_st_active")||"Fire weather spread context active") : wind.sourceStatus === "none" ? (_t("map.hd_wind_st_none")||"No elevated fire weather cells returned") : (_t("map.hd_wind_st_unavail")||"Fire weather context unavailable"), note:_t("map.hd_wind_note")||"Source: NWS + RAWS wind and humidity context.", body:_t("map.hd_wind_body")||"Fire Weather combines wind gust, sustained wind, humidity, and dry exposure into a civic spread-risk context layer. It is contextual, not an evacuation order." });
 }
 function openHazardDetailFromElement(el) {
   if (!el || !hazardDetailSheet) return;
-  openHazardDetail({ title: el.dataset.hazardTitle || "Hazard module", status: el.dataset.hazardStatus || "Planned", note: el.dataset.hazardNote || "No additional context available.", body: el.dataset.hazardDetail || el.dataset.hazardNote || "—" });
+  openHazardDetail({ title: el.dataset.hazardTitle || (_t("map.detail_title_default")||"Hazard module"), status: el.dataset.hazardStatus || (_t("map.hd_default_status")||"Planned"), note: el.dataset.hazardNote || (_t("map.hd_default_note")||"No additional context available."), body: el.dataset.hazardDetail || el.dataset.hazardNote || "—" });
 }
 function closeHazardDetail() { if (!hazardDetailSheet) return; hazardDetailSheet.classList.remove("open"); hazardDetailSheet.setAttribute("aria-hidden","true"); }
 
 function openFloodContextPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌧 Flood Context</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NWS + Kahu Ola")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">Island · Zone</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " · " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">Watershed</div><div class="popup-metric-value">${escapeHtml(p.watershed_saturation || "Unavailable")}</div></div><div class="popup-metric"><div class="popup-metric-label">Stream</div><div class="popup-metric-value">${escapeHtml(p.stream_context || "Unavailable")}</div></div></div><div class="popup-note">Estimated local Hawaiʻi flood context. Source: NWS alerts + Kahu Ola terrain logic.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\ud83c\udf27 ${_L("map.popup_title_flood_ctx","Flood Context")}</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NWS + Kahu Ola")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone","Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_watershed","Watershed")}</div><div class="popup-metric-value">${escapeHtml(p.watershed_saturation || (_t("map.s_unavailable")||"Unavailable"))}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_stream","Stream")}</div><div class="popup-metric-value">${escapeHtml(p.stream_context || (_t("map.s_unavailable")||"Unavailable"))}</div></div></div><div class="popup-note">${_L("map.popup_flood_ctx_note","Estimated local Hawai\u02bfi flood context. Source: NWS alerts + Kahu Ola terrain logic.")}</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function formatLocalHazardTime(value) {
@@ -3320,31 +3342,31 @@ function openLocalHazardPopup(feature, lngLat) {
         <div class="popup-title">⚠️ ${escapeHtml(reportType)}</div>
         <div class="popup-coords">${escapeHtml(p.source_label || "NWS Local Storm Reports")}</div>
       </div>
-      <div class="popup-severity normal">OFFICIAL REPORT</div>
+      <div class="popup-severity normal">${_L("map.popup_official_report","OFFICIAL REPORT")}</div>
     </div>
     <div class="popup-grid">
       <div class="popup-metric">
-        <div class="popup-metric-label">City</div>
+        <div class="popup-metric-label">${_L("map.popup_city","City")}</div>
         <div class="popup-metric-value">${escapeHtml(city)}</div>
       </div>
       <div class="popup-metric">
-        <div class="popup-metric-label">County</div>
+        <div class="popup-metric-label">${_L("map.popup_county","County")}</div>
         <div class="popup-metric-value">${escapeHtml(county)}</div>
       </div>
       <div class="popup-metric">
-        <div class="popup-metric-label">Magnitude</div>
+        <div class="popup-metric-label">${_L("map.popup_magnitude","Magnitude")}</div>
         <div class="popup-metric-value">${escapeHtml(magnitude)}</div>
       </div>
       <div class="popup-metric">
-        <div class="popup-metric-label">WFO</div>
+        <div class="popup-metric-label">${_L("map.popup_wfo","WFO")}</div>
         <div class="popup-metric-value">${escapeHtml(p.wfo || "HFO")}</div>
       </div>
     </div>
     <div class="popup-metric">
-      <div class="popup-metric-label">Details</div>
+      <div class="popup-metric-label">${_L("map.popup_details","Details")}</div>
       <div class="popup-metric-value" style="white-space:normal;font-size:13px;line-height:1.45;">${escapeHtml(details)}</div>
     </div>
-    <div class="popup-note">Reported at: ${escapeHtml(timeStr)}. This is an official local storm report for situational awareness and does not replace emergency instructions.</div>
+    <div class="popup-note">${_L("map.popup_reported_at","Reported at:")} ${escapeHtml(timeStr)}. ${_L("map.popup_local_disclaimer","This is an official local storm report for situational awareness and does not replace emergency instructions.")}</div>
   </div>`;
 
   activePopup = new maplibregl.Popup({
@@ -3358,14 +3380,14 @@ function openLocalHazardPopup(feature, lngLat) {
 function openMrmsPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔵 MRMS Rainfall</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NOAA MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.severity || p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">Island · Zone</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " · " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">Window</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">Accumulation</div><div class="popup-metric-value">${p.qpe_mm != null ? p.qpe_mm + " mm" : "—"}${p.qpe_in != null ? " (" + p.qpe_in + " in)" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">Risk Level</div><div class="popup-metric-value">${escapeHtml(p.risk_index || "—")}</div></div></div><div class="popup-note">MRMS rainfall is contextual. Pair with official NWS alerts.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔵 ${_L("map.popup_title_mrms","MRMS Rainfall")}</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NOAA MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.severity || p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone","Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_window","Window")}</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_accumulation","Accumulation")}</div><div class="popup-metric-value">${p.qpe_mm != null ? p.qpe_mm + " mm" : "—"}${p.qpe_in != null ? " (" + p.qpe_in + " in)" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_risk_level","Risk Level")}</div><div class="popup-metric-value">${escapeHtml(p.risk_index || "—")}</div></div></div><div class="popup-note">${_L("map.popup_mrms_note","MRMS rainfall is contextual. Pair with official NWS alerts.")}</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openWindRiskPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
   const reasons = Array.isArray(p.reason_codes) && p.reason_codes.length ? p.reason_codes.join(" · ") : "Wind + humidity spread context";
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌬 Fire Weather</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NWS / RAWS")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Context")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Wind Gust</div><div class="popup-metric-value">${escapeHtml(p.wind_gust_mph ?? "—")}${p.wind_gust_mph != null ? " mph" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">Humidity</div><div class="popup-metric-value">${escapeHtml(p.humidity_pct ?? "—")}${p.humidity_pct != null ? "%" : ""}</div></div></div><div class="popup-note">${escapeHtml(reasons)}. ${escapeHtml(p.advisory || "Context only.")}</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌬 ${_L("map.popup_title_fire_weather","Fire Weather")}</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NWS / RAWS")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Context")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind_gust","Wind Gust")}</div><div class="popup-metric-value">${escapeHtml(p.wind_gust_mph ?? "—")}${p.wind_gust_mph != null ? " mph" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_humidity","Humidity")}</div><div class="popup-metric-value">${escapeHtml(p.humidity_pct ?? "—")}${p.humidity_pct != null ? "%" : ""}</div></div></div><div class="popup-note">${escapeHtml(reasons)}. ${escapeHtml(p.advisory || (_t("map.popup_ctx_only")||"Context only."))}</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openFlashFloodPopup(feature, lngLat) {
@@ -3374,40 +3396,40 @@ function openFlashFloodPopup(feature, lngLat) {
   const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T"," ").slice(0,16) + " UTC" : "See Signal text";
   if (activePopup) activePopup.remove();
   const isWarning = severity === "WARNING";
-  const popupTitle = isWarning ? "🚨 Flash Flood WARNING" : "🌊 Flash Flood Watch";
+  const popupTitle = isWarning ? `🚨 ${_L("map.popup_title_flash_warn","Flash Flood WARNING")}` : `🌊 ${_L("map.popup_title_flash_watch","Flash Flood Watch")}`;
   const severityClass = isWarning ? "popup-severity crit" : "popup-severity normal";
   const disclaimer = isWarning
-    ? "⚠ Flash Flood WARNING — Active flooding may be occurring. Follow NWS and county emergency instructions immediately."
-    : "Flash Flood Watch — conditions are favorable for flooding. Monitor official NWS alerts and be ready to act.";
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">${popupTitle}</div><div class="popup-coords">${escapeHtml(p.source || "NWS")}</div></div><div class="${severityClass}">${escapeHtml(severity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Signal</div><div class="popup-metric-value">${escapeHtml(p.headline || (isWarning ? "Flash Flood Warning" : "Flash Flood Watch"))}</div></div><div class="popup-metric"><div class="popup-metric-label">Issued</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${disclaimer}</div></div>`;
+    ? (_t("map.popup_flood_warn_note")||"⚠ Flash Flood WARNING — Active flooding may be occurring. Follow NWS and county emergency instructions immediately.")
+    : (_t("map.popup_flood_watch_note")||"Flash Flood Watch — conditions are favorable for flooding. Monitor official NWS alerts and be ready to act.");
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">${popupTitle}</div><div class="popup-coords">${escapeHtml(p.source || "NWS")}</div></div><div class="${severityClass}">${escapeHtml(severity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal","Signal")}</div><div class="popup-metric-value">${escapeHtml(p.headline || (isWarning ? "Flash Flood Warning" : "Flash Flood Watch"))}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_issued","Issued")}</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${disclaimer}</div></div>`;
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openSmokePopup(feature, lngLat) {
   const p = feature.properties || {}; const density = p.density || "light"; const titleDensity = density.charAt(0).toUpperCase() + density.slice(1); const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T"," ").slice(0,16) + " UTC" : "Unavailable";
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌫 Smoke Presence</div><div class="popup-coords">${escapeHtml(p.source || "NOAA HMS")}</div></div><div class="popup-severity normal">${escapeHtml(titleDensity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Density</div><div class="popup-metric-value">${escapeHtml(titleDensity)}</div></div><div class="popup-metric"><div class="popup-metric-label">Detected Time</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${escapeHtml(p.advisory || "Smoke detected in this area.")}</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌫 ${_L("map.popup_title_smoke","Smoke Presence")}</div><div class="popup-coords">${escapeHtml(p.source || "NOAA HMS")}</div></div><div class="popup-severity normal">${escapeHtml(titleDensity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_density","Density")}</div><div class="popup-metric-value">${escapeHtml(titleDensity)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_detected_time","Detected Time")}</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${escapeHtml(p.advisory || (_t("map.popup_smoke_note_fallback")||"Smoke detected in this area."))}</div></div>`;
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openPerimeterPopup(feature, lngLat) {
   const p = feature.properties || {}; const official = p.official === true; const acres = p.acres ? `${Number(p.acres).toLocaleString()} acres` : "Unavailable";
   if (activePopup) activePopup.remove();
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔺 Fire Perimeter</div><div class="popup-coords">${escapeHtml(p.incident_name || "Unnamed perimeter")}</div></div><div class="popup-severity ${official ? "critical":"normal"}">${official ? "Official":"Estimated"}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Area</div><div class="popup-metric-value">${escapeHtml(acres)}</div></div><div class="popup-metric"><div class="popup-metric-label">Status</div><div class="popup-metric-value">${escapeHtml(p.status || "Active perimeter feed")}</div></div></div><div class="popup-note">Perimeter boundaries may lag fast-moving field conditions.</div></div>`;
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔺 ${_L("map.popup_title_perimeter","Fire Perimeter")}</div><div class="popup-coords">${escapeHtml(p.incident_name || "Unnamed perimeter")}</div></div><div class="popup-severity ${official ? "critical":"normal"}">${official ? (_t("map.popup_perimeter_official")||"Official") : (_t("map.popup_perimeter_estimated")||"Estimated")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(acres)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_status","Status")}</div><div class="popup-metric-value">${escapeHtml(p.status || "Active perimeter feed")}</div></div></div><div class="popup-note">${_L("map.popup_perimeter_note","Perimeter boundaries may lag fast-moving field conditions.")}</div></div>`;
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"340px" }).setLngLat(lngLat).setHTML(html).addTo(map);
 }
 function openFirePopup(feature, lngLat) {
   const coords = feature.geometry.coordinates.slice(); const p = feature.properties || {}; const lat = coords[1], lng = coords[0];
-  const milesFromYou = lastKnownUserCoord ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi" : "Enable location";
+  const milesFromYou = lastKnownUserCoord ? distMiles(lastKnownUserCoord, coords).toFixed(1) + " mi" : (_t("map.fire_enable_location")||"Enable location");
   // Safe-parse provenance — MapLibre stringifies nested objects in queryRenderedFeatures
   let pv = null; try { pv = typeof p.provenance === "string" ? JSON.parse(p.provenance) : (p.provenance && typeof p.provenance === "object" ? p.provenance : null); } catch {}
   // Signal classification — must always be shown; never hide
-  const signalClassLabels = { satellite_detection: "Satellite detection", derived_signal: "Derived signal", confirmed_observation: "Confirmed observation", official_hazard: "Official hazard" };
+  const signalClassLabels = { satellite_detection: _t("map.fire_class_satellite")||"Satellite detection", derived_signal: _t("map.fire_class_derived")||"Derived signal", confirmed_observation: _t("map.fire_class_confirmed")||"Confirmed observation", official_hazard: _t("map.fire_class_official")||"Official hazard" };
   const signalClassLabel = signalClassLabels[p.signal_class || "satellite_detection"] || String(p.signal_class || "satellite_detection");
   // Detection confidence — label MUST say "Detection confidence", NOT "Fire risk" or "Severity"
-  const confLabels = { high: "High", nominal: "Nominal", low: "Low" };
+  const confLabels = { high: _t("map.fire_conf_high")||"High", nominal: _t("map.fire_conf_nominal")||"Nominal", low: _t("map.fire_conf_low")||"Low" };
   const rawConf = p.detection_confidence != null ? p.detection_confidence : p.confidence;
   const confLabel = confLabels[String(rawConf || "").toLowerCase()] || (rawConf != null ? String(rawConf) : "—");
   // Freshness
-  const freshnessLabels = { FRESH: "Fresh (<15 min)", STALE_OK: "Stale (15–60 min)", STALE_DROP: "Outdated (>60 min)" };
+  const freshnessLabels = { FRESH: _t("map.fire_fresh_fresh")||"Fresh (<15 min)", STALE_OK: _t("map.fire_fresh_stale")||"Stale (15\u201360 min)", STALE_DROP: _t("map.fire_fresh_drop")||"Outdated (>60 min)" };
   const freshnessLabel = freshnessLabels[p.freshness_status] || (p.freshness_status ? String(p.freshness_status) : "—");
   // Timestamps — prefer ISO acq_datetime_utc, fall back to legacy acq_date/acq_time pair
   const acqTime = p.acq_datetime_utc ? String(p.acq_datetime_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : formatDetectedTime(p.acq_date, p.acq_time);
@@ -3419,8 +3441,8 @@ function openFirePopup(feature, lngLat) {
   const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`; const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Wildfire%20Signal`; const googleDirections = lastKnownUserCoord ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
   map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
   if (activePopup) activePopup.remove();
-  const observedRow = observedTime ? `<div class="popup-metric"><div class="popup-metric-label">Observed at (UTC)</div><div class="popup-metric-value">${escapeHtml(observedTime)}</div></div>` : "";
-  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔥 Wildfire Detection Signal</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} · ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Signal type</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">Detection confidence</div><div class="popup-metric-value">${escapeHtml(confLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">Acquired (UTC)</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">Distance from you</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">Freshness</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">Signal state</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">FRP (radiative power)</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">Satellite</div><div class="popup-metric-value">${escapeHtml(satellite)}</div></div>${observedRow}</div><div class="popup-note">⚠️ This is a satellite fire detection observation — not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">Open Directions</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">Satellite View</a></div></div>`;
+  const observedRow = observedTime ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_observed_at","Observed at (UTC)")}</div><div class="popup-metric-value">${escapeHtml(observedTime)}</div></div>` : "";
+  const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\ud83d\udd25 ${_L("map.popup_title_fire","Wildfire Detection Signal")}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type","Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf","Detection confidence")}</div><div class="popup-metric-value">${escapeHtml(confLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired","Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you","Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness","Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state","Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp","FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite","Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}</div></div>${observedRow}</div><div class="popup-note">${_L("map.popup_fire_disclaimer","\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions","Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view","Satellite View")}</a></div></div>`;
   activePopup = new maplibregl.Popup({ closeButton:true, closeOnMove:false, offset:14, maxWidth:"360px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
 }
 
@@ -3428,7 +3450,7 @@ function updateUserMarker(coord) {
   if (!coord) return;
   if (userMarker) userMarker.remove();
   const el = document.createElement("div"); el.className = "user-marker";
-  const popup = new maplibregl.Popup({ closeButton:false, offset:14 }).setHTML(`<div style="font-weight:600;margin-bottom:4px">📍 Your Location</div><div style="color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}</div><div style="margin-top:6px;color:#9bc4ff">Used only on this device</div>`);
+  const popup = new maplibregl.Popup({ closeButton:false, offset:14 }).setHTML(`<div style="font-weight:600;margin-bottom:4px">📍 ${_L("map.popup_your_location","Your Location")}</div><div style="color:#aaa;font-family:'DM Mono',monospace">${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}</div><div style="margin-top:6px;color:#9bc4ff">${_L("map.popup_location_privacy","Used only on this device")}</div>`);
   userMarker = new maplibregl.Marker({ element: el }).setLngLat(coord).setPopup(popup).addTo(map);
 }
 function setLocationButtonState(loading){ ["locate-btn-panel-desktop","locate-btn-panel-mobile","locate-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.disabled=loading; el.textContent = loading ? (_t("map.locating") || "Locating...") : (_t("map.use_location") || "Use My Location"); });}
@@ -3534,10 +3556,10 @@ function updateTsunamiStatusUI(state) {
     const count = state.features?.length || 0;
     const cls   = state.sourceStatus === "detected" ? "status-detected" :
                   state.sourceStatus === "none"     ? "status-none" : "status-unavailable";
-    const txt   = state.sourceStatus === "detected" ? `ALERT · ${count}` :
-                  state.sourceStatus === "none"     ? "Clear" : "Unavailable";
-    const ntxt  = state.sourceStatus === "detected" ? "⚠ Tsunami warning active — follow official guidance." :
-                  state.sourceStatus === "none"     ? "No active tsunami warnings." : "NWS data unavailable.";
+    const txt   = state.sourceStatus === "detected" ? (_tmpl("map.s_tsunami_alert_n",{n:count})||`ALERT \xb7 ${count}`) :
+                  state.sourceStatus === "none"     ? (_t("map.s_clear")||"Clear") : (_t("map.s_unavailable")||"Unavailable");
+    const ntxt  = state.sourceStatus === "detected" ? (_t("map.s_tsunami_warn_note")||"\u26a0 Tsunami warning active \u2014 follow official guidance.") :
+                  state.sourceStatus === "none"     ? (_t("map.s_tsunami_none_note")||"No active tsunami warnings.") : (_t("map.s_tsunami_unavail_note")||"NWS data unavailable.");
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     [note, n].forEach(el => { if (el) el.textContent = ntxt; });
   });
@@ -3549,8 +3571,8 @@ function updateHurricaneStatusUI(state) {
     const n = document.getElementById("hurricane-note");
     const count = state.features?.length || 0;
     const cls   = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
-    const txt   = count > 0 ? `ACTIVE · ${count}` : state.sourceStatus === "unavailable" ? "Unavailable" : "Clear";
-    const ntxt  = count > 0 ? `${count} active Pacific storm(s). Monitor NHC.` : "No active Pacific storms near Hawaiʻi.";
+    const txt   = count > 0 ? (_tmpl("map.s_hurricane_active_n",{n:count})||`ACTIVE \xb7 ${count}`) : state.sourceStatus === "unavailable" ? (_t("map.s_unavailable")||"Unavailable") : (_t("map.s_clear")||"Clear");
+    const ntxt  = count > 0 ? (_tmpl("map.s_hurricane_active_note",{n:count})||`${count} active Pacific storm(s). Monitor NHC.`) : (_t("map.s_hurricane_none_note")||"No active Pacific storms near Hawai\u02bbi.");
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     if (n) n.textContent = ntxt;
   });
@@ -3562,8 +3584,8 @@ function updateLandslideStatusUI(state) {
     const n = document.getElementById("landslide-note");
     const count = state.features?.length || 0;
     const cls   = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
-    const txt   = count > 0 ? `CONTEXT · ${count}` : "Low risk";
-    const ntxt  = count > 0 ? "Landslide susceptibility context available." : "No elevated landslide risk detected.";
+    const txt   = count > 0 ? (_tmpl("map.s_landslide_ctx_n",{n:count})||`CONTEXT \xb7 ${count}`) : (_t("map.s_landslide_low_risk")||"Low risk");
+    const ntxt  = count > 0 ? (_t("map.s_landslide_avail_note")||"Landslide susceptibility context available.") : (_t("map.s_landslide_none_note")||"No elevated landslide risk detected.");
     [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
     if (n) n.textContent = ntxt;
   });
@@ -3573,19 +3595,19 @@ function updateLandslideStatusUI(state) {
 function openTsunamiPopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 Tsunami Alert</div><div class="popup-coords">${escapeHtml(p.source_label || "NWS TWC")}</div></div><div class="popup-severity crit">${escapeHtml(p.severity || "Extreme")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Event</div><div class="popup-metric-value">${escapeHtml(p.event || "Tsunami Alert")}</div></div><div class="popup-metric"><div class="popup-metric-label">Onset</div><div class="popup-metric-value">${escapeHtml(p.onset || "—")}</div></div></div><div class="popup-note">⚠ ${escapeHtml(p.instruction || "Follow official evacuation guidance immediately.")}</div></div>`;
+  const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 ${_L("map.popup_title_tsunami","Tsunami Alert")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NWS TWC")}</div></div><div class="popup-severity crit">${escapeHtml(p.severity || "Extreme")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_event","Event")}</div><div class="popup-metric-value">${escapeHtml(p.event || "Tsunami Alert")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_onset","Onset")}</div><div class="popup-metric-value">${escapeHtml(p.onset || "—")}</div></div></div><div class="popup-note">⚠ ${escapeHtml(p.instruction || (_t("map.popup_tsunami_evac")||"Follow official evacuation guidance immediately."))}</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
 }
 function openHurricanePopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌀 ${escapeHtml(p.name || "Tropical System")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NHC")}</div></div><div class="popup-severity normal">${escapeHtml(p.classification || "Storm")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">Max Wind</div><div class="popup-metric-value">${p.wind_mph != null ? p.wind_mph + " mph" : "—"}</div></div><div class="popup-metric"><div class="popup-metric-label">Movement</div><div class="popup-metric-value">${escapeHtml(p.movement || "—")}</div></div></div><div class="popup-note">Monitor NHC for official track, cone, and watches/warnings.</div></div>`;
+  const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌀 ${escapeHtml(p.name || "Tropical System")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NHC")}</div></div><div class="popup-severity normal">${escapeHtml(p.classification || "Storm")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_max_wind","Max Wind")}</div><div class="popup-metric-value">${p.wind_mph != null ? p.wind_mph + " mph" : "—"}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_movement","Movement")}</div><div class="popup-metric-value">${escapeHtml(p.movement || "—")}</div></div></div><div class="popup-note">${_L("map.popup_hurricane_note","Monitor NHC for official track, cone, and watches/warnings.")}</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
 }
 function openLandslidePopup(feature, lngLat) {
   const p = feature.properties || {};
   if (activePopup) activePopup.remove();
-  const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⛰ Landslide Context</div><div class="popup-coords">${escapeHtml(p.source_label || "Terrain Context")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Moderate")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">Island · Zone</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " · " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">Drainage</div><div class="popup-metric-value">${escapeHtml(p.drainage || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">Terrain</div><div class="popup-metric-value">${escapeHtml(p.terrain || "—")}</div></div></div><div class="popup-note">${p.heavy_rain_active ? "⚠ Heavy rain active — elevated risk." : "Estimated susceptibility. Not an official landslide forecast."}</div></div>`;
+  const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⛰ ${_L("map.popup_title_landslide","Landslide Context")}</div><div class="popup-coords">${escapeHtml(p.source_label || "Terrain Context")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Moderate")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone","Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_drainage","Drainage")}</div><div class="popup-metric-value">${escapeHtml(p.drainage || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_terrain","Terrain")}</div><div class="popup-metric-value">${escapeHtml(p.terrain || "—")}</div></div></div><div class="popup-note">${p.heavy_rain_active ? (_t("map.popup_landslide_rain")||"⚠ Heavy rain active \u2014 elevated risk.") : (_t("map.popup_landslide_est")||"Estimated susceptibility. Not an official landslide forecast.")}</div></div>`;
   activePopup = new maplibregl.Popup({ offset:14, closeButton:true, maxWidth:"320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
 }
 
@@ -3601,26 +3623,26 @@ function openLandslidePopup(feature, lngLat) {
   // (bare "tsunami-card" is inside <template> — inert, getElementById returns null)
   ["desktop", "mobile"].forEach((sfx) => {
     document.getElementById(`tsunami-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("tsunami", (st) => ({
-      title: "Tsunami",
-      status: st.sourceStatus === "detected" ? "⚠ ACTIVE WARNING" :
-              st.sourceStatus === "none"     ? "Clear — no active warnings" :
-              st.status === "loading"        ? "Loading NWS data…" : "Unavailable",
-      note: "Source: NWS Tsunami Warning Center (official).",
-      body: "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
+      title: _t("map.hd_tsunami_title")||"Tsunami",
+      status: st.sourceStatus === "detected" ? (_t("map.hd_tsunami_st_active")||"\u26a0 ACTIVE WARNING") :
+              st.sourceStatus === "none"     ? (_t("map.hd_tsunami_st_none")||"Clear \u2014 no active warnings") :
+              st.status === "loading"        ? (_t("map.hd_tsunami_st_loading")||"Loading NWS data\u2026") : (_t("map.s_unavailable")||"Unavailable"),
+      note: _t("map.hd_tsunami_note")||"Source: NWS Tsunami Warning Center (official).",
+      body: _t("map.hd_tsunami_body")||"Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
     })));
     document.getElementById(`hurricane-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
-      title: "Hurricane Tracks",
-      status: st.features?.length > 0 ? `${st.features.length} active Pacific storm(s)` :
-              st.status === "loading"  ? "Loading NHC data…" : "Clear — no active Pacific storms",
-      note: "Source: National Hurricane Center (NHC).",
-      body: "Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
+      title: _t("map.hd_hurricane_title")||"Hurricane Tracks",
+      status: st.features?.length > 0 ? (_tmpl("map.hd_hurricane_st_n",{n:st.features.length})||`${st.features.length} active Pacific storm(s)`) :
+              st.status === "loading"  ? (_t("map.hd_hurricane_st_loading")||"Loading NHC data\u2026") : (_t("map.hd_hurricane_st_none")||"Clear \u2014 no active Pacific storms"),
+      note: _t("map.hd_hurricane_note")||"Source: National Hurricane Center (NHC).",
+      body: _t("map.hd_hurricane_body")||"Hurricane data shows active Pacific basin storms. Always monitor NHC for official track and watches/warnings."
     })));
     document.getElementById(`landslide-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("landslide", (st) => ({
-      title: "Landslide Risk",
-      status: st.features?.length > 0 ? `${st.features.length} susceptibility zones` :
-              st.status === "loading"  ? "Loading terrain data…" : "Low risk — no elevated zones",
-      note: "Source: Kahu Ola terrain + NWS alerts (contextual).",
-      body: "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
+      title: _t("map.hd_landslide_title")||"Landslide Risk",
+      status: st.features?.length > 0 ? (_tmpl("map.hd_landslide_st_n",{n:st.features.length})||`${st.features.length} susceptibility zones`) :
+              st.status === "loading"  ? (_t("map.hd_landslide_st_loading")||"Loading terrain data\u2026") : (_t("map.hd_landslide_st_low")||"Low risk \u2014 no elevated zones"),
+      note: _t("map.hd_landslide_note")||"Source: Kahu Ola terrain + NWS alerts (contextual).",
+      body: _t("map.hd_landslide_body")||"Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
     })));
   });
 }
@@ -3632,7 +3654,7 @@ function lazyLoadModule(key, detailConfig) {
   if (!model.enabled) {
     // First click — enable and fetch
     model.enabled = true;
-    updateModuleBadge(key, "Loading…", "status-none");
+    updateModuleBadge(key, _t("map.loading_ellipsis")||"Loading\u2026", "status-none");
     refreshHazard(key, { silent: true }).then(() => {
       // Re-open detail after fetch completes
       const st = getState(key);
@@ -3641,9 +3663,9 @@ function lazyLoadModule(key, detailConfig) {
     // Show loading state immediately while fetch runs
     openHazardDetail({
       title: key.charAt(0).toUpperCase() + key.slice(1),
-      status: "Fetching data…",
-      note: "Loading from Kahu Ola aggregator.",
-      body: "Please wait a moment while data is retrieved."
+      status: _t("map.fetching_data")||"Fetching data\u2026",
+      note: _t("map.loading_aggregator")||"Loading from Kahu Ola aggregator.",
+      body: _t("map.please_wait")||"Please wait a moment while data is retrieved."
     });
     return;
   }
@@ -3729,8 +3751,8 @@ document.addEventListener("click", (event) => {
       if (!model) return;
       if (!model.enabled) {
         model.enabled = true;
-        updateModuleBadge(cfg.key, "Loading…", "status-none");
-        openHazardDetail({ title:cfg.title, status:"Fetching live data…", note:cfg.note, body:cfg.body });
+        updateModuleBadge(cfg.key, _t("map.loading_ellipsis")||"Loading\u2026", "status-none");
+        openHazardDetail({ title:cfg.title, status:_t("map.fetching_data")||"Fetching live data\u2026", note:cfg.note, body:cfg.body });
         refreshHazard(cfg.key, { silent:true }).then(() => {
           const st = getState(cfg.key);
           if (cfg.key === "tsunami" || cfg.key === "hurricane") {
