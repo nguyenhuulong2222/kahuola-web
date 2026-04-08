@@ -3181,16 +3181,21 @@
       if (!map.__mrmsHoverBound) { map.__mrmsHoverBound = true; map.on("mouseenter", "mrms-rain-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "mrms-rain-fill", () => { map.getCanvas().style.cursor = ""; }); }
       syncMrmsLayerVisibility();
     }
-    // ── NEXRAD Rain Radar — USA + territories (Iowa Mesonet proxy) ──────────
-    // Tiles are transparent where no precipitation — that IS correct behavior.
-    // Kahu Ola Worker proxies Mesonet to avoid CSP: kahuola.org/api/tiles/radar/*
+    // ── NEXRAD Rain Radar — USA + territories ──────────────────────
+    // Iowa Mesonet is a public NEXRAD tile aggregator (CORS *, no auth).
+    // Architecturally equivalent to MapTiler serving basemap tiles.
+    // Invariant I preserved: no direct call to NASA/NOAA/NWS/EPA/USGS/PacIOOS.
+    // After Worker W8 deploy, switch tiles to: kahuola.org/api/tiles/radar/{z}/{x}/{y}
+    // Transparent areas = no precipitation echo — correct behavior.
     function setupRainRadar() {
       if (!map.getSource("noaa-radar")) {
         ensureSource("noaa-radar", {
           type: "raster",
-          tiles: ["https://kahuola.org/api/tiles/radar/{z}/{x}/{y}"],
+          tiles: ["https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png"],
           tileSize: 256,
-          attribution: "NOAA NEXRAD · Iowa Mesonet · Via Kahu Ola"
+          minzoom: 0,
+          maxzoom: 8,
+          attribution: "NOAA NEXRAD · Iowa State Mesonet"
         });
         ensureLayer({
           id: "noaa-radar-layer", type: "raster", source: "noaa-radar",
@@ -3199,7 +3204,7 @@
         }, "waterway");
       }
       // Update card note
-      const note = "NEXRAD · USA + Territories";
+      const note = _t("map.radar_note_live") || "NEXRAD · Iowa Mesonet · ~5 min refresh";
       ["desktop", "mobile"].forEach(sfx => {
         const el = document.getElementById(`rain-radar-note-${sfx}`);
         if (el) el.textContent = note;
