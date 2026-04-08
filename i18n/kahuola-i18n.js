@@ -154,6 +154,132 @@
       "map.map_details": "Map Details",
       "map.hide_details": "Hide Details",
       "map.footer": "Kahu Ola civic technology",
+
+      // ── Live map panel strings ────────────────────────────────
+
+      // Metric labels (panel template)
+      "map.metric_detections": "Detections",
+      "map.metric_nearest": "Nearest",
+      "map.metric_critical": "Critical",
+      "map.metric_fetched": "Fetched",
+
+      // Accordion headers
+      "map.accordion_snapshot": "Snapshot Context",
+      "map.accordion_snapshot_sub": "Situational context and source details.",
+      "map.accordion_secondary": "Secondary Layers",
+      "map.accordion_hazards": "Active Hazards \xb7 Hawai\u02bfi",
+      "map.accordion_evidence": "Supporting Evidence",
+      "map.accordion_context": "Context Layers",
+
+      // Snapshot chips
+      "map.chip_privacy": "Location stays on device",
+      "map.snapshot_waiting": "Waiting for the latest wildfire snapshot.",
+
+      // Layer names (static labels in template)
+      "map.layer_smoke": "Smoke",
+      "map.layer_perimeters": "Perimeters",
+      "map.layer_rain_radar": "Rain Radar",
+      "map.layer_mrms": "MRMS Rainfall",
+      "map.layer_fire_weather": "Fire Weather",
+      "map.layer_flood_context": "Flood Context",
+      "map.layer_landslide": "Landslide Risk",
+      "map.layer_local_reports": "Local Reports",
+
+      // Hazard card kickers + titles
+      "map.kicker_nws": "Official \xb7 National Weather Service",
+      "map.kicker_nws_twc": "Official \xb7 NWS Tsunami Warning Center",
+      "map.kicker_nhc": "Official \xb7 National Hurricane Center",
+      "map.hazard_flood": "Flash Flood",
+      "map.hazard_tsunami": "Tsunami",
+      "map.hazard_hurricane": "Hurricane",
+
+      // Civic disclaimer (blueprint footnote)
+      "map.blueprint_footnote": "Official sources are shown for each hazard. Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders. Always follow county, state, and federal guidance.",
+
+      // Status banners
+      "map.banner_offline": "Offline \u2014 showing cached data",
+      "map.banner_degraded": "Source degraded",
+      "map.banner_parse_error": "Data format error",
+      "map.banner_location": "Location used only on this device",
+      "map.banner_loc_denied": "Location permission not granted",
+
+      // JS-driven display strings
+      "map.refreshing": "REFRESHING",
+      "map.view_statewide": "Statewide",
+      "map.view_my_location": "My Location",
+      "map.basemap_dark": "Dark",
+      "map.dark_map": "Dark Map",
+
+      // Status shared labels
+      "map.s_unavailable": "Unavailable",
+      "map.s_inactive": "Inactive",
+      "map.s_none": "None",
+      "map.s_active": "Active",
+      "map.s_clear": "Clear",
+      "map.s_off": "Off",
+      // Smoke status
+      "map.s_smoke_detected_1": "Smoke detected",
+      "map.s_smoke_detected_n": "Smoke detected \xb7 {n}",
+      "map.s_smoke_det_metric_1": "Detected (1 region)",
+      "map.s_smoke_det_metric_n": "Detected ({n} regions)",
+      "map.s_smoke_det_note_1": "NOAA HMS shows smoke in 1 region in the current snapshot.",
+      "map.s_smoke_det_note_n": "NOAA HMS shows smoke in {n} regions in the current snapshot.",
+      "map.s_smoke_det_sub_on": "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage.",
+      "map.s_smoke_det_sub_off": "Smoke is present in the snapshot, but the Smoke Layer is currently off.",
+      "map.s_smoke_none": "No smoke",
+      "map.s_smoke_none_metric": "No smoke in current snapshot",
+      "map.s_smoke_none_note": "NOAA HMS did not return any smoke polygons for the current snapshot.",
+      "map.s_smoke_none_sub": "Turning the smoke layer on only enables the map overlay.",
+      "map.s_smoke_unavail_metric": "Smoke data unavailable",
+      "map.s_smoke_unavail_note": "Smoke data is temporarily unavailable.",
+      "map.s_smoke_unavail_sub": "This state is different from \u2018No smoke\u2019.",
+      // Perimeter status
+      "map.s_perim_det_metric_1": "Detected (1 perimeter)",
+      "map.s_perim_det_metric_n": "Detected ({n} perimeters)",
+      "map.s_perim_det_badge_1": "Detected \xb7 1",
+      "map.s_perim_det_badge_n": "Detected \xb7 {n}",
+      "map.s_perim_det_note_1": "Validated perimeter geometry is present in 1 region.",
+      "map.s_perim_det_note_n": "Validated perimeter geometry is present in {n} regions.",
+      "map.s_perim_none_metric": "No perimeter in current snapshot",
+      "map.s_perim_none_badge": "No perimeter",
+      "map.s_perim_none_note": "No perimeter polygons were returned in the current snapshot.",
+      "map.s_perim_unavail_metric": "Perimeter data unavailable",
+      "map.s_perim_unavail_note": "Perimeter data is temporarily unavailable.",
+      // Flash flood watch status
+      "map.s_flood_watch_1": "Watch active",
+      "map.s_flood_watch_n": "Watch active \xb7 {n}",
+      "map.s_flood_watch_note_1": "Official source: National Weather Service. One flood watch geometry is active.",
+      "map.s_flood_watch_note_n": "Official source: National Weather Service. {n} flood watch areas are active.",
+      "map.s_flood_none": "No active watch",
+      "map.s_flood_none_note": "Official source: National Weather Service. No active flash flood watch geometry was returned.",
+      "map.s_flood_unavail_note": "Official flood status could not be confirmed right now.",
+      // Flood context status
+      "map.s_fc_active_n": "Active \xb7 {n}",
+      "map.s_fc_active_note": "NWS flash flood alert active \u2014 terrain context zones are now visible.",
+      "map.s_fc_inactive_note": "Terrain context is hidden \u2014 only shown when an official NWS flash flood alert is active.",
+      // MRMS/Rain status
+      "map.s_rain_n": "Rain \xb7 {n}",
+      "map.s_rain_note_n": "NEXRAD QPE: rainfall detected across {n} zone(s).",
+      "map.s_rain_none_note": "No significant rainfall at Hawai\u02bfi NEXRAD stations.",
+      "map.s_rain_unavail_note": "NEXRAD QPE temporarily unavailable.",
+      // Fire weather status
+      "map.s_fw_red_flag": "Red Flag Active",
+      "map.s_fw_red_note": "NWS Red Flag Warning is active \u2014 fire weather zones are now visible on the map.",
+      "map.s_fw_high_n": "High Risk \xb7 {n}",
+      "map.s_fw_high_note": "HIGH or CRITICAL fire weather risk detected \u2014 zones are visible on the map.",
+      "map.s_fw_inactive_note": "Fire weather zones hidden \u2014 only shown when NWS Red Flag Warning or HIGH risk is active.",
+      // Rain radar status
+      "map.s_radar_active_note": "NOAA rain radar is active for storm visualization.",
+      "map.s_radar_off_note": "NOAA radar tiles are available and can be toggled on.",
+      // Local hazard status
+      "map.s_local_unavail_note": "Local storm reports are currently unavailable.",
+      "map.s_local_active_note_n": "{n} recent NWS Honolulu local hazard report(s) in this snapshot.",
+      "map.s_local_none_note": "No recent NWS Honolulu local hazard reports were returned in this snapshot.",
+      // Summary privacy chip
+      "map.summary_privacy": "Kahu Ola aggregates public hazard signals and does not issue emergency orders.",
+      "map.s_landslide_context": "Terrain + rainfall context",
+      "map.summary_offline": "Cached hazard data is being shown while connectivity is degraded.",
+
       "map.low_bandwidth": "Low-Bandwidth Mode",
       "map.static_preview": "Static preview \u2014 loads instantly during network outages.",
       "map.open_full_map": "Open Full Map \u2197",
@@ -529,6 +655,132 @@
       "map.map_details": "Chi ti\u1ebft b\u1ea3n \u0111\u1ed3",
       "map.hide_details": "\u1ea8n chi ti\u1ebft",
       "map.footer": "C\xf4ng ngh\u1ec7 d\u00e2n s\u1ef1 Kahu Ola",
+
+      // ── Live map panel strings ────────────────────────────────
+
+      // Metric labels
+      "map.metric_detections": "Ph\xe1t hi\u1ec7n",
+      "map.metric_nearest": "G\u1ea7n nh\u1ea5t",
+      "map.metric_critical": "Nghi\xeam tr\u1ecdng",
+      "map.metric_fetched": "\u0110\xe3 t\u1ea3i",
+
+      // Accordion headers
+      "map.accordion_snapshot": "Ng\u1eef c\u1ea3nh \u1ea2nh ch\u1ee5p",
+      "map.accordion_snapshot_sub": "Ng\u1eef c\u1ea3nh t\xecnh hu\u1ed1ng v\xe0 chi ti\u1ebft ngu\u1ed3n.",
+      "map.accordion_secondary": "L\u1edbp Th\u1ee9 c\u1ea5p",
+      "map.accordion_hazards": "Nguy c\u01a1 \u0110ang ho\u1ea1t \u0111\u1ed9ng \xb7 Hawai\u02bfi",
+      "map.accordion_evidence": "B\u1eb1ng ch\u1ee9ng H\u1ed7 tr\u1ee3",
+      "map.accordion_context": "L\u1edbp B\u1ed1i c\u1ea3nh",
+
+      // Snapshot chips
+      "map.chip_privacy": "V\u1ecb tr\xed \u1edf l\u1ea1i tr\xean thi\u1ebft b\u1ecb",
+      "map.snapshot_waiting": "\u0110ang ch\u1edd \u1ea3nh ch\u1ee5p ch\xe1y r\u1eebng m\u1edbi nh\u1ea5t.",
+
+      // Layer names
+      "map.layer_smoke": "Kh\xf3i",
+      "map.layer_perimeters": "Ranh gi\u1edbi ch\xe1y",
+      "map.layer_rain_radar": "Radar m\u01b0a",
+      "map.layer_mrms": "L\u01b0\u1ee3ng m\u01b0a MRMS",
+      "map.layer_fire_weather": "Th\u1eddi ti\u1ebft ch\xe1y",
+      "map.layer_flood_context": "B\u1ed1i c\u1ea3nh l\u0169",
+      "map.layer_landslide": "Nguy c\u01a1 s\u1ea1t l\u1edf",
+      "map.layer_local_reports": "B\xe1o c\xe1o \u0111\u1ecba ph\u01b0\u01a1ng",
+
+      // Hazard card kickers + titles
+      "map.kicker_nws": "Ch\xednh th\u1ee9c \xb7 National Weather Service",
+      "map.kicker_nws_twc": "Ch\xednh th\u1ee9c \xb7 NWS Tsunami Warning Center",
+      "map.kicker_nhc": "Ch\xednh th\u1ee9c \xb7 National Hurricane Center",
+      "map.hazard_flood": "L\u0169 qu\xe9t",
+      "map.hazard_tsunami": "S\xf3ng th\u1ea7n",
+      "map.hazard_hurricane": "B\xe3o",
+
+      // Civic disclaimer (blueprint footnote)
+      "map.blueprint_footnote": "Ngu\u1ed3n ch\xednh th\u1ee9c \u0111\u01b0\u1ee3c hi\u1ec3n th\u1ecb cho t\u1eebng nguy c\u01a1. Kahu Ola t\u1ed5ng h\u1ee3p c\xe1c t\xedn hi\u1ec7u nguy c\u01a1 c\xf4ng c\u1ed9ng \u0111\u1ec3 nh\u1eadn th\u1ee9c t\xecnh hu\u1ed1ng v\xe0 kh\xf4ng ph\xe1t l\u1ec7nh kh\u1ea9n c\u1ea5p. Lu\xf4n l\xe0m theo h\u01b0\u1edbng d\u1eabn c\u1ee7a qu\u1eadn, ti\u1ec3u bang v\xe0 li\xean bang.",
+
+      // Status banners
+      "map.banner_offline": "Ngo\u1ea1i tuy\u1ebfn \u2014 hi\u1ec3n th\u1ecb d\u1eef li\u1ec7u \u0111\xe3 l\u01b0u",
+      "map.banner_degraded": "Ngu\u1ed3n b\u1ecb suy gi\u1ea3m",
+      "map.banner_parse_error": "L\u1ed7i \u0111\u1ecbnh d\u1ea1ng d\u1eef li\u1ec7u",
+      "map.banner_location": "V\u1ecb tr\xed ch\u1ec9 d\xf9ng tr\xean thi\u1ebft b\u1ecb n\xe0y",
+      "map.banner_loc_denied": "Quy\u1ec1n v\u1ecb tr\xed kh\xf4ng \u0111\u01b0\u1ee3c c\u1ea5p",
+
+      // JS-driven display strings
+      "map.refreshing": "\u0110ang l\xe0m m\u1edbi",
+      "map.view_statewide": "To\xe0n ti\u1ec3u bang",
+      "map.view_my_location": "V\u1ecb tr\xed c\u1ee7a t\xf4i",
+      "map.basemap_dark": "T\u1ed1i",
+      "map.dark_map": "B\u1ea3n \u0111\u1ed3 t\u1ed1i",
+
+      // Status shared labels
+      "map.s_unavailable": "Không khả dụng",
+      "map.s_inactive": "Không hoạt động",
+      "map.s_none": "Không có",
+      "map.s_active": "Đang hoạt động",
+      "map.s_clear": "Không có",
+      "map.s_off": "Tắt",
+      // Smoke status
+      "map.s_smoke_detected_1": "Phát hiện khói",
+      "map.s_smoke_detected_n": "Phát hiện khói · {n}",
+      "map.s_smoke_det_metric_1": "Phát hiện (1 khu vực)",
+      "map.s_smoke_det_metric_n": "Phát hiện ({n} khu vực)",
+      "map.s_smoke_det_note_1": "NOAA HMS phát hiện khói trong 1 khu vực trong ảnh chụp hiện tại.",
+      "map.s_smoke_det_note_n": "NOAA HMS phát hiện khói trong {n} khu vực trong ảnh chụp hiện tại.",
+      "map.s_smoke_det_sub_on": "Vùng khói đang hiển thị. Phát hiện cháy vẫn được ưu tiên hiển thị trên lớp khói.",
+      "map.s_smoke_det_sub_off": "Khói có trong ảnh chụp, nhưng lớp khói hiện đang tắt.",
+      "map.s_smoke_none": "Không có khói",
+      "map.s_smoke_none_metric": "Không có khói trong ảnh chụp hiện tại",
+      "map.s_smoke_none_note": "NOAA HMS không trả về vùng khói nào trong ảnh chụp hiện tại.",
+      "map.s_smoke_none_sub": "Bật lớp khói chỉ kích hoạt lớp phủ bản đồ.",
+      "map.s_smoke_unavail_metric": "Dữ liệu khói không khả dụng",
+      "map.s_smoke_unavail_note": "Dữ liệu khói tạm thời không khả dụng.",
+      "map.s_smoke_unavail_sub": "Trạng thái này khác với 'Không có khói'.",
+      // Perimeter status
+      "map.s_perim_det_metric_1": "Phát hiện (1 vành đai)",
+      "map.s_perim_det_metric_n": "Phát hiện ({n} vành đai)",
+      "map.s_perim_det_badge_1": "Phát hiện · 1",
+      "map.s_perim_det_badge_n": "Phát hiện · {n}",
+      "map.s_perim_det_note_1": "Vành đai đã xác minh hiện diện trong 1 khu vực.",
+      "map.s_perim_det_note_n": "Vành đai đã xác minh hiện diện trong {n} khu vực.",
+      "map.s_perim_none_metric": "Không có vành đai trong ảnh chụp hiện tại",
+      "map.s_perim_none_badge": "Không có vành đai",
+      "map.s_perim_none_note": "Không có vùng vành đai nào được trả về trong ảnh chụp hiện tại.",
+      "map.s_perim_unavail_metric": "Dữ liệu vành đai không khả dụng",
+      "map.s_perim_unavail_note": "Dữ liệu vành đai tạm thời không khả dụng.",
+      // Flash flood watch status
+      "map.s_flood_watch_1": "Đang theo dõi",
+      "map.s_flood_watch_n": "Đang theo dõi · {n}",
+      "map.s_flood_watch_note_1": "Nguồn chính thức: NWS. Một vùng theo dõi lũ đang hoạt động.",
+      "map.s_flood_watch_note_n": "Nguồn chính thức: NWS. {n} vùng theo dõi lũ đang hoạt động.",
+      "map.s_flood_none": "Không có theo dõi",
+      "map.s_flood_none_note": "Nguồn chính thức: NWS. Không có vùng theo dõi lũ quét nào đang hoạt động.",
+      "map.s_flood_unavail_note": "Tình trạng lũ chính thức không thể xác nhận lúc này.",
+      // Flood context status
+      "map.s_fc_active_n": "Đang hoạt động · {n}",
+      "map.s_fc_active_note": "Cảnh báo lũ quét NWS đang hoạt động — các vùng địa hình hiện đang hiển thị.",
+      "map.s_fc_inactive_note": "Địa hình bị ẩn — chỉ hiển thị khi có cảnh báo lũ quét NWS chính thức đang hoạt động.",
+      // MRMS/Rain status
+      "map.s_rain_n": "Mưa · {n}",
+      "map.s_rain_note_n": "NEXRAD QPE: phát hiện lượng mưa tại {n} khu vực.",
+      "map.s_rain_none_note": "Không có lượng mưa đáng kể tại các trạm NEXRAD Hawaiʻi.",
+      "map.s_rain_unavail_note": "NEXRAD QPE tạm thời không khả dụng.",
+      // Fire weather status
+      "map.s_fw_red_flag": "Cờ Đỏ Đang Hoạt Động",
+      "map.s_fw_red_note": "Cảnh báo Cờ Đỏ NWS đang hoạt động — các vùng thời tiết cháy rừng hiện đang hiển thị.",
+      "map.s_fw_high_n": "Rủi ro cao · {n}",
+      "map.s_fw_high_note": "Phát hiện rủi ro thời tiết cháy rừng CAO hoặc CỰC NGUY HIỂM — các vùng hiển thị trên bản đồ.",
+      "map.s_fw_inactive_note": "Các vùng thời tiết cháy rừng bị ẩn — chỉ hiển thị khi có Cảnh báo Cờ Đỏ NWS hoặc rủi ro CAO đang hoạt động.",
+      // Rain radar status
+      "map.s_radar_active_note": "Radar mưa NOAA đang hoạt động để quan sát bão.",
+      "map.s_radar_off_note": "Lớp radar NOAA có sẵn và có thể bật.",
+      // Local hazard status
+      "map.s_local_unavail_note": "Báo cáo thời tiết địa phương hiện không khả dụng.",
+      "map.s_local_active_note_n": "{n} báo cáo nguy cơ địa phương NWS Honolulu gần đây trong ảnh chụp này.",
+      "map.s_local_none_note": "Không có báo cáo nguy cơ địa phương NWS Honolulu nào được trả về trong ảnh chụp này.",
+      // Summary privacy chip
+      "map.summary_privacy": "Kahu Ola tổng hợp các tín hiệu nguy cơ công cộng và không ban hành lệnh khẩn cấp.",
+      "map.s_landslide_context": "Địa hình + bối cảnh lượng mưa",
+      "map.summary_offline": "Dữ liệu nguy cơ đã lưu đang được hiển thị trong khi kết nối bị gián đoạn.",
+
       "map.low_bandwidth": "Ch\u1ebf \u0111\u1ed9 b\u0103ng th\xf4ng th\u1ea5p",
       "map.static_preview": "\u1ea2nh t\u0129nh \u2014 t\u1ea3i ngay c\u1ea3 khi m\u1ea1ng ch\u1eadm.",
       "map.open_full_map": "M\u1edf b\u1ea3n \u0111\u1ed3 \u0111\u1ea7y \u0111\u1ee7 \u2197",
