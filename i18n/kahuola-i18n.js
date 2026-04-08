@@ -304,6 +304,95 @@
       "map.footer_live": "Kahu Ola civic technology \xb7 live",
       "map.footer_local": "Kahu Ola civic technology \xb7 local",
 
+      // ── Homepage lower sections ───────────────────────────────
+
+      // System Transparency card
+      "transparency.title": "System Transparency",
+      "transparency.copy": "Kahu Ola integrates public data from trusted scientific and government sources.",
+      "transparency.disclaimer": "Kahu Ola provides public hazard situational awareness. It is not an official emergency service. If a data source is degraded or stale, it will be clearly labeled.",
+
+      // Official links — individual card descriptions (agency names stay English)
+      "links.hiema_desc": "State emergency information and preparedness guidance",
+      "links.maui_ema_desc": "County emergency instructions, alerts, and local safety information",
+      "links.nws_hfo_desc": "Official watches, warnings, and weather statements for Hawai\u02bfi",
+
+      // How It Works
+      "how.label": "How It Works",
+      "how.title_l1": "Satellite data to plain language",
+      "how.title_l2": "\u2014 in under 15 minutes",
+      "how.lead": "Kahu Ola connects six government data systems and normalizes them into three human-readable signal types. No jargon. No raw feeds. Just clear, honest hazard status.",
+      "how.step1_title": "Government sensors detect",
+      "how.step1_body": "NASA FIRMS satellites orbit every 90 minutes. NOAA radar scans continuously. NWS meteorologists issue watches and warnings. These systems never stop.",
+      "how.step2_title": "Aggregator normalizes",
+      "how.step2_body": "The Kahu Ola Aggregator ingests, validates, and caches every signal server-side. Raw government data becomes clean, versioned FireSignal \xb7 SmokeSignal \xb7 Perimeter. Keys never reach the client.",
+      "how.step3_title": "You see plain language",
+      "how.step3_body": "The app displays honest, timestamped signals with clear freshness labels. Stale data is always marked. Estimated perimeters are never labeled official. Your location never leaves your device.",
+
+      // Mission
+      "mission.label": "Our Mission",
+      "mission.title_l1": "Built after Lahaina.",
+      "mission.title_l2": "Built for everyone.",
+      "mission.lead": "The 2023 Lahaina wildfire revealed a devastating gap: advanced satellites were tracking the fire in real-time while residents had no clear, accessible signal. Life-saving data existed \u2014 it just wasn\u2019t reaching people in plain language.",
+      "mission.body": "Kahu Ola was built to close that gap. Not to replace official emergency services \u2014 but to give every resident of Hawai\u02bfi access to the same data that emergency managers use, translated into calm, understandable language before, during, and after a hazard.",
+      "mission.chip_fire": "\uD83D\uDD25 Wildfire-First",
+      "mission.chip_privacy": "\uD83D\uDD12 Privacy-First",
+      "mission.chip_resilience": "\u26A1 Failure-Tolerant",
+      "mission.chip_grant": "\uD83C\uDFDB Grant-Ready",
+      "mission.val1_title": "Engineered for resilience",
+      "mission.val1_body": "Cache-first architecture with validated data snapshots. The app renders under 8 distinct failure conditions \u2014 including full network loss. A degraded signal is infinitely safer than a blank screen.",
+      "mission.val2_title": "Privacy as a design principle",
+      "mission.val2_body": "Safety should not require surveillance. Proximity awareness is computed on-device. No location history is built, stored, or transmitted \u2014 ever. No accounts. No ads. No data selling.",
+      "mission.val3_title": "Honest about uncertainty",
+      "mission.val3_body": "Every signal shows its source and age. Estimated fire perimeters are never labeled official. Stale data is always marked. Kahu Ola never fabricates or inflates hazard severity.",
+      "mission.val4_title": "Community-driven \xb7 Free public service",
+      "mission.val4_body": "An independent civic technology initiative \u2014 not a government agency, not a commercial product. Built to remain freely accessible to every resident of Hawai\u02bfi.",
+
+      // Privacy-First Architecture
+      "privarch.label": "Privacy-First Architecture",
+      "privarch.title": "Zero PII. Zero tracking.",
+      "privarch.lead": "We do not need to know who you are to help you stay safe. Kahu Ola is designed around a single rule: your data stays on your device.",
+      "privarch.card1_title": "No accounts required",
+      "privarch.card1_body": "Core safety views are accessible without sign-in. No email. No phone number. No profile.",
+      "privarch.card2_title": "On-device proximity",
+      "privarch.card2_body": "Hazard distance checks compute locally on your device. Your GPS coordinates never cross the device boundary.",
+      "privarch.card3_title": "No data selling \xb7 No ads",
+      "privarch.card3_body": "No advertising profiles. No behavioral tracking. No brokered personal data. The platform is ad-free by design.",
+      "privarch.footnote_prefix": "Full detail for reviewers and auditors:",
+      "privarch.footnote_link": "Privacy Policy",
+
+      // Data Infrastructure
+      "infra.label": "Data Infrastructure",
+      "infra.title_l1": "16 open government sources.",
+      "infra.title_l2": "One civic layer.",
+      "infra.lead": "Every data source is public, open, and verifiable. Kahu Ola never creates its own hazard data \u2014 it normalizes, timestamps, and presents what government agencies already publish.",
+      "infra.note": "All upstream calls are proxied server-side through the Kahu Ola Cloudflare Worker. The browser never contacts government APIs directly \u2014 a core architectural invariant that protects API keys and ensures rate-limit safety.",
+
+      // Get Started
+      "gs.label": "Get Started",
+      "gs.title_l1": "Available now on web.",
+      "gs.title_l2": "Mobile app coming soon.",
+      "gs.lead": "Open Kahu Ola on any browser \u2014 no download, no account, no setup. The live hazard map loads instantly and works offline after first visit.",
+      "gs.web_badge": "Web \xb7 Available Now",
+      "gs.web_title": "Kahu Ola Live Map",
+      "gs.web_desc": "Real-time wildfire detections, flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
+      "gs.web_li1": "NASA FIRMS fire hotspots",
+      "gs.web_li2": "NWS official flood + tsunami alerts",
+      "gs.web_li3": "Live NEXRAD rain radar",
+      "gs.web_li4": "Fire weather + wind context",
+      "gs.web_li5": "FRESH / STALE data transparency",
+      "gs.web_cta": "Open Live Map \u2192",
+      "gs.mobile_badge": "iOS \xb7 Coming Soon",
+      "gs.mobile_title": "Mobile App",
+      "gs.mobile_desc": "The Kahu Ola mobile app brings the full hazard intelligence dashboard to iOS with native notifications for critical alerts and offline-first resilience.",
+      "gs.mobile_li1": "Push alerts for active warnings",
+      "gs.mobile_li2": "On-device proximity geofencing",
+      "gs.mobile_li3": "Offline-first \u2014 works without signal",
+      "gs.mobile_li4": "Zero PII \xb7 No account required",
+      "gs.mobile_cta": "Get Notified at Launch",
+
+      // Footer
+      "footer.follow": "Follow for daily hazard briefs:",
+
       // Language selector
       "lang.label": "Language",
       "lang.select_aria": "Select language"
@@ -599,6 +688,95 @@
       // ── Map footer mode labels ────────────────────────────────
       "map.footer_live": "C\xf4ng ngh\u1ec7 d\xe2n s\u1ef1 Kahu Ola \xb7 tr\u1ef1c ti\u1ebfp",
       "map.footer_local": "C\xf4ng ngh\u1ec7 d\xe2n s\u1ef1 Kahu Ola \xb7 th\u1eed nghi\u1ec7m",
+
+      // ── Homepage lower sections ───────────────────────────────
+
+      // System Transparency card
+      "transparency.title": "Minh b\u1ea1ch H\u1ec7 th\u1ed1ng",
+      "transparency.copy": "Kahu Ola t\xedch h\u1ee3p d\u1eef li\u1ec7u c\xf4ng c\u1ed9ng t\u1eeb c\xe1c ngu\u1ed3n khoa h\u1ecdc v\xe0 ch\xednh ph\u1ee7 \u0111\xe1ng tin c\u1eady.",
+      "transparency.disclaimer": "Kahu Ola cung c\u1ea5p nh\u1eadn th\u1ee9c t\xecnh hu\u1ed1ng nguy c\u01a1 c\xf4ng c\u1ed9ng. \u0110\xe2y kh\xf4ng ph\u1ea3i d\u1ecbch v\u1ee5 kh\u1ea9n c\u1ea5p ch\xednh th\u1ee9c. N\u1ebfu m\u1ed9t ngu\u1ed3n d\u1eef li\u1ec7u b\u1ecb suy gi\u1ea3m ho\u1eb7c c\u0169, n\xf3 s\u1ebd \u0111\u01b0\u1ee3c g\u1eafn nh\xe3n r\xf5 r\xe0ng.",
+
+      // Official links — individual card descriptions
+      "links.hiema_desc": "Th\xf4ng tin kh\u1ea9n c\u1ea5p v\xe0 h\u01b0\u1edbng d\u1eabn chu\u1ea9n b\u1ecb c\u1ee7a ti\u1ec3u bang",
+      "links.maui_ema_desc": "H\u01b0\u1edbng d\u1eabn kh\u1ea9n c\u1ea5p, c\u1ea3nh b\xe1o v\xe0 th\xf4ng tin an to\xe0n \u0111\u1ecba ph\u01b0\u01a1ng c\u1ee7a qu\u1eadn",
+      "links.nws_hfo_desc": "Theo d\xf5i, c\u1ea3nh b\xe1o v\xe0 th\xf4ng b\xe1o th\u1eddi ti\u1ebft ch\xednh th\u1ee9c cho Hawai\u02bfi",
+
+      // How It Works
+      "how.label": "C\xe1ch Th\u1ee9c Ho\u1ea1t \u0110\u1ed9ng",
+      "how.title_l1": "D\u1eef li\u1ec7u v\u1ec7 tinh th\xe0nh ng\xf4n ng\u1eef \u0111\u01a1n gi\u1ea3n",
+      "how.title_l2": "\u2014 trong v\xf2ng 15 ph\xfat",
+      "how.lead": "Kahu Ola k\u1ebft n\u1ed1i s\xe1u h\u1ec7 th\u1ed1ng d\u1eef li\u1ec7u ch\xednh ph\u1ee7 v\xe0 chu\u1ea9n h\xf3a ch\xfang th\xe0nh ba lo\u1ea1i t\xedn hi\u1ec7u d\u1ec5 \u0111\u1ecdc. Kh\xf4ng thu\u1eadt ng\u1eef kh\xf3 hi\u1ec3u. Kh\xf4ng d\u1eef li\u1ec7u th\xf4. Ch\u1ec9 l\xe0 tr\u1ea1ng th\xe1i nguy c\u01a1 r\xf5 r\xe0ng, trung th\u1ef1c.",
+      "how.step1_title": "C\u1ea3m bi\u1ebfn ch\xednh ph\u1ee7 ph\xe1t hi\u1ec7n",
+      "how.step1_body": "V\u1ec7 tinh NASA FIRMS bay qua m\u1ed7i 90 ph\xfat. Radar NOAA qu\xe9t li\xean t\u1ee5c. Nh\xe0 kh\xed t\u01b0\u1ee3ng h\u1ecdc NWS ph\xe1t theo d\xf5i v\xe0 c\u1ea3nh b\xe1o. C\xe1c h\u1ec7 th\u1ed1ng n\xe0y kh\xf4ng bao gi\u1edd ng\u1eebng.",
+      "how.step2_title": "B\u1ed9 t\u1ed5ng h\u1ee3p chu\u1ea9n h\xf3a",
+      "how.step2_body": "B\u1ed9 T\u1ed5ng h\u1ee3p Kahu Ola thu th\u1eadp, x\xe1c nh\u1eadn v\xe0 l\u01b0u cache m\u1ed7i t\xedn hi\u1ec7u ph\xeda m\xe1y ch\u1ee7. D\u1eef li\u1ec7u ch\xednh ph\u1ee7 th\xf4 tr\u1edf th\xe0nh FireSignal \xb7 SmokeSignal \xb7 Perimeter \u0111\xe3 \u0111\u01b0\u1ee3c phi\xean b\u1ea3n h\xf3a. Kh\xf3a API kh\xf4ng bao gi\u1edd \u0111\u1ebfn m\xe1y kh\xe1ch.",
+      "how.step3_title": "B\u1ea1n th\u1ea5y ng\xf4n ng\u1eef \u0111\u01a1n gi\u1ea3n",
+      "how.step3_body": "\u1ee8ng d\u1ee5ng hi\u1ec3n th\u1ecb c\xe1c t\xedn hi\u1ec7u trung th\u1ef1c, c\xf3 d\u1ea5u th\u1eddi gian v\u1edbi nh\xe3n \u0111\u1ed9 t\u01b0\u01a1i r\xf5 r\xe0ng. D\u1eef li\u1ec7u c\u0169 lu\xf4n \u0111\u01b0\u1ee3c \u0111\xe1nh d\u1ea5u. Chu vi \u01b0\u1edbc t\xednh kh\xf4ng bao gi\u1edd \u0111\u01b0\u1ee3c g\xe1n nh\xe3n ch\xednh th\u1ee9c. V\u1ecb tr\xed c\u1ee7a b\u1ea1n kh\xf4ng bao gi\u1edd r\u1eddi thi\u1ebft b\u1ecb.",
+
+      // Mission
+      "mission.label": "S\u1ee9 M\u1ec7nh C\u1ee7a Ch\xfang T\xf4i",
+      "mission.title_l1": "X\xe2y d\u1ef1ng sau Lahaina.",
+      "mission.title_l2": "X\xe2y d\u1ef1ng cho m\u1ecdi ng\u01b0\u1eddi.",
+      "mission.lead": "V\u1ee5 ch\xe1y r\u1eebng Lahaina n\u0103m 2023 b\u1ed9c l\u1ed9 kho\u1ea3ng c\xe1ch tai h\u1ea1i: c\xe1c v\u1ec7 tinh ti\xean ti\u1ebfn \u0111ang theo d\xf5i \u0111\xe1m ch\xe1y theo th\u1eddi gian th\u1ef1c trong khi c\u01b0 d\xe2n kh\xf4ng c\xf3 t\xedn hi\u1ec7u r\xf5 r\xe0ng, d\u1ec5 ti\u1ebfp c\u1eadn. D\u1eef li\u1ec7u c\u1ee9u ng\u01b0\u1eddi \u0111\xe3 t\u1ed3n t\u1ea1i \u2014 ch\u1ec9 l\xe0 kh\xf4ng \u0111\u1ebfn \u0111\u01b0\u1ee3c m\u1ecdi ng\u01b0\u1eddi b\u1eb1ng ng\xf4n ng\u1eef \u0111\u01a1n gi\u1ea3n.",
+      "mission.body": "Kahu Ola \u0111\u01b0\u1ee3c x\xe2y d\u1ef1ng \u0111\u1ec3 thu h\u1eb9p kho\u1ea3ng c\xe1ch \u0111\xf3. Kh\xf4ng thay th\u1ebf d\u1ecbch v\u1ee5 kh\u1ea9n c\u1ea5p ch\xednh th\u1ee9c \u2014 m\xe0 \u0111\u1ec3 cung c\u1ea5p cho m\u1ecdi c\u01b0 d\xe2n Hawai\u02bfi quy\u1ec1n ti\u1ebfp c\u1eadn d\u1eef li\u1ec7u m\xe0 c\xe1c nh\xe0 qu\u1ea3n l\xfd kh\u1ea9n c\u1ea5p s\u1eed d\u1ee5ng, \u0111\u01b0\u1ee3c d\u1ecbch th\xe0nh ng\xf4n ng\u1eef b\xecnh t\u0129nh, d\u1ec5 hi\u1ec3u tr\u01b0\u1edbc, trong v\xe0 sau nguy c\u01a1.",
+      "mission.chip_fire": "\ud83d\udd25 \u01afu ti\xean Ch\xe1y r\u1eebng",
+      "mission.chip_privacy": "\ud83d\udd12 \u01afu ti\xean Quy\u1ec1n ri\xeang t\u01b0",
+      "mission.chip_resilience": "\u26a1 Ch\u1ecbu l\u1ed7i",
+      "mission.chip_grant": "\ud83c\udfd3 S\u1eb5n s\xe0ng T\xe0i tr\u1ee3",
+      "mission.val1_title": "\u0110\u01b0\u1ee3c k\u1ef9 thu\u1eadt h\xf3a cho s\u1ef1 b\u1ec1n v\u1eefng",
+      "mission.val1_body": "Ki\u1ebfn tr\xfac cache-first v\u1edbi \u1ea3nh ch\u1ee5p d\u1eef li\u1ec7u \u0111\xe3 x\xe1c nh\u1eadn. \u1ee8ng d\u1ee5ng hi\u1ec3n th\u1ecb trong 8 \u0111i\u1ec1u ki\u1ec7n l\u1ed7i kh\xe1c nhau \u2014 k\u1ec3 c\u1ea3 m\u1ea5t m\u1ea1ng ho\xe0n to\xe0n. T\xedn hi\u1ec7u suy gi\u1ea3m an to\xe0n h\u01a1n v\xf4 h\u1ea1n so v\u1edbi m\xe0n h\xecnh tr\u1ed1ng.",
+      "mission.val2_title": "Quy\u1ec1n ri\xeang t\u01b0 nh\u01b0 nguy\xean t\u1eafc thi\u1ebft k\u1ebf",
+      "mission.val2_body": "An to\xe0n kh\xf4ng n\xean \u0111\xf2i h\u1ecfi gi\xe1m s\xe1t. Nh\u1eadn th\u1ee9c kho\u1ea3ng c\xe1ch \u0111\u01b0\u1ee3c t\xednh to\xe1n tr\xean thi\u1ebft b\u1ecb. Kh\xf4ng c\xf3 l\u1ecbch s\u1eed v\u1ecb tr\xed n\xe0o \u0111\u01b0\u1ee3c t\u1ea1o, l\u01b0u tr\u1eef ho\u1eb7c truy\u1ec1n \u2014 m\xe3i m\xe3i. Kh\xf4ng t\xe0i kho\u1ea3n. Kh\xf4ng qu\u1ea3ng c\xe1o. Kh\xf4ng b\xe1n d\u1eef li\u1ec7u.",
+      "mission.val3_title": "Trung th\u1ef1c v\u1ec1 s\u1ef1 kh\xf4ng ch\u1eafc ch\u1eafn",
+      "mission.val3_body": "M\u1ed7i t\xedn hi\u1ec7u hi\u1ec3n th\u1ecb ngu\u1ed3n v\xe0 tu\u1ed5i. Chu vi ch\xe1y \u01b0\u1edbc t\xednh kh\xf4ng bao gi\u1edd \u0111\u01b0\u1ee3c g\xe1n nh\xe3n ch\xednh th\u1ee9c. D\u1eef li\u1ec7u c\u0169 lu\xf4n \u0111\u01b0\u1ee3c \u0111\xe1nh d\u1ea5u. Kahu Ola kh\xf4ng bao gi\u1edd b\u1ecba \u0111\u1eb7t ho\u1eb7c ph\xf3ng \u0111\u1ea1i m\u1ee9c \u0111\u1ed9 nguy c\u01a1.",
+      "mission.val4_title": "Do c\u1ed9ng \u0111\u1ed3ng \xb7 D\u1ecbch v\u1ee5 c\xf4ng c\u1ed9ng mi\u1ec5n ph\xed",
+      "mission.val4_body": "M\u1ed9t s\xe1ng ki\u1ebfn c\xf4ng ngh\u1ec7 d\xe2n s\u1ef1 \u0111\u1ed9c l\u1eadp \u2014 kh\xf4ng ph\u1ea3i c\u01a1 quan ch\xednh ph\u1ee7, kh\xf4ng ph\u1ea3i s\u1ea3n ph\u1ea9m th\u01b0\u01a1ng m\u1ea1i. \u0110\u01b0\u1ee3c x\xe2y d\u1ef1ng \u0111\u1ec3 lu\xf4n c\xf3 th\u1ec3 truy c\u1eadp mi\u1ec5n ph\xed cho m\u1ecdi c\u01b0 d\xe2n Hawai\u02bfi.",
+
+      // Privacy-First Architecture
+      "privarch.label": "Ki\u1ebfn Tr\xfac \u01afu Ti\xean Quy\u1ec1n Ri\xeang T\u01b0",
+      "privarch.title": "Kh\xf4ng PII. Kh\xf4ng theo d\xf5i.",
+      "privarch.lead": "Ch\xfang t\xf4i kh\xf4ng c\u1ea7n bi\u1ebft b\u1ea1n l\xe0 ai \u0111\u1ec3 gi\xfap b\u1ea1n an to\xe0n. Kahu Ola \u0111\u01b0\u1ee3c thi\u1ebft k\u1ebf xung quanh m\u1ed9t quy t\u1eafc duy nh\u1ea5t: d\u1eef li\u1ec7u c\u1ee7a b\u1ea1n \u1edf l\u1ea1i tr\xean thi\u1ebft b\u1ecb c\u1ee7a b\u1ea1n.",
+      "privarch.card1_title": "Kh\xf4ng c\u1ea7n t\xe0i kho\u1ea3n",
+      "privarch.card1_body": "C\xe1c ch\u1ebf \u0111\u1ed9 xem an to\xe0n c\u01a1 b\u1ea3n c\xf3 th\u1ec3 truy c\u1eadp m\xe0 kh\xf4ng c\u1ea7n \u0111\u0103ng nh\u1eadp. Kh\xf4ng email. Kh\xf4ng s\u1ed1 \u0111i\u1ec7n tho\u1ea1i. Kh\xf4ng h\u1ed3 s\u01a1.",
+      "privarch.card2_title": "Kho\u1ea3ng c\xe1ch tr\xean thi\u1ebft b\u1ecb",
+      "privarch.card2_body": "Ki\u1ec3m tra kho\u1ea3ng c\xe1ch nguy c\u01a1 t\xednh to\xe1n c\u1ee5c b\u1ed9 tr\xean thi\u1ebft b\u1ecb c\u1ee7a b\u1ea1n. T\u1ecda \u0111\u1ed9 GPS c\u1ee7a b\u1ea1n kh\xf4ng bao gi\u1edd v\u01b0\u1ee3t qua ranh gi\u1edbi thi\u1ebft b\u1ecb.",
+      "privarch.card3_title": "Kh\xf4ng b\xe1n d\u1eef li\u1ec7u \xb7 Kh\xf4ng qu\u1ea3ng c\xe1o",
+      "privarch.card3_body": "Kh\xf4ng c\xf3 h\u1ed3 s\u01a1 qu\u1ea3ng c\xe1o. Kh\xf4ng theo d\xf5i h\xe0nh vi. Kh\xf4ng c\xf3 d\u1eef li\u1ec7u c\xe1 nh\xe2n \u0111\u01b0\u1ee3c m\xf4i gi\u1edbi. N\u1ec1n t\u1ea3ng kh\xf4ng c\xf3 qu\u1ea3ng c\xe1o theo thi\u1ebft k\u1ebf.",
+      "privarch.footnote_prefix": "Chi ti\u1ebft \u0111\u1ea7y \u0111\u1ee7 cho ng\u01b0\u1eddi \u0111\xe1nh gi\xe1 v\xe0 ki\u1ec3m to\xe1n vi\xean:",
+      "privarch.footnote_link": "Ch\xednh s\xe1ch B\u1ea3o m\u1eadt",
+
+      // Data Infrastructure
+      "infra.label": "H\u1ea1 T\u1ea7ng D\u1eef Li\u1ec7u",
+      "infra.title_l1": "16 ngu\u1ed3n ch\xednh ph\u1ee7 m\u1edf.",
+      "infra.title_l2": "M\u1ed9t l\u1edbp d\xe2n s\u1ef1.",
+      "infra.lead": "M\u1ed7i ngu\u1ed3n d\u1eef li\u1ec7u \u0111\u1ec1u c\xf4ng khai, m\u1edf v\xe0 c\xf3 th\u1ec3 x\xe1c minh. Kahu Ola kh\xf4ng bao gi\u1edd t\u1ea1o d\u1eef li\u1ec7u nguy c\u01a1 c\u1ee7a ri\xeang m\xecnh \u2014 n\xf3 chu\u1ea9n h\xf3a, g\u1eafn th\u1eddi gian v\xe0 tr\xecnh b\xe0y nh\u1eefng g\xec c\xe1c c\u01a1 quan ch\xednh ph\u1ee7 \u0111\xe3 xu\u1ea5t b\u1ea3n.",
+      "infra.note": "T\u1ea5t c\u1ea3 c\xe1c cu\u1ed9c g\u1ecdi upstream \u0111\u01b0\u1ee3c proxy ph\xeda m\xe1y ch\u1ee7 qua Kahu Ola Cloudflare Worker. Tr\xecnh duy\u1ec7t kh\xf4ng bao gi\u1edd li\xean h\u1ec7 tr\u1ef1c ti\u1ebfp v\u1edbi API ch\xednh ph\u1ee7 \u2014 m\u1ed9t b\u1ea5t bi\u1ebfn ki\u1ebfn tr\xfac c\u1ed1t l\xf5i b\u1ea3o v\u1ec7 kh\xf3a API v\xe0 \u0111\u1ea3m b\u1ea3o an to\xe0n gi\u1edbi h\u1ea1n t\u1ed1c \u0111\u1ed9.",
+
+      // Get Started
+      "gs.label": "B\u1eaft \u0110\u1ea7u",
+      "gs.title_l1": "C\xf3 s\u1eb5n ngay tr\xean web.",
+      "gs.title_l2": "\u1ee8ng d\u1ee5ng di \u0111\u1ed9ng s\u1eafp ra m\u1eaft.",
+      "gs.lead": "M\u1edf Kahu Ola tr\xean b\u1ea5t k\u1ef3 tr\xecnh duy\u1ec7t n\xe0o \u2014 kh\xf4ng c\u1ea7n t\u1ea3i xu\u1ed1ng, kh\xf4ng c\u1ea7n t\xe0i kho\u1ea3n, kh\xf4ng c\u1ea7n c\xe0i \u0111\u1eb7t. B\u1ea3n \u0111\u1ed3 nguy c\u01a1 tr\u1ef1c ti\u1ebfp t\u1ea3i ngay l\u1eadp t\u1ee9c v\xe0 ho\u1ea1t \u0111\u1ed9ng ngo\u1ea1i tuy\u1ebfn sau l\u1ea7n truy c\u1eadp \u0111\u1ea7u ti\xean.",
+      "gs.web_badge": "Web \xb7 C\xf3 s\u1eb5n ngay",
+      "gs.web_title": "B\u1ea3n \u0111\u1ed3 Tr\u1ef1c ti\u1ebfp Kahu Ola",
+      "gs.web_desc": "Ph\xe1t hi\u1ec7n ch\xe1y r\u1eebng th\u1eddi gian th\u1ef1c, c\u1ea3nh b\xe1o l\u0169 qu\xe9t, tr\u1ea1ng th\xe1i s\xf3ng th\u1ea7n, \u0111\u01b0\u1eddng \u0111i b\xe3o v\xe0 radar m\u01b0a \u2014 t\u1ea5t c\u1ea3 trong m\u1ed9t b\u1ea3ng \u0111i\u1ec1u khi\u1ec3n d\xe2n s\u1ef1. Ho\u1ea1t \u0111\u1ed9ng tr\xean m\u1ecdi thi\u1ebft b\u1ecb, m\u1ecdi tr\xecnh duy\u1ec7t.",
+      "gs.web_li1": "\u0110i\u1ec3m n\xf3ng ch\xe1y NASA FIRMS",
+      "gs.web_li2": "C\u1ea3nh b\xe1o l\u0169 + s\xf3ng th\u1ea7n ch\xednh th\u1ee9c NWS",
+      "gs.web_li3": "Radar m\u01b0a NEXRAD tr\u1ef1c ti\u1ebfp",
+      "gs.web_li4": "Th\u1eddi ti\u1ebft ch\xe1y + b\u1ed1i c\u1ea3nh gi\xf3",
+      "gs.web_li5": "Minh b\u1ea1ch d\u1eef li\u1ec7u M\u1edaI / C\u0168",
+      "gs.web_cta": "M\u1edf B\u1ea3n \u0111\u1ed3 Tr\u1ef1c ti\u1ebfp \u2192",
+      "gs.mobile_badge": "iOS \xb7 S\u1eafp ra m\u1eaft",
+      "gs.mobile_title": "\u1ee8ng d\u1ee5ng Di \u0111\u1ed9ng",
+      "gs.mobile_desc": "\u1ee8ng d\u1ee5ng di \u0111\u1ed9ng Kahu Ola mang b\u1ea3ng \u0111i\u1ec1u khi\u1ec3n th\xf4ng minh nguy c\u01a1 \u0111\u1ea7y \u0111\u1ee7 l\xean iOS v\u1edbi th\xf4ng b\xe1o g\u1ed1c cho c\xe1c c\u1ea3nh b\xe1o quan tr\u1ecdng v\xe0 kh\u1ea3 n\u0103ng ph\u1ee5c h\u1ed3i offline-first.",
+      "gs.mobile_li1": "Th\xf4ng b\xe1o \u0111\u1ea9y cho c\u1ea3nh b\xe1o \u0111ang ho\u1ea1t \u0111\u1ed9ng",
+      "gs.mobile_li2": "\u0110\u1ecba l\xfd ph\xf2ng ng\u1eeba tr\xean thi\u1ebft b\u1ecb",
+      "gs.mobile_li3": "Offline-first \u2014 ho\u1ea1t \u0111\u1ed9ng kh\xf4ng c\u1ea7n t\xedn hi\u1ec7u",
+      "gs.mobile_li4": "Kh\xf4ng PII \xb7 Kh\xf4ng c\u1ea7n t\xe0i kho\u1ea3n",
+      "gs.mobile_cta": "Nh\u1eadn Th\xf4ng b\xe1o khi Ra m\u1eaft",
+
+      // Footer
+      "footer.follow": "Theo d\xf5i \u0111\u1ec3 nh\u1eadn b\u1ea3n tin nguy c\u01a1 h\xe0ng ng\xe0y:",
 
       // Language selector
       "lang.label": "Ng\xf4n ng\u1eef",
