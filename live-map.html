@@ -2887,7 +2887,7 @@ async function setupRainRadar() {
   if (!map.getSource("noaa-radar")) {
     ensureSource("noaa-radar", {
       type: "raster",
-      tiles: ["https://kahuola.org/api/tiles/radar/{z}/{x}/{y}.png"],
+      tiles: ["https://kahuola.org/api/tiles/radar/{z}/{y}/{x}.png"],
       tileSize: 256,
       attribution: "NOAA NEXRAD · Iowa Mesonet · Via Kahu Ola"
     });
