@@ -1892,9 +1892,21 @@
 "use strict";
 
 // i18n helpers — null-safe wrappers; return null if engine not yet loaded
-const _t    = (key)       => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.t(key)         : null);
-const _tmpl = (key, vars) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.tmpl(key, vars) : null);
-const _L    = (key, fb)   => _t(key) || fb; // shorthand for popup template literals
+// _t: returns translated string, or null if key not found or engine not loaded.
+// The i18n engine returns the key string itself when a key is missing (fallback #3).
+// We treat key===value as "not found" so || fallbacks always fire correctly.
+const _t = (key) => {
+  if (!window.KAHUOLA_I18N) return null;
+  const v = window.KAHUOLA_I18N.t(key);
+  return (v !== undefined && v !== null && v !== key) ? v : null;
+};
+const _tmpl = (key, vars) => {
+  if (!window.KAHUOLA_I18N) return null;
+  const base = window.KAHUOLA_I18N.t(key);
+  if (base === undefined || base === null || base === key) return null;
+  return window.KAHUOLA_I18N.tmpl(key, vars);
+};
+const _L = (key, fb) => _t(key) || fb; // shorthand for popup template literals
 
 /*
   Kahu Ola Live Map — V4.8
@@ -3473,7 +3485,7 @@ function zoomToCluster(feature) {
   source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
 }
 function raiseFireLayersAboveOverlays() {
-  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","tsunami-fill","tsunami-outline","tsunami-point","hurricane-point","landslide-fill","landslide-outline","noaa-radar-layer","local-hazards-line","local-hazards-fill","local-hazards-outline","local-hazards-point","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
+  ["smoke-fill","smoke-outline","perimeter-fill","perimeter-outline","flash-flood-fill","flash-flood-outline","flash-flood-point","flood-context-fill","flood-context-outline","mrms-rain-fill","mrms-rain-outline","wind-risk-fill","wind-risk-outline","tsunami-fill","tsunami-outline","tsunami-point","hurricane-point","landslide-fill","landslide-outline","local-hazards-line","local-hazards-fill","local-hazards-outline","local-hazards-point","clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
     if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) {} }
   });
   ["clusters","cluster-count","unclustered-fires-glow","unclustered-fires"].forEach((id) => {
@@ -3728,10 +3740,10 @@ function maybeShowLandslideCard() {
 }
 
 const LAZY_MODULES = {
-  // Tsunami + Hurricane now use priority-module HTML — keep key/endpoint same, modal behavior same
-  "tsunami-card":   { key:"tsunami",   title:"Tsunami",          note:"Source: NWS Tsunami Warning Center (official).", body:"Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately.", status:(st)=> st.sourceStatus==="detected" ? "⚠ ACTIVE WARNING" : st.sourceStatus==="none" ? "No active tsunami warnings for Hawaiʻi" : "Unavailable" },
-  "hurricane-card": { key:"hurricane", title:"Hurricane Tracks",  note:"Source: National Hurricane Center (NHC).",        body:"Shows active Pacific basin storms. Always monitor NHC for official track and watches.",                  status:(st)=> st.features?.length>0 ? `${st.features.length} active Pacific storm(s)` : st.sourceStatus==="none" ? "No active Pacific storms near Hawaiʻi" : "Unavailable" },
-  "landslide-card": { key:"landslide", title:"Landslide Risk",    note:"Source: Kahu Ola terrain + NWS (contextual).",   body:"Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Not an official forecast.",        status:(st)=> st.features?.length>0 ? `${st.features.length} susceptibility zones` : st.sourceStatus==="none" ? "No elevated landslide risk detected" : "Unavailable" }
+  // tsunami-card, hurricane-card, landslide-card removed:
+  // per-element listeners in bindButtons() handle these with full _t() coverage.
+  // Leaving entries here caused the document-level click handler (bubble) to fire
+  // after the specific listener, overriding translated content with hardcoded English.
 };
 
 document.addEventListener("click", (event) => {
