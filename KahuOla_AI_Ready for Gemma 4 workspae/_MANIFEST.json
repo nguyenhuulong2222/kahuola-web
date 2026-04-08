@@ -1,0 +1,425 @@
+{
+  "generated_at": "2026-04-07T07:50:14Z",
+  "total_files": 52,
+  "total_chars": 273511,
+  "files": [
+    {
+      "filename": "doctrine_data_governance_policy.md",
+      "source_path": "docs/doctrine/DATA_GOVERNANCE_POLICY.md",
+      "chars": 3446,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_kahu_ola_v4_7_doctrine.md",
+      "source_path": "docs/doctrine/Kahu_Ola_V4_7_Doctrine.md",
+      "chars": 4462,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_project_handoff_rules..md",
+      "source_path": "docs/doctrine/PROJECT_HANDOFF_RULES..md",
+      "chars": 1248,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_project_handoff_rules.md",
+      "source_path": "docs/doctrine/PROJECT_HANDOFF_RULES.md",
+      "chars": 1247,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_public_trust_guidelines.md",
+      "source_path": "docs/doctrine/PUBLIC_TRUST_GUIDELINES.md",
+      "chars": 3729,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_resilience_strategy.md",
+      "source_path": "docs/doctrine/RESILIENCE_STRATEGY.md",
+      "chars": 4669,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_system_ethics_charter.md",
+      "source_path": "docs/doctrine/SYSTEM_ETHICS_CHARTER.md",
+      "chars": 4341,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_system_invariants.md",
+      "source_path": "docs/doctrine/SYSTEM_INVARIANTS.md",
+      "chars": 4745,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_system_threat_model.md",
+      "source_path": "docs/doctrine/SYSTEM_THREAT_MODEL.md",
+      "chars": 6033,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "doctrine_v4_8_runtime_protection_addendum.md",
+      "source_path": "docs/doctrine/V4_8_RUNTIME_PROTECTION_ADDENDUM.md",
+      "chars": 6851,
+      "category": "doctrine",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_adr_001_production_real_data_only.md",
+      "source_path": "docs/architecture/ADR_001_PRODUCTION_REAL_DATA_ONLY.md",
+      "chars": 976,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_architecture_decision_log.md",
+      "source_path": "docs/architecture/ARCHITECTURE_DECISION_LOG.md",
+      "chars": 5003,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_current_production_status.md",
+      "source_path": "docs/architecture/CURRENT_PRODUCTION_STATUS.md",
+      "chars": 1166,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_data_governance_policy.md",
+      "source_path": "docs/architecture/DATA_GOVERNANCE_POLICY.md",
+      "chars": 3454,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_kahuola_ai_system_manifest.md",
+      "source_path": "docs/architecture/KAHUOLA_AI_SYSTEM_MANIFEST.md",
+      "chars": 5138,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_kahu_ola_v4_7_doctrine.md",
+      "source_path": "docs/architecture/Kahu_Ola_V4_7_Doctrine.md",
+      "chars": 4470,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_public_trust_guidelines.md",
+      "source_path": "docs/architecture/PUBLIC_TRUST_GUIDELINES.md",
+      "chars": 3737,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_resilience_strategy.md",
+      "source_path": "docs/architecture/RESILIENCE_STRATEGY.md",
+      "chars": 4677,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_system_ethics_charter.md",
+      "source_path": "docs/architecture/SYSTEM_ETHICS_CHARTER.md",
+      "chars": 4349,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_system_threat_model.md",
+      "source_path": "docs/architecture/SYSTEM_THREAT_MODEL.md",
+      "chars": 6041,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_api_contract.md",
+      "source_path": "docs/architecture/V4_8_API_CONTRACT.md",
+      "chars": 2580,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_cache_strategy.md",
+      "source_path": "docs/architecture/V4_8_CACHE_STRATEGY.md",
+      "chars": 6841,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_client_architecture.md",
+      "source_path": "docs/architecture/V4_8_CLIENT_ARCHITECTURE.md",
+      "chars": 10645,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_community_integration.md",
+      "source_path": "docs/architecture/V4_8_COMMUNITY_INTEGRATION.md",
+      "chars": 1923,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_data_freshness_policy.md",
+      "source_path": "docs/architecture/V4_8_DATA_FRESHNESS_POLICY.md",
+      "chars": 2548,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_data_source_registry.md",
+      "source_path": "docs/architecture/V4_8_DATA_SOURCE_REGISTRY.md",
+      "chars": 4693,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_deployment_architecture.md",
+      "source_path": "docs/architecture/V4_8_DEPLOYMENT_ARCHITECTURE.md",
+      "chars": 1516,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_hazard_signal_pipeline.md",
+      "source_path": "docs/architecture/V4_8_HAZARD_SIGNAL_PIPELINE.md",
+      "chars": 5514,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_master_index.md",
+      "source_path": "docs/architecture/V4_8_MASTER_INDEX.md",
+      "chars": 10543,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_observability_spec.md",
+      "source_path": "docs/architecture/V4_8_OBSERVABILITY_SPEC.md",
+      "chars": 1645,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_rate_limit_protection.md",
+      "source_path": "docs/architecture/V4_8_RATE_LIMIT_PROTECTION.md",
+      "chars": 6189,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_runtime_protection_addendum.md",
+      "source_path": "docs/architecture/V4_8_RUNTIME_PROTECTION_ADDENDUM.md",
+      "chars": 6859,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_security_model.md",
+      "source_path": "docs/architecture/V4_8_SECURITY_MODEL.md",
+      "chars": 1833,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_system_architecture.md",
+      "source_path": "docs/architecture/V4_8_SYSTEM_ARCHITECTURE.md",
+      "chars": 4013,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_trust_model.md",
+      "source_path": "docs/architecture/V4_8_TRUST_MODEL.md",
+      "chars": 1642,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "architecture_v4_8_worker_aggregator_spec.md",
+      "source_path": "docs/architecture/V4_8_WORKER_AGGREGATOR_SPEC.md",
+      "chars": 8363,
+      "category": "architecture",
+      "skipped": false
+    },
+    {
+      "filename": "api_v4_8_api_contract.md",
+      "source_path": "docs/api/V4_8_API_CONTRACT.md",
+      "chars": 2562,
+      "category": "api",
+      "skipped": false
+    },
+    {
+      "filename": "api_v4_8_data_freshness_policy.md",
+      "source_path": "docs/api/V4_8_DATA_FRESHNESS_POLICY.md",
+      "chars": 2530,
+      "category": "api",
+      "skipped": false
+    },
+    {
+      "filename": "api_v4_8_signal_model_spec.md",
+      "source_path": "docs/api/V4_8_SIGNAL_MODEL_SPEC.md",
+      "chars": 10928,
+      "category": "api",
+      "skipped": false
+    },
+    {
+      "filename": "runtime_v4_8_event_priority_spec.md",
+      "source_path": "docs/runtime/V4_8_EVENT_PRIORITY_SPEC.md",
+      "chars": 10775,
+      "category": "runtime",
+      "skipped": false
+    },
+    {
+      "filename": "runtime_v4_8_mock_state_spec.md",
+      "source_path": "docs/runtime/V4_8_MOCK_STATE_SPEC.md",
+      "chars": 685,
+      "category": "runtime",
+      "skipped": false
+    },
+    {
+      "filename": "runtime_v4_8_multi_hazard_decision_tree.md",
+      "source_path": "docs/runtime/V4_8_MULTI_HAZARD_DECISION_TREE.md",
+      "chars": 12708,
+      "category": "runtime",
+      "skipped": false
+    },
+    {
+      "filename": "runtime_v4_8_state_machine.md",
+      "source_path": "docs/runtime/V4_8_STATE_MACHINE.md",
+      "chars": 5716,
+      "category": "runtime",
+      "skipped": false
+    },
+    {
+      "filename": "map_v4_8_map_layer_spec.md",
+      "source_path": "docs/map/V4_8_MAP_LAYER_SPEC.md",
+      "chars": 8735,
+      "category": "map",
+      "skipped": false
+    },
+    {
+      "filename": "ux_hawaii_community_landing_page_copy.md",
+      "source_path": "docs/ux/Hawaii_Community_Landing_Page_Copy.md",
+      "chars": 2722,
+      "category": "ux",
+      "skipped": false
+    },
+    {
+      "filename": "ux_v4_8_alert_copy_guidelines.md",
+      "source_path": "docs/ux/V4_8_ALERT_COPY_GUIDELINES.md",
+      "chars": 8245,
+      "category": "ux",
+      "skipped": false
+    },
+    {
+      "filename": "ux_v4_8_degraded_state_ux_spec.md",
+      "source_path": "docs/ux/V4_8_DEGRADED_STATE_UX_SPEC.md",
+      "chars": 882,
+      "category": "ux",
+      "skipped": false
+    },
+    {
+      "filename": "ux_v4_8_homepage_hero_spec.md",
+      "source_path": "docs/ux/V4_8_HOMEPAGE_HERO_SPEC.md",
+      "chars": 8459,
+      "category": "ux",
+      "skipped": false
+    },
+    {
+      "filename": "root_system_invariants.md",
+      "source_path": "SYSTEM_INVARIANTS.md",
+      "chars": 0,
+      "category": "root",
+      "skipped": true,
+      "skip_reason": "file not found"
+    },
+    {
+      "filename": "root_project_handoff_rules_.md",
+      "source_path": "PROJECT_HANDOFF_RULES_.md",
+      "chars": 0,
+      "category": "root",
+      "skipped": true,
+      "skip_reason": "file not found"
+    },
+    {
+      "filename": "root_v4_8_master_index.md",
+      "source_path": "V4_8_MASTER_INDEX.md",
+      "chars": 0,
+      "category": "root",
+      "skipped": true,
+      "skip_reason": "file not found"
+    },
+    {
+      "filename": "root_kahuola_v4_8_progress.md",
+      "source_path": "KAHUOLA_V4_8_PROGRESS.md",
+      "chars": 0,
+      "category": "root",
+      "skipped": true,
+      "skip_reason": "file not found"
+    },
+    {
+      "filename": "root_current_production_status.md",
+      "source_path": "CURRENT_PRODUCTION_STATUS.md",
+      "chars": 0,
+      "category": "root",
+      "skipped": true,
+      "skip_reason": "file not found"
+    },
+    {
+      "filename": "root_kahuola_ai_system_manifest.txt",
+      "source_path": "KAHUOLA_AI_SYSTEM_MANIFEST.txt",
+      "chars": 0,
+      "category": "root",
+      "skipped": true,
+      "skip_reason": "file not found"
+    },
+    {
+      "filename": "root_readme.md",
+      "source_path": "README.md",
+      "chars": 10121,
+      "category": "root",
+      "skipped": false
+    },
+    {
+      "filename": "worker_index.md",
+      "source_path": "worker/src/index.ts",
+      "chars": 28818,
+      "category": "worker",
+      "skipped": false
+    },
+    {
+      "filename": "web_live-map.md",
+      "source_path": "web/live-map.html",
+      "chars": 355,
+      "category": "web",
+      "skipped": false
+    },
+    {
+      "filename": "web_index.md",
+      "source_path": "web/index.html",
+      "chars": 2141,
+      "category": "web",
+      "skipped": false
+    }
+  ],
+  "security_scan": {
+    "exposed_keys_found": true,
+    "warnings": [
+      "worker/src/index.ts: known key identifier (10 match(es))"
+    ]
+  }
+}

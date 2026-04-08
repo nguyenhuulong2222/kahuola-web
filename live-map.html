@@ -1315,7 +1315,24 @@
       font-size:10px;
       font-family:var(--font-mono);
       pointer-events:none;
+      display:flex;
+      align-items:center;
+      gap:8px;
     }
+    footer .lang-select-sm{
+      pointer-events:auto;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--border-hi);
+      border-radius:8px;
+      color:var(--muted);
+      font-size:10px;
+      font-family:var(--font-mono);
+      padding:2px 6px;
+      cursor:pointer;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    footer .lang-select-sm:focus{outline:2px solid rgba(77,163,255,.4);outline-offset:2px}
 
     @media (max-width:980px){
       #banner-stack{display:none}
@@ -1610,7 +1627,17 @@
         </div>
       </div>
 
-      <footer id="mode-footer">Kahu Ola civic technology</footer>
+      <footer id="mode-footer">
+        <span id="map-footer-text" data-i18n="map.footer">Kahu Ola civic technology</span>
+        <select id="kahuola-lang-select" class="lang-select-sm" aria-label="Language" onchange="if(window.KAHUOLA_I18N)window.KAHUOLA_I18N.setLang(this.value)">
+          <option value="en">EN</option>
+          <option value="vi">VI</option>
+          <option value="haw">HAW</option>
+          <option value="tl">TL</option>
+          <option value="ilo">ILO</option>
+          <option value="ja">JA</option>
+        </select>
+      </footer>
     </div>
   </div>
 
@@ -1850,19 +1877,23 @@
       <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Layers: On</button>
       <button class="action-btn wind-btn" id="wind-btn-panel" type="button">Fire Weather: On</button>
       <div class="fire-scope-row" id="fire-scope-row">
-        <span class="fire-scope-label">Fire Scope</span>
+        <span class="fire-scope-label" data-i18n="map.scope_label">Fire Scope</span>
         <div class="fire-scope-seg">
-          <button class="fire-scope-opt active" id="fire-scope-opt-hawaii" type="button">Hawaiʻi</button>
-          <button class="fire-scope-opt" id="fire-scope-opt-usa" type="button">USA</button>
+          <button class="fire-scope-opt active" id="fire-scope-opt-hawaii" type="button" data-i18n="map.scope_hawaii">Hawaiʻi</button>
+          <button class="fire-scope-opt" id="fire-scope-opt-usa" type="button" data-i18n="map.scope_usa">USA</button>
         </div>
       </div>
     </div>
   </template>
 
-  
+  <script src="/i18n/kahuola-i18n.js"></script>
 
 <script>
 "use strict";
+
+// i18n helpers — null-safe wrappers; return null if engine not yet loaded
+const _t    = (key)       => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.t(key)         : null);
+const _tmpl = (key, vars) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.tmpl(key, vars) : null);
 
 /*
   Kahu Ola Live Map — V4.8
@@ -2042,7 +2073,8 @@ function show(id, on) {
   const el = document.getElementById(id);
   if (el) el.classList.toggle("hidden", !on);
 }
-if (modeFooter) modeFooter.textContent = IS_LOCAL ? "Kahu Ola civic technology · local test mode" : "Kahu Ola civic technology · live production mode";
+const _modeFooterText = document.getElementById("map-footer-text");
+if (_modeFooterText) _modeFooterText.textContent = IS_LOCAL ? "Kahu Ola civic technology · local test mode" : (_t("map.footer") || "Kahu Ola civic technology");
 
 function syncDiag() {
   document.getElementById("d-net").textContent = String(appState.diagnostics.networkFailures);
@@ -2089,11 +2121,11 @@ function applyFreshness(date) {
   ["freshness-badge-desktop", "freshness-badge-mobile"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (!date) { el.className = "freshness f-unknown"; el.textContent = "● UNKNOWN"; return; }
+    if (!date) { el.className = "freshness f-unknown"; el.textContent = _t("map.fresh.unknown") || "● UNKNOWN"; return; }
     const ageMin = (Date.now() - date.getTime()) / 60000;
-    if (ageMin <= 10) { el.className = "freshness f-fresh"; el.textContent = "✓ FRESH"; }
-    else if (ageMin <= 60) { el.className = "freshness f-stale"; el.textContent = "⚠ MAY BE STALE"; }
-    else { el.className = "freshness f-old"; el.textContent = "✗ OUTDATED"; }
+    if (ageMin <= 10) { el.className = "freshness f-fresh"; el.textContent = _t("map.fresh.fresh") || "✓ FRESH"; }
+    else if (ageMin <= 60) { el.className = "freshness f-stale"; el.textContent = _t("map.fresh.stale") || "⚠ MAY BE STALE"; }
+    else { el.className = "freshness f-old"; el.textContent = _t("map.fresh.outdated") || "✗ OUTDATED"; }
   });
 }
 function fitHawaii(animated = false) {
@@ -2990,7 +3022,7 @@ function syncFlashFloodLayerVisibility() {
   if (map.getLayer("flash-flood-fill")) map.setPaintProperty("flash-flood-fill","fill-opacity", flashFloodVisible ? ["match",["get","severity"],"WARNING",0.25,"WATCH",0.08,0.06] : 0);
   if (map.getLayer("flash-flood-outline")) map.setPaintProperty("flash-flood-outline","line-opacity", flashFloodVisible ? ["match",["get","severity"],"WARNING",0.9,"WATCH",0.72,0.72] : 0);
   if (map.getLayer("flash-flood-point")) { map.setPaintProperty("flash-flood-point","circle-opacity", flashFloodVisible ? 1 : 0); map.setPaintProperty("flash-flood-point","circle-stroke-opacity", flashFloodVisible ? 1 : 0); }
-  ["flood-btn-panel-desktop","flood-btn-panel-mobile","flood-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = flashFloodVisible ? "Flood Layers: On" : "Flood Layers: Off"; el.classList.toggle("active", flashFloodVisible); });
+  ["flood-btn-panel-desktop","flood-btn-panel-mobile","flood-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = flashFloodVisible ? (_t("map.flood_on") || "Flood Layers: On") : (_t("map.flood_off") || "Flood Layers: Off"); el.classList.toggle("active", flashFloodVisible); });
 }
 function syncFloodContextLayerVisibility() {
   setLayerVisibility("flood-context-fill", floodContextVisible);
@@ -3012,7 +3044,7 @@ function syncWindRiskLayerVisibility() {
   setLayerVisibility("wind-risk-outline", windRiskVisible);
   if (map.getLayer("wind-risk-fill")) map.setPaintProperty("wind-risk-fill","fill-opacity", windRiskVisible ? ["match",["get","risk_index"],"CRITICAL",0.16,"HIGH",0.12,"ELEVATED",0.09,"MODERATE",0.06,"LOW",0.035,0.04] : 0);
   if (map.getLayer("wind-risk-outline")) map.setPaintProperty("wind-risk-outline","line-opacity", windRiskVisible ? 0.62 : 0);
-  ["wind-btn-panel-desktop","wind-btn-panel-mobile","wind-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = windRiskVisible ? "Fire Weather: On" : "Fire Weather: Off"; el.classList.toggle("active", windRiskVisible); });
+  ["wind-btn-panel-desktop","wind-btn-panel-mobile","wind-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = windRiskVisible ? (_t("map.weather_on") || "Fire Weather: On") : (_t("map.weather_off") || "Fire Weather: Off"); el.classList.toggle("active", windRiskVisible); });
 }
 function syncTsunamiLayerVisibility() {
   ["tsunami-fill","tsunami-outline","tsunami-point"].forEach(id => setLayerVisibility(id, tsunamiVisible));
@@ -3037,8 +3069,8 @@ function syncSmokeLayerVisibility() {
   if (map.getLayer("smoke-outline")) map.setPaintProperty("smoke-outline","line-opacity", smokeVisible ? 0.82 : 0);
   syncSmokeButtons();
 }
-function syncSmokeButtons(){ ["smoke-btn-panel-desktop","smoke-btn-panel-mobile","smoke-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = smokeVisible ? "Smoke Layer: On" : "Smoke Layer: Off"; el.classList.toggle("active", smokeVisible); });}
-function syncPerimeterButtons(){ ["perimeter-btn-panel-desktop","perimeter-btn-panel-mobile","perimeter-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = perimeterVisible ? "Perimeters: On" : "Perimeters: Off"; el.classList.toggle("active", perimeterVisible); });}
+function syncSmokeButtons(){ ["smoke-btn-panel-desktop","smoke-btn-panel-mobile","smoke-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = smokeVisible ? (_t("map.smoke_on") || "Smoke Layer: On") : (_t("map.smoke_off") || "Smoke Layer: Off"); el.classList.toggle("active", smokeVisible); });}
+function syncPerimeterButtons(){ ["perimeter-btn-panel-desktop","perimeter-btn-panel-mobile","perimeter-btn-mobile"].forEach((id)=>{ const el=document.getElementById(id); if(!el) return; el.textContent = perimeterVisible ? (_t("map.perimeters_on") || "Perimeters: On") : (_t("map.perimeters_off") || "Perimeters: Off"); el.classList.toggle("active", perimeterVisible); });}
 function toggleSmokeLayer(){ smokeVisible=!smokeVisible; getState("smoke").visible=smokeVisible; syncSmokeLayerVisibility(); updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length); renderUnifiedPanels(); }
 function togglePerimeterLayer(){ perimeterVisible=!perimeterVisible; getState("perimeter").visible=perimeterVisible; syncPerimeterLayerVisibility(); updatePerimeterStatusUI(getState("perimeter").sourceStatus, getState("perimeter").features.length); renderUnifiedPanels(); }
 function toggleFlashFloodLayer(){ flashFloodVisible=!flashFloodVisible; floodContextVisible=flashFloodVisible; mrmsVisible=flashFloodVisible; getState("flashFlood").visible=flashFloodVisible; getState("floodContext").visible=floodContextVisible; getState("mrmsRain").visible=mrmsVisible; syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); updateFlashFloodStatusUI(getState("flashFlood").sourceStatus, getState("flashFlood").features.length); updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }
@@ -3134,10 +3166,13 @@ function updateRainRadarStatusUI() {
 
 function applyFireScope() {
   const isUSA = fireScope === "usa";
-  const headText = isUSA ? "Fire Signals · USA" : "Fire Signals · Hawaiʻi";
-  const hintText = isUSA
-    ? "Showing satellite fire detections across the USA."
-    : "Showing satellite fire detections for Hawaiʻi only.";
+  const _i18n = window.KAHUOLA_I18N;
+  const headText = _i18n
+    ? _i18n.t(isUSA ? "map.panel_head_usa" : "map.panel_head_hawaii")
+    : (isUSA ? "Fire Signals \xb7 USA" : "Fire Signals \xb7 Hawai\u02bfi");
+  const hintText = _i18n
+    ? _i18n.t(isUSA ? "map.scope_hint_usa" : "map.scope_hint_hawaii")
+    : (isUSA ? "Showing satellite fire detections across the USA." : "Showing satellite fire detections for Hawai\u02bfi only.");
   ["desktop","mobile"].forEach(sfx => {
     const head = document.getElementById(`panel-head-${sfx}`);
     if (head) head.textContent = headText;
@@ -3148,6 +3183,8 @@ function applyFireScope() {
     const optUSA = document.getElementById(`fire-scope-opt-usa-${sfx}`);
     if (optUSA) optUSA.classList.toggle("active", isUSA);
   });
+  // Re-apply all data-i18n elements (scope options, label, footer)
+  if (_i18n) _i18n.applyAll();
 }
 function toggleFireScope() {
   fireScope = fireScope === "usa" ? "hawaii" : "usa";
@@ -3210,6 +3247,7 @@ function renderUnifiedPanels() {
     const summaryPrivacy = document.getElementById(`summary-privacy-${suffix}`);
     if (summaryPrivacy) summaryPrivacy.textContent = "Kahu Ola aggregates public hazard signals and does not issue emergency orders.";
   });
+  window._lastFireSourceTime = fire.sourceTime || null;
   applyFreshness(fire.sourceTime);
   updateRainRadarStatusUI();
   updateAccordionPreviews();
@@ -3761,6 +3799,22 @@ map.on("load", async () => {
   setTimeout(safeMapResize, 500);
   if (pollHandle) clearInterval(pollHandle);
   pollHandle = setInterval(async () => { await refreshEnabledHazards({ silent:true }); raiseFireLayersAboveOverlays(); }, POLL_MS);
+});
+
+// On language change: re-apply static i18n labels, re-apply scope-driven text, re-sync button labels
+window.addEventListener("kahuola:langchange", () => {
+  if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
+  applyFireScope();
+  // Re-sync toggle buttons so their On/Off labels update in the new language
+  syncSmokeButtons();
+  syncPerimeterButtons();
+  syncFlashFloodLayerVisibility();
+  syncWindRiskLayerVisibility();
+  // Re-apply footer text (modeFooter holds children — target the span directly)
+  const _mft = document.getElementById("map-footer-text");
+  if (_mft && !IS_LOCAL) _mft.textContent = _t("map.footer") || "Kahu Ola civic technology";
+  // Re-apply freshness chips — applyFreshness() reads _t() on each call
+  applyFreshness((window._lastFireSourceTime instanceof Date) ? window._lastFireSourceTime : null);
 });
 </script>
 

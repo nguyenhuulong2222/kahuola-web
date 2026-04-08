@@ -161,6 +161,24 @@
       background:rgba(255,255,255,.03);
     }
 
+    /* ── Language selector ─────────────────────────────── */
+    .lang-select{
+      min-height:38px;
+      padding:0 10px;
+      border-radius:999px;
+      border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);
+      color:var(--text-dim);
+      font-size:11px;
+      font-weight:700;
+      font-family:var(--mono);
+      letter-spacing:.04em;
+      cursor:pointer;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    .lang-select:focus{outline:2px solid rgba(77,168,255,.45);outline-offset:2px}
+
     /* ── Narrative hero — SV-grade "inevitable" clarity ─── */
 
     .hero-state-kicker{
@@ -971,9 +989,9 @@
       <div class="brand">
         <div class="brand-mark">🌋</div>
         <div>
-          <div class="brand-kicker">Kahu Ola · Guardian of Life</div>
-          <h1 class="brand-title">Hawaiʻi Hazard Signals</h1>
-          <div class="brand-sub">
+          <div class="brand-kicker" data-i18n="brand.kicker">Kahu Ola · Guardian of Life</div>
+          <h1 class="brand-title" data-i18n="brand.title">Hawaiʻi Hazard Signals</h1>
+          <div class="brand-sub" data-i18n="brand.sub">
             Clear civic hazard signals for wildfire, flood, storm, and air quality across the Hawaiian Islands.
           </div>
         </div>
@@ -982,14 +1000,22 @@
       <div class="top-actions">
         <div class="pill" id="updatedPill">
           <span class="dot"></span>
-          Updated recently
+          <span data-i18n="freshness.updated_recently">Updated recently</span>
         </div>
-        <a class="pill link" href="#official-links">Official Alerts</a>
-        <a class="pill link" href="live-map.html">Live Map</a>
-        <a class="pill link" href="#how-it-works">How It Works</a>
-        <a class="pill link" href="#mission">Mission</a>
-        <a class="pill link" href="./privacy.html">Privacy</a>
-        <a class="pill link" href="./support.html">Support</a>
+        <a class="pill link" href="#official-links" data-i18n="nav.official_alerts">Official Alerts</a>
+        <a class="pill link" href="live-map.html" data-i18n="nav.live_map">Live Map</a>
+        <a class="pill link" href="#how-it-works" data-i18n="nav.how_it_works">How It Works</a>
+        <a class="pill link" href="#mission" data-i18n="nav.mission">Mission</a>
+        <a class="pill link" href="./privacy.html" data-i18n="nav.privacy">Privacy</a>
+        <a class="pill link" href="./support.html" data-i18n="nav.support">Support</a>
+        <select id="kahuola-lang-select" class="lang-select" data-i18n-aria="lang.select_aria" aria-label="Select language" onchange="if(window.KAHUOLA_I18N)window.KAHUOLA_I18N.setLang(this.value)">
+          <option value="en">EN · English</option>
+          <option value="vi">VI · Tiếng Việt</option>
+          <option value="haw">HAW · ʻŌlelo Hawaiʻi</option>
+          <option value="tl">TL · Tagalog</option>
+          <option value="ilo">ILO · Ilocano</option>
+          <option value="ja">JA · 日本語</option>
+        </select>
       </div>
     </header>
 
@@ -1014,7 +1040,7 @@
         <!-- ── WHAT CHANGED — delta since last check ── -->
         <div class="hero-delta" id="heroDelta" aria-live="polite">
           <span class="hero-delta-icon" id="heroDeltaIcon">↔</span>
-          <span id="heroDeltaText">Conditions unchanged since your last visit</span>
+          <span id="heroDeltaText" data-i18n="signal.conditions_unchanged">Conditions unchanged since your last visit</span>
           <span class="hero-delta-time" id="heroDeltaTime"></span>
         </div>
 
@@ -1058,37 +1084,37 @@
         <div class="hero-context-strip">
           <div class="hero-context-item">
             <div class="hero-context-value" id="windValue">—</div>
-            <div class="hero-context-label">Fire Weather</div>
-            <div class="hero-context-source">NWS / RAWS</div>
+            <div class="hero-context-label" data-i18n="context.fire_weather">Fire Weather</div>
+            <div class="hero-context-source" id="windSource">NWS Official</div>
           </div>
           <div class="hero-context-item">
             <div class="hero-context-value" id="rainValue">—</div>
-            <div class="hero-context-label">Rainfall</div>
-            <div class="hero-context-source">NEXRAD / MRMS</div>
+            <div class="hero-context-label" data-i18n="context.rainfall">Rainfall</div>
+            <div class="hero-context-source" id="rainSource">NEXRAD / MRMS</div>
           </div>
           <div class="hero-context-item">
             <div class="hero-context-value" id="floodRiskValue">—</div>
-            <div class="hero-context-label">Flood Risk</div>
-            <div class="hero-context-source">NWS Official</div>
+            <div class="hero-context-label" data-i18n="context.flood_risk">Flood Risk</div>
+            <div class="hero-context-source" id="floodSource">NWS Official</div>
           </div>
         </div>
 
         <div class="hero-actions">
-          <a class="btn primary" href="live-map.html">View Live Map</a>
-          <a class="btn" href="#official-links">Official Alerts</a>
+          <a class="btn primary" href="live-map.html" data-i18n="cta.view_live_map">View Live Map</a>
+          <a class="btn" href="#official-links" data-i18n="cta.official_alerts">Official Alerts</a>
         </div>
 
         <!-- ── DETAIL SIGNALS — collapsed behind strip, progressive disclosure ── -->
         <details class="signal-detail-group" id="signalDetails">
           <summary class="signal-detail-toggle">
-            <span id="signalDetailLabel">Signal detail</span>
+            <span id="signalDetailLabel" data-i18n="signal.detail_label">Signal detail</span>
             <span class="signal-detail-chevron">▾</span>
           </summary>
           <div class="signal-stack">
             <section class="signal-card fire">
               <div class="signal-top">
                 <div>
-                  <div class="signal-label">Fire · NASA FIRMS</div>
+                  <div class="signal-label" data-i18n="signal.fire_label">Fire · NASA FIRMS</div>
                   <h3 class="signal-title" id="fireTitle">🔥 Fire Signal — Monitoring</h3>
                 </div>
                 <div class="status ok" id="fireStatusDetail">CLEAR</div>
@@ -1098,13 +1124,13 @@
               </p>
               <div class="meta-row">
                 <span class="chip" id="fireSourceChip">NASA FIRMS</span>
-                <a href="live-map.html" class="chip chip-action">📍 Check My Neighborhood</a>
+                <a href="live-map.html" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
               </div>
             </section>
             <section class="signal-card flood">
               <div class="signal-top">
                 <div>
-                  <div class="signal-label">Flood · NWS Official</div>
+                  <div class="signal-label" data-i18n="signal.flood_label">Flood · NWS Official</div>
                   <h3 class="signal-title" id="floodTitle">🌊 Flood Signal — Monitoring</h3>
                 </div>
                 <div class="status ok" id="floodStatusDetail">CLEAR</div>
@@ -1114,7 +1140,7 @@
               </p>
               <div class="meta-row">
                 <span class="chip" id="floodSourceChip">NWS / PacIOOS</span>
-                <a href="live-map.html" class="chip chip-action">📍 Check My Neighborhood</a>
+                <a href="live-map.html" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
               </div>
             </section>
           </div>
@@ -1223,10 +1249,10 @@
         </div>
 
         <div class="legend">
-          <span class="legend-label">Signal</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span>Monitoring</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span>Fire Active</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span>Flood Alert</span>
+          <span class="legend-label" data-i18n="legend.signal">Signal</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span><span data-i18n="legend.monitoring">Monitoring</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span><span data-i18n="legend.fire_active">Fire Active</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span><span data-i18n="legend.flood_alert">Flood Alert</span></span>
         </div>
       </aside>
     </section>
@@ -1234,8 +1260,8 @@
     <section class="section">
       <div class="section-grid">
         <article class="card section-card" id="official-links">
-          <h3 class="section-title">Official Emergency Resources</h3>
-          <p class="section-copy">
+          <h3 class="section-title" data-i18n="links.official_resources">Official Emergency Resources</h3>
+          <p class="section-copy" data-i18n="links.official_copy">
             Kahu Ola does not issue emergency orders. Follow official authorities for urgent decisions.
           </p>
 
@@ -1492,11 +1518,12 @@
         </a>
       </div>
 
-      <p style="font-size:11px;color:var(--muted);line-height:1.6;opacity:.65;margin:0">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
+      <p style="font-size:11px;color:var(--muted);line-height:1.6;opacity:.65;margin:0" data-i18n="civic.guardian_note">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
     </footer>
 
   </div>
 
+  <script src="/i18n/kahuola-i18n.js"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -1547,18 +1574,26 @@
         return null;
       }
 
+      // i18n helper — safe if KAHUOLA_I18N not loaded
+      const _t = (key) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.t(key) : null);
+      const _tmpl = (key, vars) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.tmpl(key, vars) : null);
+
+      // Track last freshness timestamp and payloads so langchange can re-render
+      let _lastGeneratedAt = null;
+      let _lastPayloads = null;  // { fire, flood, fireWeather, mrms, primaryEvent, counts }
+
       function timeAgo(input) {
-        if (!input) return "Updated recently";
+        if (!input) return _t("freshness.updated_recently") || "Updated recently";
         const dt = new Date(input);
-        if (Number.isNaN(dt.getTime())) return "Updated recently";
+        if (Number.isNaN(dt.getTime())) return _t("freshness.updated_recently") || "Updated recently";
         const diffMs = Date.now() - dt.getTime();
         const diffMin = Math.max(0, Math.round(diffMs / 60000));
-        if (diffMin < 1) return "Updated just now";
-        if (diffMin < 60) return `Updated ${diffMin} min ago`;
+        if (diffMin < 1) return _t("freshness.updated_just_now") || "Updated just now";
+        if (diffMin < 60) return _tmpl("freshness.updated_min", { n: diffMin }) || `Updated ${diffMin} min ago`;
         const diffHr = Math.round(diffMin / 60);
-        if (diffHr < 24) return `Updated ${diffHr} hr ago`;
+        if (diffHr < 24) return _tmpl("freshness.updated_hr", { n: diffHr }) || `Updated ${diffHr} hr ago`;
         const diffDay = Math.round(diffHr / 24);
-        return `Updated ${diffDay} day ago`;
+        return _tmpl("freshness.updated_day", { n: diffDay }) || `Updated ${diffDay} day ago`;
       }
 
       function withTimeout(url, timeoutMs = 9000) {
@@ -1768,78 +1803,78 @@
       function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind) {
         if (primaryEvent === "DEGRADED") {
           return {
-            kicker: "DATA DELAYED",
-            title: "Latest data temporarily delayed.",
-            narrative: "Some data sources are delayed. Showing last known state. Always follow official emergency instructions.",
-            bannerTitle: "⚠️ Degraded snapshot active",
-            bannerCopy: "Fallback data — not current",
+            kicker:      _t("hero.kicker.degraded")       || "DATA DELAYED",
+            title:       "Latest data temporarily delayed.",
+            narrative:   _t("hero.narrative.degraded")    || "Some data sources are delayed. Showing last known state. Always follow official emergency instructions.",
+            bannerTitle: _t("hero.banner.degraded")       || "\u26a0\ufe0f Degraded snapshot active",
+            bannerCopy:  _t("hero.banner_copy.degraded")  || "Fallback data \u2014 not current",
             kicClass: "warn"
           };
         }
         if (primaryEvent === "FIRE_ACTIVE" && fireCount > 0) {
           return {
-            kicker: "FIRE SIGNAL ACTIVE",
-            title: fireCount === 1
-              ? "One wildfire detection in Hawaiʻi."
-              : `${fireCount} wildfire detections across Hawaiʻi.`,
-            narrative: "NASA FIRMS satellite has detected active fire heat signatures. Open the live map to see location and distance from you.",
-            bannerTitle: `🔥 ${fireCount} Active Wildfire Signal${fireCount > 1 ? "s" : ""}`,
-            bannerCopy: "Source: NASA FIRMS VIIRS/MODIS · verified this snapshot",
+            kicker:      _t("hero.kicker.fire_active") || "FIRE SIGNAL ACTIVE",
+            title:       fireCount === 1
+              ? "One wildfire detection in Hawai\u02bfi."
+              : `${fireCount} wildfire detections across Hawai\u02bfi.`,
+            narrative:   _t("hero.narrative.fire_active") || "NASA FIRMS satellite has detected active fire heat signatures. Open the live map to see location and distance from you.",
+            bannerTitle: _tmpl("hero.banner.fire_active", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `\ud83d\udd25 ${fireCount} Active Wildfire Signal${fireCount > 1 ? "s" : ""}`,
+            bannerCopy:  _t("hero.banner_copy.nasa_firms") || "Source: NASA FIRMS VIIRS/MODIS \xb7 verified this snapshot",
             kicClass: "fire"
           };
         }
         if (redFlag) {
           return {
-            kicker: "RED FLAG WARNING",
-            title: "Critical fire weather conditions active.",
-            narrative: "NWS has issued a Red Flag Warning. Low humidity, high winds, and dry fuel increase wildfire risk significantly.",
-            bannerTitle: "🚩 NWS Red Flag Warning Active",
-            bannerCopy: "Source: National Weather Service · official",
+            kicker:      _t("hero.kicker.red_flag")          || "RED FLAG WARNING",
+            title:       "Critical fire weather conditions active.",
+            narrative:   _t("hero.narrative.red_flag")       || "NWS has issued a Red Flag Warning. Low humidity, high winds, and dry fuel increase wildfire risk significantly.",
+            bannerTitle: _t("hero.banner.red_flag")          || "\ud83d\udea9 NWS Red Flag Warning Active",
+            bannerCopy:  _t("hero.banner_copy.nws_red_flag") || "Source: National Weather Service \xb7 official",
             kicClass: "fire"
           };
         }
         if (primaryEvent === "FLOOD_WARNING") {
           return {
-            kicker: "FLOOD WARNING ACTIVE",
-            title: "Flash flood warning in effect.",
-            narrative: "NWS has issued an active flash flood warning. Move away from streams, avoid low-lying roads, and follow official instructions.",
-            bannerTitle: "🌊 Flash Flood Warning — NWS Official",
-            bannerCopy: "Source: National Weather Service · official alert",
+            kicker:      _t("hero.kicker.flood_warning")     || "FLOOD WARNING ACTIVE",
+            title:       "Flash flood warning in effect.",
+            narrative:   _t("hero.narrative.flood_warning")  || "NWS has issued an active flash flood warning. Move away from streams, avoid low-lying roads, and follow official instructions.",
+            bannerTitle: _t("hero.banner.flood_warning")     || "\ud83c\udf0a Flash Flood Warning \u2014 NWS Official",
+            bannerCopy:  _t("hero.banner_copy.nws_official") || "Source: National Weather Service \xb7 official alert",
             kicClass: "flood"
           };
         }
         if (primaryEvent === "FLOOD_WATCH") {
           return {
-            kicker: "FLOOD WATCH",
-            title: "Flood watch conditions developing.",
-            narrative: "NWS is monitoring conditions that could produce flash flooding. Prepare, stay informed, and avoid flood-prone areas.",
-            bannerTitle: "👁 NWS Flash Flood Watch Active",
-            bannerCopy: "Source: National Weather Service · watch in effect",
+            kicker:      _t("hero.kicker.flood_watch")       || "FLOOD WATCH",
+            title:       "Flood watch conditions developing.",
+            narrative:   _t("hero.narrative.flood_watch")    || "NWS is monitoring conditions that could produce flash flooding. Prepare, stay informed, and avoid flood-prone areas.",
+            bannerTitle: _t("hero.banner.flood_watch")       || "\ud83d\udc41 NWS Flash Flood Watch Active",
+            bannerCopy:  _t("hero.banner_copy.nws_watch")    || "Source: National Weather Service \xb7 watch in effect",
             kicClass: "warn"
           };
         }
         if (highWind) {
           const isRedFlag = !!redFlag;
           return {
-            kicker: isRedFlag ? "RED FLAG WARNING" : "FIRE WEATHER WATCH",
-            title: isRedFlag
+            kicker:      isRedFlag ? (_t("hero.kicker.red_flag") || "RED FLAG WARNING") : (_t("hero.kicker.fire_watch") || "FIRE WEATHER WATCH"),
+            title:       isRedFlag
               ? '<span class="hero-title-key">Red Flag</span> Warning in effect.'
               : 'Fire Weather <span class="hero-title-key">Watch</span> in effect.',
-            narrative: isRedFlag
-              ? "NWS has issued a Red Flag Warning for parts of Hawaiʻi. Extreme fire weather conditions — avoid any outdoor burning and be ready to act."
-              : "NWS is monitoring fire weather conditions in parts of Hawaiʻi. Stay informed, avoid outdoor burning, and watch for official updates.",
-            bannerTitle: isRedFlag ? "🚨 NWS Red Flag Warning Active" : "⚠️ NWS Fire Weather Watch Active",
-            bannerCopy: "Source: National Weather Service · official alert",
+            narrative:   isRedFlag
+              ? (_t("hero.narrative.red_flag")    || "NWS has issued a Red Flag Warning for parts of Hawai\u02bfi. Extreme fire weather conditions \u2014 avoid any outdoor burning and be ready to act.")
+              : (_t("hero.narrative.fire_watch")  || "NWS is monitoring fire weather conditions in parts of Hawai\u02bfi. Stay informed, avoid outdoor burning, and watch for official updates."),
+            bannerTitle: isRedFlag ? (_t("hero.banner.red_flag")   || "\ud83d\udea9 NWS Red Flag Warning Active") : (_t("hero.banner.fire_watch") || "\u26a0\ufe0f NWS Fire Weather Watch Active"),
+            bannerCopy:  _t("hero.banner_copy.nws_official") || "Source: National Weather Service \xb7 official alert",
             kicClass: "fire"
           };
         }
         // Default: calm
         return {
-          kicker: "SYSTEM NORMAL",
-          title: "Hawaiʻi is calm right now.",
-          narrative: "No active watches, warnings, or satellite fire detections across the state.",
-          bannerTitle: "✅ No Active Hazards Detected",
-          bannerCopy: "NASA FIRMS · NWS · NEXRAD · verified this snapshot",
+          kicker:      _t("hero.kicker.system_normal")   || "SYSTEM NORMAL",
+          title:       "Hawai\u02bfi is calm right now.",
+          narrative:   _t("hero.narrative.system_normal") || "No active watches, warnings, or satellite fire detections across the state.",
+          bannerTitle: _t("hero.banner.system_normal")   || "\u2705 No Active Hazards Detected",
+          bannerCopy:  _t("hero.banner_copy.nasa_nws")   || "NASA FIRMS \xb7 NWS \xb7 NEXRAD \xb7 verified this snapshot",
           kicClass: ""
         };
       }
@@ -1850,27 +1885,28 @@
           const now  = { event: primaryEvent, fire: fireCount, flood: floodWarning ? 1 : 0, ts: Date.now() };
           localStorage.setItem(DELTA_KEY, JSON.stringify(now));
 
-          if (!last) return { text: "First check — baseline established", icon: "🔵", cls: "" };
+          if (!last) return { text: _t("delta.first_check") || "First check \u2014 baseline established", icon: "\ud83d\udd35", cls: "" };
 
           const ageMin = Math.round((Date.now() - (last.ts || 0)) / 60000);
           const ageStr = ageMin < 60
-            ? `${ageMin}m ago`
-            : `${Math.round(ageMin/60)}h ago`;
+            ? (_tmpl("delta.age_min", { n: ageMin }) || `${ageMin}m ago`)
+            : (_tmpl("delta.age_hr",  { n: Math.round(ageMin / 60) }) || `${Math.round(ageMin / 60)}h ago`);
 
           if (last.event !== now.event) {
             if (now.event === "MONITORING" && last.event !== "MONITORING")
-              return { text: `Conditions improved since ${ageStr}`, icon: "↓", cls: "changed" };
+              return { text: _tmpl("delta.improved",        { age: ageStr }) || `Conditions improved since ${ageStr}`,  icon: "\u2193", cls: "changed" };
             if (now.event !== "MONITORING")
-              return { text: `Status changed since ${ageStr}`, icon: "↑", cls: "elevated" };
+              return { text: _tmpl("delta.status_changed",  { age: ageStr }) || `Status changed since ${ageStr}`,       icon: "\u2191", cls: "elevated" };
           }
-          if (now.fire > last.fire)
-            return { text: `${now.fire - last.fire} new fire detection(s) since ${ageStr}`, icon: "↑", cls: "elevated" };
+          const diff = now.fire - last.fire;
+          if (diff > 0)
+            return { text: _tmpl("delta.new_fires",  { n: diff, s: diff > 1 ? "s" : "", age: ageStr }) || `${diff} new fire detection${diff > 1 ? "s" : ""} since ${ageStr}`, icon: "\u2191", cls: "elevated" };
           if (now.fire < last.fire && last.fire > 0)
-            return { text: `Fire detections down from ${last.fire} since ${ageStr}`, icon: "↓", cls: "changed" };
+            return { text: _tmpl("delta.fires_down", { last: last.fire, age: ageStr }) || `Fire detections down from ${last.fire} since ${ageStr}`, icon: "\u2193", cls: "changed" };
 
-          return { text: `No change since ${ageStr}`, icon: "↔", cls: "" };
+          return { text: _tmpl("delta.no_change", { age: ageStr }) || `No change since ${ageStr}`, icon: "\u2194", cls: "" };
         } catch(e) {
-          return { text: "Conditions checked", icon: "↔", cls: "" };
+          return { text: _t("delta.checked") || "Conditions checked", icon: "\u2194", cls: "" };
         }
       }
 
@@ -1886,13 +1922,13 @@
         const fireStat = document.getElementById("fireStatus");
         if (fireAns && fireStat) {
           if (fireCount === 0) {
-            fireAns.textContent = "No fire detections";
-            fireStat.className  = "signal-strip-status ok";
-            fireStat.textContent = "CLEAR";
+            fireAns.textContent  = _t("signal.strip.fire_clear") || "No fire detections";
+            fireStat.className   = "signal-strip-status ok";
+            fireStat.textContent = _t("status.clear") || "CLEAR";
           } else {
-            fireAns.textContent = `${fireCount} detection${fireCount > 1 ? "s" : ""} detected`;
-            fireStat.className  = "signal-strip-status active";
-            fireStat.textContent = fireCount >= 5 ? "ACTIVE" : "ELEVATED";
+            fireAns.textContent  = _tmpl("signal.strip.fire_count", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `${fireCount} detection${fireCount > 1 ? "s" : ""} detected`;
+            fireStat.className   = "signal-strip-status active";
+            fireStat.textContent = fireCount >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED");
           }
         }
 
@@ -1901,17 +1937,17 @@
         const floodStat = document.getElementById("floodStatus");
         if (floodAns && floodStat) {
           if (floodWarning) {
-            floodAns.textContent = "Flash flood warning active";
-            floodStat.className  = "signal-strip-status active";
-            floodStat.textContent = "WARNING";
+            floodAns.textContent  = _t("signal.strip.flood_warning_active") || "Flash flood warning active";
+            floodStat.className   = "signal-strip-status active";
+            floodStat.textContent = _t("status.warning") || "WARNING";
           } else if (floodWatch) {
-            floodAns.textContent = "Flash flood watch active";
-            floodStat.className  = "signal-strip-status watch";
-            floodStat.textContent = "WATCH";
+            floodAns.textContent  = _t("signal.strip.flood_watch_active") || "Flash flood watch active";
+            floodStat.className   = "signal-strip-status watch";
+            floodStat.textContent = _t("status.watch") || "WATCH";
           } else {
-            floodAns.textContent = "No flood watches or warnings";
-            floodStat.className  = "signal-strip-status ok";
-            floodStat.textContent = "CLEAR";
+            floodAns.textContent  = _t("signal.strip.flood_clear") || "No flood watches or warnings";
+            floodStat.className   = "signal-strip-status ok";
+            floodStat.textContent = _t("status.clear") || "CLEAR";
           }
         }
 
@@ -1920,17 +1956,17 @@
         const wxStat = document.getElementById("windStatus");
         if (wxAns && wxStat) {
           if (redFlag) {
-            wxAns.textContent = "Red Flag Warning active";
-            wxStat.className  = "signal-strip-status active";
-            wxStat.textContent = "RED FLAG";
+            wxAns.textContent  = _t("signal.strip.wx_redflag") || "Red Flag Warning active";
+            wxStat.className   = "signal-strip-status active";
+            wxStat.textContent = _t("status.red_flag") || "RED FLAG";
           } else if (highWind) {
-            wxAns.textContent = "Fire Weather Watch — NWS Official";
-            wxStat.className  = "signal-strip-status watch";
-            wxStat.textContent = "WATCH";
+            wxAns.textContent  = _t("signal.strip.wx_watch") || "Fire Weather Watch \u2014 NWS Official";
+            wxStat.className   = "signal-strip-status watch";
+            wxStat.textContent = _t("status.watch") || "WATCH";
           } else {
-            wxAns.textContent = "No active fire weather warnings";
-            wxStat.className  = "signal-strip-status ok";
-            wxStat.textContent = "CLEAR";
+            wxAns.textContent  = _t("signal.strip.wx_clear") || "No active fire weather warnings";
+            wxStat.className   = "signal-strip-status ok";
+            wxStat.textContent = _t("status.clear") || "CLEAR";
           }
         }
       }
@@ -1948,15 +1984,15 @@
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
 
         // Narrative — title with key word highlight
+        // hero.title_html.* are developer-controlled static strings with span markup — innerHTML-safe
         const titleEl = document.getElementById("heroTitle");
         if (titleEl) {
-          // Build title HTML with underlined key word
           const titleMap = {
-            MONITORING:    { html: 'Hawaiʻi is <span class="hero-title-key">calm</span> right now.',        cls: 'calm'  },
-            FIRE_ACTIVE:   { html: '<span class="hero-title-key">Wildfire</span> detected in Hawaiʻi.',    cls: 'fire'  },
-            FLOOD_WARNING: { html: 'Flash flood <span class="hero-title-key">warning</span> in effect.',   cls: 'flood' },
-            FLOOD_WATCH:   { html: 'Flood <span class="hero-title-key">watch</span> conditions developing.', cls: 'flood' },
-            DEGRADED:      { html: 'Latest data temporarily <span class="hero-title-key">delayed</span>.',  cls: 'warn'  },
+            MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',            cls: 'calm'  },
+            FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',          cls: 'fire'  },
+            FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
+            FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
+            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Latest data temporarily <span class="hero-title-key">delayed</span>.',           cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
           titleEl.innerHTML = titleData.html;
@@ -1988,7 +2024,7 @@
         }
 
         // Freshness — update pill and chip with live feel
-        const freshStr = _freshStr || "Updated just now";
+        const freshStr = _freshStr || _t("freshness.updated_just_now") || "Updated just now";
         const updatedPill = document.getElementById("updatedPill");
         if (updatedPill) updatedPill.innerHTML = `<span class="dot"></span> ${freshStr}`;
         const freshLabelEl = document.getElementById("freshnessLabel");
@@ -2005,9 +2041,13 @@
         // Signal detail toggle label
         const detailLabel = document.getElementById("signalDetailLabel");
         if (detailLabel) {
-          detailLabel.textContent = fireCount > 0
-            ? `${fireCount} fire signal${fireCount > 1 ? "s" : ""} — see detail`
-            : floodWarn || floodWatch ? "Flood detail" : "Signal detail — all clear";
+          if (fireCount > 0) {
+            detailLabel.textContent = _tmpl("signal.detail_fire_count", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `${fireCount} fire signal${fireCount > 1 ? "s" : ""} \u2014 see detail`;
+          } else if (floodWarn || floodWatch) {
+            detailLabel.textContent = _t("signal.detail_flood") || "Flood detail";
+          } else {
+            detailLabel.textContent = _t("signal.detail_all_clear") || "Signal detail \u2014 all clear";
+          }
         }
 
         // System note
@@ -2020,11 +2060,11 @@
         const note = document.getElementById("systemNote");
         if (note) {
           if (primaryEvent === "DEGRADED") {
-            note.textContent = "Some data sources are delayed. Kahu Ola is showing the safest available fallback. Always follow official emergency instructions.";
+            note.textContent = _t("system.note_degraded") || "Some data sources are delayed. Kahu Ola is showing the safest available fallback. Always follow official emergency instructions.";
           } else if (primaryEvent === "FLOOD_WARNING") {
-            note.textContent = "Flash flood warning active. Avoid flooded roads and stream crossings. Follow NWS and county instructions.";
+            note.textContent = _t("system.note_flood_warning") || "Flash flood warning active. Avoid flooded roads and stream crossings. Follow NWS and county instructions.";
           } else {
-            note.textContent = "Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.";
+            note.textContent = _t("system.note_default") || "Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.";
           }
         }
       }
@@ -2038,49 +2078,50 @@
         // Only surface HIGH/CRITICAL from real NWS alerts
         const highAlert = fwSignals.find(s => s.properties?.red_flag_active || s.properties?.risk_index === "HIGH");
         if (redFlag) {
-          setText("windValue", "Red Flag");
+          setText("windValue", _t("context.wind_red_flag") || "Red Flag");
           const el = document.getElementById("windValue");
           if (el) el.style.color = "var(--fire)";
         } else if (hasWatch) {
-          setText("windValue", "Watch");
+          setText("windValue", _t("context.wind_watch") || "Watch");
         } else if (highAlert) {
-          setText("windValue", "High");
+          setText("windValue", _t("context.wind_high") || "High");
         } else {
-          setText("windValue", "Normal");
+          setText("windValue", _t("context.wind_normal") || "Normal");
         }
-        document.querySelector(".hero-context-item:nth-child(1) .hero-context-label").textContent = "Fire Weather";
-        document.querySelector(".hero-context-item:nth-child(1) .hero-context-source").textContent = "NWS Official";
+        const windSource = document.getElementById("windSource");
+        if (windSource) windSource.textContent = _t("context.nws_official") || "NWS Official";
 
         // Rain — from MRMS/NEXRAD
         const mrmsSignals = getItems(mrmsPayload);
         const heavyRain   = mrmsSignals.find(s => s.properties?.intensity === "INTENSE" || s.properties?.intensity === "HEAVY");
         const modRain     = mrmsSignals.find(s => s.properties?.intensity === "MODERATE");
         if (heavyRain) {
-          setText("rainValue", "Heavy Rain");
+          setText("rainValue", _t("context.rain_heavy") || "Heavy Rain");
           document.getElementById("rainValue").style.color = "var(--flood)";
         } else if (modRain) {
-          setText("rainValue", "Moderate Rain");
+          setText("rainValue", _t("context.rain_moderate") || "Moderate Rain");
         } else if (mrmsSignals.length > 0) {
-          setText("rainValue", "Light Rain");
+          setText("rainValue", _t("context.rain_light") || "Light Rain");
         } else {
-          setText("rainValue", "None");
+          setText("rainValue", _t("context.none") || "None");
         }
-        document.querySelector(".hero-context-item:nth-child(2) .hero-context-label").textContent = "Rainfall";
-        document.querySelector(".hero-context-item:nth-child(2) .hero-context-source").textContent = "NEXRAD / MRMS";
+        const rainSource = document.getElementById("rainSource");
+        if (rainSource) rainSource.textContent = _t("context.nexrad_mrms") || "NEXRAD / MRMS";
 
         // Flood Risk — from NWS flash flood
         const floodSummary = floodPayload?.summary;
         if (floodSummary?.warning_count > 0) {
-          setText("floodRiskValue", "Warning Active");
+          setText("floodRiskValue", _t("context.flood_warning_active") || "Warning Active");
           document.getElementById("floodRiskValue").style.color = "var(--danger)";
         } else if (floodSummary?.watch_count > 0) {
-          setText("floodRiskValue", "Watch Active");
+          setText("floodRiskValue", _t("context.flood_watch_active") || "Watch Active");
           document.getElementById("floodRiskValue").style.color = "var(--warn)";
         } else {
-          setText("floodRiskValue", "None Active");
+          setText("floodRiskValue", _t("context.flood_none_active") || "None Active");
           document.getElementById("floodRiskValue").style.color = "";
         }
-        document.querySelector(".hero-context-item:nth-child(3) .hero-context-source").textContent = "NWS Official";
+        const floodSource = document.getElementById("floodSource");
+        if (floodSource) floodSource.textContent = _t("context.nws_official") || "NWS Official";
       }
 
       function renderFireCard(payload) {
@@ -2089,18 +2130,18 @@
         const freshness = timeAgo(getGeneratedAt(payload));
 
         if (count > 0) {
-          setText("fireTitle", `🔥 Fire Signal — ${count} Active`);
-          setText("fireCopy", `${count} wildfire signal${count === 1 ? "" : "s"} detected in the current statewide Worker snapshot. Open the live map for island-level detail.`);
+          setText("fireTitle", _tmpl("signal.fire_title_active", { n: count }) || `\ud83d\udd25 Fire Signal \u2014 ${count} Active`);
+          setText("fireCopy",  _tmpl("signal.fire_copy_active_tmpl", { n: count, s: count > 1 ? "s" : "" }) || `${count} wildfire signal${count === 1 ? "" : "s"} detected in the current statewide Worker snapshot. Open the live map for island-level detail.`);
           document.getElementById("fireStatus").className = "status active";
-          setText("fireStatus", count >= 5 ? "ACTIVE" : "ELEVATED");
+          setText("fireStatus", count >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED"));
         } else {
-          setText("fireTitle", "🔥 Fire Signal — Monitoring");
-          setText("fireCopy", "Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.");
+          setText("fireTitle", _t("signal.fire_monitoring") || "\ud83d\udd25 Fire Signal \u2014 Monitoring");
+          setText("fireCopy",  _t("signal.fire_copy_monitoring_long") || "Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.");
           document.getElementById("fireStatus").className = "status ok";
-          setText("fireStatus", "CLEAR");
+          setText("fireStatus", _t("status.clear") || "CLEAR");
         }
 
-        setText("fireSourceChip", "NASA FIRMS");
+        setText("fireSourceChip", _t("source.nasa_firms") || "NASA FIRMS");
         setText("fireFreshnessChip", freshness);
       }
 
@@ -2110,15 +2151,15 @@
         const freshness = timeAgo(getGeneratedAt(payload));
 
         if (count > 0) {
-          setText("floodTitle", `🌧 Flood Signal — ${count} Elevated`);
-          setText("floodCopy", `${count} flood context feature${count === 1 ? "" : "s"} detected in the current statewide snapshot. Heavy rain may cause streams and low-lying roads to change quickly.`);
+          setText("floodTitle", _tmpl("signal.flood_title_active", { n: count }) || `\ud83c\udf27 Flood Signal \u2014 ${count} Elevated`);
+          setText("floodCopy",  _tmpl("signal.flood_copy_active_tmpl", { n: count, s: count > 1 ? "s" : "" }) || `${count} flood context feature${count === 1 ? "" : "s"} detected in the current statewide snapshot. Heavy rain may cause streams and low-lying roads to change quickly.`);
           document.getElementById("floodStatus").className = "status watch";
-          setText("floodStatus", count >= 5 ? "ACTIVE" : "WATCH");
+          setText("floodStatus", count >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.watch") || "WATCH"));
         } else {
-          setText("floodTitle", "🌧 Flood Signal — Monitoring");
-          setText("floodCopy", "Our system is monitoring watershed conditions to keep residents safe. No broad flood watches are active, but mountain streams can flash-flood without warning. Check your local area to be sure.");
+          setText("floodTitle", _t("signal.flood_monitoring") || "\ud83c\udf27 Flood Signal \u2014 Monitoring");
+          setText("floodCopy",  _t("signal.flood_copy_monitoring_long") || "Our system is monitoring watershed conditions to keep residents safe. No broad flood watches are active, but mountain streams can flash-flood without warning. Check your local area to be sure.");
           document.getElementById("floodStatus").className = "status ok";
-          setText("floodStatus", "CLEAR");
+          setText("floodStatus", _t("status.clear") || "CLEAR");
         }
 
         setText("floodSourceChip", "NWS / PacIOOS");
@@ -2138,32 +2179,32 @@
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
 
         if (primaryEvent === "FIRE_ACTIVE" || redFlag) {
-          titleEl.textContent = "Kūpuna & Keiki Fire Safety";
-          bodyEl.textContent  = "Active wildfire signals detected. Kūpuna, keiki, and those with respiratory conditions should stay indoors with windows closed. Monitor official evacuation orders and keep go-bags ready. E mālama pono.";
+          titleEl.textContent = _t("kupuna.title.fire")         || "K\u016bpuna & Keiki Fire Safety";
+          bodyEl.textContent  = _t("kupuna.body.fire")          || "Active wildfire signals detected. K\u016bpuna, keiki, and those with respiratory conditions should stay indoors with windows closed. Monitor official evacuation orders and keep go-bags ready. E m\u0101lama pono.";
           noteEl.style.borderColor = "rgba(255,122,0,.28)";
           noteEl.style.background  = "rgba(255,122,0,.08)";
           titleEl.style.color      = "#ffd8ba";
         } else if (floodWarn) {
-          titleEl.textContent = "Kūpuna & Keiki Flood Safety";
-          bodyEl.textContent  = "Flash flood warning is active. Kūpuna, keiki, and residents near streams or low-lying roads should move to higher ground immediately. Do not attempt to cross flooded roadways. Follow official NWS and county emergency instructions. E mālama pono.";
+          titleEl.textContent = _t("kupuna.title.flood_warning") || "K\u016bpuna & Keiki Flood Safety";
+          bodyEl.textContent  = _t("kupuna.body.flood_warning")  || "Flash flood warning is active. K\u016bpuna, keiki, and residents near streams or low-lying roads should move to higher ground immediately. Do not attempt to cross flooded roadways. Follow official NWS and county emergency instructions. E m\u0101lama pono.";
           noteEl.style.borderColor = "rgba(77,168,255,.28)";
           noteEl.style.background  = "rgba(77,168,255,.08)";
           titleEl.style.color      = "#dbeeff";
         } else if (floodWatch) {
-          titleEl.textContent = "Kūpuna & Keiki Flood Awareness";
-          bodyEl.textContent  = "A flood watch is in effect. Kūpuna, keiki, and those in low-lying or flood-prone areas should prepare for possible rapid water rises. Have an emergency plan ready and monitor official alerts. E mālama pono.";
+          titleEl.textContent = _t("kupuna.title.flood_watch")   || "K\u016bpuna & Keiki Flood Awareness";
+          bodyEl.textContent  = _t("kupuna.body.flood_watch")    || "A flood watch is in effect. K\u016bpuna, keiki, and those in low-lying or flood-prone areas should prepare for possible rapid water rises. Have an emergency plan ready and monitor official alerts. E m\u0101lama pono.";
           noteEl.style.borderColor = "rgba(255,204,102,.22)";
           noteEl.style.background  = "rgba(255,204,102,.07)";
           titleEl.style.color      = "#ffe9b5";
         } else if (elevated) {
-          titleEl.textContent = "Kūpuna & Keiki Safety";
-          bodyEl.textContent  = "Fire weather conditions are elevated across parts of Hawaiʻi. Kūpuna, keiki, and those with breathing concerns should stay informed and limit strenuous outdoor activity during dry, windy periods. E mālama pono.";
+          titleEl.textContent = _t("kupuna.title.elevated")      || "K\u016bpuna & Keiki Safety";
+          bodyEl.textContent  = _t("kupuna.body.elevated")       || "Fire weather conditions are elevated across parts of Hawai\u02bfi. K\u016bpuna, keiki, and those with breathing concerns should stay informed and limit strenuous outdoor activity during dry, windy periods. E m\u0101lama pono.";
           noteEl.style.borderColor = "";
           noteEl.style.background  = "";
           titleEl.style.color      = "";
         } else {
-          titleEl.textContent = "Kūpuna & Keiki Safety";
-          bodyEl.textContent  = "Statewide conditions are calm. Kūpuna, keiki, and those in low-lying areas should remain informed through official alerts. E mālama pono — care for one another.";
+          titleEl.textContent = _t("kupuna.title.calm")          || "K\u016bpuna & Keiki Safety";
+          bodyEl.textContent  = _t("kupuna.body.calm")           || "Statewide conditions are calm. K\u016bpuna, keiki, and those in low-lying areas should remain informed through official alerts. E m\u0101lama pono \u2014 care for one another.";
           noteEl.style.borderColor = "";
           noteEl.style.background  = "";
           titleEl.style.color      = "";
@@ -2196,7 +2237,9 @@
           fireWeatherPayload?.generated_at ||
           mrmsPayload?.generated_at ||
           firePayload?.generated_at;
-        const freshnessStr = generatedAt ? timeAgo(generatedAt) : "Updated just now";
+        _lastGeneratedAt = generatedAt || null;
+        _lastPayloads = { fire: firePayload, flood: floodPayload, fireWeather: fireWeatherPayload, mrms: mrmsPayload, primaryEvent, counts: { fireCount: fireItems.length, floodCount: floodPayload?.summary?.count || 0, stormCount: 0 } };
+        const freshnessStr = generatedAt ? timeAgo(generatedAt) : (_t("freshness.updated_just_now") || "Updated just now");
 
         applyHero(primaryEvent, {
           fireCount:  fireItems.length,
@@ -2223,17 +2266,99 @@
         const chip = document.getElementById("freshnessChip");
         if (chip) {
           chip.classList.add("stale");
-          chip.innerHTML = `<span class="dot"></span>System Degraded`;
+          chip.innerHTML = `<span class="dot"></span>${_t("system.degraded_chip") || "System Degraded"}`;
         }
         const updatedPill = document.getElementById("updatedPill");
         if (updatedPill) {
-          updatedPill.innerHTML = `<span class="dot" style="background:var(--warn)"></span> Snapshot temporarily delayed`;
+          updatedPill.innerHTML = `<span class="dot" style="background:var(--warn)"></span> ${_t("system.snapshot_delayed") || "Snapshot temporarily delayed"}`;
         }
         setText("systemNote", "Some hazard data sources are delayed. Kahu Ola is showing the safest available civic fallback. Always follow official emergency instructions.");
       }
 
       loadHomepage().catch(() => {
         setDegradedUi();
+      });
+
+      // On language change: re-apply static data-i18n labels, freshness, and
+      // all JS-rendered sections.
+      //
+      // applyHero() is intentionally NOT called here — it internally calls
+      // buildDelta() which writes a new timestamp to localStorage, which would
+      // reset the "what changed" display to "0m ago" on every language switch.
+      // Instead, we inline only the sub-renders whose contracts are verified.
+      window.addEventListener("kahuola:langchange", () => {
+        if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
+
+        // Re-render freshness chip and header pill
+        const freshStr = timeAgo(_lastGeneratedAt);
+        const freshnessEl = document.getElementById("freshnessLabel");
+        if (freshnessEl) freshnessEl.textContent = freshStr;
+        const updatedPillEl = document.getElementById("updatedPill");
+        if (updatedPillEl) updatedPillEl.innerHTML = `<span class="dot"></span> ${freshStr}`;
+
+        if (!_lastPayloads) return;
+        const { fire, flood, fireWeather, mrms, primaryEvent, counts } = _lastPayloads;
+        const fireCount  = counts.fireCount || 0;
+        const floodWarn  = flood?.summary?.warning_count > 0;
+        const floodWatch = flood?.summary?.watch_count > 0;
+        const redFlag    = fireWeather?.summary?.red_flag_active;
+        const highWind   = redFlag || (fireWeather?.summary?.red_flag_count > 0) || (fireWeather?.summary?.watch_count > 0);
+
+        // Re-render hero title (innerHTML — developer-controlled strings only)
+        const titleEl = document.getElementById("heroTitle");
+        if (titleEl) {
+          const titleMap = {
+            MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',          cls: 'calm'  },
+            FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
+            FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
+            FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
+            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Latest data temporarily <span class="hero-title-key">delayed</span>.',         cls: 'warn'  },
+          };
+          const td = titleMap[primaryEvent] || titleMap.MONITORING;
+          titleEl.innerHTML = td.html;
+          titleEl.className = `hero-title ${td.cls}`;
+        }
+
+        // Re-render hero narrative / kicker / banner
+        // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
+        setText("heroNarrative", n.narrative);
+        setText("heroBannerTitle", n.bannerTitle);
+        setText("heroBannerCopy", n.bannerCopy);
+        const kicker = document.getElementById("heroKicker");
+        if (kicker) { kicker.textContent = n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
+
+        // Signal detail toggle label
+        const detailLabel = document.getElementById("signalDetailLabel");
+        if (detailLabel) {
+          if (fireCount > 0) {
+            detailLabel.textContent = _tmpl("signal.detail_fire_count", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `${fireCount} fire signal${fireCount > 1 ? "s" : ""} \u2014 see detail`;
+          } else if (floodWarn || floodWatch) {
+            detailLabel.textContent = _t("signal.detail_flood") || "Flood detail";
+          } else {
+            detailLabel.textContent = _t("signal.detail_all_clear") || "Signal detail \u2014 all clear";
+          }
+        }
+
+        // System note
+        const note = document.getElementById("systemNote");
+        if (note) {
+          if (primaryEvent === "DEGRADED")        note.textContent = _t("system.note_degraded")      || "Some data sources are delayed. Kahu Ola is showing the safest available fallback. Always follow official emergency instructions.";
+          else if (primaryEvent === "FLOOD_WARNING") note.textContent = _t("system.note_flood_warning") || "Flash flood warning active. Avoid flooded roads and stream crossings. Follow NWS and county instructions.";
+          else                                    note.textContent = _t("system.note_default")       || "Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.";
+        }
+
+        // Re-render the remaining JS-driven sections (verified signatures)
+        // renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload)
+        renderContextMetrics(fireWeather, mrms, flood);
+        // renderSignalStrip(fireCount, floodPayload, fireWeatherPayload)
+        renderSignalStrip(fireCount, flood, fireWeather);
+        // renderFireCard(payload)
+        renderFireCard(fire);
+        // renderFloodCard(payload)
+        renderFloodCard(flood);
+        // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
+        renderKupunaNote(primaryEvent, flood, fireWeather);
       });
     })();
   </script>

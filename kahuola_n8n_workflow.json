@@ -1,0 +1,382 @@
+{
+  "name": "Kahu Ola Auto Poster - Hawaiian Voice",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 17 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "HTTP Request NWS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.weather.gov/alerts/active?area=HI",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "KahuOla/4.8 (kahuola.org; contact@kahuola.org)"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "HTTP Request Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://kahuola.org/api/health",
+        "options": {
+          "timeout": 8000
+        }
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Code: Prepare Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const nwsData = $(\"HTTP Request NWS\").first().json;\nconst healthData = $(\"HTTP Request Health\").first().json;\n\nconst alerts = nwsData?.features?.slice(0, 3)?.map(f => ({\n  event: f.properties?.event,\n  headline: f.properties?.headline,\n  severity: f.properties?.severity,\n  areas: f.properties?.areaDesc\n})) || [];\n\nconst healthStatus = healthData?.status || \"monitoring\";\nconst activeHazards = healthData?.active_hazards || [];\n\nconst context = alerts.length > 0\n  ? `Active NWS alerts (${alerts.length}): ${alerts.map(a => `${a.event} \u2014 ${a.areas}`).join(\" | \")}`\n  : `No active NWS alerts. System status: ${healthStatus}.`;\n\nconst hazardContext = activeHazards.length > 0\n  ? `Kahu Ola detecting: ${activeHazards.join(\", \")}`\n  : \"Kahu Ola: routine monitoring, no active hazard signals.\";\n\nreturn [{\n  json: {\n    context: `${context} ${hazardContext}`,\n    alert_count: alerts.length,\n    timestamp: new Date().toLocaleString(\"en-US\", { timeZone: \"Pacific/Honolulu\" })\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Gemini AI Generate Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contents",
+              "value": "={{ [{\\\"parts\\\": [{\\\"text\\\": \\\"Current hazard conditions for Hawai\u02bbi as of \\\" + $json.timestamp + \\\":\\\\n\\\" + $json.context + \\\"\\\\n\\\\nWrite the Facebook post now.\\\"}]}] }}"
+            },
+            {
+              "name": "systemInstruction",
+              "value": "={{ {\\\"parts\\\": [{\\\"text\\\": \"You are the social media voice of Kahu Ola \\u2014 a civic hazard intelligence platform for Hawai\\u02bbi (kahuola.org). Your job is to write one honest, calm Facebook post per day summarizing current hazard conditions.\\n\\nPLATFORM IDENTITY:\\n- Name: Kahu Ola Hawai\\u02bbi Hazard Intelligence\\n- Mission: Civic wildfire and hazard situational awareness for Hawai\\u02bbi\\n- Tone: calm, civic, factual, never sensational, deeply Hawaiian\\n- Principle: E m\\u0101lama pono (care for people and land)\\n- Hawaiian Voice: Embrace the Aloha spirit. Speak with a warm, local Hawaiian tone. Feel free to use culturally appropriate greetings like \\\"Aloha mai k\\u0101kou\\\", \\\"Mahalo\\\", \\\"m\\u0101lama\\\", \\\"\\u02bbohana\\\", or references to the \\\"\\u02bb\\u0101ina\\\" (land) where they naturally fit to show respect and care for the community.\\n\\nCONTENT RULES:\\n1. Max 250 characters\\n2. Always end with: kahuola.org\\n3. Max 2 emojis \\u2014 only if they add clarity (\\ud83d\\udd25 for fire, \\ud83c\\udf27\\ufe0f for rain, \\ud83c\\udf3a for general)\\n4. No hashtags\\n5. No ALL CAPS except acronyms (NWS, FEMA)\\n6. Never exaggerate severity \\u2014 if uncertain, say \\\"monitoring\\\"\\n7. Always cite source agency: NWS, NASA FIRMS, NOAA\\n8. If no active alerts: post a general awareness or preparedness message\\n\\nFORBIDDEN:\\n- Never say \\\"BREAKING\\\" or \\\"URGENT\\\" unless NWS has issued a Warning\\n- Never invent hazard data \\u2014 only use what is provided\\n- Never use sensational language (\\\"devastating\\\", \\\"catastrophic\\\")\\n- Never mention evacuation routes (liability)\\n\\nOUTPUT FORMAT:\\nReturn ONLY the Facebook post text.\\nNo preamble. No explanation. No quotes around the text.\\nJust the post, ready to publish.\"}]} }}"
+            },
+            {
+              "name": "generationConfig",
+              "value": "={{ {\\\"maxOutputTokens\\\": 100, \\\"temperature\\\": 0.7} }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-6",
+      "name": "Code: Extract AI text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const response = $input.first().json;\nconst rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text || \"\";\nconst post = rawText.trim();\n\nif (post.length > 300 || !post.includes(\"kahuola.org\")) {\n  return [{\n    json: {\n      post: \"Aloha k\u0101kou! Kahu Ola is monitoring hazard conditions across Hawai\u02bbi to keep our \u02bbohana safe. Stay informed at kahuola.org \ud83c\udf3a\",\n      is_fallback: true\n    }\n  }];\n}\n\nreturn [{ json: { post, is_fallback: false } }];"
+      }
+    },
+    {
+      "id": "node-7",
+      "name": "Telegram: Send Preview",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "chatId": "6631407344",
+        "text": "={{ \"\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udccb KAHU OLA DAILY POST PREVIEW\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\" + $json.post + \"\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\u23f0 \" + $now + \"\\n\" + ($json.is_fallback ? \"\u26a0\ufe0f FALLBACK (AI error)\" : \"\u2705 AI generated\") + \"\\n\\nReply APPROVE or REJECT within 30 minutes.\" }}",
+        "additionalFields": {
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "\u2705 Approve & Post",
+                      "additionalFields": {
+                        "callback_data": "approve"
+                      }
+                    },
+                    {
+                      "text": "\u274c Reject",
+                      "additionalFields": {
+                        "callback_data": "reject"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "node-8",
+      "name": "Wait for approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "webhookPath": "kahuola-approve",
+        "options": {
+          "timeout": true,
+          "timeoutAmount": 30,
+          "timeoutUnit": "minutes"
+        }
+      }
+    },
+    {
+      "id": "node-9",
+      "name": "IF Check approval",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body ? $json.body.callback_data : \"\" }}",
+              "operation": "equal",
+              "value2": "approve"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-10a",
+      "name": "Facebook Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1800,
+        -100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v19.0/1049357994926463/feed",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_TOKEN }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $(\"Code: Extract AI text\").item.json.post }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-10b",
+      "name": "Telegram: Confirmed",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        -100
+      ],
+      "parameters": {
+        "chatId": "6631407344",
+        "text": "={{ \"\u2705 Posted to Facebook!\\nPost ID: \" + ($json.id || \"Unknown\") + \"\\nContent: \" + $(\"Code: Extract AI text\").item.json.post + \"\\nView: https://facebook.com/kahuola\" }}"
+      }
+    },
+    {
+      "id": "node-11",
+      "name": "Telegram: Rejected",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1800,
+        100
+      ],
+      "parameters": {
+        "chatId": "6631407344",
+        "text": "\u274c Post rejected or timed out. No action taken."
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request NWS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request NWS": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Health": {
+      "main": [
+        [
+          {
+            "node": "Code: Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Prepare Context": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI Generate Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI Generate Post": {
+      "main": [
+        [
+          {
+            "node": "Code: Extract AI text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Extract AI text": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Send Preview": {
+      "main": [
+        [
+          {
+            "node": "Wait for approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for approval": {
+      "main": [
+        [
+          {
+            "node": "IF Check approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Check approval": {
+      "main": [
+        [
+          {
+            "node": "Facebook Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram: Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Post": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

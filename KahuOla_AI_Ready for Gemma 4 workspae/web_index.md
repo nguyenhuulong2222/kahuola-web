@@ -1,0 +1,61 @@
+<!-- SOURCE: web/index.html -->
+<!-- CATEGORY: web -->
+<!-- EXTRACTED: 2026-04-07T07:50:14Z -->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kahu Ola | Statewide Hazard Summary</title>
+    <link rel="stylesheet" href="./css/kahuola-m3.css" />
+  </head>
+  <body>
+    <main class="page" aria-live="polite">
+      <header class="topbar">
+        <h1>Kahu Ola</h1>
+        <p class="subtitle">Guardian of Life � Hawai'i</p>
+        <p id="freshnessLabel" class="freshness">Loading latest verified snapshot...</p>
+      </header>
+
+      <section id="degradedBanner" class="banner hidden" role="status"></section>
+
+      <section class="hero" id="heroCard">
+        <h2 id="heroTitle">Statewide Hazard Monitoring</h2>
+        <p id="heroSummary">Loading current statewide conditions...</p>
+        <p id="heroContext" class="hero-context">Loading source context...</p>
+      </section>
+
+      <section class="stack">
+        <h3>Signal Stack</h3>
+        <div id="signalStack" class="stack-cards"></div>
+      </section>
+
+      <section class="freshness-block">
+        <h3>Source Freshness</h3>
+        <ul id="sourceFreshness" class="freshness-list"></ul>
+      </section>
+
+      <section id="miniMapContainer"></section>
+
+      <section class="actions">
+        <a class="btn" href="/live-map.html">View Live Map</a>
+        <a class="btn btn-secondary" href="https://www.weather.gov/hfo/" target="_blank" rel="noopener noreferrer">Official Alerts</a>
+      </section>
+
+      <section class="trust">
+        <h3>Trust & Safety</h3>
+        <p>Kahu Ola provides situational awareness. Official emergency instructions come from county/state/federal authorities.</p>
+        <p id="diagnosticsLine" class="diagnostics"></p>
+      </section>
+
+      <noscript>
+        <section class="banner">
+          JavaScript is required to load the latest Worker snapshot. Please use official alerts for urgent decisions.
+        </section>
+      </noscript>
+    </main>
+
+    <script type="module" src="./js/hero.js"></script>
+  </body>
+</html>
