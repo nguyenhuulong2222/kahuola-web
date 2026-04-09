@@ -837,6 +837,9 @@ export default {
     const xyzMatch = path.match(/^\/api\/tiles\/xyz\/airnow\/(\d+)\/(\d+)\/(\d+)\.png$/);
     if (xyzMatch) return handleAirnowXyz(xyzMatch[1], xyzMatch[2], xyzMatch[3], env, cors);
 
+    const radarMatch = path.match(/^\/api\/tiles\/radar\/(\d+)\/(\d+)\/(\d+)$/);
+    if (radarMatch) return handleRadarXyz(radarMatch[1], radarMatch[2], radarMatch[3], cors);
+
     const geoMatch = path.match(/^\/api\/tiles\/geojson\/([a-z_-]+)$/);
     if (geoMatch) return handleGeojson(geoMatch[1], cors);
 
@@ -1366,6 +1369,16 @@ async function handleAirnowXyz(z: string, x: string, y: string, env: Env, cors: 
   const cacheUrl = `https://tiles.airnowtech.org/airnow/today/${zi}/${xi}/${yi}.png`;
   const fetchUrl = `${cacheUrl}?api_key=${env.AIRNOW_API_KEY}`;
   return proxyFetch(fetchUrl, cacheUrl, 600, cors);
+}
+
+// Iowa Mesonet is a public NEXRAD tile aggregator (CORS *, no auth required).
+// TTL 300 s — tiles update roughly every 5 minutes.
+async function handleRadarXyz(z: string, x: string, y: string, cors: CorsHeaders): Promise<Response> {
+  const zi = parseInt(z, 10), xi = parseInt(x, 10), yi = parseInt(y, 10);
+  if (isNaN(zi) || isNaN(xi) || isNaN(yi)) return err(400, 'z/x/y must be integers', cors);
+  if (zi < 0 || zi > 18) return err(400, 'z must be 0–18', cors);
+  const url = `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/${zi}/${xi}/${yi}.png`;
+  return proxyFetch(url, url, 300, cors);
 }
 
 const GEOJSON_UPSTREAMS: Record<string, { url: string; ttl: number }> = {
