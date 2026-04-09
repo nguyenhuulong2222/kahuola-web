@@ -2252,6 +2252,11 @@
         renderFloodCard(floodPayload);
         renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload);
 
+        // Re-apply locale translations after all JS renders — ensures data-i18n elements
+        // that were overwritten by render functions (e.g. signalDetailLabel) get the
+        // correct locale value as the final state.
+        if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
+
         const islandCounts = countByIsland(firePayload, floodPayload);
         Object.entries(islandCounts).forEach(([key, entry]) => applyBadgeState(key, entry));
 
@@ -2358,6 +2363,11 @@
         renderFloodCard(flood);
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
         renderKupunaNote(primaryEvent, flood, fireWeather);
+
+        // Final applyAll — must be last. JS renders above can overwrite data-i18n elements
+        // (e.g. signalDetailLabel overwritten at L2331 with KEEP_ENGLISH dynamic text).
+        // Calling applyAll here restores the locale translation as the final DOM state.
+        if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
       });
     })();
   </script>
