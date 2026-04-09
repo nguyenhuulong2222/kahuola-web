@@ -223,7 +223,16 @@ async function fetchNwsAlerts(cors: CorsHeaders): Promise<any> {
 async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
   const upstream = await fetchNwsAlerts(cors);
-  if (!upstream.ok) return err(502, `Flash flood upstream failed: ${upstream.error}`, cors);
+  if (!upstream.ok) {
+    return jsonResp(
+      buildHazardEnvelope(
+        'flash-flood', 'NWS', region, [],
+        { status: 'unavailable', count: 0, message: 'NWS alerts endpoint temporarily unavailable. No flash flood data in this snapshot.' },
+        { authority: 'official', note: 'Live NWS integration via api.weather.gov alerts endpoint.', upstream_error: upstream.error },
+      ),
+      200, cors,
+    );
+  }
 
   const rawFeatures = Array.isArray(upstream.data?.features) ? upstream.data.features : [];
   const signals: Feature[] = rawFeatures
