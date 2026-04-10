@@ -10,7 +10,7 @@
 
 export interface Env {
   NASA_FIRMS_MAP_KEY: string;
-  AIRNOW_API_KEY: string;
+  AIRNOW_API_KEY?: string;
   MEDIA_BRIEF_WEBHOOK?: string;
   MEDIA_BRIEF_WEBHOOK_TOKEN?: string;
 }
@@ -68,51 +68,51 @@ function optionsResp(origin: string | null): Response {
 const SMART_HAWAII_CELLS: IslandCell[] = [
   {
     id: 'kauai-north-windward', island: 'Kauaʻi', zone: 'North Windward', terrain: 'WINDWARD', coastalExposure: 'MODERATE', runoff: 'HIGH', drainage: 'Hanalei and north shore drainages',
-    ring: [[-159.75,22.20],[-159.40,22.23],[-159.32,22.02],[-159.56,21.94],[-159.78,22.03],[-159.75,22.20]],
+    ring: [[-159.75, 22.20], [-159.40, 22.23], [-159.32, 22.02], [-159.56, 21.94], [-159.78, 22.03], [-159.75, 22.20]],
   },
   {
     id: 'kauai-south-lowland', island: 'Kauaʻi', zone: 'South Coastal Lowland', terrain: 'COASTAL', coastalExposure: 'HIGH', runoff: 'MODERATE', drainage: 'Poʻipū to Līhuʻe lowlands',
-    ring: [[-159.70,21.96],[-159.42,21.98],[-159.34,21.84],[-159.53,21.75],[-159.72,21.82],[-159.70,21.96]],
+    ring: [[-159.70, 21.96], [-159.42, 21.98], [-159.34, 21.84], [-159.53, 21.75], [-159.72, 21.82], [-159.70, 21.96]],
   },
   {
     id: 'oahu-windward', island: 'Oʻahu', zone: 'Koʻolau Windward', terrain: 'WINDWARD', coastalExposure: 'MODERATE', runoff: 'HIGH', drainage: 'Kāneʻohe and Koʻolau valleys',
-    ring: [[-158.15,21.59],[-157.67,21.58],[-157.60,21.40],[-157.78,21.28],[-158.05,21.33],[-158.15,21.59]],
+    ring: [[-158.15, 21.59], [-157.67, 21.58], [-157.60, 21.40], [-157.78, 21.28], [-158.05, 21.33], [-158.15, 21.59]],
   },
   {
     id: 'oahu-honolulu-lowland', island: 'Oʻahu', zone: 'Honolulu Urban Lowland', terrain: 'URBAN_LOWLAND', coastalExposure: 'HIGH', runoff: 'MODERATE', drainage: 'Honolulu stormwater corridor',
-    ring: [[-158.08,21.37],[-157.70,21.37],[-157.67,21.22],[-157.91,21.19],[-158.09,21.26],[-158.08,21.37]],
+    ring: [[-158.08, 21.37], [-157.70, 21.37], [-157.67, 21.22], [-157.91, 21.19], [-158.09, 21.26], [-158.08, 21.37]],
   },
   {
     id: 'molokai-east', island: 'Molokaʻi', zone: 'East Valley Slopes', terrain: 'VALLEY', coastalExposure: 'MODERATE', runoff: 'HIGH', drainage: 'East Molokaʻi stream gullies',
-    ring: [[-156.98,21.18],[-156.48,21.19],[-156.42,21.01],[-156.65,20.94],[-156.95,20.99],[-156.98,21.18]],
+    ring: [[-156.98, 21.18], [-156.48, 21.19], [-156.42, 21.01], [-156.65, 20.94], [-156.95, 20.99], [-156.98, 21.18]],
   },
   {
     id: 'lanai-south', island: 'Lānaʻi', zone: 'South Slope', terrain: 'LEEWARD', coastalExposure: 'MODERATE', runoff: 'LOW', drainage: 'Lānaʻi south slope runoff',
-    ring: [[-157.08,20.88],[-156.80,20.89],[-156.76,20.69],[-156.97,20.63],[-157.10,20.75],[-157.08,20.88]],
+    ring: [[-157.08, 20.88], [-156.80, 20.89], [-156.76, 20.69], [-156.97, 20.63], [-157.10, 20.75], [-157.08, 20.88]],
   },
   {
     id: 'maui-windward', island: 'Maui', zone: 'Hāna / East Windward', terrain: 'WINDWARD', coastalExposure: 'MODERATE', runoff: 'HIGH', drainage: 'Hāna and east slope drainages',
-    ring: [[-156.20,20.98],[-155.86,20.97],[-155.78,20.74],[-155.98,20.61],[-156.22,20.73],[-156.20,20.98]],
+    ring: [[-156.20, 20.98], [-155.86, 20.97], [-155.78, 20.74], [-155.98, 20.61], [-156.22, 20.73], [-156.20, 20.98]],
   },
   {
     id: 'maui-central-lowland', island: 'Maui', zone: 'Central Maui Lowland', terrain: 'URBAN_LOWLAND', coastalExposure: 'HIGH', runoff: 'MODERATE', drainage: 'Kahului / Wailuku drainage plain',
-    ring: [[-156.63,20.97],[-156.28,20.97],[-156.22,20.74],[-156.48,20.67],[-156.66,20.78],[-156.63,20.97]],
+    ring: [[-156.63, 20.97], [-156.28, 20.97], [-156.22, 20.74], [-156.48, 20.67], [-156.66, 20.78], [-156.63, 20.97]],
   },
   {
     id: 'maui-west-gulch', island: 'Maui', zone: 'West Maui Gulches', terrain: 'VALLEY', coastalExposure: 'MODERATE', runoff: 'HIGH', drainage: 'West Maui gulch systems',
-    ring: [[-156.86,21.03],[-156.56,21.05],[-156.47,20.86],[-156.62,20.74],[-156.84,20.82],[-156.86,21.03]],
+    ring: [[-156.86, 21.03], [-156.56, 21.05], [-156.47, 20.86], [-156.62, 20.74], [-156.84, 20.82], [-156.86, 21.03]],
   },
   {
     id: 'hawaii-hilo-hamakua', island: 'Hawaiʻi Island', zone: 'Hilo / Hāmākua Windward', terrain: 'WINDWARD', coastalExposure: 'MODERATE', runoff: 'HIGH', drainage: 'Hilo urban streams and Hāmākua gulches',
-    ring: [[-155.34,20.34],[-154.86,20.34],[-154.82,19.98],[-155.04,19.80],[-155.30,19.92],[-155.34,20.34]],
+    ring: [[-155.34, 20.34], [-154.86, 20.34], [-154.82, 19.98], [-155.04, 19.80], [-155.30, 19.92], [-155.34, 20.34]],
   },
   {
     id: 'hawaii-kona-leeward', island: 'Hawaiʻi Island', zone: 'Kona Leeward Slope', terrain: 'LEEWARD', coastalExposure: 'MODERATE', runoff: 'LOW', drainage: 'Kona leeward runoff corridors',
-    ring: [[-156.18,19.99],[-155.78,19.99],[-155.70,19.56],[-155.95,19.42],[-156.15,19.65],[-156.18,19.99]],
+    ring: [[-156.18, 19.99], [-155.78, 19.99], [-155.70, 19.56], [-155.95, 19.42], [-156.15, 19.65], [-156.18, 19.99]],
   },
   {
     id: 'hawaii-kau-coastal', island: 'Hawaiʻi Island', zone: 'Kaʻū Coastal Plain', terrain: 'COASTAL', coastalExposure: 'HIGH', runoff: 'MODERATE', drainage: 'Kaʻū coastal drainages and low crossings',
-    ring: [[-155.86,19.54],[-155.28,19.56],[-155.18,19.14],[-155.55,19.00],[-155.84,19.16],[-155.86,19.54]],
+    ring: [[-155.86, 19.54], [-155.28, 19.56], [-155.18, 19.14], [-155.55, 19.00], [-155.84, 19.16], [-155.86, 19.54]],
   },
 ];
 
@@ -664,8 +664,8 @@ async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
         // Severity mapping consistent with rest of system
         const severity =
           intensity === 'INTENSE' ? 'HIGH' :
-          intensity === 'HEAVY'   ? 'HIGH' :
-          intensity === 'MODERATE' ? 'ELEVATED' : 'LOW';
+            intensity === 'HEAVY' ? 'HIGH' :
+              intensity === 'MODERATE' ? 'ELEVATED' : 'LOW';
 
         return {
           type: 'Feature',
@@ -776,16 +776,16 @@ async function handleFloodContext(url: URL, cors: CorsHeaders): Promise<Response
   const upstream = await fetchNwsAlerts(cors);
   const officialSignals: Feature[] = upstream.ok
     ? (Array.isArray(upstream.data?.features) ? upstream.data.features : [])
-        .filter((f: any) => {
-          const event = String(f?.properties?.event || '').toLowerCase();
-          return event.includes('flash flood warning') || event.includes('flash flood watch') || event.includes('flash flood statement');
-        })
-        .map((f: any, idx: number) => ({
-          type: 'Feature',
-          geometry: f.geometry,
-          properties: { id: f?.id || `nws-context-${idx}` },
-        }))
-        .filter((f: Feature) => !!f.geometry)
+      .filter((f: any) => {
+        const event = String(f?.properties?.event || '').toLowerCase();
+        return event.includes('flash flood warning') || event.includes('flash flood watch') || event.includes('flash flood statement');
+      })
+      .map((f: any, idx: number) => ({
+        type: 'Feature',
+        geometry: f.geometry,
+        properties: { id: f?.id || `nws-context-${idx}` },
+      }))
+      .filter((f: Feature) => !!f.geometry)
     : [];
 
   const signals = buildFloodContextSignals(region, officialSignals);
@@ -846,15 +846,14 @@ export default {
     const xyzMatch = path.match(/^\/api\/tiles\/xyz\/airnow\/(\d+)\/(\d+)\/(\d+)\.png$/);
     if (xyzMatch) return handleAirnowXyz(xyzMatch[1], xyzMatch[2], xyzMatch[3], env, cors);
 
-    const radarMatch = path.match(/^\/api\/tiles\/radar\/(\d+)\/(\d+)\/(\d+)$/);
-    if (radarMatch) return handleRadarXyz(radarMatch[1], radarMatch[2], radarMatch[3], cors);
+    // Support both:
+    //   /api/tiles/radar/{z}/{x}/{y}
+    //   /api/tiles/radar/{z}/{x}/{y}.png
+    const radarTileMatch = path.match(/^\/api\/tiles\/radar\/(\d+)\/(\d+)\/(\d+)(?:\.png)?$/);
+    if (radarTileMatch) return handleRadarTile(radarTileMatch[1], radarTileMatch[2], radarTileMatch[3], cors);
 
     const geoMatch = path.match(/^\/api\/tiles\/geojson\/([a-z_-]+)$/);
     if (geoMatch) return handleGeojson(geoMatch[1], cors);
-
-    // Mesonet NEXRAD radar tile proxy — /api/tiles/radar/{z}/{x}/{y}.png
-    const radarMatch = path.match(/^\/api\/tiles\/radar\/(\d+)\/(\d+)\/(\d+)\.png$/);
-    if (radarMatch) return handleRadarTile(radarMatch[1], radarMatch[2], radarMatch[3], cors);
 
     // fire-weather context (NWS + RAWS derived)
     if (path === '/api/hazards/fire-weather' || path === '/hazards/fire-weather')
@@ -1226,20 +1225,38 @@ async function handlePushNow(url: URL, env: Env, cors: CorsHeaders): Promise<Res
   }
 }
 
+function resolveFirmsBBox(url: URL): [number, number, number, number] | null {
+  const bboxRaw = (url.searchParams.get('bbox') || '').trim();
+  if (bboxRaw) {
+    const parts = bboxRaw.split(',').map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) return null;
+    const [west, south, east, north] = parts;
+    if (west < -180 || east > 180 || south < -90 || north > 90 || west >= east || south >= north) {
+      return null;
+    }
+    return [west, south, east, north];
+  }
+
+  const scope = (url.searchParams.get('scope') || '').toLowerCase();
+  if (scope === 'hawaii') return [-161.2, 18.5, -154.5, 22.5];
+  if (scope === 'usa') return [-125.0, 24.0, -66.5, 49.5];
+
+  return null;
+}
+
 async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
   if (!env.NASA_FIRMS_MAP_KEY) return err(503, 'NASA_FIRMS_MAP_KEY not configured', cors);
 
   const dataset = url.searchParams.get('dataset') || 'VIIRS_SNPP_NRT';
   const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '1', 10)));
-  const bboxRaw = url.searchParams.get('bbox') || '';
   const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || '1000', 10)));
 
-  const parts = bboxRaw.split(',').map(Number);
-  if (parts.length !== 4 || parts.some(isNaN)) return err(400, 'bbox must be WEST,SOUTH,EAST,NORTH', cors);
-  const [west, south, east, north] = parts;
-  if (west < -180 || east > 180 || south < -90 || north > 90 || west >= east || south >= north) {
-    return err(400, 'Invalid bbox values', cors);
+  const bbox = resolveFirmsBBox(url);
+  if (!bbox) {
+    return err(400, 'bbox must be WEST,SOUTH,EAST,NORTH or scope must be hawaii|usa', cors);
   }
+
+  const [west, south, east, north] = bbox;
 
   const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/${dataset}/${west},${south},${east},${north}/${days}`;
   const cacheUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/${dataset}/${west},${south},${east},${north}/${days}`;
@@ -1254,20 +1271,34 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   }
 
   const t0 = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+
+  // MODIS cross-reference for multi-satellite confirmation (VIIRS primary only)
+  const modisXrefUrl = dataset === 'VIIRS_SNPP_NRT'
+    ? `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/MODIS_NRT/${west},${south},${east},${north}/${days}`
+    : null;
+
   let csvText = '';
+  let modisCsv = '';
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-    const res = await fetch(firmsUrl, { signal: controller.signal });
+    const [primaryRes, modisText] = await Promise.all([
+      fetch(firmsUrl, { signal: controller.signal }),
+      modisXrefUrl
+        ? fetch(modisXrefUrl, { signal: controller.signal }).then(r => r.ok ? r.text() : '').catch(() => '')
+        : Promise.resolve(''),
+    ]);
     clearTimeout(timer);
-    if (!res.ok) return err(502, `FIRMS upstream error: ${res.status}`, cors);
-    csvText = await res.text();
+    if (!primaryRes.ok) return err(502, `FIRMS upstream error: ${primaryRes.status}`, cors);
+    csvText = await primaryRes.text();
+    modisCsv = modisText;
   } catch (e: unknown) {
+    clearTimeout(timer);
     const msg = e instanceof Error ? e.message : 'unknown';
     return err(504, `FIRMS fetch failed: ${msg}`, cors);
   }
 
-  const geojson = firmsCsvToGeojson(csvText, limit);
+  const geojson = firmsCsvToGeojson(csvText, limit, modisCsv);
   const body = {
     ...geojson,
     properties: {
@@ -1292,10 +1323,33 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   return response;
 }
 
-function firmsCsvToGeojson(csv: string, limit: number): { type: string; features: unknown[] } {
+
+function buildModisSet(modisCsv: string): Set<string> {
+  if (!modisCsv) return new Set();
+  const lines = modisCsv.trim().split('\n');
+  if (lines.length < 2) return new Set();
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const latIdx = headers.indexOf('latitude');
+  const lngIdx = headers.indexOf('longitude');
+  if (latIdx < 0 || lngIdx < 0) return new Set();
+  const set = new Set<string>();
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',');
+    const lat = parseFloat(vals[latIdx] || '');
+    const lng = parseFloat(vals[lngIdx] || '');
+    if (!isNaN(lat) && !isNaN(lng)) {
+      // Round to 0.1° (~11 km) for loose spatial matching between satellites
+      set.add(`${Math.round(lat * 10)},${Math.round(lng * 10)}`);
+    }
+  }
+  return set;
+}
+
+function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: string; features: unknown[] } {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return { type: 'FeatureCollection', features: [] };
 
+  const modisSet = buildModisSet(modisCsv);
   const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
   const features: unknown[] = [];
 
@@ -1309,6 +1363,16 @@ function firmsCsvToGeojson(csv: string, limit: number): { type: string; features
     const lng = parseFloat(row.longitude || row.lon || row.lng || '');
     if (isNaN(lat) || isNaN(lng)) continue;
 
+    // Night detection: acq_time is HHMM UTC, night = 2000-2359 or 0000-0559
+    const acqTimeInt = parseInt((row.acq_time || '0000').padStart(4, '0'), 10);
+    const is_night_detection = acqTimeInt >= 2000 || acqTimeInt < 600;
+
+    // Multi-satellite confirmation: high confidence if MODIS also detected hotspot nearby
+    const modisKey = `${Math.round(lat * 10)},${Math.round(lng * 10)}`;
+    const detection_confidence = modisSet.size > 0 && modisSet.has(modisKey)
+      ? 'high'
+      : (row.confidence || '');
+
     features.push({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [lng, lat] },
@@ -1318,6 +1382,8 @@ function firmsCsvToGeojson(csv: string, limit: number): { type: string; features
         bright_ti5: row.bright_ti5 || '',
         frp: row.frp || '',
         confidence: row.confidence || '',
+        detection_confidence,
+        is_night_detection,
         acq_date: row.acq_date || '',
         acq_time: row.acq_time || '',
         satellite: row.satellite || '',
@@ -1335,7 +1401,7 @@ function firmsCsvToGeojson(csv: string, limit: number): { type: string; features
 const WMS_UPSTREAMS: Record<string, { url: string; ttl: number; keySecret?: keyof Env; keyParam?: string }> = {
   firms: { url: 'https://firms.modaps.eosdis.nasa.gov/mapserver/wms/South_America/', ttl: 300, keySecret: 'NASA_FIRMS_MAP_KEY', keyParam: 'MAP_KEY' },
   hms: { url: 'https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/', ttl: 900 },
-  goes: { url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_ctp/ows', ttl: 600 },
+  goes: { url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/ows', ttl: 600 },
   pacioos: { url: 'https://pae-paha.pacioos.hawaii.edu/thredds/wms/dhw_5km', ttl: 3600 },
 };
 
@@ -1345,6 +1411,13 @@ async function handleWms(id: string, url: URL, env: Env, cors: CorsHeaders): Pro
 
   const service = (url.searchParams.get('SERVICE') || '').toUpperCase();
   const request = (url.searchParams.get('REQUEST') || '').toUpperCase();
+
+  // Bare health/probe call (no params) → forward GetCapabilities so audit returns 200
+  if (!service && !request) {
+    const capUrl = `${upstream.url}?SERVICE=WMS&REQUEST=GetCapabilities`;
+    return proxyFetch(capUrl, capUrl, upstream.ttl, cors);
+  }
+
   if (service !== 'WMS') return err(400, 'SERVICE=WMS required', cors);
   if (!['GETMAP', 'GETCAPABILITIES'].includes(request)) return err(400, 'REQUEST must be GetMap or GetCapabilities', cors);
 
@@ -1373,11 +1446,10 @@ async function handleAirnowXyz(z: string, x: string, y: string, env: Env, cors: 
   const zi = parseInt(z, 10), xi = parseInt(x, 10), yi = parseInt(y, 10);
   if (isNaN(zi) || isNaN(xi) || isNaN(yi)) return err(400, 'z/x/y must be integers', cors);
   if (zi < 0 || zi > 18) return err(400, 'z must be 0–18', cors);
-  if (!env.AIRNOW_API_KEY) return err(503, 'Service temporarily unavailable', cors);
 
-  const cacheUrl = `https://tiles.airnowtech.org/airnow/today/${zi}/${xi}/${yi}.png`;
-  const fetchUrl = `${cacheUrl}?api_key=${env.AIRNOW_API_KEY}`;
-  return proxyFetch(fetchUrl, cacheUrl, 600, cors);
+  // tiles.airnowtech.org is defunct; AQICN distributes EPA AirNow data as public XYZ tiles
+  const tileUrl = `https://tiles.aqicn.org/tiles/usepa-aqi/${zi}/${xi}/${yi}.png`;
+  return proxyFetch(tileUrl, tileUrl, 600, cors);
 }
 
 // Iowa Mesonet is a public NEXRAD tile aggregator (CORS *, no auth required).
@@ -1454,7 +1526,7 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
         const p = f?.properties || {};
         const densityRaw = String(p.Density || p.density || p.smoke_density || 'Light').toLowerCase();
         const density = densityRaw.includes('heavy') ? 'heavy' :
-                        densityRaw.includes('medium') ? 'medium' : 'light';
+          densityRaw.includes('medium') ? 'medium' : 'light';
         const severity = density === 'heavy' ? 'WARNING' : density === 'medium' ? 'WATCH' : 'INFO';
         return {
           type: 'Feature',
@@ -1546,9 +1618,9 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
         const p = f?.properties || {};
         const incidentName = p.IncidentName || p.incident_name || p.INCIDENTNAME || 'Unnamed Fire';
         const acres = typeof p.GISAcres === 'number' ? Math.round(p.GISAcres) :
-                      typeof p.GIS_ACRES === 'number' ? Math.round(p.GIS_ACRES) : null;
+          typeof p.GIS_ACRES === 'number' ? Math.round(p.GIS_ACRES) : null;
         const containment = typeof p.PercentContained === 'number' ? p.PercentContained :
-                            typeof p.PERCENTCONTAINED === 'number' ? p.PERCENTCONTAINED : null;
+          typeof p.PERCENTCONTAINED === 'number' ? p.PERCENTCONTAINED : null;
         const discoveryDate = p.DiscoveryAcres || p.FireDiscoveryDateTime || p.FIREDISCOVERYDATETIME || null;
         return {
           type: 'Feature',
@@ -1608,17 +1680,17 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
   const corsHeaders = cors;
 
   // NWS endpoints — no API key needed, fully public
-  const NWS_RED_FLAG_URL   = "https://api.weather.gov/alerts/active?area=HI&event=Red+Flag+Warning";
+  const NWS_RED_FLAG_URL = "https://api.weather.gov/alerts/active?area=HI&event=Red+Flag+Warning";
   const NWS_FIRE_WATCH_URL = "https://api.weather.gov/alerts/active?area=HI&event=Fire+Weather+Watch";
 
   const generatedAt = new Date().toISOString();
-  const controller  = new AbortController();
-  const timeout     = setTimeout(() => controller.abort(), 8000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
     // Fetch both Red Flag Warning and Fire Weather Watch in parallel
     const [rfResp, fwResp] = await Promise.allSettled([
-      fetch(NWS_RED_FLAG_URL,   { signal: controller.signal, headers: { "User-Agent": "KahuOla/1.0 kahuola.org" } }),
+      fetch(NWS_RED_FLAG_URL, { signal: controller.signal, headers: { "User-Agent": "KahuOla/1.0 kahuola.org" } }),
       fetch(NWS_FIRE_WATCH_URL, { signal: controller.signal, headers: { "User-Agent": "KahuOla/1.0 kahuola.org" } }),
     ]);
     clearTimeout(timeout);
@@ -1635,9 +1707,9 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
 
     // ── Build GeoJSON features from real NWS alerts ──────────
     const signals: any[] = allAlerts.map((alert: any, i: number) => {
-      const props     = alert.properties ?? {};
+      const props = alert.properties ?? {};
       const isRedFlag = props.event === "Red Flag Warning";
-      const severity  = isRedFlag ? "HIGH" : "ELEVATED";
+      const severity = isRedFlag ? "HIGH" : "ELEVATED";
 
       // NWS alerts have geometry OR affected zones
       const geometry = alert.geometry ?? {
@@ -1649,56 +1721,56 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
         type: "Feature",
         geometry,
         properties: {
-          id:              `fire-weather-nws-${i}`,
-          event:           props.event,
-          headline:        props.headline ?? props.event,
-          area:            props.areaDesc ?? "Hawaiʻi",
-          severity:        severity,
-          risk_index:      severity,
+          id: `fire-weather-nws-${i}`,
+          event: props.event,
+          headline: props.headline ?? props.event,
+          area: props.areaDesc ?? "Hawaiʻi",
+          severity: severity,
+          risk_index: severity,
           red_flag_active: isRedFlag,
-          source:          "NWS Official",
-          source_label:    "NWS Official",
-          official:        true,
-          onset:           props.onset ?? generatedAt,
-          expires:         props.expires ?? null,
-          urgency:         props.urgency ?? "Unknown",
-          event_time:      props.sent ?? generatedAt,
-          note:            props.description?.substring(0, 200) ?? props.headline ?? "",
+          source: "NWS Official",
+          source_label: "NWS Official",
+          official: true,
+          onset: props.onset ?? generatedAt,
+          expires: props.expires ?? null,
+          urgency: props.urgency ?? "Unknown",
+          event_time: props.sent ?? generatedAt,
+          note: props.description?.substring(0, 200) ?? props.headline ?? "",
         },
       };
     });
 
     // ── Summary ───────────────────────────────────────────────
     const redFlagCount = signals.filter(s => s.properties.red_flag_active).length;
-    const watchCount   = signals.filter(s => !s.properties.red_flag_active).length;
+    const watchCount = signals.filter(s => !s.properties.red_flag_active).length;
 
-    let status  = "none";
+    let status = "none";
     let message = "No active fire weather warnings for Hawaiʻi.";
     if (redFlagCount > 0) {
-      status  = "red_flag";
+      status = "red_flag";
       message = `${redFlagCount} Red Flag Warning${redFlagCount > 1 ? "s" : ""} active. Extreme fire conditions — avoid outdoor burning.`;
     } else if (watchCount > 0) {
-      status  = "watch";
+      status = "watch";
       message = `${watchCount} Fire Weather Watch${watchCount > 1 ? "es" : ""} in effect. Monitor conditions closely.`;
     }
 
     const payload = {
-      ok:                 true,
-      layer:              "fire-weather",
-      source:             "NWS Official",
-      region:             "hawaii",
-      generated_at:       generatedAt,
+      ok: true,
+      layer: "fire-weather",
+      source: "NWS Official",
+      region: "hawaii",
+      generated_at: generatedAt,
       stale_after_seconds: 900,   // 15 min — NWS updates alerts frequently
-      schema_version:     "1.0",
+      schema_version: "1.0",
       signals,
       summary: {
         status,
-        count:           signals.length,
-        red_flag_count:  redFlagCount,
-        watch_count:     watchCount,
+        count: signals.length,
+        red_flag_count: redFlagCount,
+        watch_count: watchCount,
         red_flag_active: redFlagCount > 0,
-        elevated_count:  signals.length,
-        high_count:      redFlagCount,
+        elevated_count: signals.length,
+        high_count: redFlagCount,
         message,
       },
       authority: "National Weather Service — weather.gov/alerts",
@@ -1714,25 +1786,25 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
     clearTimeout(timeout);
     // On fetch error → return empty/degraded, never fake data
     const degraded = {
-      ok:           false,
-      layer:        "fire-weather",
-      source:       "NWS Official",
+      ok: false,
+      layer: "fire-weather",
+      source: "NWS Official",
       generated_at: generatedAt,
       stale_after_seconds: 300,
       schema_version: "1.0",
-      signals:      [],
+      signals: [],
       summary: {
-        status:          "degraded",
-        count:           0,
-        red_flag_count:  0,
-        watch_count:     0,
+        status: "degraded",
+        count: 0,
+        red_flag_count: 0,
+        watch_count: 0,
         red_flag_active: false,
-        elevated_count:  0,
-        high_count:      0,
-        message:         "Fire weather data temporarily unavailable. Check weather.gov for official alerts.",
+        elevated_count: 0,
+        high_count: 0,
+        message: "Fire weather data temporarily unavailable. Check weather.gov for official alerts.",
       },
       authority: "National Weather Service — weather.gov/alerts",
-      note:      `NWS fetch error: ${err?.message ?? "timeout"}`,
+      note: `NWS fetch error: ${err?.message ?? "timeout"}`,
     };
     return new Response(JSON.stringify(degraded), {
       status: 200, // Always 200 — Invariant II
@@ -1780,7 +1852,8 @@ async function handleTsunami(cors: CorsHeaders): Promise<Response> {
       .filter((f: Feature) => !!f.geometry);
 
     const envelope = buildHazardEnvelope('tsunami', 'NWS Tsunami Warning Center', 'hawaii', signals,
-      { status: signals.length > 0 ? 'active' : 'none', count: signals.length,
+      {
+        status: signals.length > 0 ? 'active' : 'none', count: signals.length,
         message: signals.length > 0 ? 'Active tsunami alert from NWS Tsunami Warning Center.' : 'No active tsunami warnings for Hawaiʻi.',
       }, { authority: 'official', note: 'Official NWS tsunami alerts only.' });
     return jsonResp({ ...envelope, stale_after_seconds: 300 }, 200, cors);
@@ -1836,7 +1909,8 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       }));
 
     const envelope = buildHazardEnvelope('hurricane', 'NHC', 'hawaii', signals,
-      { status: signals.length > 0 ? 'active' : 'none', count: signals.length,
+      {
+        status: signals.length > 0 ? 'active' : 'none', count: signals.length,
         message: signals.length > 0 ? `${signals.length} active Pacific storm(s) near Hawaiʻi.` : 'No active Pacific storms.',
       }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
     return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
@@ -1866,16 +1940,16 @@ function numberOrNull(v: unknown): number | null {
 // ── LANDSLIDE RISK — Terrain + Rainfall Derived ───────────────────────
 async function handleLandslide(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
-  const now    = new Date().toISOString();
+  const now = new Date().toISOString();
 
   // Fetch NWS to check flash flood / heavy rain active (elevates landslide risk)
   const upstream = await fetchNwsAlerts(cors);
   const heavyRainActive = upstream.ok
     ? (Array.isArray(upstream.data?.features) ? upstream.data.features : [])
-        .some((f: any) => {
-          const event = String(f?.properties?.event || '').toLowerCase();
-          return event.includes('flash flood') || event.includes('debris flow') || event.includes('landslide');
-        })
+      .some((f: any) => {
+        const event = String(f?.properties?.event || '').toLowerCase();
+        return event.includes('flash flood') || event.includes('debris flow') || event.includes('landslide');
+      })
     : false;
 
   const multiplier = heavyRainActive ? 3 : 0;
@@ -1895,18 +1969,18 @@ async function handleLandslide(url: URL, cors: CorsHeaders): Promise<Response> {
         type: 'Feature',
         geometry: polygonFromRing(cell.ring),
         properties: {
-          id:           `landslide-${cell.id}`,
-          island:       cell.island,
-          zone:         cell.zone,
-          source:       'Kahu Ola Terrain + NWS',
+          id: `landslide-${cell.id}`,
+          island: cell.island,
+          zone: cell.zone,
+          source: 'Kahu Ola Terrain + NWS',
           source_label: 'Terrain Context',
-          risk_index:   risk,
-          severity:     risk,
-          drainage:     cell.drainage,
-          terrain:      cell.terrain,
-          runoff:       cell.runoff,
+          risk_index: risk,
+          severity: risk,
+          drainage: cell.drainage,
+          terrain: cell.terrain,
+          runoff: cell.runoff,
           heavy_rain_active: heavyRainActive,
-          event_time:   now,
+          event_time: now,
           note: heavyRainActive
             ? 'Risk elevated — active heavy rain/flood alert detected.'
             : 'Estimated landslide susceptibility from terrain and runoff scoring.',
@@ -1916,7 +1990,8 @@ async function handleLandslide(url: URL, cors: CorsHeaders): Promise<Response> {
     .filter(Boolean) as Feature[];
 
   const envelope = buildHazardEnvelope('landslide', 'Kahu Ola Terrain', region, signals,
-    { status: signals.length > 0 ? 'detected' : 'none', count: signals.length,
+    {
+      status: signals.length > 0 ? 'detected' : 'none', count: signals.length,
       heavy_rain_active: heavyRainActive,
       message: signals.length > 0 ? 'Landslide susceptibility context available.' : 'No elevated landslide risk.',
     }, { authority: 'contextual', note: 'Landslide context derived conservatively from terrain, runoff, and NWS alert presence. Not an official landslide forecast.' });
