@@ -703,6 +703,7 @@ async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
         status: signals.length ? 'detected' : 'none',
         count: signals.length,
         heavy_count: heavyCount,
+        radar_flood_trigger: heavyCount > 0,
         data_source: 'NEXRAD_LIVE',
         message: signals.length
           ? `NEXRAD QPE: rainfall detected across ${signals.length} Hawaiʻi zone(s).`

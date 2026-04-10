@@ -1810,6 +1810,9 @@
             <span class="dot"></span><span id="b-loc-text" data-i18n="map.banner_location">Location used only on this
               device</span>
           </div>
+          <div id="b-mrms-flood" class="banner banner-amber hidden">
+            <span class="dot"></span><span>MRMS rainfall threshold exceeded — flood context layers auto-enabled</span>
+          </div>
         </div>
       </div>
     </header>
@@ -2889,6 +2892,19 @@
         onFetchComplete() {
           const s = getState("mrmsRain");
           updateMrmsStatusUI(s);
+          // Auto-trigger flood layers when MRMS detects HIGH-severity rainfall
+          const hasHeavyRain = s.features.some(
+            f => f?.properties?.severity === "HIGH" || f?.properties?.risk_index === "HIGH"
+          );
+          if (hasHeavyRain && !flashFloodVisible) {
+            flashFloodVisible = true;
+            floodContextVisible = true;
+            getState("flashFlood").visible = true;
+            getState("floodContext").visible = true;
+            syncFlashFloodLayerVisibility();
+            syncFloodContextLayerVisibility();
+            show("b-mrms-flood", true);
+          }
           // Fix 3: Show landslide card when MRMS detects heavy rainfall
           maybeShowLandslideCard();
           renderUnifiedPanels();
@@ -3819,16 +3835,30 @@
       const acqTime = p.acq_datetime_utc ? String(p.acq_datetime_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : formatDetectedTime(p.acq_date, p.acq_time);
       const observedTime = p.observed_at_utc ? String(p.observed_at_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : null;
       const signalStateLabel = p.signal_state || "active";
-      const frp = p.frp != null ? `${p.frp} MW` : "—";
+      const frpVal = p.frp != null ? Number(p.frp) : null;
+      const frp = frpVal != null && isFinite(frpVal)
+        ? `${frpVal} MW \u00b7 ${frpVal >= 50 ? "Extreme (\u226550 MW)" : frpVal >= 25 ? "High (25\u201350 MW)" : frpVal >= 10 ? "Moderate (10\u201325 MW)" : "Low (<10 MW)"}`
+        : "\u2014";
+      const distCommunityMi = p.distance_to_nearest_place_miles != null ? Number(p.distance_to_nearest_place_miles) : null;
+      const distCommunityRow = distCommunityMi != null && isFinite(distCommunityMi)
+        ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_nearest_community", "Nearest community")}</div><div class="popup-metric-value"${distCommunityMi < 5 ? ' style="color:#ff4d4d;font-weight:700"' : ""}>${distCommunityMi.toFixed(1)} mi${distCommunityMi < 5 ? " \u26a0" : ""}</div></div>`
+        : "";
       const satellite = p.satellite || (pv && pv.satellite) || "—";
       const nightBadge = p.is_night_detection === true ? ' <span style="font-size:0.75em;opacity:0.82" title="Night detection">🌙</span>' : '';
-      const confDisplay = String(rawConf || "").toLowerCase() === "high" ? '<span style="color:#7fd580">✓ Confirmed \u00b7 2\u00a0satellites</span>' : escapeHtml(confLabel);
+      const confNormLow = String(rawConf || "").toLowerCase();
+      const confDisplay = confNormLow === "high"
+        ? '<span style="color:#7fd580;font-weight:600">\u2713 HIGH CONFIDENCE \u00b7 2 satellites</span>'
+        : confNormLow === "nominal"
+          ? '<span style="color:#f0a500">\u25d0 NOMINAL</span>'
+          : confNormLow === "low"
+            ? '<span style="color:#8899aa">\u26a0 LOW CONFIDENCE</span>'
+            : escapeHtml(confLabel);
       const sourceLabel = (pv && pv.source_agency) ? String(pv.source_agency).replace(/_/g, " ") : (p.source || "NASA FIRMS");
       const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`; const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Wildfire%20Signal`; const googleDirections = lastKnownUserCoord ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
       if (activePopup) activePopup.remove();
       const observedRow = observedTime ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_observed_at", "Observed at (UTC)")}</div><div class="popup-metric-value">${escapeHtml(observedTime)}</div></div>` : "";
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\ud83d\udd25 ${_L("map.popup_title_fire", "Wildfire Detection Signal")}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type", "Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf", "Detection confidence")}</div><div class="popup-metric-value">${confDisplay}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired", "Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you", "Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness", "Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state", "Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp", "FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite", "Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}${nightBadge}</div></div>${observedRow}</div><div class="popup-note">${_L("map.popup_fire_disclaimer", "\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions", "Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view", "Satellite View")}</a></div></div>`;
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\ud83d\udd25 ${_L("map.popup_title_fire", "Wildfire Detection Signal")}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type", "Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf", "Detection confidence")}</div><div class="popup-metric-value">${confDisplay}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired", "Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you", "Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness", "Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state", "Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp", "FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite", "Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}${nightBadge}</div></div>${distCommunityRow}${observedRow}</div><div class="popup-note">${_L("map.popup_fire_disclaimer", "\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions", "Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view", "Satellite View")}</a></div></div>`;
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "360px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
     }
 
