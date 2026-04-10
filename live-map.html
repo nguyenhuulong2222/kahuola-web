@@ -2842,7 +2842,7 @@
           }
           // Option A: sync flood-context terrain polygons — only show when NWS alert is active
           const nwsNowActive = s.sourceStatus === "detected" && s.features.length > 0;
-          floodContextVisible = nwsNowActive;
+          floodContextVisible = (fireScope === "usa") || nwsNowActive;
           getState("floodContext").visible = floodContextVisible;
           if (typeof syncFloodContextLayerVisibility === "function") syncFloodContextLayerVisibility();
           // Show landslide card when flood is active (terrain risk elevated)
@@ -2861,7 +2861,7 @@
           // Option A: only show flood-context terrain polygons when NWS has an active flash flood alert
           const flashFloodState = getState("flashFlood");
           const nwsActive = flashFloodState.sourceStatus === "detected" && flashFloodState.features.length > 0;
-          floodContextVisible = nwsActive;
+          floodContextVisible = (fireScope === "usa") || nwsActive;
           getState("floodContext").visible = floodContextVisible;
           syncFloodContextLayerVisibility();
           updateFloodContextStatusUI(getState("floodContext"));
@@ -2930,7 +2930,7 @@
           // OR at least one CRITICAL/HIGH risk zone — not just permanent terrain ELEVATED
           const hasRedFlag = ws.features.some(f => f.properties?.red_flag_active === true);
           const hasCritical = ws.features.some(f => ["CRITICAL", "HIGH"].includes(f.properties?.risk_index));
-          windRiskVisible = hasRedFlag || hasCritical;
+          windRiskVisible = (fireScope === "usa") || hasRedFlag || hasCritical;
           getState("windRisk").visible = windRiskVisible;
           syncWindRiskLayerVisibility();
           updateWindRiskStatusUI(ws);
@@ -3631,6 +3631,8 @@
       syncRainRadarLayerVisibility();
       ensureAirnowLayers();
       syncAirnowButtons();
+      setLayerVisibility("pacioos-wms-layer", true);
+      setLayerVisibility("goes-wms-layer", true);
       // Expose landslide risk card (normally gated behind flood/MRMS trigger in Hawaiʻi mode)
       ["landslide-card-desktop", "landslide-card-mobile", "landslide-card"].forEach(function(id) {
         var el = document.getElementById(id); if (el) el.style.display = "";
@@ -3653,6 +3655,8 @@
       syncRainRadarLayerVisibility();
       ensureAirnowLayers();
       syncAirnowButtons();
+      setLayerVisibility("pacioos-wms-layer", false);
+      setLayerVisibility("goes-wms-layer", false);
       // Reset landslide card to data-driven gating (hidden unless flood/MRMS active)
       maybeShowLandslideCard();
     }
@@ -4283,6 +4287,8 @@
         syncRainRadarLayerVisibility();
         ensureAirnowLayers();
         syncAirnowButtons();
+        setLayerVisibility("pacioos-wms-layer", true);
+        setLayerVisibility("goes-wms-layer", true);
         ["landslide-card-desktop", "landslide-card-mobile", "landslide-card"].forEach(function(id) {
           var el = document.getElementById(id); if (el) el.style.display = "";
         });
