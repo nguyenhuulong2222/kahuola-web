@@ -3612,7 +3612,49 @@
       fireScope = fireScope === "usa" ? "hawaii" : "usa";
       try { localStorage.setItem("kahuola_fire_scope", fireScope); } catch (e) { }
       applyFireScope();
-      refreshHazard("fire");
+      if (fireScope === "usa") {
+        activateUSAMode();
+      } else {
+        restoreHawaiiDefaults();
+        refreshHazard("fire");
+      }
+    }
+    // ── USA national mode — enable all lazy modules, turn on tile overlays ────
+    function activateUSAMode() {
+      // Enable modules that are lazy (enabled:false) in Hawaiʻi default mode
+      HAZARD_REGISTRY.tsunami.enabled = true;
+      HAZARD_REGISTRY.hurricane.enabled = true;
+      HAZARD_REGISTRY.landslide.enabled = true;
+      // Turn on tile overlay layers that default to OFF in Hawaiʻi mode
+      rainRadarVisible = true;
+      airnowVisible = true;
+      syncRainRadarLayerVisibility();
+      ensureAirnowLayers();
+      syncAirnowButtons();
+      // Expose landslide risk card (normally gated behind flood/MRMS trigger in Hawaiʻi mode)
+      ["landslide-card-desktop", "landslide-card-mobile", "landslide-card"].forEach(function(id) {
+        var el = document.getElementById(id); if (el) el.style.display = "";
+      });
+      // Full refresh: fire uses the USA-scope endpoint; newly enabled modules are fetched
+      refreshEnabledHazards({ silent: false });
+    }
+    // ── Restore Hawaiʻi compact defaults when leaving USA scope ──────────────
+    function restoreHawaiiDefaults() {
+      // Re-disable lazy modules and clear stale USA-scope data from the map
+      HAZARD_REGISTRY.tsunami.enabled = false;
+      HAZARD_REGISTRY.hurricane.enabled = false;
+      HAZARD_REGISTRY.landslide.enabled = false;
+      HAZARD_REGISTRY.tsunami.applyData([]);
+      HAZARD_REGISTRY.hurricane.applyData([]);
+      HAZARD_REGISTRY.landslide.applyData([]);
+      // Turn off layers that default to OFF in Hawaiʻi mode
+      rainRadarVisible = false;
+      airnowVisible = false;
+      syncRainRadarLayerVisibility();
+      ensureAirnowLayers();
+      syncAirnowButtons();
+      // Reset landslide card to data-driven gating (hidden unless flood/MRMS active)
+      maybeShowLandslideCard();
     }
 
     function renderUnifiedPanels() {
@@ -4230,6 +4272,21 @@
     });
     map.on("load", async () => {
       ensureLayers();
+      // Restore USA-mode state when page loads with a persisted USA scope from localStorage.
+      // Layer sync only — refreshEnabledHazards() below will fetch the enabled modules.
+      if (fireScope === "usa") {
+        HAZARD_REGISTRY.tsunami.enabled = true;
+        HAZARD_REGISTRY.hurricane.enabled = true;
+        HAZARD_REGISTRY.landslide.enabled = true;
+        rainRadarVisible = true;
+        airnowVisible = true;
+        syncRainRadarLayerVisibility();
+        ensureAirnowLayers();
+        syncAirnowButtons();
+        ["landslide-card-desktop", "landslide-card-mobile", "landslide-card"].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.style.display = "";
+        });
+      }
       bindGlobalCanvasClickRouter();
       raiseFireLayersAboveOverlays();
       fitHawaii(false);
