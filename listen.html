@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Kahu Ola | Voice Brief</title>
+  <meta name="description" content="Listen to a 60-second audio hazard brief for your area in multiple languages." />
+  <style>
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#101b27;
+      --surface-2:#142232;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.14);
+      --text:#eef4fb;
+      --text-dim:#c4d2df;
+      --muted:#8ea3b7;
+      --fire:#ff7a00;
+      --flood:#4da8ff;
+      --ok:#67c27e;
+      --warn:#ffcc66;
+      --danger:#ff5e7b;
+      --radius-xl:28px;
+      --radius-lg:22px;
+      --radius-md:18px;
+      --radius-sm:14px;
+      --shadow:0 18px 46px rgba(0,0,0,.28);
+      --max:1280px;
+      --font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%);
+      color:var(--text);font-family:var(--font);
+    }
+    a{text-decoration:none;color:inherit}
+    button{font:inherit;cursor:pointer}
+    .app{width:min(100%,var(--max));margin:0 auto;padding:16px 16px 40px}
+    .topbar{
+      display:flex;align-items:flex-start;justify-content:space-between;
+      gap:16px;padding:6px 0 18px;flex-wrap:wrap;
+    }
+    .brand{display:flex;gap:12px;min-width:0}
+    .brand-mark{
+      width:42px;height:42px;flex:0 0 42px;border-radius:14px;
+      display:grid;place-items:center;
+      background:linear-gradient(180deg,rgba(255,122,0,.18),rgba(255,122,0,.08));
+      border:1px solid rgba(255,122,0,.22);
+      box-shadow:0 10px 26px rgba(0,0,0,.24);font-size:20px;
+    }
+    .brand-kicker{color:var(--text-dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:4px}
+    .brand-title{margin:0;font-size:28px;line-height:1.02;letter-spacing:-.03em;font-weight:900}
+    .top-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    .pill{
+      min-height:38px;padding:0 14px;
+      display:inline-flex;align-items:center;gap:8px;
+      border-radius:999px;border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);color:var(--text);
+      font-size:12px;font-weight:800;white-space:nowrap;
+    }
+    .pill.link{color:var(--text-dim);background:rgba(255,255,255,.03)}
+    .pill.link.active{color:var(--text);border-color:rgba(77,168,255,.45)}
+
+    /* ── Listen page ───────────────────────────────────── */
+    .listen-hero{text-align:center;padding:28px 0 10px}
+    .listen-hero h2{margin:0;font-size:26px;font-weight:900;letter-spacing:-.02em}
+    .listen-hero p{margin:8px 0 0;font-size:14px;color:var(--text-dim)}
+    .listen-card{
+      max-width:540px;margin:0 auto;
+      padding:22px;
+      background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));
+      border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow);
+    }
+    .listen-zone-bar{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:10px 12px;
+      background:rgba(255,255,255,.03);border:1px solid var(--line-strong);
+      border-radius:var(--radius-sm);margin-bottom:16px;
+    }
+    .listen-zone-name{font-weight:800;font-size:14px;color:var(--text)}
+    .listen-zone-none{font-size:13px;color:var(--muted);text-align:center;padding:14px 0}
+    .listen-zone-none a{color:var(--flood);text-decoration:underline;text-underline-offset:3px}
+    .listen-lang-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+    .listen-lang-btn{
+      padding:8px 14px;
+      border-radius:9px;border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.03);
+      color:var(--text-dim);font-size:12px;font-weight:800;
+      transition:background .12s,border-color .12s,color .12s;
+      position:relative;
+    }
+    .listen-lang-btn:hover{border-color:var(--line-strong);color:var(--text)}
+    .listen-lang-btn.active{
+      background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.55);
+      color:#bfdbfe;
+    }
+    .listen-lang-beta{
+      position:absolute;top:-6px;right:-6px;
+      font-size:8px;font-weight:900;letter-spacing:.06em;
+      background:#d97706;color:#fff;padding:1px 5px;border-radius:4px;
+    }
+    .listen-player-wrap{
+      padding:16px;
+      background:rgba(255,255,255,.02);border:1px solid var(--line);
+      border-radius:var(--radius-md);margin-bottom:14px;
+    }
+    .listen-player-wrap audio{width:100%;margin-bottom:8px}
+    .listen-player-status{font-size:13px;color:var(--muted);text-align:center;line-height:1.5}
+    .listen-haw-note{
+      font-size:11px;color:#d97706;
+      font-family:var(--mono);letter-spacing:.02em;
+      text-align:center;margin-top:4px;
+    }
+    .listen-share{
+      display:flex;align-items:center;gap:8px;
+      padding:10px 12px;
+      background:rgba(255,255,255,.02);border:1px solid var(--line);
+      border-radius:var(--radius-sm);
+    }
+    .listen-share-url{
+      flex:1;min-width:0;font-size:12px;color:var(--muted);
+      font-family:var(--mono);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .listen-share-copy{
+      padding:6px 12px;
+      border-radius:6px;border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);color:var(--text-dim);
+      font-size:11px;font-weight:800;flex-shrink:0;
+    }
+    .listen-share-copy:hover{background:rgba(255,255,255,.06);color:var(--text)}
+    .listen-privacy{
+      margin-top:14px;font-size:11px;color:var(--muted);
+      font-family:var(--mono);text-align:center;line-height:1.45;
+    }
+    .listen-footer{
+      max-width:540px;margin:32px auto 0;
+      text-align:center;font-size:11px;color:var(--muted);
+      line-height:1.55;
+    }
+    .listen-footer a{color:var(--flood);text-decoration:underline;text-underline-offset:3px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <a href="/" class="brand-mark">&#x1F30B;</a>
+        <div>
+          <div class="brand-kicker">Kahu Ola &middot; Guardian of Life</div>
+          <h1 class="brand-title">Voice Brief</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a class="pill link" href="/">Home</a>
+        <a class="pill link" href="live-map.html">Live Map</a>
+        <a class="pill link active" href="listen.html">Listen</a>
+        <a class="pill link" href="privacy.html">Privacy</a>
+        <a class="pill link" href="support.html">Support</a>
+      </div>
+    </header>
+
+    <div class="listen-hero">
+      <h2>Kahu Ola Voice Brief</h2>
+      <p>60-second audio hazard brief for your area</p>
+    </div>
+
+    <div class="listen-card">
+      <div id="listenZoneBar" class="listen-zone-bar" hidden>
+        <span class="listen-zone-name" id="listenZoneName">—</span>
+        <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">Maui</span>
+      </div>
+      <div id="listenZoneNone" class="listen-zone-none" hidden>
+        Select your area on the <a href="/">homepage</a> first.
+      </div>
+
+      <div class="listen-lang-grid" id="listenLangGrid">
+        <button class="listen-lang-btn active" data-lang="en" type="button">EN</button>
+        <button class="listen-lang-btn" data-lang="vi" type="button">VI</button>
+        <button class="listen-lang-btn" data-lang="tl" type="button">TL</button>
+        <button class="listen-lang-btn" data-lang="ilo" type="button">ILO</button>
+        <button class="listen-lang-btn" data-lang="haw" type="button" style="position:relative">HAW<span class="listen-lang-beta">Beta</span></button>
+        <button class="listen-lang-btn" data-lang="ja" type="button">JA</button>
+      </div>
+
+      <div class="listen-player-wrap">
+        <audio id="listenAudio" controls preload="none" style="width:100%"></audio>
+        <p class="listen-player-status" id="listenStatus">Select a language above to load your brief.</p>
+        <p class="listen-haw-note" id="listenHawNote" hidden>&#x02BB;&#x014C;lelo Hawai&#x02BBi &mdash; Beta &middot; Community review needed before launch</p>
+      </div>
+
+      <div class="listen-share">
+        <span class="listen-share-url" id="listenShareUrl">—</span>
+        <button class="listen-share-copy" id="listenShareCopy" type="button">Copy link</button>
+      </div>
+
+      <p class="listen-privacy">Your zone is stored on this device only.</p>
+    </div>
+
+    <div class="listen-footer">
+      <p>Kahu Ola &middot; <a href="/">kahuola.org</a> &middot; Civic hazard intelligence for Hawai&#x02BBi</p>
+      <p><a href="privacy.html">Privacy</a> &middot; <a href="support.html">Support</a></p>
+    </div>
+  </div>
+
+  <script>
+    (function initListen() {
+      "use strict";
+      var ZONE_KEY = "kahuola_zone";
+      var LANGS = { en:"English", vi:"Ti&#x1EBF;ng Vi&#x1EC7;t", tl:"Tagalog", ilo:"Ilocano", haw:"&#x02BB;&#x014C;lelo Hawai&#x02BBi", ja:"&#x65E5;&#x672C;&#x8A9E;" };
+      var ZONES = {
+        lahaina:"Lahaina",lahaina_mauka:"Lahaina Mauka",kaanapali:"K&#x0101;&#x02BB;anapali",
+        kihe_north:"K&#x012B;hei North",kihe_south:"K&#x012B;hei South",kahului_harbor:"Kahului Harbor",
+        wailuku_central:"Wailuku Central",wailuku_mauka:"Wailuku Mauka",pukalani:"Pukalani",
+        makawao:"Makawao",kula_upper:"Kula Upper",kula_lower:"Kula Lower",
+        paia:"P&#x0101;&#x02BB;ia",hana:"H&#x0101;na",upcountry_interface:"Upcountry Interface"
+      };
+
+      var zoneBar    = document.getElementById("listenZoneBar");
+      var zoneName   = document.getElementById("listenZoneName");
+      var zoneNone   = document.getElementById("listenZoneNone");
+      var langGrid   = document.getElementById("listenLangGrid");
+      var langBtns   = langGrid ? langGrid.querySelectorAll(".listen-lang-btn") : [];
+      var audioEl    = document.getElementById("listenAudio");
+      var statusEl   = document.getElementById("listenStatus");
+      var hawNote    = document.getElementById("listenHawNote");
+      var shareUrl   = document.getElementById("listenShareUrl");
+      var copyBtn    = document.getElementById("listenShareCopy");
+
+      var currentZone = null;
+      var currentLang = "en";
+
+      function loadZoneFromStorage() {
+        try {
+          var raw = localStorage.getItem(ZONE_KEY);
+          if (!raw) return null;
+          var obj = JSON.parse(raw);
+          return (obj && typeof obj.zone_id === "string") ? obj.zone_id : null;
+        } catch (e) { return null; }
+      }
+
+      function resolveZone() {
+        var params = new URLSearchParams(window.location.search);
+        var fromUrl = params.get("zone");
+        if (fromUrl && ZONES[fromUrl]) return fromUrl;
+        return loadZoneFromStorage();
+      }
+
+      function resolveLang() {
+        var params = new URLSearchParams(window.location.search);
+        var fromUrl = params.get("lang");
+        if (fromUrl && LANGS[fromUrl]) return fromUrl;
+        return "en";
+      }
+
+      function updateUI() {
+        // Zone bar
+        if (currentZone && ZONES[currentZone]) {
+          zoneName.textContent = ZONES[currentZone];
+          zoneBar.hidden = false;
+          zoneNone.hidden = true;
+        } else {
+          zoneBar.hidden = true;
+          zoneNone.hidden = false;
+        }
+
+        // Active lang button
+        for (var i = 0; i < langBtns.length; i++) {
+          var btn = langBtns[i];
+          if (btn.getAttribute("data-lang") === currentLang) btn.classList.add("active");
+          else btn.classList.remove("active");
+        }
+
+        // HAW beta note
+        hawNote.hidden = (currentLang !== "haw");
+
+        // Audio + status
+        if (currentZone && ZONES[currentZone]) {
+          var src = "https://kahuola.org/api/voice?zone=" +
+            encodeURIComponent(currentZone) + "&lang=" + encodeURIComponent(currentLang);
+          audioEl.src = src;
+          var langLabel = currentLang === "haw" ? "\u02BB\u014Clelo Hawai\u02BBi" : (currentLang.toUpperCase());
+          statusEl.textContent = "Voice brief for " + ZONES[currentZone] +
+            " in " + langLabel + " \u2014 coming soon";
+        } else {
+          audioEl.removeAttribute("src");
+          statusEl.textContent = "Select your area on the homepage first.";
+        }
+
+        // Share link
+        var base = window.location.origin + "/listen.html";
+        if (currentZone) {
+          var link = base + "?zone=" + encodeURIComponent(currentZone) + "&lang=" + encodeURIComponent(currentLang);
+          shareUrl.textContent = link;
+        } else {
+          shareUrl.textContent = base;
+        }
+
+        // URL bar (pushState — no reload)
+        var newUrl = window.location.pathname;
+        if (currentZone) {
+          newUrl += "?zone=" + encodeURIComponent(currentZone) + "&lang=" + encodeURIComponent(currentLang);
+        }
+        try { history.replaceState(null, "", newUrl); } catch (e) { /* noop */ }
+      }
+
+      // Wire language buttons
+      for (var j = 0; j < langBtns.length; j++) {
+        (function (btn) {
+          btn.addEventListener("click", function () {
+            currentLang = btn.getAttribute("data-lang") || "en";
+            updateUI();
+          });
+        })(langBtns[j]);
+      }
+
+      // Copy share link
+      if (copyBtn) {
+        copyBtn.addEventListener("click", function () {
+          var text = shareUrl.textContent || "";
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+              copyBtn.textContent = "Copied!";
+              setTimeout(function () { copyBtn.textContent = "Copy link"; }, 1500);
+            }).catch(function () { copyBtn.textContent = "Copy link"; });
+          }
+        });
+      }
+
+      // Init
+      currentZone = resolveZone();
+      currentLang = resolveLang();
+      updateUI();
+    })();
+  </script>
+</body>
+</html>
