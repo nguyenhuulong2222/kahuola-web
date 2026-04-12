@@ -3434,9 +3434,13 @@
             whyHtml += '</div>';
           }
 
-          // 4. Historical context — labeled clearly as past
+          // 4. Historical context — only when active hazard (calm day = positive only)
+          var s4 = envelope.state || {};
+          var showHistory = s4.fire_risk === "HIGH" || s4.fire_risk === "EXTREME" ||
+                            s4.flood_risk === "HIGH" || s4.flood_risk === "EXTREME" ||
+                            (s4.nws_alerts && s4.nws_alerts.length > 0);
           var hist = z4.historical_signals || [];
-          if (hist.length > 0) {
+          if (showHistory && hist.length > 0) {
             whyHtml += '<div class="zone-why-group">';
             whyHtml += '<p class="zone-why-label">Historical signals (past)</p>';
             whyHtml += '<p>' + hist.join(" · ") + '</p>';
