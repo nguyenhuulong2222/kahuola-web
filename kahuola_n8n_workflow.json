@@ -73,12 +73,12 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const nwsData = $(\"HTTP Request NWS\").first().json;\nconst healthData = $(\"HTTP Request Health\").first().json;\n\nconst alerts = nwsData?.features?.slice(0, 3)?.map(f => ({\n  event: f.properties?.event,\n  headline: f.properties?.headline,\n  severity: f.properties?.severity,\n  areas: f.properties?.areaDesc\n})) || [];\n\nconst healthStatus = healthData?.status || \"monitoring\";\nconst activeHazards = healthData?.active_hazards || [];\n\nconst context = alerts.length > 0\n  ? `Active NWS alerts (${alerts.length}): ${alerts.map(a => `${a.event} \u2014 ${a.areas}`).join(\" | \")}`\n  : `No active NWS alerts. System status: ${healthStatus}.`;\n\nconst hazardContext = activeHazards.length > 0\n  ? `Kahu Ola detecting: ${activeHazards.join(\", \")}`\n  : \"Kahu Ola: routine monitoring, no active hazard signals.\";\n\nreturn [{\n  json: {\n    context: `${context} ${hazardContext}`,\n    alert_count: alerts.length,\n    timestamp: new Date().toLocaleString(\"en-US\", { timeZone: \"Pacific/Honolulu\" })\n  }\n}];"
+        "jsCode": "const nwsData = $(\"HTTP Request NWS\").first().json;\nconst healthData = $(\"HTTP Request Health\").first().json;\n\nconst alerts = nwsData?.features?.slice(0, 3)?.map(f => ({\n  event: f.properties?.event,\n  headline: f.properties?.headline,\n  severity: f.properties?.severity,\n  areas: f.properties?.areaDesc\n})) || [];\n\nconst healthStatus = healthData?.status || \"monitoring\";\nconst activeHazards = healthData?.active_hazards || [];\n\nconst context = alerts.length > 0\n  ? `Active NWS alerts (${alerts.length}): ${alerts.map(a => `${a.event} — ${a.areas}`).join(\" | \")}`\n  : `No active NWS alerts. System status: ${healthStatus}.`;\n\nconst hazardContext = activeHazards.length > 0\n  ? `Kahu Ola detecting: ${activeHazards.join(\", \")}`\n  : \"Kahu Ola: routine monitoring, no active hazard signals.\";\n\nreturn [{\n  json: {\n    context: `${context} ${hazardContext}`,\n    alert_count: alerts.length,\n    timestamp: new Date().toLocaleString(\"en-US\", { timeZone: \"Pacific/Honolulu\" })\n  }\n}];"
       }
     },
     {
       "id": "node-5",
-      "name": "Gemini AI Generate Post",
+      "name": "Kahu Ola Brief (Gemma 4)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -87,25 +87,26 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
-        "sendBody": true,
-        "bodyParameters": {
+        "url": "https://kahuola.org/api/brief",
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
             {
-              "name": "contents",
-              "value": "={{ [{\\\"parts\\\": [{\\\"text\\\": \\\"Current hazard conditions for Hawai\u02bbi as of \\\" + $json.timestamp + \\\":\\\\n\\\" + $json.context + \\\"\\\\n\\\\nWrite the Facebook post now.\\\"}]}] }}"
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.MEDIA_BRIEF_WEBHOOK_TOKEN }}"
             },
             {
-              "name": "systemInstruction",
-              "value": "={{ {\\\"parts\\\": [{\\\"text\\\": \"You are the social media voice of Kahu Ola \\u2014 a civic hazard intelligence platform for Hawai\\u02bbi (kahuola.org). Your job is to write one honest, calm Facebook post per day summarizing current hazard conditions.\\n\\nPLATFORM IDENTITY:\\n- Name: Kahu Ola Hawai\\u02bbi Hazard Intelligence\\n- Mission: Civic wildfire and hazard situational awareness for Hawai\\u02bbi\\n- Tone: calm, civic, factual, never sensational, deeply Hawaiian\\n- Principle: E m\\u0101lama pono (care for people and land)\\n- Hawaiian Voice: Embrace the Aloha spirit. Speak with a warm, local Hawaiian tone. Feel free to use culturally appropriate greetings like \\\"Aloha mai k\\u0101kou\\\", \\\"Mahalo\\\", \\\"m\\u0101lama\\\", \\\"\\u02bbohana\\\", or references to the \\\"\\u02bb\\u0101ina\\\" (land) where they naturally fit to show respect and care for the community.\\n\\nCONTENT RULES:\\n1. Max 250 characters\\n2. Always end with: kahuola.org\\n3. Max 2 emojis \\u2014 only if they add clarity (\\ud83d\\udd25 for fire, \\ud83c\\udf27\\ufe0f for rain, \\ud83c\\udf3a for general)\\n4. No hashtags\\n5. No ALL CAPS except acronyms (NWS, FEMA)\\n6. Never exaggerate severity \\u2014 if uncertain, say \\\"monitoring\\\"\\n7. Always cite source agency: NWS, NASA FIRMS, NOAA\\n8. If no active alerts: post a general awareness or preparedness message\\n\\nFORBIDDEN:\\n- Never say \\\"BREAKING\\\" or \\\"URGENT\\\" unless NWS has issued a Warning\\n- Never invent hazard data \\u2014 only use what is provided\\n- Never use sensational language (\\\"devastating\\\", \\\"catastrophic\\\")\\n- Never mention evacuation routes (liability)\\n\\nOUTPUT FORMAT:\\nReturn ONLY the Facebook post text.\\nNo preamble. No explanation. No quotes around the text.\\nJust the post, ready to publish.\"}]} }}"
-            },
-            {
-              "name": "generationConfig",
-              "value": "={{ {\\\"maxOutputTokens\\\": 100, \\\"temperature\\\": 0.7} }}"
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
-        "options": {}
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"context\": \"Current hazard conditions for Hawaiʻi as of \" + $json.timestamp + \":\\n\" + $json.context, \"lang\": \"en\", \"max_chars\": 280 } }}",
+        "options": {
+          "timeout": 15000
+        }
       }
     },
     {
@@ -119,7 +120,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const response = $input.first().json;\nconst rawText = response?.candidates?.[0]?.content?.parts?.[0]?.text || \"\";\nconst post = rawText.trim();\n\nif (post.length > 300 || !post.includes(\"kahuola.org\")) {\n  return [{\n    json: {\n      post: \"Aloha k\u0101kou! Kahu Ola is monitoring hazard conditions across Hawai\u02bbi to keep our \u02bbohana safe. Stay informed at kahuola.org \ud83c\udf3a\",\n      is_fallback: true\n    }\n  }];\n}\n\nreturn [{ json: { post, is_fallback: false } }];"
+        "jsCode": "const response = $input.first().json;\nconst post = (response?.post || \"\").trim();\nconst isFallback = response?.is_fallback === true;\n\nif (!post || post.length > 300 || !post.toLowerCase().includes(\"kahuola.org\")) {\n  return [{\n    json: {\n      post: \"Aloha mai kākou. Kahu Ola is monitoring hazard conditions across Hawaiʻi. Stay informed — kahuola.org 🌺\",\n      is_fallback: true,\n      model: \"template_fallback\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    post,\n    is_fallback: isFallback,\n    model: response?.model || \"@cf/google/gemma-4-26b-a4b-it\"\n  }\n}];"
       }
     },
     {
@@ -133,7 +134,7 @@
       ],
       "parameters": {
         "chatId": "6631407344",
-        "text": "={{ \"\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\ud83d\udccb KAHU OLA DAILY POST PREVIEW\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\" + $json.post + \"\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\u23f0 \" + $now + \"\\n\" + ($json.is_fallback ? \"\u26a0\ufe0f FALLBACK (AI error)\" : \"\u2705 AI generated\") + \"\\n\\nReply APPROVE or REJECT within 30 minutes.\" }}",
+        "text": "={{ \"━━━━━━━━━━━━━━━━━━━━━━\\n📋 KAHU OLA DAILY POST PREVIEW\\n━━━━━━━━━━━━━━━━━━━━━━\\n\" + $json.post + \"\\n━━━━━━━━━━━━━━━━━━━━━━\\n⏰ \" + $now + \"\\n\" + ($json.is_fallback ? \"⚠️ FALLBACK (AI error)\" : \"✅ AI generated\") + \"\\n\\nReply APPROVE or REJECT within 30 minutes.\" }}",
         "additionalFields": {
           "replyMarkup": "inlineKeyboard",
           "inlineKeyboard": {
@@ -142,13 +143,13 @@
                 "row": {
                   "buttons": [
                     {
-                      "text": "\u2705 Approve & Post",
+                      "text": "✅ Approve & Post",
                       "additionalFields": {
                         "callback_data": "approve"
                       }
                     },
                     {
-                      "text": "\u274c Reject",
+                      "text": "❌ Reject",
                       "additionalFields": {
                         "callback_data": "reject"
                       }
@@ -240,7 +241,7 @@
       ],
       "parameters": {
         "chatId": "6631407344",
-        "text": "={{ \"\u2705 Posted to Facebook!\\nPost ID: \" + ($json.id || \"Unknown\") + \"\\nContent: \" + $(\"Code: Extract AI text\").item.json.post + \"\\nView: https://facebook.com/kahuola\" }}"
+        "text": "={{ \"✅ Posted to Facebook!\\nPost ID: \" + ($json.id || \"Unknown\") + \"\\nContent: \" + $(\"Code: Extract AI text\").item.json.post + \"\\nView: https://facebook.com/kahuola\" }}"
       }
     },
     {
@@ -254,7 +255,7 @@
       ],
       "parameters": {
         "chatId": "6631407344",
-        "text": "\u274c Post rejected or timed out. No action taken."
+        "text": "❌ Post rejected or timed out. No action taken."
       }
     }
   ],
@@ -296,18 +297,7 @@
       "main": [
         [
           {
-            "node": "Gemini AI Generate Post",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gemini AI Generate Post": {
-      "main": [
-        [
-          {
-            "node": "Code: Extract AI text",
+            "node": "Kahu Ola Brief (Gemma 4)",
             "type": "main",
             "index": 0
           }
@@ -370,6 +360,17 @@
         [
           {
             "node": "Telegram: Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kahu Ola Brief (Gemma 4)": {
+      "main": [
+        [
+          {
+            "node": "Code: Extract AI text",
             "type": "main",
             "index": 0
           }

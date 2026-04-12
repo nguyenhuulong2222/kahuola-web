@@ -8,11 +8,37 @@
  * - Silent when dry: no false-persistence badges on clear days
  */
 
+import { getZoneById, type ZoneDynamicState, type RiskLevel } from "./zones";
+import {
+  generateZoneBrief,
+  generateFallbackBrief,
+  type HouseholdProfile,
+  type ZoneBrief,
+} from "./zone-brief";
+import {
+  briefCacheKey,
+  getCachedBrief,
+  putCachedBrief,
+  writeSnapshot,
+  computeSnapshotDelta,
+  formatDelta,
+} from "./cache";
+import {
+  generateBrief as generateGemmaBrief,
+  generateSocialPost,
+  GEMMA_MODEL,
+} from "./gemma";
+
 export interface Env {
   NASA_FIRMS_MAP_KEY: string;
   AIRNOW_API_KEY?: string;
   MEDIA_BRIEF_WEBHOOK?: string;
   MEDIA_BRIEF_WEBHOOK_TOKEN?: string;
+  // Phase 2 bindings (Workers AI + KV). Declared as loose types so this
+  // file does not need to pull the full @cloudflare/workers-types surface
+  // in — existing code in the file already works this way.
+  AI: { run(model: string, input: unknown): Promise<unknown> };
+  KAHUOLA_CACHE: unknown;
 }
 
 type CorsHeaders = Record<string, string>;
@@ -63,6 +89,28 @@ function optionsResp(origin: string | null): Response {
     return new Response(null, { status: 403, headers: { Vary: 'Origin' } });
   }
   return new Response(null, { status: 204, headers: corsHeaders(origin) });
+}
+
+// P1-B hardening: return a cached response only if its Content-Type is JSON.
+// A non-JSON or missing content-type would surface as a raw-parse failure in
+// the client (triggering the red "Data format error" banner), so fall through
+// to a fresh upstream fetch by returning null.
+function cachedJsonResponse(
+  cached: Response | undefined,
+  cors: CorsHeaders,
+  statusOverride?: number,
+): Response | null {
+  if (!cached) return null;
+  const ct = (cached.headers.get('content-type') || '').toLowerCase();
+  if (!ct.includes('json')) return null;
+  const headers = new Headers(cached.headers);
+  Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
+  headers.set('Content-Type', 'application/json');
+  headers.set('X-Kahuola-Cache', 'HIT');
+  return new Response(cached.body, {
+    status: statusOverride ?? cached.status ?? 200,
+    headers,
+  });
 }
 
 const SMART_HAWAII_CELLS: IslandCell[] = [
@@ -350,12 +398,8 @@ async function handleRainRadar(url: URL, cors: CorsHeaders): Promise<Response> {
   const cacheKey = 'https://kahuola.org/cache/nexrad-hawaii-v1';
   const cache = caches.default;
   const cached = await cache.match(new Request(cacheKey));
-  if (cached) {
-    const headers = new Headers(cached.headers);
-    Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
-    headers.set('X-Kahuola-Cache', 'HIT');
-    return new Response(cached.body, { status: 200, headers });
-  }
+  const cachedJson = cachedJsonResponse(cached, cors, 200);
+  if (cachedJson) return cachedJson;
 
   try {
     const controller = new AbortController();
@@ -486,12 +530,8 @@ async function handleLocalHazards(url: URL, cors: CorsHeaders): Promise<Response
   const cacheReq = new Request(cacheKey);
   const cached = await cache.match(cacheReq);
 
-  if (cached) {
-    const headers = new Headers(cached.headers);
-    Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
-    headers.set('X-Kahuola-Cache', 'HIT');
-    return new Response(cached.body, { status: cached.status, headers });
-  }
+  const cachedJson = cachedJsonResponse(cached, cors);
+  if (cachedJson) return cachedJson;
 
   let raw: any;
   try {
@@ -601,12 +641,8 @@ async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
   const cacheKey = 'https://kahuola.org/cache/mrms-hawaii-v1';
   const cache = caches.default;
   const cached = await cache.match(new Request(cacheKey));
-  if (cached) {
-    const headers = new Headers(cached.headers);
-    Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
-    headers.set('X-Kahuola-Cache', 'HIT');
-    return new Response(cached.body, { status: 200, headers });
-  }
+  const cachedJson = cachedJsonResponse(cached, cors, 200);
+  if (cachedJson) return cachedJson;
 
   try {
     const controller = new AbortController();
@@ -818,58 +854,93 @@ async function handleFloodContext(url: URL, cors: CorsHeaders): Promise<Response
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-    const origin = request.headers.get('Origin');
-    const cors = corsHeaders(origin);
+    // P1-B hardening: a single outer try/catch guarantees the Worker never
+    // emits a Cloudflare HTML error page (1101 / 522 / 524). Any unhandled
+    // exception becomes a valid JSON envelope so the client parser never
+    // throws PARSE_ERROR and the red "Data format error" banner can't fire.
+    let cors: CorsHeaders = { Vary: 'Origin' };
+    try {
+      const url = new URL(request.url);
+      const origin = request.headers.get('Origin');
+      cors = corsHeaders(origin);
+      const path = url.pathname;
 
-    if (request.method === 'OPTIONS') return optionsResp(origin);
-    if (!['GET', 'HEAD'].includes(request.method)) return err(405, 'Method not allowed', cors);
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) return err(403, 'Forbidden', cors);
+      if (request.method === 'OPTIONS') return optionsResp(origin);
 
-    const path = url.pathname;
+      // POST /api/brief — n8n server-to-server content generation.
+      // Carved out BEFORE the GET/HEAD guard because n8n is a backend
+      // caller, not a browser. Auth is via MEDIA_BRIEF_WEBHOOK_TOKEN
+      // bearer header; origin check is skipped because n8n will not send
+      // an Origin header on server-initiated requests.
+      if (request.method === 'POST' && path === '/api/brief') {
+        return handleBriefPost(request, env, cors);
+      }
 
-    if (path === '/api/tiles/health' || path === '/api/health') return handleHealth(env, cors);
-    if (path === '/api/hazards/flash-flood' || path === '/hazards/flash-flood') return handleFlashFlood(url, cors);
-    if (path === '/api/hazards/flood-context' || path === '/hazards/flood-context') return handleFloodContext(url, cors);
-    if (path === '/api/hazards/rain-radar' || path === '/hazards/rain-radar') return handleRainRadar(url, cors);
-    if (path === '/api/hazards/mrms-qpe' || path === '/hazards/mrms-qpe') return handleMrmsQpe(url, cors);
-    if (path === '/api/hazards/landslide' || path === '/hazards/landslide') return handleLandslide(url, cors);
-    if (path === '/api/hazards/smoke' || path === '/hazards/smoke') return handleSmoke(url, cors);
-    if (path === '/api/hazards/perimeters' || path === '/hazards/perimeters') return handlePerimeters(url, cors);
-    if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
-    if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
-    if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
-    if (path === '/api/firms/hotspots') return handleFirmsHotspots(url, env, cors);
+      if (!['GET', 'HEAD'].includes(request.method)) return err(405, 'Method not allowed', cors);
+      if (origin && !ALLOWED_ORIGINS.includes(origin)) return err(403, 'Forbidden', cors);
 
-    const wmsMatch = path.match(/^\/api\/tiles\/wms\/([a-z_]+)$/);
-    if (wmsMatch) return handleWms(wmsMatch[1], url, env, cors);
+      if (path === '/api/tiles/health' || path === '/api/health') return handleHealth(env, cors);
+      if (path === '/api/hazards/flash-flood' || path === '/hazards/flash-flood') return handleFlashFlood(url, cors);
+      if (path === '/api/hazards/flood-context' || path === '/hazards/flood-context') return handleFloodContext(url, cors);
+      if (path === '/api/hazards/rain-radar' || path === '/hazards/rain-radar') return handleRainRadar(url, cors);
+      if (path === '/api/hazards/mrms-qpe' || path === '/hazards/mrms-qpe') return handleMrmsQpe(url, cors);
+      if (path === '/api/hazards/landslide' || path === '/hazards/landslide') return handleLandslide(url, cors);
+      if (path === '/api/hazards/smoke' || path === '/hazards/smoke') return handleSmoke(url, cors);
+      if (path === '/api/hazards/perimeters' || path === '/hazards/perimeters') return handlePerimeters(url, cors);
+      if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
+      if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
+      if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
+      if (path === '/api/firms/hotspots') return handleFirmsHotspots(url, env, cors);
 
-    const xyzMatch = path.match(/^\/api\/tiles\/xyz\/airnow\/(\d+)\/(\d+)\/(\d+)\.png$/);
-    if (xyzMatch) return handleAirnowXyz(xyzMatch[1], xyzMatch[2], xyzMatch[3], env, cors);
+      const wmsMatch = path.match(/^\/api\/tiles\/wms\/([a-z_]+)$/);
+      if (wmsMatch) return handleWms(wmsMatch[1], url, env, cors);
 
-    // Support both:
-    //   /api/tiles/radar/{z}/{x}/{y}
-    //   /api/tiles/radar/{z}/{x}/{y}.png
-    const radarTileMatch = path.match(/^\/api\/tiles\/radar\/(\d+)\/(\d+)\/(\d+)(?:\.png)?$/);
-    if (radarTileMatch) return handleRadarTile(radarTileMatch[1], radarTileMatch[2], radarTileMatch[3], cors);
+      const xyzMatch = path.match(/^\/api\/tiles\/xyz\/airnow\/(\d+)\/(\d+)\/(\d+)\.png$/);
+      if (xyzMatch) return handleAirnowXyz(xyzMatch[1], xyzMatch[2], xyzMatch[3], env, cors);
 
-    const geoMatch = path.match(/^\/api\/tiles\/geojson\/([a-z_-]+)$/);
-    if (geoMatch) return handleGeojson(geoMatch[1], cors);
+      // Support both:
+      //   /api/tiles/radar/{z}/{x}/{y}
+      //   /api/tiles/radar/{z}/{x}/{y}.png
+      const radarTileMatch = path.match(/^\/api\/tiles\/radar\/(\d+)\/(\d+)\/(\d+)(?:\.png)?$/);
+      if (radarTileMatch) return handleRadarTile(radarTileMatch[1], radarTileMatch[2], radarTileMatch[3], cors);
 
-    // fire-weather context (NWS + RAWS derived)
-    if (path === '/api/hazards/fire-weather' || path === '/hazards/fire-weather')
-      return handleFireWeather(url, cors);
+      const geoMatch = path.match(/^\/api\/tiles\/geojson\/([a-z_-]+)$/);
+      if (geoMatch) return handleGeojson(geoMatch[1], cors);
 
-    // Tsunami alerts — NWS Tsunami Warning Center
-    if (path === '/api/hazards/tsunami' || path === '/hazards/tsunami')
-      return handleTsunami(cors);
+      // fire-weather context (NWS + RAWS derived)
+      if (path === '/api/hazards/fire-weather' || path === '/hazards/fire-weather')
+        return handleFireWeather(url, cors);
 
-    // Hurricane tracks — NHC active storms
-    if (path === '/api/hazards/hurricane' || path === '/hazards/hurricane')
-      return handleHurricane(cors);
+      // Tsunami alerts — NWS Tsunami Warning Center
+      if (path === '/api/hazards/tsunami' || path === '/hazards/tsunami')
+        return handleTsunami(cors);
 
+      // Hurricane tracks — NHC active storms
+      if (path === '/api/hazards/hurricane' || path === '/hazards/hurricane')
+        return handleHurricane(cors);
 
-    return err(404, 'Not found', cors);
+      // Zone brief — static zone profile + live NWS alerts → template,
+      // upgraded to Gemma 4 reasoning when the AI binding is available.
+      // Template fallback stays the primary safety net.
+      const zoneMatch = path.match(/^\/api\/hazards\/zone\/([a-z0-9_]+)$/);
+      if (zoneMatch) return handleZoneBrief(zoneMatch[1], url, env, cors);
+
+      return err(404, 'Not found', cors);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'unknown';
+      console.error('Unhandled worker exception:', msg);
+      return jsonResp(
+        {
+          ok: false,
+          error: 'worker_internal',
+          message: 'Worker encountered an unexpected error. Data temporarily unavailable.',
+          detail: msg,
+          generated_at: new Date().toISOString(),
+        },
+        200, // Invariant II: never break the UI with a 5xx/HTML page
+        cors,
+      );
+    }
   },
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     // Chạy mỗi 6AM HST — build brief và push to Apps Script
@@ -1264,12 +1335,8 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   const cache = caches.default;
   const cacheReq = new Request(cacheUrl);
   const cached = await cache.match(cacheReq);
-  if (cached) {
-    const headers = new Headers(cached.headers);
-    Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
-    headers.set('X-Kahuola-Cache', 'HIT');
-    return new Response(cached.body, { status: cached.status, headers });
-  }
+  const cachedJson = cachedJsonResponse(cached, cors);
+  if (cachedJson) return cachedJson;
 
   const t0 = Date.now();
   const controller = new AbortController();
@@ -1482,12 +1549,8 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
   const cacheKey = 'https://kahuola.org/cache/smoke-hawaii-v1';
   const cache = caches.default;
   const cached = await cache.match(new Request(cacheKey));
-  if (cached) {
-    const headers = new Headers(cached.headers);
-    Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
-    headers.set('X-Kahuola-Cache', 'HIT');
-    return new Response(cached.body, { status: 200, headers });
-  }
+  const cachedJson = cachedJsonResponse(cached, cors, 200);
+  if (cachedJson) return cachedJson;
 
   try {
     const controller = new AbortController();
@@ -1583,12 +1646,8 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
   const cacheKey = 'https://kahuola.org/cache/perimeters-hawaii-v1';
   const cache = caches.default;
   const cached = await cache.match(new Request(cacheKey));
-  if (cached) {
-    const headers = new Headers(cached.headers);
-    Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
-    headers.set('X-Kahuola-Cache', 'HIT');
-    return new Response(cached.body, { status: 200, headers });
-  }
+  const cachedJson = cachedJsonResponse(cached, cors, 200);
+  if (cachedJson) return cachedJson;
 
   try {
     const controller = new AbortController();
@@ -2024,6 +2083,8 @@ async function proxyFetch(fetchUrl: string, cacheUrl: string, ttlSeconds: number
   const cache = caches.default;
   const cacheReq = new Request(cacheUrl);
   const cached = await cache.match(cacheReq);
+  // proxyFetch caches binary tiles (image/png) as well as JSON — do NOT require
+  // JSON content-type here; serve whatever was stored, with CORS headers merged.
   if (cached) {
     const headers = new Headers(cached.headers);
     Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
@@ -2065,4 +2126,390 @@ async function proxyFetch(fetchUrl: string, cacheUrl: string, ttlSeconds: number
   const response = new Response(body, { status: 200, headers: respHeaders });
   if (shouldCache) await cache.put(cacheReq, response.clone());
   return response;
+}
+
+// ── ZONE BRIEF — /api/hazards/zone/:zoneId ────────────────────────
+// Phase 1: static zone profile + live NWS alerts → deterministic
+// template brief. No AI, no Gemma, no browser-side upstream calls.
+// Every failure path returns a safe fallback brief with status 200
+// per Invariant II (UI never goes blank).
+
+function parseHouseholdFromUrl(url: URL): HouseholdProfile {
+  const q = url.searchParams;
+  const flag = (name: string): boolean => {
+    const v = (q.get(name) || "").toLowerCase();
+    return v === "1" || v === "true" || v === "yes";
+  };
+  return {
+    kupuna: flag("kupuna"),
+    keiki: flag("keiki"),
+    pets: flag("pets"),
+    medical: flag("medical"),
+    // car defaults to TRUE (most households) unless explicitly set to false
+    car: q.get("car") !== null ? flag("car") : true,
+  };
+}
+
+function parseLangFromUrl(url: URL): string {
+  const lang = (url.searchParams.get("lang") || "en").toLowerCase();
+  // Phase 1 only supports en templates; other langs are preserved in the
+  // response but generate English content. Phase 2 will translate.
+  return ["en", "vi", "haw"].includes(lang) ? lang : "en";
+}
+
+function textMentionsZone(text: string, zoneName: string): boolean {
+  if (!text) return false;
+  const haystack = text.toLowerCase();
+  return haystack.includes(zoneName.toLowerCase());
+}
+
+async function buildZoneDynamicState(
+  zone: { zone_id: string; zone_name: string; typical_fire_risk: RiskLevel; typical_flood_risk: RiskLevel },
+  cors: CorsHeaders,
+): Promise<ZoneDynamicState> {
+  const fetched_at = new Date().toISOString();
+  const sources: string[] = ["Kahu Ola zone profile"];
+  const notes: string[] = [];
+
+  // Start from the zone's static baseline — this is the honest default
+  // when we have no live signal to contradict it.
+  let fire_risk: RiskLevel = zone.typical_fire_risk;
+  let flood_risk: RiskLevel = zone.typical_flood_risk;
+  const nws_alerts: string[] = [];
+
+  const upstream = await fetchNwsAlerts(cors);
+  if (upstream && upstream.ok) {
+    sources.push("NWS Honolulu active alerts");
+    const features: any[] = Array.isArray(upstream.data?.features)
+      ? upstream.data.features
+      : [];
+
+    for (const f of features) {
+      const props = f?.properties || {};
+      const event = String(props.event || "").trim();
+      const areaDesc = String(props.areaDesc || "");
+      if (!event) continue;
+
+      // Zone-aware filtering: if the alert area mentions the zone by name,
+      // count it. Otherwise, still count island-wide Red Flag Warnings
+      // (they apply to all Maui zones).
+      const zoneMatch = textMentionsZone(areaDesc, zone.zone_name);
+      const islandWideFire = /red flag/i.test(event);
+
+      if (zoneMatch || islandWideFire) {
+        if (!nws_alerts.includes(event)) nws_alerts.push(event);
+      }
+
+      if ((zoneMatch || islandWideFire) && /flash flood/i.test(event)) {
+        flood_risk = "EXTREME";
+      }
+      if ((zoneMatch || /flood warning/i.test(event)) && /flood warning/i.test(event)) {
+        if (flood_risk !== "EXTREME") flood_risk = "HIGH";
+      }
+      if (islandWideFire) {
+        fire_risk = "EXTREME";
+      }
+    }
+  } else {
+    notes.push(
+      `NWS alerts endpoint unavailable (${upstream && upstream.error ? upstream.error : "unknown"}); using zone baseline only.`,
+    );
+  }
+
+  nws_alerts.sort();
+
+  return {
+    fetched_at,
+    fire_risk,
+    flood_risk,
+    nws_alerts,
+    wind_mph: null,        // Phase 1: not wired to RAWS yet
+    humidity_pct: null,    // Phase 1: not wired to RAWS yet
+    notes,
+    sources,
+  };
+}
+
+/**
+ * Attempt a Gemma 4 upgrade of the template brief. If the wrapper returns
+ * fallbackUsed=true for any reason (timeout, empty output, validator
+ * rejection, runtime error), we keep the deterministic template exactly
+ * as produced — template fallback is the primary safety net per doctrine.
+ *
+ * The AI's contribution is the `what_it_means` paragraph only: it provides
+ * reasoning about what the conditions mean in plain language. Headline,
+ * action checklist (what_to_do), and household note stay deterministic
+ * because they encode civic facts (routes, choke points, schools) that
+ * the AI must never invent.
+ */
+async function tryGemmaUpgrade(
+  env: Env,
+  templateBrief: ZoneBrief,
+  zone: ReturnType<typeof getZoneById>,
+  state: ZoneDynamicState,
+  household: HouseholdProfile,
+  lang: string,
+): Promise<ZoneBrief> {
+  if (!zone) return templateBrief;
+  if (!env.AI || typeof env.AI.run !== "function") return templateBrief;
+
+  try {
+    const result = await generateGemmaBrief(env, {
+      zoneId: zone.zone_id,
+      lang,
+      householdProfile: household,
+      zoneSnapshot: state,
+      zoneName: zone.zone_name,
+      zoneTerrain: zone.terrain_type,
+      zoneDrainageContext: zone.drainage_context,
+      zoneEvacuationPrimary: zone.evacuation_routes.primary,
+      zoneNotableSchoolNames: zone.notable_locations
+        .filter((l) => l.type === "school")
+        .map((l) => l.name),
+      zoneHistoricalSignals: zone.historical_signals,
+    });
+
+    if (result.fallbackUsed || !result.text) {
+      return templateBrief;
+    }
+
+    // Merge: AI supplies the reasoning paragraph; deterministic template
+    // supplies facts. Sources accumulate both attributions.
+    return {
+      ...templateBrief,
+      what_it_means: result.text,
+      sources: result.sourceLabels.length > 0
+        ? result.sourceLabels
+        : templateBrief.sources,
+      generated_by: "kahuola_ai",
+      fallback_used: false,
+    };
+  } catch (e: unknown) {
+    // Any failure bubbles back to the template — never surfaces to the UI.
+    console.error(
+      "tryGemmaUpgrade failed; using deterministic template:",
+      e instanceof Error ? e.message : "unknown",
+    );
+    return templateBrief;
+  }
+}
+
+async function handleZoneBrief(
+  zoneId: string,
+  url: URL,
+  env: Env,
+  cors: CorsHeaders,
+): Promise<Response> {
+  const lang = parseLangFromUrl(url);
+  const household = parseHouseholdFromUrl(url);
+
+  const zone = getZoneById(zoneId);
+  if (!zone) {
+    // Unknown zone: return a structured "not found" envelope but still
+    // status 200 so the UI never sees a raw error page (Invariant II).
+    return jsonResp(
+      {
+        ok: false,
+        error: "zone_not_found",
+        message: `Zone '${zoneId}' is not a known Kahu Ola zone.`,
+        zone: null,
+        state: null,
+        brief: null,
+        delta: "Conditions unchanged since yesterday.",
+      },
+      200,
+      cors,
+    );
+  }
+
+  try {
+    const state = await buildZoneDynamicState(zone, cors);
+    writeSnapshot(zone.zone_id, state);
+
+    const key = briefCacheKey(zone.zone_id, state, household, lang);
+    let brief = getCachedBrief(key);
+    if (!brief) {
+      const templateBrief = generateZoneBrief({ zone, state, household, lang });
+      brief = await tryGemmaUpgrade(env, templateBrief, zone, state, household, lang);
+      putCachedBrief(key, brief);
+    }
+
+    const delta = formatDelta(computeSnapshotDelta(zone.zone_id));
+
+    return jsonResp(
+      {
+        ok: true,
+        zone,
+        state,
+        brief,
+        delta,
+        generated_at: state.fetched_at,
+      },
+      200,
+      cors,
+    );
+  } catch (e: unknown) {
+    // Any unexpected failure inside the zone pipeline → deterministic
+    // fallback brief. UI still renders, sources still point at the
+    // zone profile, and fallback_used: true is visible to the client.
+    const msg = e instanceof Error ? e.message : "unknown";
+    console.error(`handleZoneBrief failure for ${zoneId}:`, msg);
+    const fallback = generateFallbackBrief(zone, lang);
+    const fallbackState: ZoneDynamicState = {
+      fetched_at: new Date().toISOString(),
+      fire_risk: zone.typical_fire_risk,
+      flood_risk: zone.typical_flood_risk,
+      nws_alerts: [],
+      wind_mph: null,
+      humidity_pct: null,
+      notes: [`internal_error: ${msg}`],
+      sources: ["Kahu Ola zone profile"],
+    };
+    return jsonResp(
+      {
+        ok: false,
+        error: "zone_internal",
+        message: msg,
+        zone,
+        state: fallbackState,
+        brief: fallback,
+        delta: "Conditions unchanged since yesterday.",
+      },
+      200,
+      cors,
+    );
+  }
+}
+
+// ── /api/brief — n8n social poster endpoint (POST) ───────────────
+// Replaces the old Gemini call in kahuola_n8n_workflow.json. n8n POSTs
+// a freeform civic context string; the Worker runs Gemma 4 with the
+// SOCIAL_SYSTEM_PROMPT and returns a validated Facebook post.
+//
+// Auth: shared-secret bearer token via env.MEDIA_BRIEF_WEBHOOK_TOKEN.
+//       Request header: Authorization: Bearer <token>
+//
+// Failure discipline: every path returns HTTP 200 with a JSON envelope so
+// n8n parsing is trivial and the workflow never breaks on errors.
+
+const BRIEF_STATIC_FALLBACK =
+  "Aloha mai kākou. Kahu Ola is monitoring hazard conditions across Hawaiʻi. Stay informed — kahuola.org 🌺";
+
+async function handleBriefPost(
+  request: Request,
+  env: Env,
+  cors: CorsHeaders,
+): Promise<Response> {
+  // Auth guard — bearer token. When no token is configured in the env,
+  // we REFUSE the request rather than open the endpoint (defensive
+  // default for a billed inference route).
+  const expected = env.MEDIA_BRIEF_WEBHOOK_TOKEN;
+  if (!expected) {
+    return jsonResp(
+      {
+        ok: false,
+        error: "brief_auth_unconfigured",
+        message:
+          "MEDIA_BRIEF_WEBHOOK_TOKEN not set in Worker environment. /api/brief is disabled until configured.",
+        post: BRIEF_STATIC_FALLBACK,
+        is_fallback: true,
+        sources: ["template_fallback"],
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      cors,
+    );
+  }
+  const authHeader = request.headers.get("Authorization") || "";
+  const presented = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!presented || presented !== expected) {
+    return jsonResp(
+      {
+        ok: false,
+        error: "brief_unauthorized",
+        message: "Missing or invalid Authorization bearer token.",
+        post: BRIEF_STATIC_FALLBACK,
+        is_fallback: true,
+        sources: ["template_fallback"],
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      cors,
+    );
+  }
+
+  // Body parsing.
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResp(
+      {
+        ok: false,
+        error: "brief_invalid_json",
+        message: "Request body was not valid JSON.",
+        post: BRIEF_STATIC_FALLBACK,
+        is_fallback: true,
+        sources: ["template_fallback"],
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      cors,
+    );
+  }
+
+  const context =
+    typeof body?.context === "string" ? body.context.trim() : "";
+  if (!context) {
+    return jsonResp(
+      {
+        ok: false,
+        error: "brief_missing_context",
+        message: "Request body must include a non-empty `context` string.",
+        post: BRIEF_STATIC_FALLBACK,
+        is_fallback: true,
+        sources: ["template_fallback"],
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      cors,
+    );
+  }
+  const lang = typeof body?.lang === "string" ? body.lang : "en";
+  const maxChars =
+    typeof body?.max_chars === "number" && Number.isFinite(body.max_chars)
+      ? body.max_chars
+      : 280;
+
+  try {
+    const result = await generateSocialPost(env, { context, lang, maxChars });
+    return jsonResp(
+      {
+        ok: true,
+        post: result.post,
+        is_fallback: result.fallbackUsed,
+        sources: result.sources,
+        model: result.fallbackUsed ? "template_fallback" : GEMMA_MODEL,
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      cors,
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    console.error("handleBriefPost outer error:", msg);
+    return jsonResp(
+      {
+        ok: false,
+        error: "brief_internal",
+        message: msg,
+        post: BRIEF_STATIC_FALLBACK,
+        is_fallback: true,
+        sources: ["template_fallback"],
+        generated_at: new Date().toISOString(),
+      },
+      200,
+      cors,
+    );
+  }
 }

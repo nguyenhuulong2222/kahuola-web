@@ -23,3 +23,19 @@ NASA_FIRMS_DAY_RANGE = "1"
 # Secrets already set in Cloudflare dashboard:
 # FIRMS_MAP_KEY
 # AIRNOW_API_KEY
+
+# ── KV namespace for Zone Brief cache + snapshot diff (Phase 2) ──
+# Provisioned 2026-04-10 via:
+#   npx wrangler kv namespace create KAHUOLA_CACHE
+# Phase 1 still uses in-memory per-isolate maps in worker/src/cache.ts;
+# this binding is wired so Phase 2 migration (swap Maps → KV) can ship
+# without a follow-up deploy.
+[[kv_namespaces]]
+binding = "KAHUOLA_CACHE"
+id = "76de514417fb4821bc1e51bac04b30a1"
+
+# ── Workers AI binding for Gemma 4 inference (Phase 2) ──
+# Model id (hardcoded in worker/src/gemma.ts): @cf/google/gemma-4-26b-a4b-it
+# Doctrine: Gemma 4 only. No Gemini. No other AI vendor.
+[ai]
+binding = "AI"
