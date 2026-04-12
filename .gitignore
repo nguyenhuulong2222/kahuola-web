@@ -4,3 +4,9 @@ worker/node_modules/
 worker/.wrangler/
 .claude/
 _merge_work
+
+# macOS metadata — never belongs in the repo
+.DS_Store
+
+# graphify tool output (knowledge-graph build artifact, rebuilt locally)
+graphify-out/
