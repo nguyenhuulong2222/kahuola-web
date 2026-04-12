@@ -1004,8 +1004,8 @@
     .zone-map-wrap{
       position:relative;
       width:100%;
-      aspect-ratio:10/7;
-      max-width:720px;
+      aspect-ratio:3/2;
+      max-width:760px;
       margin:4px auto 0;
       border-radius:var(--radius-md);
       background:rgba(255,255,255,.02);
@@ -1033,8 +1033,11 @@
     .zone-dot:focus{outline:none}
     .zone-dot-inner{
       width:14px;height:14px;border-radius:50%;
-      box-shadow:0 0 0 4px rgba(0,0,0,.25),0 0 0 6px rgba(255,255,255,.04);
-      transition:transform .12s ease,box-shadow .12s ease;
+      /* Default: neutral gray — risk is UNKNOWN until the brief is
+         fetched. A risk-* class on the parent .zone-dot overrides this. */
+      background:#64748b;
+      box-shadow:0 0 0 4px rgba(100,116,139,.22),0 0 0 6px rgba(100,116,139,.08);
+      transition:transform .12s ease,box-shadow .2s ease,background .2s ease;
     }
     .zone-dot:hover .zone-dot-inner,
     .zone-dot:focus-visible .zone-dot-inner{
@@ -1075,12 +1078,14 @@
     .zone-dot:focus-visible .zone-dot-label,
     .zone-dot.selected .zone-dot-label{opacity:1}
 
-    /* Risk colors — applied to dot inner and legend swatches */
+    /* Risk colors — applied post-fetch to the selected dot and to
+       the legend swatches. Default dot color is gray (unknown). */
     .risk-extreme-fire .zone-dot-inner,.risk-extreme-fire.zml-swatch{background:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.25),0 0 0 6px rgba(220,38,38,.10)}
     .risk-high-fire    .zone-dot-inner,.risk-high-fire.zml-swatch{background:#ea580c;box-shadow:0 0 0 4px rgba(234,88,12,.25),0 0 0 6px rgba(234,88,12,.10)}
     .risk-moderate     .zone-dot-inner,.risk-moderate.zml-swatch{background:#ca8a04;box-shadow:0 0 0 4px rgba(202,138,4,.25),0 0 0 6px rgba(202,138,4,.10)}
     .risk-high-flood   .zone-dot-inner,.risk-high-flood.zml-swatch{background:#1d4ed8;box-shadow:0 0 0 4px rgba(29,78,216,.30),0 0 0 6px rgba(29,78,216,.12)}
     .risk-low          .zone-dot-inner,.risk-low.zml-swatch{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.25),0 0 0 6px rgba(22,163,74,.10)}
+    .risk-unknown.zml-swatch{background:#64748b;box-shadow:0 0 0 4px rgba(100,116,139,.22),0 0 0 6px rgba(100,116,139,.08)}
 
     /* ── Selected-zone bar ──────────────────────────────── */
     .zone-selected-bar{
@@ -1342,42 +1347,47 @@
           <h2 class="zone-brief-title" id="zoneBriefTitle">Tap a zone on the map for a local brief</h2>
         </div>
 
-        <!-- ── Interactive Maui map (SVG outline + 15 positioned dot buttons) ── -->
+        <!-- ── Interactive Maui map ─────────────────────────────
+             SVG outline is figure-8 shaped: West Maui lobe + narrow
+             isthmus waist + larger Haleakalā lobe + Hana point.
+             viewBox is 0 0 100 100 with preserveAspectRatio="none" so
+             SVG coordinates align 1:1 with dot `left%/top%`.
+
+             Dots start NEUTRAL (gray) — risk color is applied only
+             after the live API response confirms state.fire_risk /
+             state.flood_risk for the selected zone. ─────────────── -->
         <div class="zone-map-wrap" id="zoneMapWrap">
-          <svg class="zone-map-svg" viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true">
-            <!-- Stylized Maui outline: West Maui hump (lahaina side),
-                 central isthmus, Haleakalā mass, Hāna peninsula. Not
-                 pixel-accurate — meant to be recognizable under 15
-                 geographically-positioned dot markers. -->
+          <svg class="zone-map-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <path class="maui-fill" d="
-              M 8 42
-              C 4 22, 16 10, 28 14
-              C 38 18, 36 32, 40 32
-              C 48 22, 58 14, 72 16
-              C 88 18, 98 30, 96 44
-              C 99 56, 92 68, 80 74
-              C 66 80, 52 82, 42 76
-              C 34 72, 26 74, 18 66
-              C 10 60, 4 52, 8 42
+              M 5 25
+              C 0 8, 25 2, 34 15
+              L 38 22
+              C 46 8, 72 2, 88 15
+              C 98 28, 98 50, 90 60
+              C 92 75, 72 90, 50 86
+              C 42 88, 38 78, 34 65
+              L 30 72
+              C 22 76, 8 72, 2 55
+              C -2 35, 0 22, 5 25
               Z
             "/>
           </svg>
 
-          <button class="zone-dot risk-extreme-fire" type="button" data-zone="lahaina"            data-name="Lahaina"              data-risk="Extreme fire"  style="left:20%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina<span class="zone-dot-risk">Extreme fire</span></span></button>
-          <button class="zone-dot risk-extreme-fire" type="button" data-zone="lahaina_mauka"      data-name="Lahaina Mauka"        data-risk="Extreme fire"  style="left:22%;top:45%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina Mauka<span class="zone-dot-risk">Extreme fire</span></span></button>
-          <button class="zone-dot risk-high-fire"    type="button" data-zone="kaanapali"          data-name="Kāʻanapali"           data-risk="High fire"     style="left:18%;top:40%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kāʻanapali<span class="zone-dot-risk">High fire</span></span></button>
-          <button class="zone-dot risk-high-fire"    type="button" data-zone="kihe_north"         data-name="Kīhei North"          data-risk="High fire"     style="left:38%;top:62%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei North<span class="zone-dot-risk">High fire</span></span></button>
-          <button class="zone-dot risk-high-fire"    type="button" data-zone="kihe_south"         data-name="Kīhei South"          data-risk="High fire"     style="left:40%;top:72%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei South<span class="zone-dot-risk">High fire</span></span></button>
-          <button class="zone-dot risk-high-flood"   type="button" data-zone="kahului_harbor"     data-name="Kahului Harbor"       data-risk="High flood"    style="left:48%;top:38%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kahului Harbor<span class="zone-dot-risk">High flood</span></span></button>
-          <button class="zone-dot risk-moderate"     type="button" data-zone="wailuku_central"    data-name="Wailuku Central"      data-risk="Moderate"      style="left:45%;top:42%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Central<span class="zone-dot-risk">Moderate</span></span></button>
-          <button class="zone-dot risk-moderate"     type="button" data-zone="wailuku_mauka"      data-name="Wailuku Mauka"        data-risk="Moderate"      style="left:43%;top:32%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Mauka<span class="zone-dot-risk">Moderate</span></span></button>
-          <button class="zone-dot risk-high-fire"    type="button" data-zone="pukalani"           data-name="Pukalani"             data-risk="High fire"     style="left:52%;top:48%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pukalani<span class="zone-dot-risk">High fire</span></span></button>
-          <button class="zone-dot risk-moderate"     type="button" data-zone="makawao"            data-name="Makawao"              data-risk="Moderate"      style="left:55%;top:40%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Makawao<span class="zone-dot-risk">Moderate</span></span></button>
-          <button class="zone-dot risk-extreme-fire" type="button" data-zone="kula_upper"         data-name="Kula Upper"           data-risk="Extreme fire"  style="left:50%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Upper<span class="zone-dot-risk">Extreme fire</span></span></button>
-          <button class="zone-dot risk-high-fire"    type="button" data-zone="kula_lower"         data-name="Kula Lower"           data-risk="High fire"     style="left:48%;top:62%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Lower<span class="zone-dot-risk">High fire</span></span></button>
-          <button class="zone-dot risk-low"          type="button" data-zone="paia"               data-name="Pāʻia"                data-risk="Low"           style="left:58%;top:32%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pāʻia<span class="zone-dot-risk">Low</span></span></button>
-          <button class="zone-dot risk-high-flood"   type="button" data-zone="hana"               data-name="Hāna"                 data-risk="High flood"    style="left:82%;top:52%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Hāna<span class="zone-dot-risk">High flood</span></span></button>
-          <button class="zone-dot risk-high-fire"    type="button" data-zone="upcountry_interface" data-name="Upcountry Interface" data-risk="High fire"     style="left:54%;top:44%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Upcountry Interface<span class="zone-dot-risk">High fire</span></span></button>
+          <button class="zone-dot" type="button" data-zone="kaanapali"           data-name="Kāʻanapali"           style="left:12%;top:18%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kāʻanapali<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="lahaina_mauka"       data-name="Lahaina Mauka"        style="left:16%;top:30%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina Mauka<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="lahaina"             data-name="Lahaina"              style="left:10%;top:48%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="kahului_harbor"      data-name="Kahului Harbor"       style="left:40%;top:20%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kahului Harbor<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="wailuku_mauka"       data-name="Wailuku Mauka"        style="left:33%;top:26%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Mauka<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="wailuku_central"     data-name="Wailuku Central"      style="left:36%;top:34%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Central<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="paia"                data-name="Pāʻia"                style="left:44%;top:13%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pāʻia<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="makawao"             data-name="Makawao"              style="left:52%;top:30%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Makawao<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="upcountry_interface" data-name="Upcountry Interface"  style="left:48%;top:40%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Upcountry Interface<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="pukalani"            data-name="Pukalani"             style="left:55%;top:44%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pukalani<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="kula_upper"          data-name="Kula Upper"           style="left:58%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Upper<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="kula_lower"          data-name="Kula Lower"           style="left:58%;top:64%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Lower<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="kihe_north"          data-name="Kīhei North"          style="left:42%;top:72%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei North<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="kihe_south"          data-name="Kīhei South"          style="left:50%;top:80%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei South<span class="zone-dot-risk">Tap to check</span></span></button>
+          <button class="zone-dot" type="button" data-zone="hana"                data-name="Hāna"                 style="left:92%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Hāna<span class="zone-dot-risk">Tap to check</span></span></button>
         </div>
 
         <!-- ── Selected-zone bar ── -->
@@ -1389,6 +1399,7 @@
 
         <!-- ── Map legend ── -->
         <div class="zone-map-legend" aria-hidden="true">
+          <span class="zml-item"><span class="zml-swatch risk-unknown"></span>Unknown — tap to check</span>
           <span class="zml-item"><span class="zml-swatch risk-extreme-fire"></span>Extreme fire</span>
           <span class="zml-item"><span class="zml-swatch risk-high-fire"></span>High fire</span>
           <span class="zml-item"><span class="zml-swatch risk-moderate"></span>Moderate</span>
@@ -2966,16 +2977,51 @@
         return parts.join("&");
       }
 
-      // ── Risk labels keyed by the data-risk attribute on each dot ─
-      var RISK_CLASS = {
-        "Extreme fire": "risk-extreme-fire",
-        "High fire":    "risk-high-fire",
-        "Moderate":     "risk-moderate",
-        "High flood":   "risk-high-flood",
-        "Low":          "risk-low"
-      };
+      // ── Risk derivation from live state ─────────────────
+      // Honest-color rule: dots start gray ("Unknown") and only paint
+      // after the Worker returns state.fire_risk / state.flood_risk.
+      // Only the currently-selected dot shows a color; every other
+      // dot stays neutral because we have no live confirmation of
+      // their current state.
+      var RISK_CLASSES = [
+        "risk-extreme-fire","risk-high-fire","risk-moderate",
+        "risk-high-flood","risk-low"
+      ];
 
-      function setSelectedBar(zoneId) {
+      function deriveRiskFromState(state) {
+        var fire  = (state && state.fire_risk)  || "LOW";
+        var flood = (state && state.flood_risk) || "LOW";
+        if (fire  === "EXTREME")  return { className:"risk-extreme-fire", label:"Extreme fire" };
+        if (flood === "EXTREME")  return { className:"risk-high-flood",   label:"Extreme flood" };
+        if (fire  === "HIGH")     return { className:"risk-high-fire",    label:"High fire" };
+        if (flood === "HIGH")     return { className:"risk-high-flood",   label:"High flood" };
+        if (fire  === "MODERATE" || flood === "MODERATE")
+          return { className:"risk-moderate", label:"Moderate" };
+        return { className:"risk-low", label:"Low" };
+      }
+
+      function clearDotRisk(dot) {
+        for (var i = 0; i < RISK_CLASSES.length; i++) dot.classList.remove(RISK_CLASSES[i]);
+        var r = dot.querySelector(".zone-dot-risk");
+        if (r) r.textContent = "Tap to check";
+      }
+      function resetAllDotRisks() {
+        for (var i = 0; i < dots.length; i++) clearDotRisk(dots[i]);
+      }
+      function applyRiskToDot(zoneId, riskInfo) {
+        var dot = mapWrap.querySelector('.zone-dot[data-zone="' + zoneId + '"]');
+        if (!dot || !riskInfo) return;
+        for (var i = 0; i < RISK_CLASSES.length; i++) dot.classList.remove(RISK_CLASSES[i]);
+        if (riskInfo.className) dot.classList.add(riskInfo.className);
+        var r = dot.querySelector(".zone-dot-risk");
+        if (r && riskInfo.label) r.textContent = riskInfo.label;
+      }
+
+      // ── Selected-zone bar ───────────────────────────────
+      // Two modes: with risk info (post-fetch, painted), or without
+      // (immediately on click, placeholder "—"). Always shows the
+      // zone name so the user sees their selection took effect.
+      function setSelectedBar(zoneId, riskInfo) {
         if (!zoneId) {
           selectedBar.hidden = true;
           return;
@@ -2983,11 +3029,13 @@
         var dot = mapWrap.querySelector('.zone-dot[data-zone="' + zoneId + '"]');
         if (!dot) { selectedBar.hidden = true; return; }
         selectedName.textContent = dot.getAttribute("data-name") || "";
-        var risk = dot.getAttribute("data-risk") || "";
-        selectedRisk.textContent = risk.toUpperCase();
-        // Reset class, then apply the matching risk class.
         selectedRisk.className = "zone-selected-risk";
-        if (RISK_CLASS[risk]) selectedRisk.classList.add(RISK_CLASS[risk]);
+        if (riskInfo && riskInfo.label) {
+          selectedRisk.textContent = riskInfo.label.toUpperCase();
+          if (riskInfo.className) selectedRisk.classList.add(riskInfo.className);
+        } else {
+          selectedRisk.textContent = "—";
+        }
         selectedBar.hidden = false;
       }
 
@@ -3034,6 +3082,16 @@
         }
         var brief = envelope.brief || {};
         if (!brief.headline) { hideBrief(); return; }
+
+        // Live risk color: only paint the dot and the selected-bar
+        // risk badge AFTER the Worker confirms state. Nothing else
+        // changes on the map.
+        var zoneId = (envelope.zone && envelope.zone.zone_id) || null;
+        var riskInfo = deriveRiskFromState(envelope.state);
+        if (zoneId) {
+          applyRiskToDot(zoneId, riskInfo);
+          setSelectedBar(zoneId, riskInfo);
+        }
 
         headlineEl.textContent = brief.headline || "";
         meansEl.textContent    = brief.what_it_means || "";
@@ -3097,7 +3155,12 @@
       }
 
       // ── Selection flow ──────────────────────────────────
+      // Every selection change resets ALL dots back to neutral gray
+      // first. Only after the fetch succeeds does the selected dot
+      // get painted with the live risk color. Stale colors never
+      // linger from a previous selection.
       function selectZone(zoneId) {
+        resetAllDotRisks();
         if (!zoneId) {
           saveZone(null);
           setSelectedDot(null);
@@ -3107,7 +3170,7 @@
         }
         saveZone({ island: "Maui", zone_id: zoneId });
         setSelectedDot(zoneId);
-        setSelectedBar(zoneId);
+        setSelectedBar(zoneId, null); // "—" placeholder until fetch returns
         fetchBrief(zoneId);
       }
 
@@ -3141,15 +3204,18 @@
       }
 
       // ── Restore from localStorage on load ───────────────
+      // Dots start gray. If a saved zone exists, mark it selected
+      // and show the selected-bar with a placeholder, then fetch.
+      // The color only lands after renderBrief() confirms the state.
       try {
+        resetAllDotRisks();
         applyHhToCards(loadHousehold());
         var saved = loadZone();
         if (saved && saved.zone_id) {
-          // Verify the zone still exists in the current dot set.
           var exists = !!mapWrap.querySelector('.zone-dot[data-zone="' + saved.zone_id + '"]');
           if (exists) {
             setSelectedDot(saved.zone_id);
-            setSelectedBar(saved.zone_id);
+            setSelectedBar(saved.zone_id, null);
             fetchBrief(saved.zone_id);
           } else {
             saveZone(null);
