@@ -560,6 +560,7 @@
       "signal.strip.wx_clear": "No active fire weather warnings",
       "signal.strip.wx_redflag": "Red Flag Warning active",
       "signal.strip.wx_watch": "Fire Weather Watch \u2014 NWS Official",
+      "signal.strip.wx_source": "NWS / RAWS terrain",
 
       // ── Status labels (additional) ────────────────────────────
       "status.elevated": "ELEVATED",
@@ -724,9 +725,27 @@
       // Footer
       "footer.follow": "Follow for daily hazard briefs:",
 
+      // ── Map preview card (homepage mini-map section) ──────────
+      "map.preview_title": "Mini Hawai\u02bfi Map",
+      "map.preview_desc": "Visual confirmation of statewide hazard context. Tap anywhere on the map to open interactive mode.",
+      "map.preview_chip": "Map Preview",
+      "map.preview_low_bandwidth": "Low-Bandwidth Mode",
+      "map.preview_static_note": "Static preview \u2014 loads instantly during network outages.",
+      "map.preview_open_cta": "Open Full Map \u2197",
+
+      // ── Region names (for fire summary templates) ─────────────
+      "map.region_hawaii": "Hawai\u02bfi",
+      "map.region_usa": "the USA",
+      "map.radar_note_live": "NEXRAD \xb7 Via Kahu Ola \xb7 ~5 min refresh",
+
       // Language selector
       "lang.label": "Language",
-      "lang.select_aria": "Select language"
+      "lang.select_aria": "Select language",
+
+      // ── Flood source chips (live-map.html tier-1 panel) ──────
+      "map.chip_flood_official": "Official: NWS",
+      "map.chip_flood_context": "Context: PacIOOS",
+      "map.chip_flood_radar": "Radar: NOAA"
     },
 
     // ── VIETNAMESE (Phase 1 — fully usable) ───────────────────
@@ -1272,6 +1291,7 @@
       "signal.strip.wx_clear": "Kh\xf4ng c\xf3 c\u1ea3nh b\u00e1o th\u1eddi ti\u1ebft ch\u00e1y n\xe0o",
       "signal.strip.wx_redflag": "C\u1ea3nh b\u00e1o C\u1edd \u0110\u1ecf \u0111ang ho\u1ea1t \u0111\u1ed9ng",
       "signal.strip.wx_watch": "Theo d\xf5i Th\u1eddi Ti\u1ebft Ch\u00e1y \u2014 NWS Ch\xednh th\u1ee9c",
+      "signal.strip.wx_source": "NWS / RAWS terrain",
 
       // ── Status labels (additional) ────────────────────────────
       // state.elevated not in glossary — using descriptive vi term
@@ -1440,9 +1460,27 @@
       // Footer
       "footer.follow": "Theo d\xf5i \u0111\u1ec3 nh\u1eadn b\u1ea3n tin nguy c\u01a1 h\xe0ng ng\xe0y:",
 
+      // ── Map preview card ──────────────────────────────────────
+      "map.preview_title": "B\u1ea3n \u0111\u1ed3 Thu nh\u1ecf Hawai\u02bfi",
+      "map.preview_desc": "X\xe1c nh\u1eadn tr\u1ef1c quan v\u1ec1 ng\u1eef c\u1ea3nh nguy c\u01a1 to\xe0n ti\u1ec3u bang. Nh\u1ea5n v\xe0o b\u1ea5t k\u1ef3 \u0111\xe2u tr\xean b\u1ea3n \u0111\u1ed3 \u0111\u1ec3 m\u1edf ch\u1ebf \u0111\u1ed9 t\u01b0\u01a1ng t\xe1c.",
+      "map.preview_chip": "Xem tr\u01b0\u1edbc b\u1ea3n \u0111\u1ed3",
+      "map.preview_low_bandwidth": "Ch\u1ebf \u0111\u1ed9 B\u0103ng th\xf4ng Th\u1ea5p",
+      "map.preview_static_note": "Xem tr\u01b0\u1edbc t\u0129nh \u2014 t\u1ea3i ngay l\u1eadp t\u1ee9c khi m\u1ea1ng b\u1ecb ch\u1eadm.",
+      "map.preview_open_cta": "M\u1edf B\u1ea3n \u0111\u1ed3 \u0110\u1ea7y \u0111\u1ee7 \u2197",
+
+      // ── Region names ──────────────────────────────────────────
+      "map.region_hawaii": "Hawai\u02bfi",
+      "map.region_usa": "to\xe0n n\u01b0\u1edbc M\u1ef9",
+      "map.radar_note_live": KEEP_ENGLISH,
+
       // Language selector
       "lang.label": "Ng\xf4n ng\u1eef",
-      "lang.select_aria": "Ch\u1ecdn ng\xf4n ng\u1eef"
+      "lang.select_aria": "Ch\u1ecdn ng\xf4n ng\u1eef",
+
+      // Flood source chips
+      "map.chip_flood_official": "Ch\xednh th\u1ee9c: NWS",
+      "map.chip_flood_context": "Ng\u1eef c\u1ea3nh: PacIOOS",
+      "map.chip_flood_radar": "Radar: NOAA"
     },
 
     // ── HAWAIIAN (Phase 2 — glossary-locked, conservative) ────
@@ -1480,7 +1518,7 @@
       "signal.flood_monitoring": KEEP_ENGLISH,
       "signal.fire_copy_clear": KEEP_ENGLISH,
       "signal.flood_copy_clear": KEEP_ENGLISH,
-      "signal.conditions_unchanged": KEEP_ENGLISH,
+      "signal.conditions_unchanged": "ʻAʻohe loli nā kūlana mai kou kipa hope",
 
       // Status: KEEP ENGLISH
       "status.clear": KEEP_ENGLISH,
@@ -1494,15 +1532,15 @@
 
       // Freshness: safe label translated
       "freshness.updated_recently": "I hou \u02bbia",
-      "freshness.updated_just_now": KEEP_ENGLISH,
-      "freshness.updated_min": KEEP_ENGLISH,
-      "freshness.updated_hr": KEEP_ENGLISH,
-      "freshness.updated_day": KEEP_ENGLISH,
+      "freshness.updated_just_now": "I hou nō",
+      "freshness.updated_min": "I hou ʻia {n} minuke aku nei",
+      "freshness.updated_hr": "I hou ʻia {n} hora aku nei",
+      "freshness.updated_day": "I hou ʻia {n} lā aku nei",
       "freshness.loading": "E kali ana\u2026",
       "freshness.data_may_be_stale": KEEP_ENGLISH,
 
       // Legend
-      "legend.signal": KEEP_ENGLISH,
+      "legend.signal": "Hōʻailona",
       "legend.monitoring": "E n\u0101n\u0101 ana",
       "legend.fire_active": KEEP_ENGLISH,
       "legend.flood_alert": KEEP_ENGLISH,
@@ -1544,6 +1582,11 @@
       "lang.label": "\u02bbolelo",
       "lang.select_aria": "E w\u0101lau i ka \u02bbolelo",
 
+      // Flood source chips
+      "map.chip_flood_official": KEEP_ENGLISH,
+      "map.chip_flood_context": KEEP_ENGLISH,
+      "map.chip_flood_radar": KEEP_ENGLISH,
+
       // ── Map UI chrome (safe) ──────────────────────────────────────
       "map.loading": "E kali ana\u2026",
       "map.loading_ellipsis": "E kali ana\u2026",
@@ -1570,16 +1613,24 @@
       "map.blueprint_footnote": KEEP_ENGLISH,
       "map.mini_map_title": "Palapala \u02bb\u0101ina li\u02bbili\u02bbi",
       "map.mini_map_desc": "Palapala \u02bb\u0101ina li\u02bbili\u02bbi",
+
+      // Map preview section (map.preview_* = the keys used in HTML)
+      "map.preview_title": "Palapala ʻĀina Liʻiliʻi",
+      "map.preview_desc": "Hōʻike ʻana i nā pilikia o ka mokuʻāina. E kaomi ma luna o ka palapala ʻāina e wehe i ke ʻano hana.",
+      "map.preview_chip": "Nānā Mua",
+      "map.preview_low_bandwidth": KEEP_ENGLISH,
+      "map.preview_static_note": KEEP_ENGLISH,
+      "map.preview_open_cta": "Wehe i ka Palapala ʻĀina Piha ↗",
       "map.banner_degraded": "Kumu i pilikia",
       "map.banner_loc_denied": "\u02bb\u0100\u02bbole i \u02bbae \u02bbia ka wahi",
       "map.banner_location": "E ho\u02bbohana ana i ka wahi",
       "map.banner_offline": "Offline",
-      "map.banner_parse_error": KEEP_ENGLISH,
+      "map.banner_parse_error": "Hewa nā ʻikepili",
       "map.layer_smoke": "Ka uahi",
       "map.layer_rain_radar": "Radar ua",
       "map.layer_perimeters": "N\u0101 palena",
       "map.layer_mrms": "MRMS",
-      "map.layer_fire_weather": KEEP_ENGLISH,
+      "map.layer_fire_weather": "Anilā Ahi",
       "map.layer_flood_context": "Ka puni wai",
       "map.layer_landslide": KEEP_ENGLISH,
       "map.layer_local_reports": "N\u0101 h\u014d\u02bbike k\u016bloko",
@@ -1701,7 +1752,7 @@
       "map.s_hurricane_active_n": KEEP_ENGLISH,
       "map.s_hurricane_active_note": KEEP_ENGLISH,
       "map.s_hurricane_none_note": KEEP_ENGLISH,
-      "map.s_landslide_context": KEEP_ENGLISH,
+      "map.s_landslide_context": "Ka puni ʻāina + ua",
       "map.s_landslide_ctx_n": KEEP_ENGLISH,
       "map.s_landslide_avail_note": KEEP_ENGLISH,
       "map.s_landslide_low_risk": KEEP_ENGLISH,
@@ -1743,7 +1794,7 @@
       "map.prev_no_hazards": KEEP_ENGLISH,
       "map.prev_radar_monitor": KEEP_ENGLISH,
       "map.prev_flood_terrain": KEEP_ENGLISH,
-      "map.metric_critical": KEEP_ENGLISH,
+      "map.metric_critical": "Koʻikoʻi",
       "map.metric_detections": "N\u0101 lo\u02bba\u02bba",
       "map.metric_fetched": "Lawe \u02bbia",
       "map.metric_nearest": "Ka ho\u02bbokokoke",
@@ -1824,23 +1875,23 @@
       "map.popup_island_zone": KEEP_ENGLISH,
       "map.popup_risk_level": KEEP_ENGLISH,
       "map.popup_window": KEEP_ENGLISH,
-      "map.flood_off": KEEP_ENGLISH,
-      "map.flood_on": KEEP_ENGLISH,
+      "map.flood_off": "Nā Papa Wai: Pani",
+      "map.flood_on": "Nā Papa Wai: Wehe",
       "map.flood_subnote": KEEP_ENGLISH,
       "map.flood_ctx_note_init": KEEP_ENGLISH,
       "map.smoke_on": "Ka uahi: Wehe",
       "map.smoke_off": "Ka uahi: Pani",
-      "map.smoke_layer_note": KEEP_ENGLISH,
-      "map.weather_on": KEEP_ENGLISH,
-      "map.weather_off": KEEP_ENGLISH,
+      "map.smoke_layer_note": "ʻAʻohe hōʻailona uahi ke nānā ʻana i ka papa.",
+      "map.weather_on": "Anilā Ahi: Wehe",
+      "map.weather_off": "Anilā Ahi: Pani",
       "map.perimeters_on": "N\u0101 palena: Wehe",
       "map.perimeters_off": "N\u0101 palena: Pani",
-      "map.wind_note_init": KEEP_ENGLISH,
+      "map.wind_note_init": "Puni makani + māhu",
       "map.mrms_note_init": KEEP_ENGLISH,
       "map.radar_note_init": KEEP_ENGLISH,
       "map.local_note_init": KEEP_ENGLISH,
       "map.wait_smoke": KEEP_ENGLISH,
-      "map.wait_perim": KEEP_ENGLISH,
+      "map.wait_perim": "E kali ana no ka feed palena hou loa.",
 
       // ── CTAs / nav additions ──────────────────────────────────────
       "cta.open_live_map": "Wehe i ka Palapala \u02bb\u0100ina",
@@ -1865,20 +1916,20 @@
       "footer.follow": "E hahai i n\u0101 h\u014d\u02bbike pilikia o k\u0113l\u0101 me k\u0113ia l\u0101:",
 
       // ── Context / delta / signal additions ───────────────────────
-      "context.fire_weather": KEEP_ENGLISH,
+      "context.fire_weather": "Anilā Ahi",
       "context.flood_none_active": KEEP_ENGLISH,
-      "context.flood_risk": KEEP_ENGLISH,
+      "context.flood_risk": "Pilikia Wai",
       "context.flood_warning_active": KEEP_ENGLISH,
       "context.flood_watch_active": KEEP_ENGLISH,
       "context.nexrad_mrms": KEEP_ENGLISH,
-      "context.none": KEEP_ENGLISH,
-      "context.nws_official": KEEP_ENGLISH,
-      "context.rain_heavy": KEEP_ENGLISH,
-      "context.rain_light": KEEP_ENGLISH,
-      "context.rain_moderate": KEEP_ENGLISH,
+      "context.none": "ʻAʻohe",
+      "context.nws_official": "NWS Kūʻokokōʻa",
+      "context.rain_heavy": "Ua Nui",
+      "context.rain_light": "Ua Liʻiliʻi",
+      "context.rain_moderate": "Ua Mālie",
       "context.rainfall": "Ua",
       "context.wind_high": KEEP_ENGLISH,
-      "context.wind_normal": KEEP_ENGLISH,
+      "context.wind_normal": "Maʻamau",
       "context.wind_red_flag": KEEP_ENGLISH,
       "context.wind_watch": KEEP_ENGLISH,
       "delta.age_hr": KEEP_ENGLISH,
@@ -1901,14 +1952,15 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
-      "signal.strip.fire_clear": KEEP_ENGLISH,
+      "signal.strip.fire_clear": "ʻAʻohe ahi i loaʻa",
       "signal.strip.fire_count": KEEP_ENGLISH,
-      "signal.strip.flood_clear": KEEP_ENGLISH,
+      "signal.strip.flood_clear": "ʻAʻohe maka a me aʻoaia wai",
       "signal.strip.flood_warning_active": KEEP_ENGLISH,
       "signal.strip.flood_watch_active": KEEP_ENGLISH,
-      "signal.strip.wx_clear": KEEP_ENGLISH,
+      "signal.strip.wx_clear": "ʻAʻohe aʻoaia anilā ahi",
       "signal.strip.wx_redflag": KEEP_ENGLISH,
       "signal.strip.wx_watch": KEEP_ENGLISH,
+      "signal.strip.wx_source": KEEP_ENGLISH,
 
       // ── Hero / kupuna: all KEEP ENGLISH (hazard narrative) ────────
       "hero.banner.system_normal": "\u2705 \u02bbA\u02bbohe Pilikia Nui i \u02bbIke \u02bbia",
@@ -1996,7 +2048,10 @@
       "links.maui_ema_desc": "N\u0101 \u02bb\u014dlelo a\u02bbo k\u016bikaw\u0101, a\u02bboaia, a me ka \u02bbike palekana k\u016bloko",
       "system.degraded_chip": KEEP_ENGLISH, "system.note_default": KEEP_ENGLISH,
       "system.note_degraded": KEEP_ENGLISH, "system.note_flood_warning": KEEP_ENGLISH,
-      "system.snapshot_delayed": KEEP_ENGLISH
+      "system.snapshot_delayed": KEEP_ENGLISH,
+      "map.region_hawaii": "Hawaiʻi",
+      "map.region_usa": "ʻAmelika Hui Pū ʻIa",
+      "map.radar_note_live": KEEP_ENGLISH
     },
 
     // ── TAGALOG (Phase 3 — framework, controlled coverage) ────
@@ -3455,8 +3510,16 @@
    * Called automatically. Safe to call again.
    */
   function init() {
-    var saved = safeLs("get", STORAGE_KEY) || DEFAULT_LANG;
-    currentLang = (SUPPORTED.indexOf(saved) !== -1) ? saved : DEFAULT_LANG;
+    var VALID_AUTO = ["en", "vi"];
+    var saved = safeLs("get", STORAGE_KEY);
+    if (saved && VALID_AUTO.indexOf(saved) !== -1) {
+      currentLang = saved;
+    } else if (typeof navigator !== "undefined" && navigator.language &&
+               navigator.language.toLowerCase().indexOf("vi") === 0) {
+      currentLang = "vi";
+    } else {
+      currentLang = "en";
+    }
     var htmlLang = (LOCALES[currentLang] || {})["meta.lang_html"] || currentLang;
     document.documentElement.lang = htmlLang;
     if (document.readyState === "loading") {
