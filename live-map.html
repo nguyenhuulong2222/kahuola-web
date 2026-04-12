@@ -1762,6 +1762,64 @@
         font-size: 17px;
       }
     }
+
+    /* ── Safe Routes + Responder panels (Phase 2.2 additive) ─── */
+    .lm-routes-panel,.lm-responder-panel{
+      position:absolute;
+      bottom:0;left:0;right:0;
+      background:#0d1117;
+      border-top:1px solid #21262d;
+      border-radius:16px 16px 0 0;
+      padding:16px;
+      z-index:100;
+      max-height:60vh;
+      overflow-y:auto;
+    }
+    .lm-panel-header{
+      display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:12px;
+      font-size:14px;font-weight:500;color:#f0f6fc;
+    }
+    .lm-panel-close{background:none;border:none;color:#6e7681;cursor:pointer;font-size:16px}
+    .lm-panel-close:hover{color:#c9d1d9}
+    .lm-panel-body{font-size:13px;color:#c9d1d9;line-height:1.65}
+    .lm-panel-body h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6e7681;margin:12px 0 4px;font-weight:700}
+    .lm-panel-body h4:first-child{margin-top:0}
+    .lm-panel-body ul{margin:0 0 8px;padding-left:18px;color:#8b949e;font-size:12px;line-height:1.6}
+    .lm-panel-body .lm-route-primary{
+      font-size:14px;font-weight:700;color:#f0f6fc;
+      padding:8px 10px;
+      background:rgba(59,130,246,.08);
+      border:1px solid rgba(59,130,246,.25);
+      border-radius:8px;
+      margin-bottom:10px;
+    }
+    .lm-panel-source,.lm-panel-disclaimer{font-size:11px;color:#6e7681;margin-top:8px;line-height:1.5}
+    .lm-panel-loading{font-size:13px;color:#6e7681;font-style:italic}
+    .lm-responder-overlay{
+      position:absolute;inset:0;
+      background:rgba(0,0,0,.7);
+      display:flex;align-items:center;justify-content:center;
+      z-index:200;border-radius:inherit;
+    }
+    .lm-responder-dialog{
+      background:#161b22;border:1px solid #21262d;border-radius:14px;
+      padding:20px;margin:16px;max-width:320px;
+    }
+    .lm-responder-dialog-title{font-size:15px;font-weight:500;color:#f0f6fc;margin:0 0 8px}
+    .lm-responder-dialog-body{font-size:13px;color:#8b949e;line-height:1.6;margin:0 0 14px}
+    .lm-responder-confirm{
+      width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:9px;
+      padding:10px;font-size:13px;font-weight:700;cursor:pointer;
+    }
+    .lm-responder-confirm:hover{background:#1e40af}
+    .lm-resp-stat{
+      display:flex;align-items:center;gap:8px;
+      padding:6px 0;border-bottom:.5px solid #21262d;
+      font-size:13px;color:#c9d1d9;
+    }
+    .lm-resp-stat:last-child{border-bottom:none}
+    .lm-resp-stat-label{font-size:11px;color:#6e7681;font-family:var(--font-mono,monospace);letter-spacing:.04em;min-width:90px;flex-shrink:0}
   </style>
 </head>
 
@@ -1845,6 +1903,12 @@
               <button class="action-btn" id="perimeter-btn-mobile" type="button">Perimeters: On</button>
               <button class="action-btn flood-btn" id="flood-btn-mobile" type="button">Flood Layers: On</button>
               <button class="action-btn wind-btn" id="wind-btn-mobile" type="button">Fire Weather: On</button>
+              <button class="action-btn" id="safeRoutesBtn" type="button" aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M3 12h18M3 6l9-3 9 3M3 18l9 3 9-3"/></svg>Safe Routes
+              </button>
+              <button class="action-btn" id="responderBtn" type="button" aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Responder
+              </button>
               <a class="action-btn" href="/index.html" data-i18n="nav.home">Home</a>
               <a class="action-btn" href="/support.html" data-i18n="nav.support">Support</a>
             </div>
@@ -4323,6 +4387,233 @@
       // Re-render panel accordion content (JS-driven strings)
       renderUnifiedPanels();
     });
+  </script>
+
+  <!-- ── Safe Routes panel ── -->
+  <div class="lm-routes-panel" id="lmRoutesPanel" hidden>
+    <div class="lm-panel-header">
+      <span>Safe Routes</span>
+      <button class="lm-panel-close" id="lmRoutesClose" type="button">✕</button>
+    </div>
+    <div class="lm-panel-body" id="lmRoutesBody">
+      <p class="lm-panel-loading">Select your area on the homepage first.</p>
+    </div>
+    <p class="lm-panel-source">Kahu Ola zone profile — pre-computed, not live traffic</p>
+    <p class="lm-panel-disclaimer">Always follow official evacuation orders from county emergency management.</p>
+  </div>
+
+  <!-- ── Responder disclaimer overlay ── -->
+  <div class="lm-responder-overlay" id="lmResponderOverlay" hidden>
+    <div class="lm-responder-dialog">
+      <p class="lm-responder-dialog-title">Community Responder View</p>
+      <p class="lm-responder-dialog-body">
+        This view provides situational awareness for community responders
+        and CERT volunteers. It is not a dispatch system and does not
+        replace official emergency communications.
+      </p>
+      <button class="lm-responder-confirm" id="lmResponderConfirm" type="button">
+        I understand — show responder view
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Responder panel ── -->
+  <div class="lm-responder-panel" id="lmResponderPanel" hidden>
+    <div class="lm-panel-header">
+      <span>Responder Situational Awareness</span>
+      <button class="lm-panel-close" id="lmResponderClose" type="button">✕</button>
+    </div>
+    <div class="lm-panel-body" id="lmResponderBody">
+      <p class="lm-panel-loading">Loading zone data…</p>
+    </div>
+    <p class="lm-panel-source">Situational awareness only — not a dispatch system</p>
+  </div>
+
+  <!-- ── Safe Routes + Responder JS ── -->
+  <script>
+    (function initMapPanels() {
+      "use strict";
+      var API_BASE = "https://kahuola.org/api/hazards/zone/";
+      var ZONE_KEY = "kahuola_zone";
+
+      var routesBtn   = document.getElementById("safeRoutesBtn");
+      var routesPanel = document.getElementById("lmRoutesPanel");
+      var routesBody  = document.getElementById("lmRoutesBody");
+      var routesClose = document.getElementById("lmRoutesClose");
+
+      var respBtn       = document.getElementById("responderBtn");
+      var respPanel     = document.getElementById("lmResponderPanel");
+      var respBody      = document.getElementById("lmResponderBody");
+      var respClose     = document.getElementById("lmResponderClose");
+      var respOverlay   = document.getElementById("lmResponderOverlay");
+      var respConfirm   = document.getElementById("lmResponderConfirm");
+
+      if (!routesBtn || !routesPanel || !respBtn || !respPanel) return;
+
+      function loadZoneId() {
+        try {
+          var raw = localStorage.getItem(ZONE_KEY);
+          if (!raw) return null;
+          var obj = JSON.parse(raw);
+          return (obj && typeof obj.zone_id === "string") ? obj.zone_id : null;
+        } catch (e) { return null; }
+      }
+
+      function escHtml(s) {
+        return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      }
+
+      // ── Fetch zone data ─────────────────────────────────
+      var zoneCache = {};
+      function fetchZone(zoneId, callback) {
+        if (zoneCache[zoneId]) { callback(null, zoneCache[zoneId]); return; }
+        fetch(API_BASE + encodeURIComponent(zoneId), { cache: "no-store" })
+          .then(function (res) {
+            if (!res.ok) throw new Error("HTTP_" + res.status);
+            return res.json();
+          })
+          .then(function (json) {
+            if (!json || json.ok === false) throw new Error(json && json.error || "bad_response");
+            zoneCache[zoneId] = json;
+            callback(null, json);
+          })
+          .catch(function (err) {
+            callback(err, null);
+          });
+      }
+
+      // ── Safe Routes panel ───────────────────────────────
+      function renderRoutes(data) {
+        var z = data && data.zone;
+        if (!z || !z.evacuation_routes) {
+          routesBody.innerHTML = '<p class="lm-panel-loading">Route data unavailable. Follow official NWS guidance.</p>';
+          return;
+        }
+        var r = z.evacuation_routes;
+        var html = '<div class="lm-route-primary">' + escHtml(r.primary) + '</div>';
+        if (r.avoid_when_flood && r.avoid_when_flood.length > 0) {
+          html += '<h4>Avoid if flooding</h4><ul>';
+          for (var i = 0; i < r.avoid_when_flood.length; i++) html += '<li>' + escHtml(r.avoid_when_flood[i]) + '</li>';
+          html += '</ul>';
+        }
+        if (r.choke_points && r.choke_points.length > 0) {
+          html += '<h4>Watch for bottlenecks</h4><ul>';
+          for (var j = 0; j < r.choke_points.length; j++) html += '<li>' + escHtml(r.choke_points[j]) + '</li>';
+          html += '</ul>';
+        }
+        routesBody.innerHTML = html;
+      }
+
+      function openRoutes() {
+        var zoneId = loadZoneId();
+        if (!zoneId) {
+          routesBody.innerHTML = '<p class="lm-panel-loading">Select your area on the homepage first.</p>';
+          routesPanel.hidden = false;
+          return;
+        }
+        routesBody.innerHTML = '<p class="lm-panel-loading">Loading routes…</p>';
+        routesPanel.hidden = false;
+        fetchZone(zoneId, function (err, data) {
+          if (err) {
+            routesBody.innerHTML = '<p class="lm-panel-loading">Route data unavailable. Follow official NWS guidance.</p>';
+            return;
+          }
+          renderRoutes(data);
+        });
+      }
+
+      routesBtn.addEventListener("click", function () {
+        var open = routesBtn.getAttribute("aria-pressed") === "true";
+        routesBtn.setAttribute("aria-pressed", String(!open));
+        if (open) { routesPanel.hidden = true; }
+        else { respPanel.hidden = true; respBtn.setAttribute("aria-pressed","false"); openRoutes(); }
+      });
+      routesClose.addEventListener("click", function () {
+        routesPanel.hidden = true;
+        routesBtn.setAttribute("aria-pressed", "false");
+      });
+
+      // ── Responder panel ─────────────────────────────────
+      function renderResponder(data) {
+        var z = data && data.zone;
+        var s = data && data.state;
+        if (!z) {
+          respBody.innerHTML = '<p class="lm-panel-loading">Zone data unavailable.</p>';
+          return;
+        }
+        var html = '';
+        html += '<div class="lm-resp-stat"><span class="lm-resp-stat-label">ACCESS ROUTE</span>' + escHtml(z.evacuation_routes && z.evacuation_routes.primary) + '</div>';
+        html += '<div class="lm-resp-stat"><span class="lm-resp-stat-label">TERRAIN</span>' + escHtml(z.terrain_type) + '</div>';
+        html += '<div class="lm-resp-stat"><span class="lm-resp-stat-label">CONDITIONS</span>' +
+          escHtml((s && s.fire_risk || "—") + " fire / " + (s && s.flood_risk || "—") + " flood") + '</div>';
+        html += '<div class="lm-resp-stat"><span class="lm-resp-stat-label">WIND</span>' +
+          (s && s.wind_mph != null ? s.wind_mph + " mph" : "Not available") + '</div>';
+        if (z.historical_signals && z.historical_signals[0]) {
+          html += '<div class="lm-resp-stat"><span class="lm-resp-stat-label">LAST INCIDENT</span>' +
+            escHtml(z.historical_signals[0]) + ' (historical)</div>';
+        }
+        if (z.notable_locations && z.notable_locations.length > 0) {
+          html += '<h4>Notable locations</h4><ul>';
+          for (var k = 0; k < z.notable_locations.length; k++) {
+            var nl = z.notable_locations[k];
+            var icon = nl.type === "school" ? "\uD83C\uDFEB " : nl.type === "medical" ? "\uD83C\uDFE5 " : nl.type === "fire_station" ? "\uD83D\uDE92 " : "";
+            html += '<li>' + icon + escHtml(nl.name) + ' <span style="color:#6e7681;font-size:11px">(' + escHtml(nl.type) + ')</span></li>';
+          }
+          html += '</ul>';
+        }
+        respBody.innerHTML = html;
+      }
+
+      function openResponder() {
+        var zoneId = loadZoneId();
+        if (!zoneId) {
+          respBody.innerHTML = '<p class="lm-panel-loading">Select your area on the homepage first.</p>';
+          respPanel.hidden = false;
+          return;
+        }
+        respBody.innerHTML = '<p class="lm-panel-loading">Loading zone data…</p>';
+        respPanel.hidden = false;
+        fetchZone(zoneId, function (err, data) {
+          if (err) {
+            respBody.innerHTML = '<p class="lm-panel-loading">Zone data unavailable.</p>';
+            return;
+          }
+          renderResponder(data);
+        });
+      }
+
+      respBtn.addEventListener("click", function () {
+        var open = respBtn.getAttribute("aria-pressed") === "true";
+        if (open) {
+          respPanel.hidden = true;
+          respBtn.setAttribute("aria-pressed", "false");
+          return;
+        }
+        // Check sessionStorage for disclaimer confirmation
+        var confirmed = false;
+        try { confirmed = sessionStorage.getItem("kahuola_responder_confirmed") === "1"; } catch (e) { /* noop */ }
+        if (!confirmed) {
+          respOverlay.hidden = false;
+        } else {
+          routesPanel.hidden = true; routesBtn.setAttribute("aria-pressed","false");
+          respBtn.setAttribute("aria-pressed", "true");
+          openResponder();
+        }
+      });
+
+      respConfirm.addEventListener("click", function () {
+        try { sessionStorage.setItem("kahuola_responder_confirmed", "1"); } catch (e) { /* noop */ }
+        respOverlay.hidden = true;
+        routesPanel.hidden = true; routesBtn.setAttribute("aria-pressed","false");
+        respBtn.setAttribute("aria-pressed", "true");
+        openResponder();
+      });
+
+      respClose.addEventListener("click", function () {
+        respPanel.hidden = true;
+        respBtn.setAttribute("aria-pressed", "false");
+      });
+    })();
   </script>
 
 </body>
