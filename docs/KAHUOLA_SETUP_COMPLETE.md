@@ -74,6 +74,17 @@
 
 ---
 
+## n8n Pipeline
+
+| Change | Details |
+|---|---|
+| Node 5 (Gemini AI Generate Post) | Replaced with **Kahu Ola Brief (Gemma 4)** |
+| Endpoint | `POST https://kahuola.org/api/brief` |
+| Auth | `Bearer MEDIA_BRIEF_WEBHOOK_TOKEN` |
+| Import | `kahuola_n8n_workflow.json` in repo root |
+
+---
+
 ## Daily Workflow (from now on)
 
 ```
