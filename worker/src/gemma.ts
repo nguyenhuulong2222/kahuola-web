@@ -175,7 +175,7 @@ function buildUserPrompt(input: GenerateBriefInput): string {
   };
   const langName = LANG_NAMES[input.lang] || "English";
   if (input.lang !== "en") {
-    lines.push(`Language: ${langName}. Write the entire brief in ${langName}.`);
+    lines.push(`Language: ${langName}. Write ALL fields (headline, what_it_means, what_to_do, household_note) entirely in ${langName}. No English in any field.`);
     if (input.lang === "haw") {
       lines.push(`Use warm ʻŌlelo Hawaiʻi. Prioritize cultural accuracy.`);
     }
@@ -209,21 +209,27 @@ function buildUserPrompt(input: GenerateBriefInput): string {
 
   lines.push(``);
 
+  const langReminder = input.lang !== "en"
+    ? ` Write every output field (headline, what_it_means, what_to_do, household_note) entirely in ${langName} — no English.`
+    : "";
+
   if (isCalm) {
     lines.push(
       `Task: conditions are CLEAR. Write a warm, genuinely positive brief (3–5 sentences) in Hawaiian civic voice. Celebrate the calm. ` +
       `Mention the zone by name. If kupuna or keiki are present, suggest using this calm time to review household plans. ` +
       `Use Hawaiian words naturally (E mālama pono, aloha, ʻāina). ` +
       `Do NOT mention terrain dangers, flood drainage, historical fires, evacuation routes, or what COULD happen. ` +
-      `Only describe what IS happening: calm, low risk, no alerts. ` +
-      `If the input is insufficient, respond with: ${FALLBACK_MARKER}`
+      `Only describe what IS happening: calm, low risk, no alerts.` +
+      langReminder +
+      ` If the input is insufficient, respond with: ${FALLBACK_MARKER}`
     );
   } else {
     lines.push(
       `Task: write a short civic-tone brief (3–5 sentences) explaining what the current conditions mean for this household in this zone. ` +
       `Ground every statement in the facts above. Do not invent road closures, school closures, evacuation orders, timelines, or statistics. ` +
-      `Do not change the hazard levels. Do not predict the future or claim certainty beyond what the facts support. ` +
-      `If the input is insufficient, respond with: ${FALLBACK_MARKER}`
+      `Do not change the hazard levels. Do not predict the future or claim certainty beyond what the facts support.` +
+      langReminder +
+      ` If the input is insufficient, respond with: ${FALLBACK_MARKER}`
     );
   }
 
