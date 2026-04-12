@@ -169,6 +169,19 @@ function buildUserPrompt(input: GenerateBriefInput): string {
 
   const lines: string[] = [];
 
+  const LANG_NAMES: Record<string, string> = {
+    en: "English", vi: "Vietnamese", tl: "Tagalog",
+    ilo: "Ilocano", haw: "ʻŌlelo Hawaiʻi", ja: "Japanese",
+  };
+  const langName = LANG_NAMES[input.lang] || "English";
+  if (input.lang !== "en") {
+    lines.push(`Language: ${langName}. Write the entire brief in ${langName}.`);
+    if (input.lang === "haw") {
+      lines.push(`Use warm ʻŌlelo Hawaiʻi. Prioritize cultural accuracy.`);
+    }
+    lines.push(``);
+  }
+
   lines.push(`Zone: ${input.zoneName} (id: ${input.zoneId}).`);
 
   // When conditions are CLEAR, do NOT give the model terrain, drainage,

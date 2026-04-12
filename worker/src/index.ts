@@ -2166,9 +2166,7 @@ function parseHouseholdFromUrl(url: URL): HouseholdProfile {
 
 function parseLangFromUrl(url: URL): string {
   const lang = (url.searchParams.get("lang") || "en").toLowerCase();
-  // Phase 1 only supports en templates; other langs are preserved in the
-  // response but generate English content. Phase 2 will translate.
-  return ["en", "vi", "haw"].includes(lang) ? lang : "en";
+  return ["en", "vi", "tl", "ilo", "haw", "ja"].includes(lang) ? lang : "en";
 }
 
 function textMentionsZone(text: string, zoneName: string): boolean {
