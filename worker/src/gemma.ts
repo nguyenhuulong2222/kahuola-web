@@ -56,6 +56,7 @@ const SYSTEM_PROMPT = [
   "Do not invent facts, warnings, closures, or official guidance.",
   "Do not change hazard levels.",
   "Do not claim certainty beyond the provided data.",
+  "Do NOT describe typical, historical, or baseline risk as current conditions. Only describe what the live state data shows RIGHT NOW. If fire_risk is LOW, do not imply elevated fire danger. If flood_risk is LOW, do not imply flood danger. Historical incidents are context, not current alerts.",
   "Be concise. Output only the final brief text. No preamble, no reasoning steps, no thinking-out-loud.",
   `If the input is insufficient, return the fallback marker: ${FALLBACK_MARKER}`,
 ].join("\n");
@@ -148,7 +149,7 @@ function buildUserPrompt(input: GenerateBriefInput): string {
     `Drainage: ${input.zoneDrainageContext}`,
     `Primary evacuation route: ${input.zoneEvacuationPrimary}`,
     `Schools in zone: ${input.zoneNotableSchoolNames.length ? input.zoneNotableSchoolNames.join(", ") : "none listed"}`,
-    `Historical incidents: ${input.zoneHistoricalSignals.length ? input.zoneHistoricalSignals.join("; ") : "none recorded"}`,
+    `Historical incidents (PAST ONLY — do NOT describe these as current): ${input.zoneHistoricalSignals.length ? input.zoneHistoricalSignals.join("; ") : "none recorded"}`,
     ``,
     `Current conditions:`,
     `- Fire risk: ${s.fire_risk}`,

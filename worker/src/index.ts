@@ -2171,10 +2171,12 @@ async function buildZoneDynamicState(
   const sources: string[] = ["Kahu Ola zone profile"];
   const notes: string[] = [];
 
-  // Start from the zone's static baseline — this is the honest default
-  // when we have no live signal to contradict it.
-  let fire_risk: RiskLevel = zone.typical_fire_risk;
-  let flood_risk: RiskLevel = zone.typical_flood_risk;
+  // Start from LOW — the honest default when no live signal says otherwise.
+  // typical_fire_risk / typical_flood_risk stay in the zone profile for
+  // context, but NEVER surface as current state. Only live NWS/FIRMS
+  // signals can escalate above LOW.
+  let fire_risk: RiskLevel = "LOW";
+  let flood_risk: RiskLevel = "LOW";
   const nws_alerts: string[] = [];
 
   const upstream = await fetchNwsAlerts(cors);
@@ -2212,7 +2214,7 @@ async function buildZoneDynamicState(
     }
   } else {
     notes.push(
-      `NWS alerts endpoint unavailable (${upstream && upstream.error ? upstream.error : "unknown"}); using zone baseline only.`,
+      `NWS alerts endpoint unavailable (${upstream && upstream.error ? upstream.error : "unknown"}); risk levels reflect absence of confirmed alerts only.`,
     );
   }
 
