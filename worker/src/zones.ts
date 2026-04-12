@@ -1,5 +1,5 @@
 /**
- * Kahu Ola — Zone profiles (Maui V1, 15 zones)
+ * Kahu Ola — Zone profiles (Hawaiʻi statewide, 31 zones)
  *
  * Static terrain + civic context for each zone. These profiles are the
  * deterministic base layer for zone briefs: they never change at runtime,
@@ -618,10 +618,362 @@ export const MAUI_ZONES: ZoneProfile[] = [
   }
 ];
 
+export const HAWAII_ZONES: ZoneProfile[] = [
+  {
+    zone_id: "hilo",
+    zone_name: "Hilo",
+    island: "Hawaii",
+    terrain_type: "Windward coastal urban — wettest city in the US, direct Hilo Bay exposure",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "HIGH",
+    drainage_context: "Wailuku River and Wailoa River drain directly through town. Flash flood response can be under 30 minutes after heavy rain.",
+    evacuation_constraints: ["Wailuku River bridge closure during high water", "Hilo Bay tsunami inundation zone", "Single Mamalahoa Hwy corridor inland"],
+    evacuation_routes: {
+      primary: "Mamalahoa Highway (Route 11 or 19) west toward Volcano or north toward Waimea",
+      avoid_when_flood: ["Wailuku River crossings", "Hilo Bay front street", "Kamehameha Ave low points"],
+      choke_points: ["Wailuku River bridge (Route 19)", "Bayfront Hwy / Kamehameha Ave junction"],
+    },
+    notable_locations: [
+      { name: "Hilo High School", type: "school" },
+      { name: "Waiakea High School", type: "school" },
+      { name: "Hilo Medical Center", type: "medical" },
+      { name: "Hilo Fire Station", type: "fire_station" },
+    ],
+    historical_signals: ["1960 Hilo tsunami — 61 fatalities", "Recurring Wailuku River floods", "Frequent flash flood warnings"],
+    zone_notes: ["Tsunami inundation zone — know your evacuation route", "Rainfall can exceed 200 inches/year — fast stream response"],
+  },
+  {
+    zone_id: "puna",
+    zone_name: "Puna District",
+    island: "Hawaii",
+    terrain_type: "Lower East Rift Zone — active lava field, geothermal activity, isolated communities",
+    typical_fire_risk: "MODERATE",
+    typical_flood_risk: "MODERATE",
+    drainage_context: "Porous lava substrate limits surface flooding but volcanic gases and lava flow are primary hazards.",
+    evacuation_constraints: ["Highway 130 is sole paved evacuation route — was cut by 2018 lava", "Multiple communities on dead-end roads", "SO2 and volcanic gas hazard"],
+    evacuation_routes: {
+      primary: "Highway 130 north toward Keaau and Hilo",
+      avoid_when_flood: ["Low-lying areas near Wailuku River tributaries"],
+      choke_points: ["Highway 130 / Keaau junction", "Pahoa town center"],
+    },
+    notable_locations: [
+      { name: "Pahoa High and Elementary School", type: "school" },
+      { name: "Pahoa Transfer Station shelter", type: "shelter" },
+    ],
+    historical_signals: ["2018 Lower East Rift Zone eruption — destroyed 700+ homes", "Ongoing Kilauea volcanic activity"],
+    zone_notes: ["Lava flow hazard zone — know your lava zone (1-9)", "SO2 advisory common — sensitive groups should monitor air quality"],
+  },
+  {
+    zone_id: "kona",
+    zone_name: "Kailua-Kona",
+    island: "Hawaii",
+    terrain_type: "Leeward volcanic coast — dry, steep lava slopes to ocean",
+    typical_fire_risk: "HIGH",
+    typical_flood_risk: "LOW",
+    drainage_context: "Occasional flash floods in gulches after rare heavy rain. Primary hazard is fire and lava.",
+    evacuation_constraints: ["Queen Kaʻahumanu Highway (Route 19) is primary corridor", "Steep lava terrain limits off-road options"],
+    evacuation_routes: {
+      primary: "Queen Kaʻahumanu Highway (Route 19) north toward Waikoloa or south toward Captain Cook",
+      avoid_when_flood: ["Ali'i Drive low points near Kailua Bay"],
+      choke_points: ["Palani Road / Queen Kaʻahumanu junction", "Kailua town center"],
+    },
+    notable_locations: [
+      { name: "Konawaena High School", type: "school" },
+      { name: "Kona Community Hospital", type: "medical" },
+      { name: "Kailua-Kona Fire Station", type: "fire_station" },
+    ],
+    historical_signals: ["Periodic brush fires on dry lava fields", "Kona storms bring rare but intense rainfall"],
+    zone_notes: ["Driest side of Hawaii Island — fire risk elevated during Kona wind events", "Lava tube network under the town"],
+  },
+  {
+    zone_id: "kohala",
+    zone_name: "North Kohala",
+    island: "Hawaii",
+    terrain_type: "Remote leeward peninsula — dry ranching land, limited road access",
+    typical_fire_risk: "HIGH",
+    typical_flood_risk: "LOW",
+    drainage_context: "Steep gulches on windward side can flood. Leeward side very dry.",
+    evacuation_constraints: ["Route 270 is sole road — no alternate route", "Extreme isolation"],
+    evacuation_routes: {
+      primary: "Route 270 south toward Kawaihae and Queen Kaʻahumanu Highway",
+      avoid_when_flood: ["Pololu Valley access road"],
+      choke_points: ["Kapaau town", "Route 270 / Route 19 junction at Kawaihae"],
+    },
+    notable_locations: [
+      { name: "Kohala High School", type: "school" },
+    ],
+    historical_signals: ["Dry grass fires during drought years"],
+    zone_notes: ["Most isolated zone on Hawaii Island — self-sufficiency critical", "Limited emergency services response time"],
+  },
+  {
+    zone_id: "waimea_hi",
+    zone_name: "Waimea (Kamuela)",
+    island: "Hawaii",
+    terrain_type: "Upcountry saddle — high elevation cattle ranch land between Kohala and Mauna Kea",
+    typical_fire_risk: "MODERATE",
+    typical_flood_risk: "MODERATE",
+    drainage_context: "Elevation brings cool wet weather. Flash floods in Waimea town center during heavy rain.",
+    evacuation_constraints: ["Multiple highway access points", "Fog and poor visibility common"],
+    evacuation_routes: {
+      primary: "Route 19 east toward Hilo or west toward Kona",
+      avoid_when_flood: ["Waimea town center low areas"],
+      choke_points: ["Route 19 / Route 190 junction"],
+    },
+    notable_locations: [
+      { name: "Waimea Middle School", type: "school" },
+      { name: "North Hawaii Community Hospital", type: "medical" },
+    ],
+    historical_signals: ["Flash flooding in town center during Kona Low events"],
+    zone_notes: ["High elevation — temperature drops and fog can affect driving conditions rapidly"],
+  },
+  {
+    zone_id: "volcano_hi",
+    zone_name: "Volcano Village",
+    island: "Hawaii",
+    terrain_type: "Kilauea summit rim — active volcanic area, high elevation rainforest",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "LOW",
+    drainage_context: "High rainfall but volcanic terrain. Primary hazard is volcanic gas (SO2, vog) and lava.",
+    evacuation_constraints: ["Route 11 sole exit", "Volcanic gas can make evacuation hazardous"],
+    evacuation_routes: {
+      primary: "Route 11 north toward Hilo or south toward Naalehu",
+      avoid_when_flood: ["Chain of Craters Road (may be closed)"],
+      choke_points: ["Park entrance / Route 11 junction"],
+    },
+    notable_locations: [
+      { name: "Volcano School of Arts and Sciences", type: "school" },
+    ],
+    historical_signals: ["2018 Kilauea summit collapse — 6.9 earthquake", "Ongoing volcanic activity at Halemaumau"],
+    zone_notes: ["Vog and SO2 advisory — sensitive groups monitor air quality daily", "Inside Hawaii Volcanoes National Park boundary"],
+  },
+];
+
+export const OAHU_ZONES: ZoneProfile[] = [
+  {
+    zone_id: "honolulu",
+    zone_name: "Honolulu",
+    island: "Oahu",
+    terrain_type: "Urban coastal — state capital, high density, sea level to steep Ko'olau slopes",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "MODERATE",
+    drainage_context: "Nuuanu Stream and Manoa Stream flood regularly. Urban runoff concentrates quickly.",
+    evacuation_constraints: ["H-1 freeway congestion", "Tunnel closures during flooding (Pali, Likelike)", "High population density"],
+    evacuation_routes: {
+      primary: "H-1 Freeway west toward Kapolei or H-3 toward Kaneohe",
+      avoid_when_flood: ["Nuuanu Avenue low points", "Manoa Valley road", "Palolo Valley road"],
+      choke_points: ["H-1 / Pali Highway junction", "Downtown Honolulu grid"],
+    },
+    notable_locations: [
+      { name: "Kaiser High School", type: "school" },
+      { name: "Queen's Medical Center", type: "medical" },
+      { name: "Honolulu Fire Department HQ", type: "fire_station" },
+    ],
+    historical_signals: ["Recurring Nuuanu Stream flooding", "2004 Manoa flash flood"],
+    zone_notes: ["State capital — traffic bottlenecks during emergencies", "Tsunami evacuation zones A-E — know your zone"],
+  },
+  {
+    zone_id: "kailua_oahu",
+    zone_name: "Kailua",
+    island: "Oahu",
+    terrain_type: "Windward coastal — Ko'olau mountain runoff, Kailua Bay, low-lying areas",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "HIGH",
+    drainage_context: "Kailu Stream and Kaelepulu Stream flood frequently. Low-lying areas near beach fill quickly.",
+    evacuation_constraints: ["Pali Highway or Likelike Highway to cross Ko'olau — both can close", "Single coastal road"],
+    evacuation_routes: {
+      primary: "Pali Highway (Route 61) west toward Honolulu",
+      avoid_when_flood: ["Kailua Road low sections", "Oneawa Street flooding areas"],
+      choke_points: ["Pali Highway / Kailua Road junction", "Castle Junction (Routes 61/72)"],
+    },
+    notable_locations: [
+      { name: "Kailua High School", type: "school" },
+      { name: "Castle Medical Center", type: "medical" },
+    ],
+    historical_signals: ["Frequent flash flood warnings", "2021 Kailua flooding event"],
+    zone_notes: ["Windward side — rainfall can be intense and rapid", "Beach communities in tsunami inundation zone"],
+  },
+  {
+    zone_id: "kaneohe",
+    zone_name: "Kāneʻohe",
+    island: "Oahu",
+    terrain_type: "Windward valley — Ko'olau slopes, Kaneohe Bay, wettest area on Oahu",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "HIGH",
+    drainage_context: "Multiple streams drain from Ko'olau directly into town. Kaneohe Bay flooding risk during heavy rain.",
+    evacuation_constraints: ["Ko'olau crossing limited to Pali or Likelike Highway", "H-3 Freeway may close"],
+    evacuation_routes: {
+      primary: "H-3 Freeway or Likelike Highway (Route 63) toward Honolulu",
+      avoid_when_flood: ["Kamehameha Highway low sections near Bay", "Valley roads"],
+      choke_points: ["H-3 / Likelike interchange", "Kaneohe town center"],
+    },
+    notable_locations: [
+      { name: "Kaneohe Elementary School", type: "school" },
+      { name: "Windward Community College shelter", type: "shelter" },
+    ],
+    historical_signals: ["Recurring flash floods — highest rainfall on Oahu", "2021 Ko'olau flooding"],
+    zone_notes: ["Marine Corps Base Hawaii nearby — may affect traffic during alerts"],
+  },
+  {
+    zone_id: "pearl_city",
+    zone_name: "Pearl City",
+    island: "Oahu",
+    terrain_type: "Central urban — Pearl Harbor adjacent, H-1 corridor, moderate elevation",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "MODERATE",
+    drainage_context: "Pearl Harbor watershed. Urban drainage can back up during heavy rain.",
+    evacuation_constraints: ["H-1 and H-2 freeway access", "Pearl Harbor military restricted areas"],
+    evacuation_routes: {
+      primary: "H-1 Freeway east toward Honolulu or west toward Kapolei",
+      avoid_when_flood: ["Low-lying areas near Pearl Harbor"],
+      choke_points: ["H-1 / H-2 interchange", "Kamehameha Highway / H-1 ramps"],
+    },
+    notable_locations: [
+      { name: "Pearl City High School", type: "school" },
+      { name: "Pali Momi Medical Center", type: "medical" },
+    ],
+    historical_signals: ["Periodic urban flooding during Kona storms"],
+    zone_notes: ["Pearl Harbor federal security zone may affect evacuation routing"],
+  },
+  {
+    zone_id: "waianae",
+    zone_name: "Waiʻanae Coast",
+    island: "Oahu",
+    terrain_type: "Leeward coastal — dry, isolated coast backed by Waianae Range",
+    typical_fire_risk: "HIGH",
+    typical_flood_risk: "LOW",
+    drainage_context: "Rare but intense rain events can cause flash floods in gulches.",
+    evacuation_constraints: ["Farrington Highway (Route 93) sole road — no alternate", "Extreme isolation from rest of Oahu"],
+    evacuation_routes: {
+      primary: "Farrington Highway (Route 93) east toward Kapolei and H-1",
+      avoid_when_flood: ["Waianae Valley gulch crossings"],
+      choke_points: ["Kapolei / Farrington Highway junction", "Makaha Valley Road"],
+    },
+    notable_locations: [
+      { name: "Waianae High School", type: "school" },
+      { name: "Waianae Coast Comprehensive Health Center", type: "medical" },
+    ],
+    historical_signals: ["Dry grass fires on leeward slopes", "Isolation during road closures"],
+    zone_notes: ["Most isolated community on Oahu — self-sufficiency important", "Fire risk highest during summer drought"],
+  },
+  {
+    zone_id: "north_shore_oahu",
+    zone_name: "North Shore",
+    island: "Oahu",
+    terrain_type: "Rural north coast — agricultural, surf beaches, Ko'olau foothills",
+    typical_fire_risk: "MODERATE",
+    typical_flood_risk: "MODERATE",
+    drainage_context: "Anahulu River and agricultural drainage. Flash floods in valley areas.",
+    evacuation_constraints: ["Kamehameha Highway sole coastal road", "Limited interior routes"],
+    evacuation_routes: {
+      primary: "Kamehameha Highway (Route 83) east toward Kaneohe or south via Route 99 toward Wahiawa",
+      avoid_when_flood: ["Haleiwa bridge", "Waimea Bay area during high surf"],
+      choke_points: ["Haleiwa town", "Weed Junction (Routes 83/99)"],
+    },
+    notable_locations: [
+      { name: "Kahuku High and Intermediate School", type: "school" },
+    ],
+    historical_signals: ["Occasional flash floods in valley areas", "High surf closures affecting evacuation"],
+    zone_notes: ["High surf season (Nov-Mar) can affect coastal road access"],
+  },
+];
+
+export const KAUAI_ZONES: ZoneProfile[] = [
+  {
+    zone_id: "lihue",
+    zone_name: "Līhuʻe",
+    island: "Kauai",
+    terrain_type: "East coast urban center — county seat, Nawiliwili Harbor, low elevation",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "HIGH",
+    drainage_context: "Huleia Stream and Nawiliwili watershed. Airport and harbor in flood-prone area.",
+    evacuation_constraints: ["Kaumuali'i Highway and Kuhio Highway primary routes", "Airport may close during flooding"],
+    evacuation_routes: {
+      primary: "Kaumuali'i Highway (Route 50) west toward Koloa or Kuhio Highway (Route 56) north toward Kapaa",
+      avoid_when_flood: ["Nawiliwili Harbor area", "Huleia Stream crossings"],
+      choke_points: ["Lihue shopping center corridor", "Routes 50/56 junction"],
+    },
+    notable_locations: [
+      { name: "Kauai High School", type: "school" },
+      { name: "Wilcox Medical Center", type: "medical" },
+      { name: "Lihue Fire Station", type: "fire_station" },
+    ],
+    historical_signals: ["2018 flooding from 50-inch rainfall event", "Hurricane Iniki 1992"],
+    zone_notes: ["County seat — emergency operations center here", "2018 set national 24-hour rainfall record nearby"],
+  },
+  {
+    zone_id: "hanalei",
+    zone_name: "Hanalei",
+    island: "Kauai",
+    terrain_type: "Remote north coast — Na Pali cliffs, Hanalei Bay, isolated valley communities",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "EXTREME",
+    drainage_context: "Hanalei River and multiple north shore streams. Wettest area of Kauai. Flash floods close Kuhio Highway regularly.",
+    evacuation_constraints: ["Kuhio Highway (Route 56) sole road — closes during flooding", "North of Hanalei completely isolated when bridge closes", "No alternate route"],
+    evacuation_routes: {
+      primary: "Kuhio Highway (Route 56) south toward Princeville and Kapaa",
+      avoid_when_flood: ["All Hanalei Valley stream crossings", "One-lane bridges north of Hanalei"],
+      choke_points: ["Hanalei Bridge (one lane)", "Wainiha and Haena area bridges"],
+    },
+    notable_locations: [
+      { name: "Hanalei Colony School", type: "school" },
+    ],
+    historical_signals: ["2018 catastrophic flooding — 200+ residents airlifted", "Recurring Kuhio Highway closures from flooding"],
+    zone_notes: ["Most flood-prone community in Hawaii — road closures are routine", "Communities past Hanalei Bridge can be isolated for days"],
+  },
+  {
+    zone_id: "poipu",
+    zone_name: "Poʻipū",
+    island: "Kauai",
+    terrain_type: "South shore resort coast — leeward, sunny, low tsunami exposure",
+    typical_fire_risk: "MODERATE",
+    typical_flood_risk: "LOW",
+    drainage_context: "South shore dry conditions. Sporadic flash floods after Kona storms.",
+    evacuation_constraints: ["Poipu Road sole access", "Resort density creates traffic during emergencies"],
+    evacuation_routes: {
+      primary: "Poipu Road north to Koloa, then Kaumuali'i Highway (Route 50) west",
+      avoid_when_flood: ["Waiohai Beach area low points"],
+      choke_points: ["Koloa town center", "Route 50 / Koloa Road junction"],
+    },
+    notable_locations: [
+      { name: "Koloa Elementary School", type: "school" },
+    ],
+    historical_signals: ["Hurricane Iniki 1992 — direct hit on south shore", "Periodic tsunami advisory"],
+    zone_notes: ["High visitor population — evacuation messaging in multiple languages important"],
+  },
+  {
+    zone_id: "kapaa",
+    zone_name: "Kapaʻa",
+    island: "Kauai",
+    terrain_type: "East coast town — largest town on Kauai, Wailua River delta",
+    typical_fire_risk: "LOW",
+    typical_flood_risk: "HIGH",
+    drainage_context: "Wailua River is major flooding source. Town sits in flood-prone lowlands.",
+    evacuation_constraints: ["Kuhio Highway (Route 56) through town — congests quickly", "Wailua River bridge critical link"],
+    evacuation_routes: {
+      primary: "Kuhio Highway (Route 56) north toward Hanalei or south toward Lihue",
+      avoid_when_flood: ["Wailua River bridge if flooding", "Kapaa town center low areas"],
+      choke_points: ["Wailua River bridge", "Kapaa town bypass road"],
+    },
+    notable_locations: [
+      { name: "Kapaa High School", type: "school" },
+      { name: "Samuel Mahelona Medical Center", type: "medical" },
+    ],
+    historical_signals: ["Recurring Wailua River flooding", "2018 flooding event"],
+    zone_notes: ["Largest town on Kauai — traffic bottlenecks during emergencies"],
+  },
+];
+
+const ALL_ZONES: ZoneProfile[] = [
+  ...MAUI_ZONES,
+  ...HAWAII_ZONES,
+  ...OAHU_ZONES,
+  ...KAUAI_ZONES,
+];
+
 export function getZoneById(zoneId: string): ZoneProfile | undefined {
-  return MAUI_ZONES.find((z) => z.zone_id === zoneId);
+  return ALL_ZONES.find((z) => z.zone_id === zoneId);
 }
 
 export function listZoneIds(): string[] {
-  return MAUI_ZONES.map((z) => z.zone_id);
+  return ALL_ZONES.map((z) => z.zone_id);
 }
