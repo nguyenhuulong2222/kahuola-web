@@ -75,11 +75,37 @@
 
     [hidden] { display: none !important; }
 
-    /* Mobile app WebView (?mobile=1): hide bottom sheet overlays so the
-       MapLibre canvas can fill the full viewport. Native app provides
-       its own navigation chrome. */
+    /* Mobile app WebView (?mobile=1): collapse the bottom sheet to just
+       the drag handle so the MapLibre canvas gets the full viewport.
+       Tapping the handle (existing toggleSheet wiring) expands it to
+       ~50vh, revealing the full panel and all controls. */
     .mobile-app #mobile-sheet,
-    .mobile-app .sheet,
+    .mobile-app .sheet {
+      display: block !important;
+      height: 40px !important;
+      overflow: hidden !important;
+      pointer-events: none !important;
+      transition: height 0.28s ease !important;
+      padding: 0 !important;
+    }
+    .mobile-app .sheet .sheet-card {
+      pointer-events: auto;
+    }
+    .mobile-app .sheet .sheet-topbar {
+      padding: 6px 10px !important;
+      border-radius: 16px 16px 0 0 !important;
+    }
+    .mobile-app .sheet .sheet-handle-wrap {
+      padding: 4px 0 !important;
+    }
+    /* Collapsed: hide quick-action buttons, keep only the drag handle. */
+    .mobile-app .sheet:not(.open) .sheet-quick-actions { display: none !important; }
+    /* Expanded: restore the sheet so the full panel is visible. */
+    .mobile-app .sheet.open {
+      height: 50vh !important;
+      overflow: auto !important;
+    }
+    .mobile-app .sheet.open .sheet-quick-actions { display: flex !important; }
     .mobile-app .hazard-detail-sheet { display: none !important; }
 
     body {
@@ -4217,7 +4243,7 @@
       const st = getState(key);
       openHazardDetail(detailConfig(st));
     }
-    function setSheetOpen(open) { if (IS_MOBILE_APP) return; if (window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? (_t("map.hide_details") || "Hide Details") : (_t("map.map_details") || "Map Details"); setTimeout(safeMapResize, 280); }
+    function setSheetOpen(open) { if (!IS_MOBILE_APP && window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? (_t("map.hide_details") || "Hide Details") : (_t("map.map_details") || "Map Details"); setTimeout(safeMapResize, 280); }
     function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
     bindButtons();
