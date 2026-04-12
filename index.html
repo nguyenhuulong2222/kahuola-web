@@ -981,7 +981,7 @@
     .gs-disclaimer{font-size:12px;color:var(--fg-dim);opacity:.55;text-align:center;line-height:1.65;max-width:580px;margin:0 auto}
     .gs-disclaimer a{color:var(--accent);text-decoration:none}
 
-    /* ── Local zone brief (Phase 2 homepage integration) ─── */
+    /* ══ Local zone brief — map-first UI (Phase 2.1) ══════ */
     .zone-brief-section{margin:0 0 20px}
     .zone-brief-card{
       padding:22px 22px 20px;
@@ -999,83 +999,207 @@
       margin:0;font-size:19px;line-height:1.2;
       letter-spacing:-.01em;font-weight:800;color:var(--text);
     }
-    .zone-selector{
-      display:grid;
-      grid-template-columns:1fr 1fr auto;
-      gap:10px;
-      align-items:end;
+
+    /* ── Interactive Maui map ───────────────────────────── */
+    .zone-map-wrap{
+      position:relative;
+      width:100%;
+      aspect-ratio:10/7;
+      max-width:720px;
+      margin:4px auto 0;
+      border-radius:var(--radius-md);
+      background:rgba(255,255,255,.02);
+      border:1px solid var(--line);
+      overflow:hidden;
     }
-    @media(max-width:600px){
-      .zone-selector{grid-template-columns:1fr}
+    .zone-map-svg{
+      position:absolute;inset:0;
+      width:100%;height:100%;
+      display:block;
+      pointer-events:none;
     }
-    .zone-selector-row{display:flex;flex-direction:column;gap:6px;min-width:0}
-    .zone-label{
-      font-family:var(--mono);font-size:10px;letter-spacing:.1em;
-      color:var(--muted);text-transform:uppercase;font-weight:700;
+    .zone-map-svg .maui-fill{fill:rgba(77,168,255,.07);stroke:rgba(77,168,255,.28);stroke-width:.4}
+    .zone-map-svg .maui-shadow{fill:rgba(0,0,0,.22)}
+    .zone-dot{
+      position:absolute;
+      width:34px;height:34px;
+      margin:0;padding:0;
+      transform:translate(-50%,-50%);
+      background:transparent;border:0;
+      cursor:pointer;
+      display:grid;place-items:center;
+      z-index:2;
     }
-    .zone-select{
-      min-height:40px;
-      padding:0 12px;
-      border-radius:var(--radius-sm);
+    .zone-dot:focus{outline:none}
+    .zone-dot-inner{
+      width:14px;height:14px;border-radius:50%;
+      box-shadow:0 0 0 4px rgba(0,0,0,.25),0 0 0 6px rgba(255,255,255,.04);
+      transition:transform .12s ease,box-shadow .12s ease;
+    }
+    .zone-dot:hover .zone-dot-inner,
+    .zone-dot:focus-visible .zone-dot-inner{
+      transform:scale(1.18);
+    }
+    .zone-dot.selected .zone-dot-inner{
+      transform:scale(1.28);
+      box-shadow:0 0 0 4px rgba(255,255,255,.14),0 0 0 8px rgba(255,255,255,.06);
+    }
+    .zone-dot-label{
+      position:absolute;
+      bottom:calc(100% + 4px);
+      left:50%;
+      transform:translateX(-50%);
+      padding:5px 9px;
+      background:rgba(13,17,23,.94);
       border:1px solid var(--line-strong);
-      background:rgba(255,255,255,.05);
-      color:var(--text);font-size:14px;font-family:var(--font);
-      font-weight:600;
+      border-radius:6px;
+      color:var(--text);
+      font-size:11px;font-weight:700;
+      font-family:var(--font);
+      white-space:nowrap;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .12s ease;
+      z-index:3;
+      box-shadow:0 8px 20px rgba(0,0,0,.35);
     }
-    .zone-select:focus{outline:2px solid rgba(77,168,255,.45);outline-offset:2px}
-    .zone-select:disabled{opacity:.5;cursor:not-allowed}
-    .zone-clear{
-      min-height:40px;padding:0 14px;
+    .zone-dot-label .zone-dot-risk{
+      display:block;
+      font-size:10px;font-weight:600;
+      color:var(--muted);
+      font-family:var(--mono);
+      letter-spacing:.04em;
+      margin-top:2px;
+    }
+    .zone-dot:hover .zone-dot-label,
+    .zone-dot:focus-visible .zone-dot-label,
+    .zone-dot.selected .zone-dot-label{opacity:1}
+
+    /* Risk colors — applied to dot inner and legend swatches */
+    .risk-extreme-fire .zone-dot-inner,.risk-extreme-fire.zml-swatch{background:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.25),0 0 0 6px rgba(220,38,38,.10)}
+    .risk-high-fire    .zone-dot-inner,.risk-high-fire.zml-swatch{background:#ea580c;box-shadow:0 0 0 4px rgba(234,88,12,.25),0 0 0 6px rgba(234,88,12,.10)}
+    .risk-moderate     .zone-dot-inner,.risk-moderate.zml-swatch{background:#ca8a04;box-shadow:0 0 0 4px rgba(202,138,4,.25),0 0 0 6px rgba(202,138,4,.10)}
+    .risk-high-flood   .zone-dot-inner,.risk-high-flood.zml-swatch{background:#1d4ed8;box-shadow:0 0 0 4px rgba(29,78,216,.30),0 0 0 6px rgba(29,78,216,.12)}
+    .risk-low          .zone-dot-inner,.risk-low.zml-swatch{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.25),0 0 0 6px rgba(22,163,74,.10)}
+
+    /* ── Selected-zone bar ──────────────────────────────── */
+    .zone-selected-bar{
+      margin:12px 0 0;
+      display:flex;align-items:center;gap:10px;
+      padding:10px 12px;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line-strong);
       border-radius:var(--radius-sm);
+    }
+    .zone-selected-name{
+      font-weight:800;font-size:14px;color:var(--text);
+      flex:1;min-width:0;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .zone-selected-risk{
+      font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+      font-weight:800;text-transform:uppercase;
+      padding:4px 8px;border-radius:4px;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line-strong);
+      color:var(--text-dim);
+      white-space:nowrap;
+    }
+    .zone-selected-risk.risk-extreme-fire{background:rgba(220,38,38,.14);color:#fecaca;border-color:rgba(220,38,38,.35)}
+    .zone-selected-risk.risk-high-fire{background:rgba(234,88,12,.14);color:#fed7aa;border-color:rgba(234,88,12,.35)}
+    .zone-selected-risk.risk-moderate{background:rgba(202,138,4,.14);color:#fde68a;border-color:rgba(202,138,4,.35)}
+    .zone-selected-risk.risk-high-flood{background:rgba(29,78,216,.18);color:#bfdbfe;border-color:rgba(29,78,216,.40)}
+    .zone-selected-risk.risk-low{background:rgba(22,163,74,.14);color:#bbf7d0;border-color:rgba(22,163,74,.35)}
+    .zone-selected-clear{
+      width:30px;height:30px;
+      border-radius:50%;
       border:1px solid var(--line-strong);
       background:transparent;color:var(--text-dim);
-      font-size:12px;font-weight:700;
+      font-size:14px;line-height:1;font-weight:700;
+      cursor:pointer;flex-shrink:0;
+      display:grid;place-items:center;
     }
-    .zone-clear:hover{background:rgba(255,255,255,.04)}
-    .zone-household{margin:12px 0 0}
-    .zone-household-summary{
-      list-style:none;cursor:pointer;
-      padding:10px 12px;
-      border-radius:var(--radius-sm);
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.025);
-      color:var(--text-dim);font-size:12px;font-weight:700;
-      display:flex;align-items:center;gap:10px;
-    }
-    .zone-household-summary::-webkit-details-marker{display:none}
-    .zone-household-summary::marker{content:""}
-    .zone-household-icon{font-size:13px;color:var(--muted)}
-    .zone-household[open] > .zone-household-summary{
-      border-radius:var(--radius-sm) var(--radius-sm) 0 0;
-      border-bottom-color:transparent;
-    }
-    .zone-household-body{
-      padding:12px;
-      border:1px solid var(--line);
-      border-top:0;
-      border-radius:0 0 var(--radius-sm) var(--radius-sm);
+    .zone-selected-clear:hover{background:rgba(255,255,255,.04);color:var(--text)}
+
+    /* ── Map legend ─────────────────────────────────────── */
+    .zone-map-legend{
+      margin-top:12px;
+      display:flex;flex-wrap:wrap;gap:8px 14px;
+      padding:8px 12px;
       background:rgba(255,255,255,.02);
-      display:grid;gap:8px;
+      border:1px solid var(--line);
+      border-radius:var(--radius-sm);
     }
-    .zone-hh-item{
-      display:flex;align-items:center;gap:10px;
-      font-size:13px;color:var(--text-dim);cursor:pointer;
-      padding:4px 2px;
+    .zml-item{
+      display:flex;align-items:center;gap:6px;
+      font-size:11px;color:var(--text-dim);
+      font-family:var(--mono);font-weight:600;
+      letter-spacing:.02em;
     }
-    .zone-hh-item input{width:16px;height:16px;accent-color:var(--flood)}
+    .zml-swatch{
+      display:inline-block;
+      width:10px;height:10px;border-radius:50%;
+      flex-shrink:0;
+    }
+
+    /* ── Household icon cards (3×2 grid) ────────────────── */
+    .zone-household-heading{
+      margin:22px 0 10px;
+      font-size:13px;font-weight:800;color:var(--text);
+      display:flex;align-items:baseline;gap:8px;
+    }
+    .zone-household-sub{
+      font-weight:500;font-size:11px;color:var(--muted);
+      font-family:var(--mono);letter-spacing:.04em;
+    }
+    .zone-hh-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+    }
+    @media(max-width:520px){
+      .zone-hh-grid{grid-template-columns:repeat(2,1fr)}
+    }
+    .zone-hh-card{
+      display:flex;flex-direction:column;align-items:center;gap:6px;
+      padding:14px 10px 12px;
+      border-radius:var(--radius-sm);
+      background:#161b22;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:12px;font-weight:700;
+      cursor:pointer;
+      transition:background .12s ease,border-color .12s ease,color .12s ease;
+      text-align:center;
+    }
+    .zone-hh-card:hover{border-color:var(--line-strong);color:var(--text-dim)}
+    .zone-hh-card:focus-visible{outline:2px solid rgba(59,130,246,.55);outline-offset:2px}
+    .zone-hh-card[aria-pressed="true"]{
+      background:rgba(59,130,246,.12);
+      border-color:rgba(59,130,246,.55);
+      color:#bfdbfe;
+    }
+    .zone-hh-icon{
+      width:28px;height:28px;
+      display:grid;place-items:center;
+    }
+    .zone-hh-icon svg{width:100%;height:100%;display:block}
+    .zone-hh-label{line-height:1.2}
     .zone-household-privacy{
-      margin:6px 0 0;
+      margin:8px 0 0;
       font-size:11px;color:var(--muted);
       font-family:var(--mono);line-height:1.45;
     }
+
+    /* ── Delta line (upgraded) ──────────────────────────── */
     .zone-delta{
-      margin-top:14px;
+      margin-top:16px;
       padding:10px 14px;
       border-radius:var(--radius-sm);
       background:rgba(255,204,102,.08);
       border:1px solid rgba(255,204,102,.18);
       color:#ffe9b5;font-size:13px;font-weight:600;
-      display:flex;align-items:center;gap:8px;
+      display:flex;align-items:center;gap:10px;
     }
     .zone-delta.unchanged{
       background:rgba(255,255,255,.025);
@@ -1083,8 +1207,13 @@
       color:var(--muted);
       font-weight:500;
     }
-    .zone-delta::before{content:"↕";font-family:var(--mono)}
-    .zone-delta.unchanged::before{content:"↔"}
+    .zone-delta-arrow{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:18px;height:18px;flex-shrink:0;
+      font-family:var(--mono);font-size:13px;font-weight:800;
+    }
+
+    /* ── Brief body (upgraded display) ──────────────────── */
     .zone-brief-body{margin-top:14px}
     .zone-brief-loading{
       padding:14px;
@@ -1095,48 +1224,24 @@
       border-radius:var(--radius-sm);
     }
     .zone-brief-content{
-      padding:16px;
+      padding:18px;
       background:rgba(255,255,255,.02);
       border:1px solid var(--line);
       border-radius:var(--radius-md);
     }
-    .zone-brief-trust{
-      display:flex;align-items:center;gap:10px;
-      margin-bottom:10px;min-width:0;
-    }
-    .zone-brief-trust-badge{
-      display:inline-block;
-      font-family:var(--mono);font-size:10px;
-      letter-spacing:.1em;font-weight:800;
-      padding:3px 8px;border-radius:4px;
-      background:rgba(255,255,255,.08);
-      color:var(--text-dim);
-      border:1px solid var(--line-strong);
-      flex-shrink:0;
-    }
-    .zone-brief-trust-badge.ai{
-      background:var(--fire-soft);
-      color:#ffd8ba;
-      border-color:rgba(255,122,0,.28);
-    }
-    .zone-brief-source{
-      font-family:var(--mono);font-size:11px;
-      color:var(--muted);flex:1;min-width:0;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
     .zone-brief-headline{
-      margin:0 0 8px;
-      font-size:17px;line-height:1.28;
-      font-weight:800;letter-spacing:-.01em;
+      margin:0 0 10px;
+      font-size:22px;line-height:1.22;
+      font-weight:900;letter-spacing:-.015em;
       color:var(--text);
     }
     .zone-brief-means{
       margin:0 0 14px;
-      font-size:14px;line-height:1.55;
+      font-size:15px;line-height:1.55;
       color:var(--text-dim);
     }
     .zone-brief-action{
-      padding:12px;
+      padding:12px 14px;
       border-radius:var(--radius-sm);
       background:rgba(77,168,255,.06);
       border:1px solid rgba(77,168,255,.18);
@@ -1153,14 +1258,37 @@
       color:#dbeeff;
     }
     .zone-brief-hh-note{
-      margin-top:10px;
-      padding:10px 12px;
+      margin-top:12px;
+      padding:10px 12px 10px 14px;
       border-radius:var(--radius-sm);
-      background:rgba(103,194,126,.06);
-      border:1px solid rgba(103,194,126,.18);
-      color:#ddf4e3;
-      font-size:12px;line-height:1.5;
+      background:rgba(59,130,246,.08);
+      border-left:3px solid rgba(59,130,246,.55);
+      border-top:1px solid rgba(59,130,246,.18);
+      border-right:1px solid rgba(59,130,246,.18);
+      border-bottom:1px solid rgba(59,130,246,.18);
+      color:#dbeafe;
+      font-size:13px;line-height:1.5;
     }
+    .zone-brief-trust{
+      margin-top:14px;
+      padding-top:12px;
+      border-top:1px solid var(--line);
+      display:flex;align-items:center;gap:8px;
+      font-family:var(--mono);font-size:11px;
+      color:var(--muted);
+      font-weight:600;letter-spacing:.02em;
+    }
+    .zone-brief-trust-dot{
+      display:inline-block;
+      width:8px;height:8px;border-radius:50%;
+      background:#64748b;
+      flex-shrink:0;
+    }
+    .zone-brief-trust.ai .zone-brief-trust-dot{
+      background:#16a34a;
+      box-shadow:0 0 0 3px rgba(22,163,74,.18);
+    }
+    .zone-brief-trust.ai{color:#bbf7d0}
   </style>
 </head>
 <body>
@@ -1200,59 +1328,153 @@
     </header>
 
     <!-- ══════════════════════════════════════════════════════
-         LOCAL ZONE BRIEF (Phase 2) — added above statewide hazard
-         status. Fetches from /api/hazards/zone/:id (Gemma 4 / template
-         fallback). Entire block hides gracefully on any failure.
-         Household data lives in localStorage only.
+         LOCAL ZONE BRIEF (Phase 2.1) — map-first selector + icon
+         household cards + upgraded brief display. Fetches from
+         /api/hazards/zone/:id (Gemma 4 / template fallback). Entire
+         block hides gracefully on any failure.
+         Household data lives in localStorage only; booleans are
+         passed to the Worker as anonymous 0/1 query params.
          ══════════════════════════════════════════════════════ -->
     <section class="zone-brief-section" id="zoneBriefSection">
       <article class="card zone-brief-card">
         <div class="zone-brief-head">
-          <div class="zone-brief-kicker">LOCAL BRIEF</div>
-          <h2 class="zone-brief-title" id="zoneBriefTitle">Select your area for a local brief</h2>
+          <div class="zone-brief-kicker">LOCAL BRIEF — MAUI</div>
+          <h2 class="zone-brief-title" id="zoneBriefTitle">Tap a zone on the map for a local brief</h2>
         </div>
 
-        <div class="zone-selector">
-          <div class="zone-selector-row">
-            <label class="zone-label" for="zoneIslandSelect">Island</label>
-            <select id="zoneIslandSelect" class="zone-select" aria-label="Island">
-              <option value="">—</option>
-              <option value="Maui">Maui</option>
-            </select>
-          </div>
-          <div class="zone-selector-row">
-            <label class="zone-label" for="zoneAreaSelect">Area</label>
-            <select id="zoneAreaSelect" class="zone-select" aria-label="Area" disabled>
-              <option value="">—</option>
-            </select>
-          </div>
-          <button class="zone-clear" id="zoneClearBtn" type="button" hidden>Clear</button>
+        <!-- ── Interactive Maui map (SVG outline + 15 positioned dot buttons) ── -->
+        <div class="zone-map-wrap" id="zoneMapWrap">
+          <svg class="zone-map-svg" viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true">
+            <!-- Stylized Maui outline: West Maui hump (lahaina side),
+                 central isthmus, Haleakalā mass, Hāna peninsula. Not
+                 pixel-accurate — meant to be recognizable under 15
+                 geographically-positioned dot markers. -->
+            <path class="maui-fill" d="
+              M 8 42
+              C 4 22, 16 10, 28 14
+              C 38 18, 36 32, 40 32
+              C 48 22, 58 14, 72 16
+              C 88 18, 98 30, 96 44
+              C 99 56, 92 68, 80 74
+              C 66 80, 52 82, 42 76
+              C 34 72, 26 74, 18 66
+              C 10 60, 4 52, 8 42
+              Z
+            "/>
+          </svg>
+
+          <button class="zone-dot risk-extreme-fire" type="button" data-zone="lahaina"            data-name="Lahaina"              data-risk="Extreme fire"  style="left:20%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina<span class="zone-dot-risk">Extreme fire</span></span></button>
+          <button class="zone-dot risk-extreme-fire" type="button" data-zone="lahaina_mauka"      data-name="Lahaina Mauka"        data-risk="Extreme fire"  style="left:22%;top:45%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina Mauka<span class="zone-dot-risk">Extreme fire</span></span></button>
+          <button class="zone-dot risk-high-fire"    type="button" data-zone="kaanapali"          data-name="Kāʻanapali"           data-risk="High fire"     style="left:18%;top:40%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kāʻanapali<span class="zone-dot-risk">High fire</span></span></button>
+          <button class="zone-dot risk-high-fire"    type="button" data-zone="kihe_north"         data-name="Kīhei North"          data-risk="High fire"     style="left:38%;top:62%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei North<span class="zone-dot-risk">High fire</span></span></button>
+          <button class="zone-dot risk-high-fire"    type="button" data-zone="kihe_south"         data-name="Kīhei South"          data-risk="High fire"     style="left:40%;top:72%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei South<span class="zone-dot-risk">High fire</span></span></button>
+          <button class="zone-dot risk-high-flood"   type="button" data-zone="kahului_harbor"     data-name="Kahului Harbor"       data-risk="High flood"    style="left:48%;top:38%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kahului Harbor<span class="zone-dot-risk">High flood</span></span></button>
+          <button class="zone-dot risk-moderate"     type="button" data-zone="wailuku_central"    data-name="Wailuku Central"      data-risk="Moderate"      style="left:45%;top:42%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Central<span class="zone-dot-risk">Moderate</span></span></button>
+          <button class="zone-dot risk-moderate"     type="button" data-zone="wailuku_mauka"      data-name="Wailuku Mauka"        data-risk="Moderate"      style="left:43%;top:32%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Mauka<span class="zone-dot-risk">Moderate</span></span></button>
+          <button class="zone-dot risk-high-fire"    type="button" data-zone="pukalani"           data-name="Pukalani"             data-risk="High fire"     style="left:52%;top:48%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pukalani<span class="zone-dot-risk">High fire</span></span></button>
+          <button class="zone-dot risk-moderate"     type="button" data-zone="makawao"            data-name="Makawao"              data-risk="Moderate"      style="left:55%;top:40%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Makawao<span class="zone-dot-risk">Moderate</span></span></button>
+          <button class="zone-dot risk-extreme-fire" type="button" data-zone="kula_upper"         data-name="Kula Upper"           data-risk="Extreme fire"  style="left:50%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Upper<span class="zone-dot-risk">Extreme fire</span></span></button>
+          <button class="zone-dot risk-high-fire"    type="button" data-zone="kula_lower"         data-name="Kula Lower"           data-risk="High fire"     style="left:48%;top:62%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Lower<span class="zone-dot-risk">High fire</span></span></button>
+          <button class="zone-dot risk-low"          type="button" data-zone="paia"               data-name="Pāʻia"                data-risk="Low"           style="left:58%;top:32%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pāʻia<span class="zone-dot-risk">Low</span></span></button>
+          <button class="zone-dot risk-high-flood"   type="button" data-zone="hana"               data-name="Hāna"                 data-risk="High flood"    style="left:82%;top:52%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Hāna<span class="zone-dot-risk">High flood</span></span></button>
+          <button class="zone-dot risk-high-fire"    type="button" data-zone="upcountry_interface" data-name="Upcountry Interface" data-risk="High fire"     style="left:54%;top:44%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Upcountry Interface<span class="zone-dot-risk">High fire</span></span></button>
         </div>
 
-        <details class="zone-household" id="zoneHousehold">
-          <summary class="zone-household-summary">
-            <span class="zone-household-icon">⚙︎</span>
-            <span>Personalize your brief (optional)</span>
-          </summary>
-          <div class="zone-household-body">
-            <label class="zone-hh-item"><input type="checkbox" data-hh="kupuna"> <span>Kūpuna in household</span></label>
-            <label class="zone-hh-item"><input type="checkbox" data-hh="keiki"> <span>Keiki (children)</span></label>
-            <label class="zone-hh-item"><input type="checkbox" data-hh="pets"> <span>Pets</span></label>
-            <label class="zone-hh-item"><input type="checkbox" data-hh="medical"> <span>Daily medication or oxygen</span></label>
-            <label class="zone-hh-item"><input type="checkbox" data-hh="nocar"> <span>No private vehicle</span></label>
-            <p class="zone-household-privacy">Saved on this device only. Never transmitted with your identity.</p>
-          </div>
-        </details>
+        <!-- ── Selected-zone bar ── -->
+        <div class="zone-selected-bar" id="zoneSelectedBar" hidden>
+          <div class="zone-selected-name" id="zoneSelectedName">—</div>
+          <div class="zone-selected-risk" id="zoneSelectedRisk">—</div>
+          <button class="zone-selected-clear" id="zoneSelectedClear" type="button" aria-label="Clear selection">✕</button>
+        </div>
 
-        <div class="zone-delta" id="zoneDelta" hidden aria-live="polite"></div>
+        <!-- ── Map legend ── -->
+        <div class="zone-map-legend" aria-hidden="true">
+          <span class="zml-item"><span class="zml-swatch risk-extreme-fire"></span>Extreme fire</span>
+          <span class="zml-item"><span class="zml-swatch risk-high-fire"></span>High fire</span>
+          <span class="zml-item"><span class="zml-swatch risk-moderate"></span>Moderate</span>
+          <span class="zml-item"><span class="zml-swatch risk-high-flood"></span>High flood</span>
+          <span class="zml-item"><span class="zml-swatch risk-low"></span>Low</span>
+        </div>
 
+        <!-- ── Household icon cards ── -->
+        <div class="zone-household-heading">Personalize your brief <span class="zone-household-sub">(optional)</span></div>
+        <div class="zone-hh-grid" id="zoneHhGrid">
+          <button class="zone-hh-card" type="button" data-hh="kupuna" aria-pressed="false">
+            <span class="zone-hh-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="10" cy="5" r="2.2"/>
+                <path d="M10 7.2 L10 13 L7.5 20"/>
+                <path d="M10 13 L13 16 L12.5 20"/>
+                <path d="M14.5 9 L14.5 21"/>
+              </svg>
+            </span>
+            <span class="zone-hh-label">Kūpuna</span>
+          </button>
+          <button class="zone-hh-card" type="button" data-hh="keiki" aria-pressed="false">
+            <span class="zone-hh-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="6" r="2.2"/>
+                <path d="M12 8.4 L12 14"/>
+                <path d="M8.5 11 L15.5 11"/>
+                <path d="M12 14 L9 20"/>
+                <path d="M12 14 L15 20"/>
+              </svg>
+            </span>
+            <span class="zone-hh-label">Keiki</span>
+          </button>
+          <button class="zone-hh-card" type="button" data-hh="pets" aria-pressed="false">
+            <span class="zone-hh-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="7"  cy="8" r="1.7"/>
+                <circle cx="11" cy="5" r="1.7"/>
+                <circle cx="15" cy="5" r="1.7"/>
+                <circle cx="19" cy="8" r="1.7"/>
+                <path d="M12 10.5 C 8 10.5, 6 14, 6 16 C 6 18.2, 8.2 19.5, 12 19.5 C 15.8 19.5, 18 18.2, 18 16 C 18 14, 16 10.5, 12 10.5 Z"/>
+              </svg>
+            </span>
+            <span class="zone-hh-label">Pets</span>
+          </button>
+          <button class="zone-hh-card" type="button" data-hh="medical" aria-pressed="false">
+            <span class="zone-hh-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3.2" y="9" width="17.6" height="6" rx="3" transform="rotate(-22 12 12)"/>
+                <line x1="10.6" y1="5.6" x2="13.4" y2="18.4"/>
+              </svg>
+            </span>
+            <span class="zone-hh-label">Medication</span>
+          </button>
+          <button class="zone-hh-card" type="button" data-hh="nocar" aria-pressed="false">
+            <span class="zone-hh-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 16.5 L4 13 L6 8 L18 8 L20 13 L20 16.5"/>
+                <circle cx="7"  cy="16.5" r="1.4"/>
+                <circle cx="17" cy="16.5" r="1.4"/>
+                <line x1="3" y1="3" x2="21" y2="21"/>
+              </svg>
+            </span>
+            <span class="zone-hh-label">No vehicle</span>
+          </button>
+          <button class="zone-hh-card" type="button" data-hh="oxygen" aria-pressed="false">
+            <span class="zone-hh-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 4 L14 4 L14 10 L20 10 L20 14 L14 14 L14 20 L10 20 L10 14 L4 14 L4 10 L10 10 Z"/>
+              </svg>
+            </span>
+            <span class="zone-hh-label">Oxygen</span>
+          </button>
+        </div>
+        <p class="zone-household-privacy">Saved on this device only. Never transmitted.</p>
+
+        <!-- ── Delta line ── -->
+        <div class="zone-delta" id="zoneDelta" hidden aria-live="polite">
+          <span class="zone-delta-arrow" id="zoneDeltaArrow">↕</span>
+          <span id="zoneDeltaText"></span>
+        </div>
+
+        <!-- ── Brief body (upgraded display) ── -->
         <div class="zone-brief-body" id="zoneBriefBody" hidden>
           <div class="zone-brief-loading" id="zoneBriefLoading" hidden>Loading your area brief…</div>
           <div class="zone-brief-content" id="zoneBriefContent" hidden>
-            <div class="zone-brief-trust">
-              <span class="zone-brief-trust-badge" id="zoneBriefTrust">TEMPLATE</span>
-              <span class="zone-brief-source" id="zoneBriefSource"></span>
-            </div>
             <h3 class="zone-brief-headline" id="zoneBriefHeadline"></h3>
             <p class="zone-brief-means" id="zoneBriefMeans"></p>
             <div class="zone-brief-action">
@@ -1260,6 +1482,10 @@
               <p class="zone-brief-action-text" id="zoneBriefAction"></p>
             </div>
             <div class="zone-brief-hh-note" id="zoneBriefHhNote" hidden></div>
+            <div class="zone-brief-trust" id="zoneBriefTrust">
+              <span class="zone-brief-trust-dot"></span>
+              <span id="zoneBriefTrustText">Kahu Ola template · NWS + zone profile</span>
+            </div>
           </div>
         </div>
       </article>
@@ -2620,66 +2846,50 @@
   </script>
 
   <!-- ══════════════════════════════════════════════════════
-       LOCAL ZONE BRIEF — Phase 2 homepage integration
-       Vanilla JS, no libraries. Reads/writes localStorage only.
-       Calls /api/hazards/zone/:id via existing Worker (never
-       direct to upstream). Fails silently to hide the block on
-       any error — never blanks the page.
+       LOCAL ZONE BRIEF — Phase 2.1 (map-first UI)
+       Vanilla JS. localStorage only. All fetches via Worker.
+       Fails silently on any error.
        ══════════════════════════════════════════════════════ -->
   <script>
     (function initZoneBrief() {
       "use strict";
 
-      var MAUI_ZONES = [
-        { id: "lahaina",             name: "Lahaina" },
-        { id: "lahaina_mauka",       name: "Lahaina Mauka" },
-        { id: "kaanapali",           name: "Kāʻanapali" },
-        { id: "kihe_north",          name: "Kīhei North" },
-        { id: "kihe_south",          name: "Kīhei South (Wailea)" },
-        { id: "kahului_harbor",      name: "Kahului Harbor" },
-        { id: "wailuku_central",     name: "Wailuku Central" },
-        { id: "wailuku_mauka",       name: "Wailuku Mauka (ʻĪao Valley)" },
-        { id: "pukalani",            name: "Pukalani" },
-        { id: "makawao",             name: "Makawao" },
-        { id: "kula_upper",          name: "Kula Upper" },
-        { id: "kula_lower",          name: "Kula Lower" },
-        { id: "paia",                name: "Pāʻia" },
-        { id: "hana",                name: "Hāna" },
-        { id: "upcountry_interface", name: "Upcountry Interface" }
-      ];
-
       var ZONE_KEY = "kahuola_zone";
       var HH_KEY   = "kahuola_household";
       var API_BASE = "https://kahuola.org/api/hazards/zone/";
 
-      var islandSelect = document.getElementById("zoneIslandSelect");
-      var areaSelect   = document.getElementById("zoneAreaSelect");
-      var clearBtn     = document.getElementById("zoneClearBtn");
-      var hhBoxes      = document.querySelectorAll("#zoneHousehold input[type=checkbox]");
-      var deltaEl      = document.getElementById("zoneDelta");
-      var briefBody    = document.getElementById("zoneBriefBody");
-      var loadingEl    = document.getElementById("zoneBriefLoading");
-      var contentEl    = document.getElementById("zoneBriefContent");
-      var trustEl      = document.getElementById("zoneBriefTrust");
-      var sourceEl     = document.getElementById("zoneBriefSource");
-      var headlineEl   = document.getElementById("zoneBriefHeadline");
-      var meansEl      = document.getElementById("zoneBriefMeans");
-      var actionEl     = document.getElementById("zoneBriefAction");
-      var hhNoteEl     = document.getElementById("zoneBriefHhNote");
+      var mapWrap       = document.getElementById("zoneMapWrap");
+      var dots          = mapWrap ? mapWrap.querySelectorAll(".zone-dot") : [];
+      var selectedBar   = document.getElementById("zoneSelectedBar");
+      var selectedName  = document.getElementById("zoneSelectedName");
+      var selectedRisk  = document.getElementById("zoneSelectedRisk");
+      var selectedClear = document.getElementById("zoneSelectedClear");
 
-      // Defensive: if any anchor is missing, bail out silently so the
-      // statewide hazard block below is never affected.
-      if (!islandSelect || !areaSelect || !briefBody) return;
+      var hhGrid   = document.getElementById("zoneHhGrid");
+      var hhCards  = hhGrid ? hhGrid.querySelectorAll(".zone-hh-card") : [];
 
-      function safeGet(key) {
-        try { return localStorage.getItem(key); } catch (e) { return null; }
-      }
-      function safeSet(key, value) {
-        try { localStorage.setItem(key, value); } catch (e) { /* noop */ }
-      }
-      function safeRemove(key) {
-        try { localStorage.removeItem(key); } catch (e) { /* noop */ }
-      }
+      var deltaEl     = document.getElementById("zoneDelta");
+      var deltaArrow  = document.getElementById("zoneDeltaArrow");
+      var deltaText   = document.getElementById("zoneDeltaText");
+      var briefBody   = document.getElementById("zoneBriefBody");
+      var loadingEl   = document.getElementById("zoneBriefLoading");
+      var contentEl   = document.getElementById("zoneBriefContent");
+      var headlineEl  = document.getElementById("zoneBriefHeadline");
+      var meansEl     = document.getElementById("zoneBriefMeans");
+      var actionEl    = document.getElementById("zoneBriefAction");
+      var hhNoteEl    = document.getElementById("zoneBriefHhNote");
+      var trustEl     = document.getElementById("zoneBriefTrust");
+      var trustText   = document.getElementById("zoneBriefTrustText");
+
+      // Defensive: if critical anchors are missing, bail out silently
+      // so the rest of the homepage (hero, hazard status, map, footer)
+      // is never affected.
+      if (!mapWrap || dots.length === 0 || !briefBody) return;
+
+      // ── localStorage helpers ────────────────────────────
+      function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+      function safeSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* noop */ } }
+      function safeRemove(key) { try { localStorage.removeItem(key); } catch (e) { /* noop */ } }
 
       function loadZone() {
         var raw = safeGet(ZONE_KEY);
@@ -2706,56 +2916,99 @@
       function saveHousehold(obj) {
         try { safeSet(HH_KEY, JSON.stringify(obj)); } catch (e) { /* noop */ }
       }
-      function readHhBoxes() {
-        var out = {};
-        for (var i = 0; i < hhBoxes.length; i++) {
-          var b = hhBoxes[i];
-          if (b && b.dataset && b.dataset.hh) out[b.dataset.hh] = !!b.checked;
+
+      function readHhCards() {
+        var out = { kupuna:false, keiki:false, pets:false, medical:false, car:true, oxygen:false };
+        for (var i = 0; i < hhCards.length; i++) {
+          var c = hhCards[i];
+          var k = c && c.dataset && c.dataset.hh;
+          if (!k) continue;
+          var on = c.getAttribute("aria-pressed") === "true";
+          if (k === "nocar") {
+            // UI card is "No vehicle" → out.car = !on
+            out.car = !on;
+          } else {
+            out[k] = on;
+          }
         }
         return out;
       }
-      function applyHhToBoxes(obj) {
-        for (var i = 0; i < hhBoxes.length; i++) {
-          var b = hhBoxes[i];
-          if (b && b.dataset && b.dataset.hh) b.checked = !!obj[b.dataset.hh];
-        }
-      }
-
-      function populateAreas(island) {
-        // Clear all but the first placeholder option.
-        while (areaSelect.options.length > 1) areaSelect.remove(1);
-        if (island === "Maui") {
-          for (var i = 0; i < MAUI_ZONES.length; i++) {
-            var z = MAUI_ZONES[i];
-            var opt = document.createElement("option");
-            opt.value = z.id;
-            opt.textContent = z.name;
-            areaSelect.appendChild(opt);
+      function applyHhToCards(obj) {
+        for (var i = 0; i < hhCards.length; i++) {
+          var c = hhCards[i];
+          var k = c && c.dataset && c.dataset.hh;
+          if (!k) continue;
+          var on;
+          if (k === "nocar") {
+            // Stored as car:bool; UI "No vehicle" is on when car === false
+            on = (obj.car === false);
+          } else {
+            on = !!obj[k];
           }
-          areaSelect.disabled = false;
-        } else {
-          areaSelect.disabled = true;
+          c.setAttribute("aria-pressed", on ? "true" : "false");
         }
       }
 
+      // ── URL query building ──────────────────────────────
+      // max_chars ≠ max_tokens: only UI-side boolean flags are sent,
+      // always as anonymous 0/1. The Worker validates + bucketizes.
+      // Oxygen is OR'd into `medical` server-side because the current
+      // ZoneDynamicState schema has a single "medication or oxygen"
+      // field; we preserve both booleans locally so the user's card
+      // state survives, but collapse to one param in the query.
       function buildQueryString(hh) {
         var parts = [];
         parts.push("kupuna="  + (hh.kupuna  ? "1" : "0"));
         parts.push("keiki="   + (hh.keiki   ? "1" : "0"));
         parts.push("pets="    + (hh.pets    ? "1" : "0"));
-        parts.push("medical=" + (hh.medical ? "1" : "0"));
-        // UI flag "nocar" inverts to API "car"
-        parts.push("car="     + (hh.nocar   ? "0" : "1"));
+        parts.push("medical=" + ((hh.medical || hh.oxygen) ? "1" : "0"));
+        parts.push("car="     + (hh.car === false ? "0" : "1"));
         return parts.join("&");
       }
 
+      // ── Risk labels keyed by the data-risk attribute on each dot ─
+      var RISK_CLASS = {
+        "Extreme fire": "risk-extreme-fire",
+        "High fire":    "risk-high-fire",
+        "Moderate":     "risk-moderate",
+        "High flood":   "risk-high-flood",
+        "Low":          "risk-low"
+      };
+
+      function setSelectedBar(zoneId) {
+        if (!zoneId) {
+          selectedBar.hidden = true;
+          return;
+        }
+        var dot = mapWrap.querySelector('.zone-dot[data-zone="' + zoneId + '"]');
+        if (!dot) { selectedBar.hidden = true; return; }
+        selectedName.textContent = dot.getAttribute("data-name") || "";
+        var risk = dot.getAttribute("data-risk") || "";
+        selectedRisk.textContent = risk.toUpperCase();
+        // Reset class, then apply the matching risk class.
+        selectedRisk.className = "zone-selected-risk";
+        if (RISK_CLASS[risk]) selectedRisk.classList.add(RISK_CLASS[risk]);
+        selectedBar.hidden = false;
+      }
+
+      function setSelectedDot(zoneId) {
+        for (var i = 0; i < dots.length; i++) {
+          if (dots[i].getAttribute("data-zone") === zoneId) {
+            dots[i].classList.add("selected");
+          } else {
+            dots[i].classList.remove("selected");
+          }
+        }
+      }
+
+      // ── Brief rendering ─────────────────────────────────
       function setTrust(generatedBy) {
         if (generatedBy === "kahuola_ai") {
-          trustEl.textContent = "KAHU OLA";
-          trustEl.className = "zone-brief-trust-badge ai";
+          trustEl.className = "zone-brief-trust ai";
+          trustText.textContent = "Gemma 4 · based on NWS + NASA data";
         } else {
-          trustEl.textContent = "TEMPLATE";
-          trustEl.className = "zone-brief-trust-badge";
+          trustEl.className = "zone-brief-trust";
+          trustText.textContent = "Kahu Ola template · NWS + zone profile";
         }
       }
 
@@ -2780,10 +3033,7 @@
           return;
         }
         var brief = envelope.brief || {};
-        if (!brief.headline) {
-          hideBrief();
-          return;
-        }
+        if (!brief.headline) { hideBrief(); return; }
 
         headlineEl.textContent = brief.headline || "";
         meansEl.textContent    = brief.what_it_means || "";
@@ -2798,16 +3048,15 @@
 
         setTrust(brief.generated_by);
 
-        var sources = Array.isArray(brief.sources) ? brief.sources : [];
-        sourceEl.textContent = sources.length ? sources.join(" · ") : "";
-
         var delta = typeof envelope.delta === "string" ? envelope.delta : "";
         if (delta) {
-          deltaEl.textContent = delta;
+          deltaText.textContent = delta;
           if (/unchanged/i.test(delta)) {
             deltaEl.classList.add("unchanged");
+            deltaArrow.textContent = "↔";
           } else {
             deltaEl.classList.remove("unchanged");
+            deltaArrow.textContent = "↑";
           }
           deltaEl.hidden = false;
         } else {
@@ -2819,6 +3068,7 @@
         briefBody.hidden = false;
       }
 
+      // ── Fetch ───────────────────────────────────────────
       var currentAbort = null;
       function fetchBrief(zoneId) {
         if (!zoneId) { hideBrief(); return; }
@@ -2826,7 +3076,7 @@
           try { currentAbort.abort(); } catch (e) { /* noop */ }
         }
         currentAbort = (typeof AbortController !== "undefined") ? new AbortController() : null;
-        var hh = readHhBoxes();
+        var hh = readHhCards();
         var url = API_BASE + encodeURIComponent(zoneId) + "?" + buildQueryString(hh);
         showLoading();
 
@@ -2846,64 +3096,60 @@
           });
       }
 
-      // ── Wire up event handlers ──────────────────────────
-      islandSelect.addEventListener("change", function () {
-        var island = islandSelect.value;
-        populateAreas(island);
-        areaSelect.value = "";
-        saveZone(null);
-        hideBrief();
-        clearBtn.hidden = !island;
-      });
-
-      areaSelect.addEventListener("change", function () {
-        var zone = areaSelect.value;
-        if (!zone) {
+      // ── Selection flow ──────────────────────────────────
+      function selectZone(zoneId) {
+        if (!zoneId) {
           saveZone(null);
+          setSelectedDot(null);
+          setSelectedBar(null);
           hideBrief();
-          clearBtn.hidden = !islandSelect.value;
           return;
         }
-        saveZone({ island: islandSelect.value, zone_id: zone });
-        clearBtn.hidden = false;
-        fetchBrief(zone);
-      });
+        saveZone({ island: "Maui", zone_id: zoneId });
+        setSelectedDot(zoneId);
+        setSelectedBar(zoneId);
+        fetchBrief(zoneId);
+      }
 
-      clearBtn.addEventListener("click", function () {
-        islandSelect.value = "";
-        populateAreas("");
-        areaSelect.value = "";
-        saveZone(null);
-        hideBrief();
-        clearBtn.hidden = true;
-      });
+      // ── Wire dot click/tap/keyboard ─────────────────────
+      for (var i = 0; i < dots.length; i++) {
+        (function (dot) {
+          dot.addEventListener("click", function () {
+            selectZone(dot.getAttribute("data-zone"));
+          });
+        })(dots[i]);
+      }
 
-      for (var i = 0; i < hhBoxes.length; i++) {
-        (function (box) {
-          box.addEventListener("change", function () {
-            var hh = readHhBoxes();
-            saveHousehold(hh);
+      // ── Selected-bar clear button ───────────────────────
+      if (selectedClear) {
+        selectedClear.addEventListener("click", function () {
+          selectZone(null);
+        });
+      }
+
+      // ── Household icon card toggles ─────────────────────
+      for (var j = 0; j < hhCards.length; j++) {
+        (function (card) {
+          card.addEventListener("click", function () {
+            var on = card.getAttribute("aria-pressed") === "true";
+            card.setAttribute("aria-pressed", on ? "false" : "true");
+            saveHousehold(readHhCards());
             var current = loadZone();
             if (current && current.zone_id) fetchBrief(current.zone_id);
           });
-        })(hhBoxes[i]);
+        })(hhCards[j]);
       }
 
       // ── Restore from localStorage on load ───────────────
       try {
-        applyHhToBoxes(loadHousehold());
+        applyHhToCards(loadHousehold());
         var saved = loadZone();
-        if (saved && saved.island && saved.zone_id) {
-          islandSelect.value = saved.island;
-          populateAreas(saved.island);
-          // Ensure the option exists before assigning.
-          var found = false;
-          for (var j = 0; j < areaSelect.options.length; j++) {
-            if (areaSelect.options[j].value === saved.zone_id) { found = true; break; }
-          }
-          if (found) {
-            areaSelect.value = saved.zone_id;
-            clearBtn.hidden = false;
+        if (saved && saved.zone_id) {
+          // Verify the zone still exists in the current dot set.
+          var exists = !!mapWrap.querySelector('.zone-dot[data-zone="' + saved.zone_id + '"]');
+          if (exists) {
+            setSelectedDot(saved.zone_id);
+            setSelectedBar(saved.zone_id);
             fetchBrief(saved.zone_id);
           } else {
             saveZone(null);
