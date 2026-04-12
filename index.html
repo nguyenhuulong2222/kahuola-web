@@ -1417,6 +1417,19 @@
     }
     .zone-brief-trust.ai{color:#bbf7d0}
 
+    /* ── Language switcher ── */
+    .zone-lang-wrap{margin:10px 0 6px}
+    .zone-lang-label{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#6e7681;margin-bottom:8px}
+    .zone-lang-buttons{display:flex;gap:6px;flex-wrap:wrap}
+    .zone-lang-btn{
+      background:#161b22;border:1px solid #30363d;border-radius:8px;
+      color:#8b949e;font-size:12px;padding:5px 12px;cursor:pointer;transition:all .15s;
+    }
+    .zone-lang-btn:hover{border-color:#6e7681;color:#c9d1d9}
+    .zone-lang-btn.active{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.5);color:#93c5fd}
+    .zone-lang-beta{font-size:9px;color:#f59e0b;margin-left:2px}
+    .zone-lang-haw-warning{font-size:11px;color:#f59e0b;margin-top:6px;line-height:1.5}
+
     /* ── Section 4: Why this area is different ──────────── */
     .zone-why-section{border-top:.5px solid #21262d;margin-top:8px;padding-top:8px}
     .zone-why-toggle{
@@ -1694,6 +1707,21 @@
           </button>
         </div>
         <p class="zone-household-privacy">Saved on this device only. Never transmitted.</p>
+
+        <!-- ── Language switcher ── -->
+        <div class="zone-lang-wrap" id="zoneLangWrap" hidden>
+          <p class="zone-lang-label">Brief language</p>
+          <div class="zone-lang-buttons" id="zoneLangButtons">
+            <button class="zone-lang-btn active" data-lang="en">EN</button>
+            <button class="zone-lang-btn" data-lang="vi">VI</button>
+            <button class="zone-lang-btn" data-lang="tl">TL</button>
+            <button class="zone-lang-btn" data-lang="ilo">ILO</button>
+            <button class="zone-lang-btn" data-lang="haw">
+              HAW <span class="zone-lang-beta">&beta;</span>
+            </button>
+            <button class="zone-lang-btn" data-lang="ja">日本語</button>
+          </div>
+        </div>
 
         <!-- ── Delta line ── -->
         <div class="zone-delta" id="zoneDelta" hidden aria-live="polite">
@@ -3200,6 +3228,9 @@
       var hhGrid          = document.getElementById("zoneHhGrid");
       var hhCards         = hhGrid ? hhGrid.querySelectorAll(".zone-hh-card") : [];
 
+      var zoneLangWrap    = document.getElementById("zoneLangWrap");
+      var zoneLangButtons = document.getElementById("zoneLangButtons");
+
       var deltaEl         = document.getElementById("zoneDelta");
       var deltaArrow      = document.getElementById("zoneDeltaArrow");
       var deltaText       = document.getElementById("zoneDeltaText");
@@ -3382,6 +3413,8 @@
         contentEl.hidden = true;
         loadingEl.hidden = true;
         deltaEl.hidden = true;
+        if (zoneLangWrap) zoneLangWrap.hidden = true;
+        clearHawWarning();
         // Also hide timeline, trust ladder, and sections 4–6 on clear.
         var ws = document.getElementById("zoneWhySection");
         var ss = document.getElementById("zoneSchoolSection");
@@ -3688,6 +3721,62 @@
         }
       }
 
+      // ── Language switcher ─────────────────────────────────
+      var LANG_KEY = "kahuola_lang";
+      var hawWarningTimer = null;
+
+      function getBriefLang() {
+        return safeGet(LANG_KEY) || "en";
+      }
+
+      function markActiveLangBtn() {
+        if (!zoneLangButtons) return;
+        var btns = zoneLangButtons.querySelectorAll(".zone-lang-btn");
+        var cur = getBriefLang();
+        for (var i = 0; i < btns.length; i++) {
+          var b = btns[i];
+          if (b.getAttribute("data-lang") === cur) b.classList.add("active");
+          else b.classList.remove("active");
+        }
+      }
+
+      function clearHawWarning() {
+        if (hawWarningTimer) { clearTimeout(hawWarningTimer); hawWarningTimer = null; }
+        var existing = document.getElementById("zoneLangHawWarn");
+        if (existing) existing.remove();
+      }
+
+      function showHawWarning() {
+        clearHawWarning();
+        if (!zoneLangWrap) return;
+        var w = document.createElement("p");
+        w.id = "zoneLangHawWarn";
+        w.className = "zone-lang-haw-warning";
+        w.textContent = "\u02BBŌlelo Hawai\u02BBi — Beta · Community review in progress. Accuracy not yet verified.";
+        zoneLangWrap.appendChild(w);
+        hawWarningTimer = setTimeout(function () {
+          var el = document.getElementById("zoneLangHawWarn");
+          if (el) el.remove();
+          hawWarningTimer = null;
+        }, 4000);
+      }
+
+      if (zoneLangButtons) {
+        markActiveLangBtn();
+        zoneLangButtons.addEventListener("click", function (e) {
+          var btn = e.target.closest(".zone-lang-btn");
+          if (!btn) return;
+          var lang = btn.getAttribute("data-lang");
+          if (!lang) return;
+          safeSet(LANG_KEY, lang);
+          markActiveLangBtn();
+          clearHawWarning();
+          if (lang === "haw") showHawWarning();
+          var saved = loadZone();
+          if (saved && saved.zone_id) fetchBrief(saved.zone_id);
+        });
+      }
+
       // ── Fetch ───────────────────────────────────────────
       var currentAbort = null;
       function fetchBrief(zoneId) {
@@ -3697,7 +3786,8 @@
         }
         currentAbort = (typeof AbortController !== "undefined") ? new AbortController() : null;
         var hh = readHhCards();
-        var url = API_BASE + encodeURIComponent(zoneId) + "?" + buildQueryString(hh);
+        var langParam = getBriefLang();
+        var url = API_BASE + encodeURIComponent(zoneId) + "?" + buildQueryString(hh) + "&lang=" + encodeURIComponent(langParam);
         showLoading();
 
         var fetchOpts = { cache: "no-store" };
@@ -3736,6 +3826,7 @@
         saveZone({ island: "Maui", zone_id: z.id });
         showState("selected");
         showSelectedBar(z.id);
+        if (zoneLangWrap) { zoneLangWrap.hidden = false; markActiveLangBtn(); }
         fetchBrief(z.id);
       }
 
@@ -3910,6 +4001,7 @@
         if (saved && saved.zone_id && zoneById(saved.zone_id)) {
           showState("selected");
           showSelectedBar(saved.zone_id);
+          if (zoneLangWrap) { zoneLangWrap.hidden = false; markActiveLangBtn(); }
           fetchBrief(saved.zone_id);
         } else {
           showState("idle");
