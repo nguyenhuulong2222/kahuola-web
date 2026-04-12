@@ -1001,96 +1001,239 @@
     }
 
     /* ── Interactive Maui map ───────────────────────────── */
-    .zone-map-wrap{
-      position:relative;
-      width:100%;
-      aspect-ratio:3/2;
-      max-width:760px;
-      margin:4px auto 0;
-      border-radius:var(--radius-md);
-      background:rgba(255,255,255,.02);
-      border:1px solid var(--line);
-      overflow:hidden;
+    /* ── GPS smart detect — zone selector (Phase 2.2) ──── */
+    .zone-detect-wrap{
+      padding:20px;
+      background:#161b22;
+      border:1px solid #21262d;
+      border-radius:14px;
     }
-    .zone-map-svg{
-      position:absolute;inset:0;
-      width:100%;height:100%;
-      display:block;
-      pointer-events:none;
-    }
-    .zone-map-svg .maui-fill{fill:rgba(77,168,255,.07);stroke:rgba(77,168,255,.28);stroke-width:.4}
-    .zone-map-svg .maui-shadow{fill:rgba(0,0,0,.22)}
-    .zone-dot{
-      position:absolute;
-      width:34px;height:34px;
-      margin:0;padding:0;
-      transform:translate(-50%,-50%);
-      background:transparent;border:0;
-      cursor:pointer;
+    .zone-detect-idle,
+    .zone-detecting,
+    .zone-confirm-card,
+    .zone-manual-wrap{display:flex;flex-direction:column}
+    .zone-detect-idle{align-items:center;text-align:center;gap:10px}
+    .zone-detect-icon{
+      width:52px;height:52px;
+      border-radius:50%;
+      background:rgba(59,130,246,.10);
+      border:1px solid rgba(59,130,246,.30);
       display:grid;place-items:center;
-      z-index:2;
+      color:#60a5fa;
+      margin-bottom:4px;
     }
-    .zone-dot:focus{outline:none}
-    .zone-dot-inner{
-      width:14px;height:14px;border-radius:50%;
-      /* Default: neutral gray — risk is UNKNOWN until the brief is
-         fetched. A risk-* class on the parent .zone-dot overrides this. */
-      background:#64748b;
-      box-shadow:0 0 0 4px rgba(100,116,139,.22),0 0 0 6px rgba(100,116,139,.08);
-      transition:transform .12s ease,box-shadow .2s ease,background .2s ease;
+    .zone-detect-icon svg{width:26px;height:26px;display:block}
+    .zone-detect-title{
+      margin:0;
+      font-size:17px;line-height:1.25;
+      font-weight:800;color:var(--text);
+      letter-spacing:-.01em;
     }
-    .zone-dot:hover .zone-dot-inner,
-    .zone-dot:focus-visible .zone-dot-inner{
-      transform:scale(1.18);
-    }
-    .zone-dot.selected .zone-dot-inner{
-      transform:scale(1.28);
-      box-shadow:0 0 0 4px rgba(255,255,255,.14),0 0 0 8px rgba(255,255,255,.06);
-    }
-    .zone-dot-label{
-      position:absolute;
-      bottom:calc(100% + 4px);
-      left:50%;
-      transform:translateX(-50%);
-      padding:5px 9px;
-      background:rgba(13,17,23,.94);
-      border:1px solid var(--line-strong);
-      border-radius:6px;
-      color:var(--text);
-      font-size:11px;font-weight:700;
-      font-family:var(--font);
-      white-space:nowrap;
-      pointer-events:none;
-      opacity:0;
-      transition:opacity .12s ease;
-      z-index:3;
-      box-shadow:0 8px 20px rgba(0,0,0,.35);
-    }
-    .zone-dot-label .zone-dot-risk{
-      display:block;
-      font-size:10px;font-weight:600;
+    .zone-detect-sub{
+      margin:0;
+      font-size:13px;line-height:1.5;
       color:var(--muted);
-      font-family:var(--mono);
-      letter-spacing:.04em;
-      margin-top:2px;
+      max-width:48ch;
     }
-    .zone-dot:hover .zone-dot-label,
-    .zone-dot:focus-visible .zone-dot-label,
-    .zone-dot.selected .zone-dot-label{opacity:1}
+    .zone-detect-btn{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;max-width:340px;
+      margin-top:6px;
+      padding:11px 16px;
+      background:#1d4ed8;
+      color:#fff;
+      border:1px solid #1d4ed8;
+      border-radius:10px;
+      font-size:14px;font-weight:800;
+      cursor:pointer;
+      transition:background .15s ease,transform .1s ease;
+    }
+    .zone-detect-btn:hover{background:#1e40af}
+    .zone-detect-btn:active{transform:scale(.98)}
+    .zone-detect-btn svg{width:16px;height:16px;flex-shrink:0}
+    .zone-detect-manual-link{
+      margin:2px 0 0;
+      font-size:12px;font-weight:700;
+      color:#8b949e;
+      cursor:pointer;
+      text-decoration:underline;
+      text-underline-offset:3px;
+    }
+    .zone-detect-manual-link:hover{color:var(--text-dim)}
 
-    /* Risk colors — applied post-fetch to the selected dot and to
-       the legend swatches. Default dot color is gray (unknown). */
-    .risk-extreme-fire .zone-dot-inner,.risk-extreme-fire.zml-swatch{background:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.25),0 0 0 6px rgba(220,38,38,.10)}
-    .risk-high-fire    .zone-dot-inner,.risk-high-fire.zml-swatch{background:#ea580c;box-shadow:0 0 0 4px rgba(234,88,12,.25),0 0 0 6px rgba(234,88,12,.10)}
-    .risk-moderate     .zone-dot-inner,.risk-moderate.zml-swatch{background:#ca8a04;box-shadow:0 0 0 4px rgba(202,138,4,.25),0 0 0 6px rgba(202,138,4,.10)}
-    .risk-high-flood   .zone-dot-inner,.risk-high-flood.zml-swatch{background:#1d4ed8;box-shadow:0 0 0 4px rgba(29,78,216,.30),0 0 0 6px rgba(29,78,216,.12)}
-    .risk-low          .zone-dot-inner,.risk-low.zml-swatch{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.25),0 0 0 6px rgba(22,163,74,.10)}
-    .risk-unknown.zml-swatch{background:#64748b;box-shadow:0 0 0 4px rgba(100,116,139,.22),0 0 0 6px rgba(100,116,139,.08)}
+    /* State 2: detecting — pulsing ring around the GPS icon */
+    .zone-detecting{align-items:center;gap:14px;padding:8px 0}
+    .zone-pulse-ring{
+      position:relative;
+      width:56px;height:56px;
+      border-radius:50%;
+      border:2px solid #3b82f6;
+      display:grid;place-items:center;
+      color:#60a5fa;
+    }
+    .zone-pulse-ring svg{width:24px;height:24px;display:block;z-index:2}
+    .zone-pulse-ring::before{
+      content:"";
+      position:absolute;inset:-2px;
+      border-radius:50%;
+      border:2px solid #3b82f6;
+      animation:zone-pulse-expand 1.4s ease-out infinite;
+    }
+    @keyframes zone-pulse-expand{
+      0%  {transform:scale(1);   opacity:.8}
+      80% {transform:scale(1.55);opacity:0}
+      100%{transform:scale(1.55);opacity:0}
+    }
+    .zone-detecting p{
+      margin:0;
+      font-size:13px;font-weight:700;
+      color:var(--text-dim);
+    }
 
-    /* ── Selected-zone bar ──────────────────────────────── */
+    /* State 3: confirm */
+    .zone-confirm-card{
+      gap:8px;
+      padding:16px;
+      background:rgba(29,78,216,.08);
+      border:2px solid #1d4ed8;
+      border-radius:12px;
+    }
+    .zone-confirm-name{
+      margin:0;
+      font-size:20px;font-weight:900;
+      letter-spacing:-.01em;color:var(--text);
+    }
+    .zone-confirm-island{
+      margin:0;
+      font-size:12px;font-weight:600;
+      color:var(--muted);
+      font-family:var(--mono);letter-spacing:.04em;
+    }
+    .zone-confirm-meta{
+      display:flex;flex-wrap:wrap;gap:8px;
+      margin-top:6px;
+    }
+    .zone-confirm-distance,
+    .zone-confirm-risk{
+      display:inline-flex;align-items:center;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;font-weight:700;
+      font-family:var(--mono);letter-spacing:.04em;
+    }
+    .zone-confirm-distance{
+      background:rgba(255,255,255,.05);
+      color:var(--text-dim);
+      border:1px solid var(--line-strong);
+    }
+    .zone-confirm-risk{
+      background:rgba(59,130,246,.12);
+      color:#bfdbfe;
+      border:1px solid rgba(59,130,246,.40);
+    }
+    .zone-confirm-risk.risk-extreme-fire{background:rgba(220,38,38,.14);color:#fecaca;border-color:rgba(220,38,38,.35)}
+    .zone-confirm-risk.risk-high-fire{background:rgba(234,88,12,.14);color:#fed7aa;border-color:rgba(234,88,12,.35)}
+    .zone-confirm-risk.risk-moderate{background:rgba(202,138,4,.14);color:#fde68a;border-color:rgba(202,138,4,.35)}
+    .zone-confirm-risk.risk-high-flood{background:rgba(29,78,216,.18);color:#bfdbfe;border-color:rgba(29,78,216,.40)}
+    .zone-confirm-risk.risk-low{background:rgba(22,163,74,.14);color:#bbf7d0;border-color:rgba(22,163,74,.35)}
+    .zone-confirm-actions{
+      display:flex;gap:8px;
+      margin-top:10px;
+    }
+    .zone-btn-confirm,
+    .zone-btn-change{
+      flex:1;
+      padding:10px 14px;
+      font-size:13px;font-weight:800;
+      border-radius:9px;
+      cursor:pointer;
+      transition:background .15s ease,border-color .15s ease;
+    }
+    .zone-btn-confirm{
+      background:#1d4ed8;color:#fff;
+      border:1px solid #1d4ed8;
+    }
+    .zone-btn-confirm:hover{background:#1e40af}
+    .zone-btn-change{
+      background:transparent;
+      border:1px solid #30363d;
+      color:#8b949e;
+    }
+    .zone-btn-change:hover{border-color:var(--line-strong);color:var(--text-dim)}
+
+    /* State 4: manual search */
+    .zone-manual-wrap{gap:10px}
+    .zone-search-input{
+      width:100%;
+      padding:10px 12px;
+      background:#161b22;
+      border:1px solid #30363d;
+      border-radius:10px;
+      color:var(--text);
+      font-size:14px;font-family:var(--font);
+      font-weight:500;
+    }
+    .zone-search-input::placeholder{color:#6e7681}
+    .zone-search-input:focus{
+      outline:none;
+      border-color:#1d4ed8;
+      box-shadow:0 0 0 3px rgba(29,78,216,.18);
+    }
+    .zone-search-results{
+      background:#161b22;
+      border:1px solid #21262d;
+      border-radius:10px;
+      overflow:hidden;
+      max-height:260px;
+      overflow-y:auto;
+    }
+    .zone-search-result-item{
+      display:block;
+      width:100%;
+      padding:10px 12px;
+      background:transparent;
+      border:0;
+      border-bottom:1px solid #21262d;
+      color:var(--text);
+      font-size:13px;font-weight:600;
+      text-align:left;
+      cursor:pointer;
+    }
+    .zone-search-result-item:last-child{border-bottom:0}
+    .zone-search-result-item:hover,
+    .zone-search-result-item:focus{
+      background:#1f2937;
+      outline:none;
+    }
+    .zone-search-empty{
+      padding:12px;
+      font-size:12px;color:var(--muted);
+      font-style:italic;text-align:center;
+    }
+    .zone-manual-back{
+      margin:0;
+      font-size:12px;font-weight:700;
+      color:#8b949e;
+      cursor:pointer;
+      text-decoration:underline;
+      text-underline-offset:3px;
+      text-align:center;
+    }
+    .zone-manual-back:hover{color:var(--text-dim)}
+    .zone-manual-error{
+      margin:0 0 8px;
+      padding:10px 12px;
+      background:rgba(234,88,12,.10);
+      border:1px solid rgba(234,88,12,.30);
+      border-radius:8px;
+      color:#fed7aa;
+      font-size:12px;line-height:1.5;
+    }
+
+    /* ── Selected-zone bar (reused from Phase 2.1) ──────── */
     .zone-selected-bar{
       margin:12px 0 0;
-      display:flex;align-items:center;gap:10px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
       padding:10px 12px;
       background:rgba(255,255,255,.03);
       border:1px solid var(--line-strong);
@@ -1098,7 +1241,7 @@
     }
     .zone-selected-name{
       font-weight:800;font-size:14px;color:var(--text);
-      flex:1;min-width:0;
+      min-width:0;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
     .zone-selected-risk{
@@ -1115,7 +1258,7 @@
     .zone-selected-risk.risk-moderate{background:rgba(202,138,4,.14);color:#fde68a;border-color:rgba(202,138,4,.35)}
     .zone-selected-risk.risk-high-flood{background:rgba(29,78,216,.18);color:#bfdbfe;border-color:rgba(29,78,216,.40)}
     .zone-selected-risk.risk-low{background:rgba(22,163,74,.14);color:#bbf7d0;border-color:rgba(22,163,74,.35)}
-    .zone-selected-clear{
+    .zone-clear-btn{
       width:30px;height:30px;
       border-radius:50%;
       border:1px solid var(--line-strong);
@@ -1124,28 +1267,7 @@
       cursor:pointer;flex-shrink:0;
       display:grid;place-items:center;
     }
-    .zone-selected-clear:hover{background:rgba(255,255,255,.04);color:var(--text)}
-
-    /* ── Map legend ─────────────────────────────────────── */
-    .zone-map-legend{
-      margin-top:12px;
-      display:flex;flex-wrap:wrap;gap:8px 14px;
-      padding:8px 12px;
-      background:rgba(255,255,255,.02);
-      border:1px solid var(--line);
-      border-radius:var(--radius-sm);
-    }
-    .zml-item{
-      display:flex;align-items:center;gap:6px;
-      font-size:11px;color:var(--text-dim);
-      font-family:var(--mono);font-weight:600;
-      letter-spacing:.02em;
-    }
-    .zml-swatch{
-      display:inline-block;
-      width:10px;height:10px;border-radius:50%;
-      flex-shrink:0;
-    }
+    .zone-clear-btn:hover{background:rgba(255,255,255,.04);color:var(--text)}
 
     /* ── Household icon cards (3×2 grid) ────────────────── */
     .zone-household-heading{
@@ -1333,78 +1455,106 @@
     </header>
 
     <!-- ══════════════════════════════════════════════════════
-         LOCAL ZONE BRIEF (Phase 2.1) — map-first selector + icon
-         household cards + upgraded brief display. Fetches from
-         /api/hazards/zone/:id (Gemma 4 / template fallback). Entire
-         block hides gracefully on any failure.
-         Household data lives in localStorage only; booleans are
-         passed to the Worker as anonymous 0/1 query params.
+         LOCAL ZONE BRIEF (Phase 2.2) — GPS smart detect + manual
+         search. Fetches /api/hazards/zone/:id (Gemma 4 / template
+         fallback). Entire block hides gracefully on any failure.
+
+         PRIVACY INVARIANT:
+           GPS coordinates are used ONLY for client-side distance
+           calculation to pick the nearest named zone. Coordinates
+           are NEVER stored (localStorage or otherwise) and NEVER
+           transmitted — only the zone_id string leaves this device.
          ══════════════════════════════════════════════════════ -->
     <section class="zone-brief-section" id="zoneBriefSection">
       <article class="card zone-brief-card">
         <div class="zone-brief-head">
           <div class="zone-brief-kicker">LOCAL BRIEF — MAUI</div>
-          <h2 class="zone-brief-title" id="zoneBriefTitle">Tap a zone on the map for a local brief</h2>
+          <h2 class="zone-brief-title" id="zoneBriefTitle">Find your area for a local brief</h2>
         </div>
 
-        <!-- ── Interactive Maui map ─────────────────────────────
-             SVG outline is figure-8 shaped: West Maui lobe + narrow
-             isthmus waist + larger Haleakalā lobe + Hana point.
-             viewBox is 0 0 100 100 with preserveAspectRatio="none" so
-             SVG coordinates align 1:1 with dot `left%/top%`.
+        <!-- ── GPS smart detect container ── -->
+        <div class="zone-detect-wrap" id="zoneDetectWrap">
 
-             Dots start NEUTRAL (gray) — risk color is applied only
-             after the live API response confirms state.fire_risk /
-             state.flood_risk for the selected zone. ─────────────── -->
-        <div class="zone-map-wrap" id="zoneMapWrap">
-          <svg class="zone-map-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <path class="maui-fill" d="
-              M 5 25
-              C 0 8, 25 2, 34 15
-              L 38 22
-              C 46 8, 72 2, 88 15
-              C 98 28, 98 50, 90 60
-              C 92 75, 72 90, 50 86
-              C 42 88, 38 78, 34 65
-              L 30 72
-              C 22 76, 8 72, 2 55
-              C -2 35, 0 22, 5 25
-              Z
-            "/>
-          </svg>
+          <!-- State 1: Idle (default) -->
+          <div class="zone-detect-idle" id="zoneDetectIdle">
+            <div class="zone-detect-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>
+                <line x1="12" y1="1.5" x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="22.5"/>
+                <line x1="1.5" y1="12" x2="5" y2="12"/>
+                <line x1="19" y1="12" x2="22.5" y2="12"/>
+              </svg>
+            </div>
+            <p class="zone-detect-title">Find your area</p>
+            <p class="zone-detect-sub">
+              Kahu Ola shows conditions for your specific neighborhood. Your location never leaves this device — only your zone name is used.
+            </p>
+            <button class="zone-detect-btn" id="zoneDetectBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+                <line x1="12" y1="2" x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="2" y1="12" x2="5" y2="12"/>
+                <line x1="19" y1="12" x2="22" y2="12"/>
+              </svg>
+              Detect my area
+            </button>
+            <p class="zone-detect-manual-link" id="zoneManualLink" role="button" tabindex="0">Or type your town instead</p>
+          </div>
 
-          <button class="zone-dot" type="button" data-zone="kaanapali"           data-name="Kāʻanapali"           style="left:12%;top:18%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kāʻanapali<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="lahaina_mauka"       data-name="Lahaina Mauka"        style="left:16%;top:30%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina Mauka<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="lahaina"             data-name="Lahaina"              style="left:10%;top:48%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Lahaina<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="kahului_harbor"      data-name="Kahului Harbor"       style="left:40%;top:20%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kahului Harbor<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="wailuku_mauka"       data-name="Wailuku Mauka"        style="left:33%;top:26%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Mauka<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="wailuku_central"     data-name="Wailuku Central"      style="left:36%;top:34%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Wailuku Central<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="paia"                data-name="Pāʻia"                style="left:44%;top:13%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pāʻia<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="makawao"             data-name="Makawao"              style="left:52%;top:30%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Makawao<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="upcountry_interface" data-name="Upcountry Interface"  style="left:48%;top:40%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Upcountry Interface<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="pukalani"            data-name="Pukalani"             style="left:55%;top:44%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Pukalani<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="kula_upper"          data-name="Kula Upper"           style="left:58%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Upper<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="kula_lower"          data-name="Kula Lower"           style="left:58%;top:64%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kula Lower<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="kihe_north"          data-name="Kīhei North"          style="left:42%;top:72%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei North<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="kihe_south"          data-name="Kīhei South"          style="left:50%;top:80%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Kīhei South<span class="zone-dot-risk">Tap to check</span></span></button>
-          <button class="zone-dot" type="button" data-zone="hana"                data-name="Hāna"                 style="left:92%;top:55%"><span class="zone-dot-inner"></span><span class="zone-dot-label">Hāna<span class="zone-dot-risk">Tap to check</span></span></button>
+          <!-- State 2: Detecting (GPS acquiring) -->
+          <div class="zone-detecting" id="zoneDetecting" hidden>
+            <div class="zone-pulse-ring" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <p>Finding your area…</p>
+          </div>
+
+          <!-- State 3: Confirm (zone matched from GPS) -->
+          <div class="zone-confirm-card" id="zoneConfirmCard" hidden>
+            <p class="zone-confirm-name" id="zoneConfirmName"></p>
+            <p class="zone-confirm-island">Maui · Hawaiʻi</p>
+            <div class="zone-confirm-meta">
+              <span class="zone-confirm-distance" id="zoneConfirmDistance">—</span>
+              <span class="zone-confirm-risk" id="zoneConfirmRisk">Checking…</span>
+            </div>
+            <div class="zone-confirm-actions">
+              <button class="zone-btn-confirm" id="zoneBtnConfirm" type="button">Yes, this is me</button>
+              <button class="zone-btn-change" id="zoneBtnChange" type="button">Change area</button>
+            </div>
+          </div>
+
+          <!-- State 4: Manual search -->
+          <div class="zone-manual-wrap" id="zoneManualWrap" hidden>
+            <p class="zone-manual-error" id="zoneManualError" hidden></p>
+            <input
+              type="search"
+              class="zone-search-input"
+              id="zoneSearchInput"
+              placeholder="Type your town or area…"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Search for your area"
+            />
+            <div class="zone-search-results" id="zoneSearchResults" hidden></div>
+            <p class="zone-manual-back" id="zoneManualBack" role="button" tabindex="0">← Use GPS instead</p>
+          </div>
+
         </div>
 
-        <!-- ── Selected-zone bar ── -->
+        <!-- ── Selected-zone bar (shown after confirm) ── -->
         <div class="zone-selected-bar" id="zoneSelectedBar" hidden>
-          <div class="zone-selected-name" id="zoneSelectedName">—</div>
-          <div class="zone-selected-risk" id="zoneSelectedRisk">—</div>
-          <button class="zone-selected-clear" id="zoneSelectedClear" type="button" aria-label="Clear selection">✕</button>
-        </div>
-
-        <!-- ── Map legend ── -->
-        <div class="zone-map-legend" aria-hidden="true">
-          <span class="zml-item"><span class="zml-swatch risk-unknown"></span>Unknown — tap to check</span>
-          <span class="zml-item"><span class="zml-swatch risk-extreme-fire"></span>Extreme fire</span>
-          <span class="zml-item"><span class="zml-swatch risk-high-fire"></span>High fire</span>
-          <span class="zml-item"><span class="zml-swatch risk-moderate"></span>Moderate</span>
-          <span class="zml-item"><span class="zml-swatch risk-high-flood"></span>High flood</span>
-          <span class="zml-item"><span class="zml-swatch risk-low"></span>Low</span>
+          <span class="zone-selected-name" id="zoneSelectedName">—</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <span class="zone-selected-risk" id="zoneSelectedRisk">—</span>
+            <button class="zone-clear-btn" id="zoneClearBtn" type="button" aria-label="Clear zone">✕</button>
+          </div>
         </div>
 
         <!-- ── Household icon cards ── -->
@@ -2857,50 +3007,96 @@
   </script>
 
   <!-- ══════════════════════════════════════════════════════
-       LOCAL ZONE BRIEF — Phase 2.1 (map-first UI)
+       LOCAL ZONE BRIEF — Phase 2.2 (GPS smart detect)
        Vanilla JS. localStorage only. All fetches via Worker.
-       Fails silently on any error.
+       Fails gracefully — never blanks the page.
+
+       PRIVACY INVARIANT:
+         navigator.geolocation coordinates are used ONLY for local
+         Haversine distance calculation to find the nearest named
+         zone. Coordinates are NEVER written to localStorage or
+         sessionStorage, and NEVER included in any network request.
+         Only the matched zone_id string is persisted and sent.
        ══════════════════════════════════════════════════════ -->
   <script>
     (function initZoneBrief() {
       "use strict";
 
+      // Zone centroid coordinates — client-side only, for GPS
+      // distance matching. These are rough centroids of the named
+      // zones; they are not coastline-accurate.
+      var ZONES = [
+        { id: "lahaina",             name: "Lahaina",                      lat: 20.8783, lng: -156.6825 },
+        { id: "lahaina_mauka",       name: "Lahaina Mauka",                lat: 20.8900, lng: -156.6600 },
+        { id: "kaanapali",           name: "Kāʻanapali",                   lat: 20.9226, lng: -156.6918 },
+        { id: "kihe_north",          name: "Kīhei North",                  lat: 20.7645, lng: -156.4440 },
+        { id: "kihe_south",          name: "Kīhei South (Wailea)",         lat: 20.7135, lng: -156.4420 },
+        { id: "kahului_harbor",      name: "Kahului Harbor",               lat: 20.8997, lng: -156.4700 },
+        { id: "wailuku_central",     name: "Wailuku Central",              lat: 20.8893, lng: -156.5047 },
+        { id: "wailuku_mauka",       name: "Wailuku Mauka",                lat: 20.9100, lng: -156.5200 },
+        { id: "pukalani",            name: "Pukalani",                     lat: 20.8331, lng: -156.3474 },
+        { id: "makawao",             name: "Makawao",                      lat: 20.8560, lng: -156.3120 },
+        { id: "kula_upper",          name: "Kula Upper",                   lat: 20.7800, lng: -156.3300 },
+        { id: "kula_lower",          name: "Kula Lower",                   lat: 20.7600, lng: -156.3600 },
+        { id: "paia",                name: "Pāʻia",                        lat: 20.9151, lng: -156.3620 },
+        { id: "hana",                name: "Hāna",                         lat: 20.7579, lng: -155.9899 },
+        { id: "upcountry_interface", name: "Upcountry Interface",          lat: 20.8450, lng: -156.3600 }
+      ];
+
       var ZONE_KEY = "kahuola_zone";
       var HH_KEY   = "kahuola_household";
       var API_BASE = "https://kahuola.org/api/hazards/zone/";
+      var GEOLOCATE_TIMEOUT_MS = 10000;
 
-      var mapWrap       = document.getElementById("zoneMapWrap");
-      var dots          = mapWrap ? mapWrap.querySelectorAll(".zone-dot") : [];
-      var selectedBar   = document.getElementById("zoneSelectedBar");
-      var selectedName  = document.getElementById("zoneSelectedName");
-      var selectedRisk  = document.getElementById("zoneSelectedRisk");
-      var selectedClear = document.getElementById("zoneSelectedClear");
+      // ── DOM anchors ─────────────────────────────────────
+      var detectWrap      = document.getElementById("zoneDetectWrap");
+      var idleState       = document.getElementById("zoneDetectIdle");
+      var detectingState  = document.getElementById("zoneDetecting");
+      var confirmState    = document.getElementById("zoneConfirmCard");
+      var manualState     = document.getElementById("zoneManualWrap");
 
-      var hhGrid   = document.getElementById("zoneHhGrid");
-      var hhCards  = hhGrid ? hhGrid.querySelectorAll(".zone-hh-card") : [];
+      var detectBtn       = document.getElementById("zoneDetectBtn");
+      var manualLink      = document.getElementById("zoneManualLink");
 
-      var deltaEl     = document.getElementById("zoneDelta");
-      var deltaArrow  = document.getElementById("zoneDeltaArrow");
-      var deltaText   = document.getElementById("zoneDeltaText");
-      var briefBody   = document.getElementById("zoneBriefBody");
-      var loadingEl   = document.getElementById("zoneBriefLoading");
-      var contentEl   = document.getElementById("zoneBriefContent");
-      var headlineEl  = document.getElementById("zoneBriefHeadline");
-      var meansEl     = document.getElementById("zoneBriefMeans");
-      var actionEl    = document.getElementById("zoneBriefAction");
-      var hhNoteEl    = document.getElementById("zoneBriefHhNote");
-      var trustEl     = document.getElementById("zoneBriefTrust");
-      var trustText   = document.getElementById("zoneBriefTrustText");
+      var confirmName     = document.getElementById("zoneConfirmName");
+      var confirmDistance = document.getElementById("zoneConfirmDistance");
+      var confirmRisk     = document.getElementById("zoneConfirmRisk");
+      var btnConfirm      = document.getElementById("zoneBtnConfirm");
+      var btnChange       = document.getElementById("zoneBtnChange");
 
-      // Defensive: if critical anchors are missing, bail out silently
-      // so the rest of the homepage (hero, hazard status, map, footer)
-      // is never affected.
-      if (!mapWrap || dots.length === 0 || !briefBody) return;
+      var manualError     = document.getElementById("zoneManualError");
+      var searchInput     = document.getElementById("zoneSearchInput");
+      var searchResults   = document.getElementById("zoneSearchResults");
+      var manualBack      = document.getElementById("zoneManualBack");
+
+      var selectedBar     = document.getElementById("zoneSelectedBar");
+      var selectedName    = document.getElementById("zoneSelectedName");
+      var selectedRisk    = document.getElementById("zoneSelectedRisk");
+      var clearBtn        = document.getElementById("zoneClearBtn");
+
+      var hhGrid          = document.getElementById("zoneHhGrid");
+      var hhCards         = hhGrid ? hhGrid.querySelectorAll(".zone-hh-card") : [];
+
+      var deltaEl         = document.getElementById("zoneDelta");
+      var deltaArrow      = document.getElementById("zoneDeltaArrow");
+      var deltaText       = document.getElementById("zoneDeltaText");
+      var briefBody       = document.getElementById("zoneBriefBody");
+      var loadingEl       = document.getElementById("zoneBriefLoading");
+      var contentEl       = document.getElementById("zoneBriefContent");
+      var headlineEl      = document.getElementById("zoneBriefHeadline");
+      var meansEl         = document.getElementById("zoneBriefMeans");
+      var actionEl        = document.getElementById("zoneBriefAction");
+      var hhNoteEl        = document.getElementById("zoneBriefHhNote");
+      var trustEl         = document.getElementById("zoneBriefTrust");
+      var trustText       = document.getElementById("zoneBriefTrustText");
+
+      // Defensive: if critical anchors are missing, bail out silently.
+      if (!detectWrap || !idleState || !briefBody) return;
 
       // ── localStorage helpers ────────────────────────────
-      function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-      function safeSet(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* noop */ } }
-      function safeRemove(key) { try { localStorage.removeItem(key); } catch (e) { /* noop */ } }
+      function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+      function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* noop */ } }
+      function safeRemove(k) { try { localStorage.removeItem(k); } catch (e) { /* noop */ } }
 
       function loadZone() {
         var raw = safeGet(ZONE_KEY);
@@ -2913,7 +3109,14 @@
       }
       function saveZone(obj) {
         if (!obj) { safeRemove(ZONE_KEY); return; }
-        try { safeSet(ZONE_KEY, JSON.stringify(obj)); } catch (e) { /* noop */ }
+        // PRIVACY: only persist zone_id + island name. Never store
+        // coordinates. This is the one place that writes the key.
+        try {
+          safeSet(ZONE_KEY, JSON.stringify({
+            island:  obj.island  || "Maui",
+            zone_id: String(obj.zone_id)
+          }));
+        } catch (e) { /* noop */ }
       }
 
       function loadHousehold() {
@@ -2935,12 +3138,8 @@
           var k = c && c.dataset && c.dataset.hh;
           if (!k) continue;
           var on = c.getAttribute("aria-pressed") === "true";
-          if (k === "nocar") {
-            // UI card is "No vehicle" → out.car = !on
-            out.car = !on;
-          } else {
-            out[k] = on;
-          }
+          if (k === "nocar") out.car = !on;
+          else out[k] = on;
         }
         return out;
       }
@@ -2949,24 +3148,44 @@
           var c = hhCards[i];
           var k = c && c.dataset && c.dataset.hh;
           if (!k) continue;
-          var on;
-          if (k === "nocar") {
-            // Stored as car:bool; UI "No vehicle" is on when car === false
-            on = (obj.car === false);
-          } else {
-            on = !!obj[k];
-          }
+          var on = (k === "nocar") ? (obj.car === false) : !!obj[k];
           c.setAttribute("aria-pressed", on ? "true" : "false");
         }
       }
 
+      // ── Haversine distance (miles) ───────────────────────
+      // Pure local math. Takes two lat/lng pairs, returns miles.
+      // Coordinates are never leaves this function except as a
+      // distance number.
+      function haversineMiles(lat1, lng1, lat2, lng2) {
+        var R = 3958.8; // Earth radius in miles
+        var toRad = function (d) { return d * Math.PI / 180; };
+        var dLat = toRad(lat2 - lat1);
+        var dLng = toRad(lng2 - lng1);
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      // PRIVACY: coords used for local distance calc only, never stored or transmitted.
+      function findNearestZone(lat, lng) {
+        var best = null;
+        var bestDist = Infinity;
+        for (var i = 0; i < ZONES.length; i++) {
+          var z = ZONES[i];
+          var d = haversineMiles(lat, lng, z.lat, z.lng);
+          if (d < bestDist) { bestDist = d; best = z; }
+        }
+        return best ? { zone: best, miles: bestDist } : null;
+      }
+
+      function zoneById(zoneId) {
+        for (var i = 0; i < ZONES.length; i++) if (ZONES[i].id === zoneId) return ZONES[i];
+        return null;
+      }
+
       // ── URL query building ──────────────────────────────
-      // max_chars ≠ max_tokens: only UI-side boolean flags are sent,
-      // always as anonymous 0/1. The Worker validates + bucketizes.
-      // Oxygen is OR'd into `medical` server-side because the current
-      // ZoneDynamicState schema has a single "medication or oxygen"
-      // field; we preserve both booleans locally so the user's card
-      // state survives, but collapse to one param in the query.
       function buildQueryString(hh) {
         var parts = [];
         parts.push("kupuna="  + (hh.kupuna  ? "1" : "0"));
@@ -2978,11 +3197,6 @@
       }
 
       // ── Risk derivation from live state ─────────────────
-      // Honest-color rule: dots start gray ("Unknown") and only paint
-      // after the Worker returns state.fire_risk / state.flood_risk.
-      // Only the currently-selected dot shows a color; every other
-      // dot stays neutral because we have no live confirmation of
-      // their current state.
       var RISK_CLASSES = [
         "risk-extreme-fire","risk-high-fire","risk-moderate",
         "risk-high-flood","risk-low"
@@ -3000,56 +3214,36 @@
         return { className:"risk-low", label:"Low" };
       }
 
-      function clearDotRisk(dot) {
-        for (var i = 0; i < RISK_CLASSES.length; i++) dot.classList.remove(RISK_CLASSES[i]);
-        var r = dot.querySelector(".zone-dot-risk");
-        if (r) r.textContent = "Tap to check";
-      }
-      function resetAllDotRisks() {
-        for (var i = 0; i < dots.length; i++) clearDotRisk(dots[i]);
-      }
-      function applyRiskToDot(zoneId, riskInfo) {
-        var dot = mapWrap.querySelector('.zone-dot[data-zone="' + zoneId + '"]');
-        if (!dot || !riskInfo) return;
-        for (var i = 0; i < RISK_CLASSES.length; i++) dot.classList.remove(RISK_CLASSES[i]);
-        if (riskInfo.className) dot.classList.add(riskInfo.className);
-        var r = dot.querySelector(".zone-dot-risk");
-        if (r && riskInfo.label) r.textContent = riskInfo.label;
-      }
-
-      // ── Selected-zone bar ───────────────────────────────
-      // Two modes: with risk info (post-fetch, painted), or without
-      // (immediately on click, placeholder "—"). Always shows the
-      // zone name so the user sees their selection took effect.
-      function setSelectedBar(zoneId, riskInfo) {
-        if (!zoneId) {
-          selectedBar.hidden = true;
-          return;
-        }
-        var dot = mapWrap.querySelector('.zone-dot[data-zone="' + zoneId + '"]');
-        if (!dot) { selectedBar.hidden = true; return; }
-        selectedName.textContent = dot.getAttribute("data-name") || "";
-        selectedRisk.className = "zone-selected-risk";
+      function paintBadge(el, riskInfo, placeholder) {
+        if (!el) return;
+        // Reset all risk-* classes.
+        for (var i = 0; i < RISK_CLASSES.length; i++) el.classList.remove(RISK_CLASSES[i]);
         if (riskInfo && riskInfo.label) {
-          selectedRisk.textContent = riskInfo.label.toUpperCase();
-          if (riskInfo.className) selectedRisk.classList.add(riskInfo.className);
+          el.textContent = riskInfo.label.toUpperCase();
+          if (riskInfo.className) el.classList.add(riskInfo.className);
         } else {
-          selectedRisk.textContent = "—";
-        }
-        selectedBar.hidden = false;
-      }
-
-      function setSelectedDot(zoneId) {
-        for (var i = 0; i < dots.length; i++) {
-          if (dots[i].getAttribute("data-zone") === zoneId) {
-            dots[i].classList.add("selected");
-          } else {
-            dots[i].classList.remove("selected");
-          }
+          el.textContent = placeholder || "—";
         }
       }
 
-      // ── Brief rendering ─────────────────────────────────
+      // ── State machine ───────────────────────────────────
+      // Only one of the 4 GPS states is visible at a time. The
+      // selected-bar is independent — it appears AFTER confirm and
+      // the detect-wrap is hidden during its presence.
+      function showState(name) {
+        idleState.hidden      = (name !== "idle");
+        detectingState.hidden = (name !== "detecting");
+        confirmState.hidden   = (name !== "confirm");
+        manualState.hidden    = (name !== "manual");
+        detectWrap.hidden     = (name === "selected");
+        if (name !== "manual") {
+          if (manualError) { manualError.hidden = true; manualError.textContent = ""; }
+          if (searchResults) { searchResults.hidden = true; searchResults.innerHTML = ""; }
+          if (searchInput) searchInput.value = "";
+        }
+      }
+
+      // ── Brief display ───────────────────────────────────
       function setTrust(generatedBy) {
         if (generatedBy === "kahuola_ai") {
           trustEl.className = "zone-brief-trust ai";
@@ -3078,20 +3272,16 @@
           console.info("[kahuola] zone brief unavailable; hiding block",
             envelope && envelope.error);
           hideBrief();
+          // Leave the selected bar with its placeholder risk badge;
+          // the user still sees their zone selection is valid.
           return;
         }
         var brief = envelope.brief || {};
         if (!brief.headline) { hideBrief(); return; }
 
-        // Live risk color: only paint the dot and the selected-bar
-        // risk badge AFTER the Worker confirms state. Nothing else
-        // changes on the map.
-        var zoneId = (envelope.zone && envelope.zone.zone_id) || null;
+        // Paint the selected-bar risk badge with live state.
         var riskInfo = deriveRiskFromState(envelope.state);
-        if (zoneId) {
-          applyRiskToDot(zoneId, riskInfo);
-          setSelectedBar(zoneId, riskInfo);
-        }
+        paintBadge(selectedRisk, riskInfo, "—");
 
         headlineEl.textContent = brief.headline || "";
         meansEl.textContent    = brief.what_it_means || "";
@@ -3154,43 +3344,179 @@
           });
       }
 
-      // ── Selection flow ──────────────────────────────────
-      // Every selection change resets ALL dots back to neutral gray
-      // first. Only after the fetch succeeds does the selected dot
-      // get painted with the live risk color. Stale colors never
-      // linger from a previous selection.
-      function selectZone(zoneId) {
-        resetAllDotRisks();
-        if (!zoneId) {
-          saveZone(null);
-          setSelectedDot(null);
-          setSelectedBar(null);
-          hideBrief();
+      // ── Selected-bar show/hide ──────────────────────────
+      function showSelectedBar(zoneId) {
+        var z = zoneById(zoneId);
+        if (!z) { selectedBar.hidden = true; return; }
+        selectedName.textContent = z.name;
+        // Risk badge starts as placeholder; renderBrief() repaints it.
+        paintBadge(selectedRisk, null, "Checking…");
+        selectedBar.hidden = false;
+      }
+
+      // ── Confirm/save flow ───────────────────────────────
+      // Called when the user commits to a zone (from GPS confirm or
+      // manual search). Persists to localStorage (zone_id only),
+      // swaps UI to "selected" state, fetches the brief.
+      function commitZone(zoneId) {
+        var z = zoneById(zoneId);
+        if (!z) return;
+        saveZone({ island: "Maui", zone_id: z.id });
+        showState("selected");
+        showSelectedBar(z.id);
+        fetchBrief(z.id);
+      }
+
+      // ── GPS detection ───────────────────────────────────
+      function runGeolocate() {
+        if (!navigator.geolocation || typeof navigator.geolocation.getCurrentPosition !== "function") {
+          showManual("Location services unavailable on this device. Search for your area below.");
           return;
         }
-        saveZone({ island: "Maui", zone_id: zoneId });
-        setSelectedDot(zoneId);
-        setSelectedBar(zoneId, null); // "—" placeholder until fetch returns
-        fetchBrief(zoneId);
+        showState("detecting");
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            // PRIVACY: coords used for local distance calc only, never stored or transmitted.
+            var lat = position && position.coords ? position.coords.latitude  : null;
+            var lng = position && position.coords ? position.coords.longitude : null;
+            if (typeof lat !== "number" || typeof lng !== "number") {
+              showManual("Location unavailable — search for your area below.");
+              return;
+            }
+            var match = findNearestZone(lat, lng);
+            if (!match) {
+              showManual("Location unavailable — search for your area below.");
+              return;
+            }
+            // Present the confirm card. We store nothing yet; the user
+            // must still tap "Yes, this is me".
+            presentConfirm(match.zone, match.miles);
+            // Local variables lat/lng go out of scope here — nothing persisted.
+          },
+          function (err) {
+            console.info("[kahuola] geolocation declined or failed", err && err.code);
+            showManual("Location unavailable — search for your area below.");
+          },
+          {
+            enableHighAccuracy: false,
+            maximumAge: 5 * 60 * 1000,
+            timeout: GEOLOCATE_TIMEOUT_MS
+          }
+        );
       }
 
-      // ── Wire dot click/tap/keyboard ─────────────────────
-      for (var i = 0; i < dots.length; i++) {
-        (function (dot) {
-          dot.addEventListener("click", function () {
-            selectZone(dot.getAttribute("data-zone"));
-          });
-        })(dots[i]);
+      var pendingZone = null;  // Zone object awaiting user confirmation (not persisted).
+
+      function presentConfirm(zone, miles) {
+        pendingZone = zone;
+        confirmName.textContent = zone.name;
+        var rounded = miles < 1 ? miles.toFixed(1) : Math.round(miles);
+        confirmDistance.textContent = rounded + " mi away";
+        // Reset risk badge to "Checking…" — it stays that way until
+        // the user confirms and the brief fetch returns.
+        confirmRisk.className = "zone-confirm-risk";
+        confirmRisk.textContent = "Checking…";
+        showState("confirm");
       }
 
-      // ── Selected-bar clear button ───────────────────────
-      if (selectedClear) {
-        selectedClear.addEventListener("click", function () {
-          selectZone(null);
+      // ── Manual search ───────────────────────────────────
+      function showManual(errorMsg) {
+        if (errorMsg) {
+          manualError.textContent = errorMsg;
+          manualError.hidden = false;
+        } else {
+          manualError.hidden = true;
+          manualError.textContent = "";
+        }
+        showState("manual");
+        // Focus the input for quick typing, but only if it was not
+        // already a user-initiated flow with a different focus.
+        setTimeout(function () {
+          try { searchInput && searchInput.focus(); } catch (e) { /* noop */ }
+        }, 50);
+      }
+
+      function filterZones(query) {
+        var q = (query || "").trim().toLowerCase();
+        if (!q) return [];
+        var matches = [];
+        for (var i = 0; i < ZONES.length; i++) {
+          var z = ZONES[i];
+          if (z.name.toLowerCase().indexOf(q) !== -1) matches.push(z);
+        }
+        return matches;
+      }
+
+      function renderSearchResults(query) {
+        var matches = filterZones(query);
+        searchResults.innerHTML = "";
+        if (!query || query.trim().length === 0) {
+          searchResults.hidden = true;
+          return;
+        }
+        if (matches.length === 0) {
+          var empty = document.createElement("div");
+          empty.className = "zone-search-empty";
+          empty.textContent = "No areas found for “" + query + "”.";
+          searchResults.appendChild(empty);
+          searchResults.hidden = false;
+          return;
+        }
+        for (var i = 0; i < matches.length; i++) {
+          (function (zone) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "zone-search-result-item";
+            btn.textContent = zone.name;
+            btn.addEventListener("click", function () { commitZone(zone.id); });
+            searchResults.appendChild(btn);
+          })(matches[i]);
+        }
+        searchResults.hidden = false;
+      }
+
+      // ── Wire event handlers ─────────────────────────────
+      if (detectBtn) detectBtn.addEventListener("click", runGeolocate);
+
+      if (manualLink) {
+        manualLink.addEventListener("click", function () { showManual(null); });
+        manualLink.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showManual(null); }
         });
       }
 
-      // ── Household icon card toggles ─────────────────────
+      if (btnConfirm) {
+        btnConfirm.addEventListener("click", function () {
+          if (pendingZone) commitZone(pendingZone.id);
+          pendingZone = null;
+        });
+      }
+      if (btnChange) {
+        btnChange.addEventListener("click", function () {
+          pendingZone = null;
+          showManual(null);
+        });
+      }
+
+      if (searchInput) {
+        searchInput.addEventListener("input", function () { renderSearchResults(searchInput.value); });
+      }
+      if (manualBack) {
+        manualBack.addEventListener("click", function () { showState("idle"); });
+        manualBack.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showState("idle"); }
+        });
+      }
+
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function () {
+          saveZone(null);
+          selectedBar.hidden = true;
+          hideBrief();
+          showState("idle");
+        });
+      }
+
       for (var j = 0; j < hhCards.length; j++) {
         (function (card) {
           card.addEventListener("click", function () {
@@ -3203,26 +3529,22 @@
         })(hhCards[j]);
       }
 
-      // ── Restore from localStorage on load ───────────────
-      // Dots start gray. If a saved zone exists, mark it selected
-      // and show the selected-bar with a placeholder, then fetch.
-      // The color only lands after renderBrief() confirms the state.
+      // ── Init ────────────────────────────────────────────
+      // If a zone was previously saved, skip straight to the
+      // selected state. Otherwise start at idle.
       try {
-        resetAllDotRisks();
         applyHhToCards(loadHousehold());
         var saved = loadZone();
-        if (saved && saved.zone_id) {
-          var exists = !!mapWrap.querySelector('.zone-dot[data-zone="' + saved.zone_id + '"]');
-          if (exists) {
-            setSelectedDot(saved.zone_id);
-            setSelectedBar(saved.zone_id, null);
-            fetchBrief(saved.zone_id);
-          } else {
-            saveZone(null);
-          }
+        if (saved && saved.zone_id && zoneById(saved.zone_id)) {
+          showState("selected");
+          showSelectedBar(saved.zone_id);
+          fetchBrief(saved.zone_id);
+        } else {
+          showState("idle");
         }
       } catch (e) {
         console.warn("[kahuola] zone brief init failed", e && e.message);
+        showState("idle");
         hideBrief();
       }
     })();
