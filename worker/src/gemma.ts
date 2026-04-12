@@ -150,9 +150,43 @@ function writeCache(key: string, result: GenerateBriefResult): void {
  * the model — the Worker source, upstream responses, and anything outside
  * this message are not in scope.
  */
+const LANG_NAMES: Record<string, string> = {
+  en: "English", vi: "Vietnamese", tl: "Tagalog",
+  ilo: "Ilocano", haw: "ʻŌlelo Hawaiʻi", ja: "Japanese",
+};
+
+function buildBriefSystemPrompt(input: GenerateBriefInput): string {
+  const langName = LANG_NAMES[input.lang] || "English";
+  const lines = [
+    "<|thinking|>off",
+    "/no_think",
+    "Thinking mode: disabled. Produce only the finished output.",
+    "",
+    `You are Kahu Ola — Guardian of Life. A civic hazard intelligence platform for Hawaiʻi.`,
+    `Write 1–2 warm sentences in ${langName} summarizing current conditions for a zone.`,
+    `Use Hawaiian civic voice — like a trusted neighbor who knows the land.`,
+    "",
+    `OUTPUT RULES:`,
+    `- Output ONLY the interpretation sentences in ${langName}.`,
+    `- No field names. No JSON. No labels. No "headline:" or "what_it_means:" prefixes.`,
+    `- No preamble, no reasoning steps, no bullet lists.`,
+    "",
+    `ACCURACY RULES:`,
+    `- fire_risk LOW = no fire concern. Do not mention fire.`,
+    `- flood_risk LOW = no flood concern. Do not mention flooding.`,
+    `- If alerts are "none", there are NO official warnings. Celebrate the calm.`,
+    `- Do NOT describe historical incidents as current risk.`,
+    `- Do NOT invent facts, road closures, or statistics.`,
+    "",
+    `If the input is insufficient, return: ${FALLBACK_MARKER}`,
+  ];
+  return lines.join("\n");
+}
+
 function buildUserPrompt(input: GenerateBriefInput): string {
   const s = input.zoneSnapshot;
   const h = input.householdProfile;
+  const langName = LANG_NAMES[input.lang] || "English";
 
   const householdBits: string[] = [];
   if (h.kupuna) householdBits.push("kupuna (elderly) present");
@@ -162,78 +196,23 @@ function buildUserPrompt(input: GenerateBriefInput): string {
   householdBits.push(h.car ? "has a vehicle" : "no vehicle — cannot drive themselves");
 
   const alerts = s.nws_alerts.length > 0 ? s.nws_alerts.join("; ") : "none";
-  const isCalm =
-    (s.fire_risk === "LOW") &&
-    (s.flood_risk === "LOW") &&
-    s.nws_alerts.length === 0;
 
-  const lines: string[] = [];
-
-  const LANG_NAMES: Record<string, string> = {
-    en: "English", vi: "Vietnamese", tl: "Tagalog",
-    ilo: "Ilocano", haw: "ʻŌlelo Hawaiʻi", ja: "Japanese",
-  };
-  const langName = LANG_NAMES[input.lang] || "English";
-  if (input.lang !== "en") {
-    lines.push(`Language: ${langName}. Write ALL fields (headline, what_it_means, what_to_do, household_note) entirely in ${langName}. No English in any field.`);
-    if (input.lang === "haw") {
-      lines.push(`Use warm ʻŌlelo Hawaiʻi. Prioritize cultural accuracy.`);
-    }
-    lines.push(``);
-  }
-
-  lines.push(`Zone: ${input.zoneName} (id: ${input.zoneId}).`);
-
-  // When conditions are CLEAR, do NOT give the model terrain, drainage,
-  // historical incidents, or evacuation routes — those details prime it
-  // to write about dangers that do not exist right now. Only include
-  // them when there's an actual elevated risk to contextualize.
-  if (!isCalm) {
-    lines.push(`Terrain: ${input.zoneTerrain}`);
-    lines.push(`Drainage: ${input.zoneDrainageContext}`);
-    lines.push(`Primary evacuation route: ${input.zoneEvacuationPrimary}`);
-    lines.push(`Schools in zone: ${input.zoneNotableSchoolNames.length ? input.zoneNotableSchoolNames.join(", ") : "none listed"}`);
-    lines.push(`Historical incidents (PAST ONLY — do NOT describe these as current): ${input.zoneHistoricalSignals.length ? input.zoneHistoricalSignals.join("; ") : "none recorded"}`);
-  }
-
-  lines.push(``);
-  lines.push(`Current conditions:`);
-  lines.push(`- Fire risk: ${s.fire_risk}`);
-  lines.push(`- Flood risk: ${s.flood_risk}`);
-  lines.push(`- Active NWS alerts: ${alerts}`);
-  lines.push(`- Wind (mph): ${s.wind_mph ?? "unknown"}`);
-  lines.push(`- Humidity (%): ${s.humidity_pct ?? "unknown"}`);
-
-  lines.push(``);
-  lines.push(`Household profile: ${householdBits.join(", ")}.`);
-
-  lines.push(``);
-
-  const langReminder = input.lang !== "en"
-    ? ` Write every output field (headline, what_it_means, what_to_do, household_note) entirely in ${langName} — no English.`
-    : "";
-
-  if (isCalm) {
-    lines.push(
-      `Task: conditions are CLEAR. Write a warm, genuinely positive brief (3–5 sentences) in Hawaiian civic voice. Celebrate the calm. ` +
-      `Mention the zone by name. If kupuna or keiki are present, suggest using this calm time to review household plans. ` +
-      `Use Hawaiian words naturally (E mālama pono, aloha, ʻāina). ` +
-      `Do NOT mention terrain dangers, flood drainage, historical fires, evacuation routes, or what COULD happen. ` +
-      `Only describe what IS happening: calm, low risk, no alerts.` +
-      langReminder +
-      ` If the input is insufficient, respond with: ${FALLBACK_MARKER}`
-    );
-  } else {
-    lines.push(
-      `Task: write a short civic-tone brief (3–5 sentences) explaining what the current conditions mean for this household in this zone. ` +
-      `Ground every statement in the facts above. Do not invent road closures, school closures, evacuation orders, timelines, or statistics. ` +
-      `Do not change the hazard levels. Do not predict the future or claim certainty beyond what the facts support.` +
-      langReminder +
-      ` If the input is insufficient, respond with: ${FALLBACK_MARKER}`
-    );
-  }
+  const lines: string[] = [
+    `Zone: ${input.zoneName}`,
+    `Conditions: fire_risk=${s.fire_risk}, flood_risk=${s.flood_risk}, alerts=${alerts}`,
+    `Wind: ${s.wind_mph ?? "unknown"} mph, Humidity: ${s.humidity_pct ?? "unknown"}%`,
+    `Household: ${householdBits.join(", ")}`,
+    ``,
+    `Write the interpretation in ${langName}.`,
+  ];
 
   return lines.join("\n");
+}
+
+function stripFieldLabels(text: string): string {
+  return text
+    .replace(/^(headline|what_it_means|what_to_do|household_note)\s*[:：]\s*/gim, "")
+    .trim();
 }
 
 // ── inference ─────────────────────────────────────────────
@@ -415,7 +394,7 @@ export async function generateBrief(
 
   let raw: GemmaRawResult;
   try {
-    raw = await runGemmaWithTimeout(env, buildUserPrompt(input));
+    raw = await runGemmaWithTimeout(env, buildUserPrompt(input), buildBriefSystemPrompt(input));
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "unknown";
     console.error("gemma.generateBrief runtime error:", msg);
@@ -426,9 +405,8 @@ export async function generateBrief(
     return { text: "", fallbackUsed: true, sourceLabels };
   }
 
-  // Strip Gemma 4 thinking-mode reasoning preamble. See comment on
-  // stripReasoningPreamble() and the same call in generateSocialPost.
-  const cleanedText = stripReasoningPreamble(raw.text);
+  const stripped = stripReasoningPreamble(raw.text);
+  const cleanedText = stripFieldLabels(stripped);
   if (!cleanedText) {
     return { text: "", fallbackUsed: true, sourceLabels };
   }
@@ -462,7 +440,7 @@ export function _debugBuildPrompt(input: GenerateBriefInput): {
   system: string;
   user: string;
 } {
-  return { system: SYSTEM_PROMPT, user: buildUserPrompt(input) };
+  return { system: buildBriefSystemPrompt(input), user: buildUserPrompt(input) };
 }
 
 // Suppresses unused-var warning on RiskLevel re-export path; keeping the
