@@ -43,22 +43,42 @@ const BRIEF_TTL_MS = 15 * 60 * 1000;
 export const FALLBACK_MARKER = "FALLBACK_REQUIRED";
 
 const SYSTEM_PROMPT = [
-  // Thinking-mode suppression (Gemma 4 Workers AI adapter). Multiple
-  // directives because different adapter versions respect different
-  // tokens; whichever one the runtime understands will take effect,
-  // and the others become harmless text.
   "<|thinking|>off",
   "/no_think",
   "Thinking mode: disabled. Do not emit reasoning steps, chain-of-thought, or bullet-list deliberations. Produce only the finished output.",
   "",
-  "You are Kahu Ola, a civic hazard information system for Hawaiʻi.",
+  "You are Kahu Ola — Guardian of Life. A civic hazard intelligence platform for Hawaiʻi, built after Lahaina.",
+  "",
+  "TONE RULES — strictly enforce:",
+  "- When conditions are CLEAR (fire_risk LOW, flood_risk LOW, no NWS alerts):",
+  "  Write with genuine Hawaiian warmth and calm. Use phrases like:",
+  '  "E mālama pono", "conditions are calm today", "a good day to",',
+  '  "Hawaiʻi is quiet right now". Celebrate the calm.',
+  "  DO NOT mention terrain dangers, historical incidents, or \"be aware of\" anything.",
+  "  DO NOT add caveats about what COULD happen. Only describe what IS happening.",
+  "",
+  "- When conditions are ACTIVE (any HIGH/EXTREME risk or NWS alert):",
+  "  Be clear, direct, and action-focused. Never sensational.",
+  "  Give specific actionable guidance. Reference official NWS alerts.",
+  "",
+  "ACCURACY RULES — never violate:",
+  "- Use ONLY the live state data provided. Never infer from terrain profile.",
+  "- state.fire_risk LOW = no fire concern today. Do not mention fire.",
+  "- state.flood_risk LOW = no flood concern today. Do not mention flooding.",
+  "- Historical incidents (zone.historical_signals) are PAST ONLY.",
+  "  NEVER reference them as current risk or current concern.",
+  "- Do NOT describe typical terrain characteristics as current hazards.",
+  "- If state.nws_alerts is empty, there are NO official warnings. Say so warmly.",
+  "",
+  "LANGUAGE:",
+  "- Weave in Hawaiian words naturally: mālama, pono, aloha, ʻāina, kūpuna, keiki",
+  "- Warm, local, civic tone — like a trusted neighbor who knows the land",
+  "- Never clinical, never bureaucratic, never fear-based when calm",
+  "",
   "Use only the structured input provided.",
-  "Do not invent facts, warnings, closures, or official guidance.",
-  "Do not change hazard levels.",
-  "Do not claim certainty beyond the provided data.",
-  "Do NOT describe typical, historical, or baseline risk as current conditions. Only describe what the live state data shows RIGHT NOW. If fire_risk is LOW, do not imply elevated fire danger. If flood_risk is LOW, do not imply flood danger. Historical incidents are context, not current alerts.",
-  "Be concise. Output only the final brief text. No preamble, no reasoning steps, no thinking-out-loud.",
-  `If the input is insufficient, return the fallback marker: ${FALLBACK_MARKER}`,
+  "Do not invent facts, warnings, or official guidance.",
+  "Be concise. Output only the final brief text. No preamble, no reasoning steps.",
+  `If the input is insufficient, return: ${FALLBACK_MARKER}`,
 ].join("\n");
 
 // Minimal AI binding contract. The real Workers AI binding exposes more,
@@ -142,27 +162,59 @@ function buildUserPrompt(input: GenerateBriefInput): string {
   householdBits.push(h.car ? "has a vehicle" : "no vehicle — cannot drive themselves");
 
   const alerts = s.nws_alerts.length > 0 ? s.nws_alerts.join("; ") : "none";
+  const isCalm =
+    (s.fire_risk === "LOW") &&
+    (s.flood_risk === "LOW") &&
+    s.nws_alerts.length === 0;
 
-  return [
-    `Zone: ${input.zoneName} (id: ${input.zoneId}).`,
-    `Terrain: ${input.zoneTerrain}`,
-    `Drainage: ${input.zoneDrainageContext}`,
-    `Primary evacuation route: ${input.zoneEvacuationPrimary}`,
-    `Schools in zone: ${input.zoneNotableSchoolNames.length ? input.zoneNotableSchoolNames.join(", ") : "none listed"}`,
-    `Historical incidents (PAST ONLY — do NOT describe these as current): ${input.zoneHistoricalSignals.length ? input.zoneHistoricalSignals.join("; ") : "none recorded"}`,
-    ``,
-    `Current conditions:`,
-    `- Fire risk: ${s.fire_risk}`,
-    `- Flood risk: ${s.flood_risk}`,
-    `- Active NWS alerts: ${alerts}`,
-    `- Wind (mph): ${s.wind_mph ?? "unknown"}`,
-    `- Humidity (%): ${s.humidity_pct ?? "unknown"}`,
-    ``,
-    `Household profile: ${householdBits.join(", ")}.`,
-    `Language requested: ${input.lang}. For Phase 2 respond in English only unless explicitly told otherwise.`,
-    ``,
-    `Task: write a short civic-tone brief (3–5 sentences) that explains, in plain language, what the current conditions mean for this household in this zone. Ground every statement in the facts above. Do not invent road closures, school closures, evacuation orders, timelines, or statistics. Do not change the hazard levels. Do not predict the future or claim certainty beyond what the facts support. If the facts above are too sparse to write a grounded brief, respond with exactly: ${FALLBACK_MARKER}`,
-  ].join("\n");
+  const lines: string[] = [];
+
+  lines.push(`Zone: ${input.zoneName} (id: ${input.zoneId}).`);
+
+  // When conditions are CLEAR, do NOT give the model terrain, drainage,
+  // historical incidents, or evacuation routes — those details prime it
+  // to write about dangers that do not exist right now. Only include
+  // them when there's an actual elevated risk to contextualize.
+  if (!isCalm) {
+    lines.push(`Terrain: ${input.zoneTerrain}`);
+    lines.push(`Drainage: ${input.zoneDrainageContext}`);
+    lines.push(`Primary evacuation route: ${input.zoneEvacuationPrimary}`);
+    lines.push(`Schools in zone: ${input.zoneNotableSchoolNames.length ? input.zoneNotableSchoolNames.join(", ") : "none listed"}`);
+    lines.push(`Historical incidents (PAST ONLY — do NOT describe these as current): ${input.zoneHistoricalSignals.length ? input.zoneHistoricalSignals.join("; ") : "none recorded"}`);
+  }
+
+  lines.push(``);
+  lines.push(`Current conditions:`);
+  lines.push(`- Fire risk: ${s.fire_risk}`);
+  lines.push(`- Flood risk: ${s.flood_risk}`);
+  lines.push(`- Active NWS alerts: ${alerts}`);
+  lines.push(`- Wind (mph): ${s.wind_mph ?? "unknown"}`);
+  lines.push(`- Humidity (%): ${s.humidity_pct ?? "unknown"}`);
+
+  lines.push(``);
+  lines.push(`Household profile: ${householdBits.join(", ")}.`);
+
+  lines.push(``);
+
+  if (isCalm) {
+    lines.push(
+      `Task: conditions are CLEAR. Write a warm, genuinely positive brief (3–5 sentences) in Hawaiian civic voice. Celebrate the calm. ` +
+      `Mention the zone by name. If kupuna or keiki are present, suggest using this calm time to review household plans. ` +
+      `Use Hawaiian words naturally (E mālama pono, aloha, ʻāina). ` +
+      `Do NOT mention terrain dangers, flood drainage, historical fires, evacuation routes, or what COULD happen. ` +
+      `Only describe what IS happening: calm, low risk, no alerts. ` +
+      `If the input is insufficient, respond with: ${FALLBACK_MARKER}`
+    );
+  } else {
+    lines.push(
+      `Task: write a short civic-tone brief (3–5 sentences) explaining what the current conditions mean for this household in this zone. ` +
+      `Ground every statement in the facts above. Do not invent road closures, school closures, evacuation orders, timelines, or statistics. ` +
+      `Do not change the hazard levels. Do not predict the future or claim certainty beyond what the facts support. ` +
+      `If the input is insufficient, respond with: ${FALLBACK_MARKER}`
+    );
+  }
+
+  return lines.join("\n");
 }
 
 // ── inference ─────────────────────────────────────────────
@@ -437,7 +489,7 @@ const SOCIAL_SYSTEM_PROMPT = [
   "5. No ALL CAPS except acronyms (NWS, FEMA, NOAA)",
   "6. Never exaggerate severity — if uncertain, say \"monitoring\"",
   "7. Cite source agency when relevant: NWS, NASA FIRMS, NOAA",
-  "8. If no active alerts: post a general awareness or preparedness message",
+  "8. If no active alerts: post a genuinely positive, warm message celebrating calm conditions. Use Hawaiian warmth (E mālama pono, Aloha mai kākou). Do NOT mention terrain dangers, historical incidents, or what COULD happen. Celebrate the calm.",
   "",
   "FORBIDDEN:",
   "- Never say \"BREAKING\" or \"URGENT\" unless the context mentions an NWS Warning",
