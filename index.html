@@ -1451,6 +1451,29 @@
     }
     .zone-school-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;margin-top:4px}
 
+    /* ── Hazard Timeline — Now / Next 3h / Tonight ─────── */
+    .zone-timeline{margin:10px 0;padding:10px 0;border-top:.5px solid #21262d;border-bottom:.5px solid #21262d}
+    .zone-timeline-row{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;align-items:start}
+    .zone-tl-block{display:flex;flex-direction:column;gap:4px;padding:0 8px}
+    .zone-tl-block:first-child{padding-left:0}
+    .zone-tl-block:last-child{padding-right:0}
+    .zone-tl-divider{width:.5px;background:#21262d;align-self:stretch;margin:2px 0}
+    .zone-tl-label{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#6e7681;font-weight:500}
+    .zone-tl-text{font-size:12px;color:#c9d1d9;line-height:1.4}
+
+    /* ── Trust Ladder ───────────────────────────────────── */
+    .zone-trust-ladder{margin-bottom:8px;display:flex;flex-direction:column;gap:4px}
+    .ztl-row{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5}
+    .ztl-badge{
+      font-size:10px;font-family:var(--mono);
+      padding:1px 6px;border-radius:4px;
+      white-space:nowrap;flex-shrink:0;margin-top:1px;
+    }
+    .ztl-official{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+    .ztl-signal{background:rgba(234,179,8,.12);color:#fde68a;border:1px solid rgba(234,179,8,.25)}
+    .ztl-kahuola{background:rgba(99,153,34,.12);color:#97c459;border:1px solid rgba(99,153,34,.25)}
+    .ztl-text{color:#8b949e}
+
     /* ── Section 6: Calm Window Detector ────────────────── */
     .zone-calm-section{margin-top:10px}
     .zone-calm-card{
@@ -1678,12 +1701,40 @@
           <span id="zoneDeltaText"></span>
         </div>
 
+        <!-- ── Trust Ladder ── -->
+        <div class="zone-trust-ladder" id="zoneTrustLadder" hidden>
+          <div class="ztl-row" id="ztlOfficial" hidden>
+            <span class="ztl-badge ztl-official">[OFFICIAL]</span>
+            <span class="ztl-text" id="ztlOfficialText"></span>
+          </div>
+          <div class="ztl-row" id="ztlSignal" hidden>
+            <span class="ztl-badge ztl-signal">[SIGNAL]</span>
+            <span class="ztl-text" id="ztlSignalText"></span>
+          </div>
+          <div class="ztl-row">
+            <span class="ztl-badge ztl-kahuola">[KAHU OLA]</span>
+            <span class="ztl-text" id="ztlKahuolaText"></span>
+          </div>
+        </div>
+
         <!-- ── Brief body (upgraded display) ── -->
         <div class="zone-brief-body" id="zoneBriefBody" hidden>
           <div class="zone-brief-loading" id="zoneBriefLoading" hidden>Loading your area brief…</div>
           <div class="zone-brief-content" id="zoneBriefContent" hidden>
             <h3 class="zone-brief-headline" id="zoneBriefHeadline"></h3>
             <p class="zone-brief-means" id="zoneBriefMeans"></p>
+
+            <!-- ── Hazard Timeline — Now / Next 3h / Tonight ── -->
+            <div class="zone-timeline" id="zoneTimeline" hidden>
+              <div class="zone-timeline-row">
+                <div class="zone-tl-block"><span class="zone-tl-label">Now</span><span class="zone-tl-text" id="tlNowText"></span></div>
+                <div class="zone-tl-divider"></div>
+                <div class="zone-tl-block"><span class="zone-tl-label">Next 3h</span><span class="zone-tl-text" id="tl3hText"></span></div>
+                <div class="zone-tl-divider"></div>
+                <div class="zone-tl-block"><span class="zone-tl-label">Tonight</span><span class="zone-tl-text" id="tlTonightText"></span></div>
+              </div>
+            </div>
+
             <div class="zone-brief-action">
               <div class="zone-brief-action-label">What to do</div>
               <p class="zone-brief-action-text" id="zoneBriefAction"></p>
@@ -3331,13 +3382,17 @@
         contentEl.hidden = true;
         loadingEl.hidden = true;
         deltaEl.hidden = true;
-        // Also hide sections 4–6 so they don't linger after zone clear.
+        // Also hide timeline, trust ladder, and sections 4–6 on clear.
         var ws = document.getElementById("zoneWhySection");
         var ss = document.getElementById("zoneSchoolSection");
         var cs = document.getElementById("zoneCalmSection");
+        var zt = document.getElementById("zoneTimeline");
+        var zl = document.getElementById("zoneTrustLadder");
         if (ws) ws.hidden = true;
         if (ss) ss.hidden = true;
         if (cs) cs.hidden = true;
+        if (zt) zt.hidden = true;
+        if (zl) zl.hidden = true;
       }
 
       function showLoading() {
@@ -3393,6 +3448,77 @@
         loadingEl.hidden = true;
         contentEl.hidden = false;
         briefBody.hidden = false;
+
+        // ── Hazard Timeline — Now / Next 3h / Tonight ─────
+        var tlEl = document.getElementById("zoneTimeline");
+        if (tlEl) {
+          var tfr = (envelope.state && envelope.state.fire_risk) || "LOW";
+          var tfl = (envelope.state && envelope.state.flood_risk) || "LOW";
+          var tal = (envelope.state && envelope.state.nws_alerts) || [];
+          var twd = envelope.state && envelope.state.wind_mph;
+
+          var nowText;
+          if (tal.length > 0) nowText = tal[0];
+          else if (tfr === "EXTREME") nowText = "Extreme fire conditions";
+          else if (tfr === "HIGH") nowText = "Elevated fire risk";
+          else if (tfl === "HIGH" || tfl === "EXTREME") nowText = "Elevated flood risk";
+          else nowText = "Conditions calm";
+
+          var next3hText;
+          if (tfr === "EXTREME" || tfr === "HIGH") {
+            next3hText = twd ? "Winds " + twd + " mph — monitor closely" : "Continue monitoring";
+          } else if (tfl === "HIGH" || tfl === "EXTREME") {
+            next3hText = "Watch stream levels and NWS";
+          } else {
+            next3hText = "No change expected";
+          }
+
+          var tonightText;
+          if (tal.length > 0) tonightText = "Follow NWS guidance";
+          else if (tfr === "HIGH" || tfr === "EXTREME") tonightText = "Check NWS before nightfall";
+          else if (tfl === "HIGH" || tfl === "EXTREME") tonightText = "Monitor overnight — NWS";
+          else tonightText = "Calm expected — stay informed";
+
+          document.getElementById("tlNowText").textContent = nowText;
+          document.getElementById("tl3hText").textContent = next3hText;
+          document.getElementById("tlTonightText").textContent = tonightText;
+          tlEl.hidden = false;
+        }
+
+        // ── Trust Ladder ──────────────────────────────────
+        var trustLadder = document.getElementById("zoneTrustLadder");
+        var ztlOfficial = document.getElementById("ztlOfficial");
+        var ztlSignal   = document.getElementById("ztlSignal");
+        if (trustLadder) {
+          var lfr = (envelope.state && envelope.state.fire_risk) || "LOW";
+          var lfl = (envelope.state && envelope.state.flood_risk) || "LOW";
+          var lal = (envelope.state && envelope.state.nws_alerts) || [];
+
+          if (ztlOfficial) {
+            if (lal.length > 0) {
+              document.getElementById("ztlOfficialText").textContent =
+                "NWS " + lal[0] + " — " + (envelope.zone && envelope.zone.zone_name || "");
+              ztlOfficial.hidden = false;
+            } else {
+              ztlOfficial.hidden = true;
+            }
+          }
+          if (ztlSignal) {
+            if (lfr === "HIGH" || lfr === "EXTREME" || lfl === "HIGH" || lfl === "EXTREME") {
+              var sigParts = [];
+              if (lfr === "HIGH" || lfr === "EXTREME") sigParts.push("NASA FIRMS fire data: " + lfr + " risk");
+              if (lfl === "HIGH" || lfl === "EXTREME") sigParts.push("NWS flood signal: " + lfl + " risk");
+              document.getElementById("ztlSignalText").textContent = sigParts.join(" · ");
+              ztlSignal.hidden = false;
+            } else {
+              ztlSignal.hidden = true;
+            }
+          }
+          document.getElementById("ztlKahuolaText").textContent =
+            (envelope.zone && envelope.zone.zone_name || "") + " local meaning — " +
+            (brief.generated_by === "kahuola_ai" ? "Gemma 4 interpretation" : "zone profile template");
+          trustLadder.hidden = false;
+        }
 
         // ── Section 4: Why this area is different ─────────
         var whySection = document.getElementById("zoneWhySection");
