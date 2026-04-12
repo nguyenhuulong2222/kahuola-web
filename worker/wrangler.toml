@@ -39,3 +39,11 @@ id = "76de514417fb4821bc1e51bac04b30a1"
 # Doctrine: Gemma 4 only. No Gemini. No other AI vendor.
 [ai]
 binding = "AI"
+
+# ── R2 bucket for voice audio cache (Phase 2.2) ──
+# Bucket already exists: kahuola-media
+# Cache key: voice/{zone_id}/{lang}/{date_hst}.mp3
+# Invalidated daily — new brief audio generated each morning.
+[[r2_buckets]]
+binding = "KAHUOLA_MEDIA"
+bucket_name = "kahuola-media"

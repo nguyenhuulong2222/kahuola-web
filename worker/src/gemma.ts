@@ -283,7 +283,7 @@ function extractContentString(content: unknown): string {
  * If neither produces anything, fall through to the original text and
  * let the validator decide.
  */
-function stripReasoningPreamble(text: string): string {
+export function stripReasoningPreamble(text: string): string {
   if (!text) return text;
 
   // Strategy 1: find the last bullet-reasoning line, return everything after.
@@ -314,7 +314,7 @@ function stripReasoningPreamble(text: string): string {
   return text;
 }
 
-function extractResponseText(response: any): string {
+export function extractResponseText(response: any): string {
   if (typeof response === "string") return response;
   if (response == null || typeof response !== "object") return "";
 

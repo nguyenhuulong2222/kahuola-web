@@ -28,6 +28,12 @@ import {
   generateSocialPost,
   GEMMA_MODEL,
 } from "./gemma";
+import {
+  generateVoiceScript,
+  generateTTSAudio,
+  voiceCacheKey,
+  type VoiceInput,
+} from "./voice";
 
 export interface Env {
   NASA_FIRMS_MAP_KEY: string;
@@ -39,6 +45,11 @@ export interface Env {
   // in — existing code in the file already works this way.
   AI: { run(model: string, input: unknown): Promise<unknown> };
   KAHUOLA_CACHE: unknown;
+  OPENAI_API_KEY?: string;
+  KAHUOLA_MEDIA: {
+    get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+    put(key: string, value: ArrayBuffer, options?: { httpMetadata?: { contentType?: string } }): Promise<void>;
+  };
 }
 
 type CorsHeaders = Record<string, string>;
@@ -924,6 +935,9 @@ export default {
       // Template fallback stays the primary safety net.
       const zoneMatch = path.match(/^\/api\/hazards\/zone\/([a-z0-9_]+)$/);
       if (zoneMatch) return handleZoneBrief(zoneMatch[1], url, env, cors);
+
+      // Voice brief — Gemma 4 script + OpenAI TTS, cached in R2
+      if (path === '/api/voice') return handleVoiceRequest(url, env, cors);
 
       return err(404, 'Not found', cors);
     } catch (e: unknown) {
@@ -2514,4 +2528,145 @@ async function handleBriefPost(
       cors,
     );
   }
+}
+
+// ── /api/voice — spoken hazard brief (Gemma 4 script + OpenAI TTS) ────
+const VALID_VOICE_LANGS = ["en", "vi", "tl", "ilo", "haw", "ja"];
+
+async function handleVoiceRequest(
+  url: URL,
+  env: Env,
+  cors: CorsHeaders,
+): Promise<Response> {
+  const zoneId = (url.searchParams.get("zone") || "").trim();
+  const lang = url.searchParams.get("lang") || "en";
+  const safeLang = VALID_VOICE_LANGS.includes(lang) ? lang : "en";
+
+  const zone = getZoneById(zoneId);
+  if (!zone) {
+    return jsonResp(
+      { ok: false, error: "zone_not_found", message: `Zone '${zoneId}' not found` },
+      200,
+      cors,
+    );
+  }
+
+  // R2 cache check — serve cached MP3 if available
+  const cacheKey = voiceCacheKey(zoneId, safeLang);
+  if (env.KAHUOLA_MEDIA) {
+    try {
+      const cached = await env.KAHUOLA_MEDIA.get(cacheKey);
+      if (cached) {
+        const audio = await cached.arrayBuffer();
+        return new Response(audio, {
+          status: 200,
+          headers: {
+            ...cors,
+            "Content-Type": "audio/mpeg",
+            "Cache-Control": "public, max-age=3600",
+            "X-Kahuola-Cache": "HIT",
+            "X-Kahuola-Zone": zoneId,
+            "X-Kahuola-Lang": safeLang,
+          },
+        });
+      }
+    } catch (e: unknown) {
+      console.warn("R2 voice cache read failed:", e instanceof Error ? e.message : "unknown");
+    }
+  }
+
+  // Build zone brief (reuse existing buildZoneDynamicState + template)
+  let briefData: { headline: string; what_it_means: string; what_to_do: string; household_note: string | null };
+  try {
+    const state = await buildZoneDynamicState(zone, cors);
+    const defaultHousehold: HouseholdProfile = {
+      kupuna: false,
+      keiki: false,
+      pets: false,
+      medical: false,
+      car: true,
+    };
+    const brief = generateZoneBrief({ zone, state, household: defaultHousehold, lang: safeLang });
+    briefData = {
+      headline: brief.headline,
+      what_it_means: brief.what_it_means,
+      what_to_do: brief.what_to_do,
+      household_note: brief.household_note,
+    };
+  } catch (e: unknown) {
+    console.error("Voice: brief build failed:", e instanceof Error ? e.message : "unknown");
+    briefData = {
+      headline: zone.zone_name + ": brief unavailable",
+      what_it_means: "Live hazard data temporarily unavailable.",
+      what_to_do: "Check NWS Honolulu alerts at weather.gov.",
+      household_note: null,
+    };
+  }
+
+  // Generate voice script via Gemma 4
+  const voiceInput: VoiceInput = {
+    zoneId,
+    lang: safeLang,
+    zoneBrief: briefData,
+    zoneName: zone.zone_name,
+    islandName: zone.island,
+  };
+
+  const script = await generateVoiceScript(env, voiceInput);
+
+  // Generate TTS audio via OpenAI
+  if (!env.OPENAI_API_KEY) {
+    return jsonResp(
+      {
+        ok: false,
+        error: "tts_unconfigured",
+        message: "OPENAI_API_KEY not configured. Script generated but TTS unavailable.",
+        script,
+        zone: zone.zone_name,
+        lang: safeLang,
+      },
+      200,
+      cors,
+    );
+  }
+
+  const audioBuffer = await generateTTSAudio(env.OPENAI_API_KEY, script);
+
+  if (!audioBuffer) {
+    return jsonResp(
+      {
+        ok: false,
+        error: "tts_unavailable",
+        message: "Audio generation temporarily unavailable.",
+        script,
+        zone: zone.zone_name,
+        lang: safeLang,
+      },
+      200,
+      cors,
+    );
+  }
+
+  // Write to R2 cache (best-effort — return audio even if cache write fails)
+  if (env.KAHUOLA_MEDIA) {
+    try {
+      await env.KAHUOLA_MEDIA.put(cacheKey, audioBuffer, {
+        httpMetadata: { contentType: "audio/mpeg" },
+      });
+    } catch (e: unknown) {
+      console.warn("R2 voice cache write failed:", e instanceof Error ? e.message : "unknown");
+    }
+  }
+
+  return new Response(audioBuffer, {
+    status: 200,
+    headers: {
+      ...cors,
+      "Content-Type": "audio/mpeg",
+      "Cache-Control": "public, max-age=3600",
+      "X-Kahuola-Cache": "MISS",
+      "X-Kahuola-Zone": zoneId,
+      "X-Kahuola-Lang": safeLang,
+    },
+  });
 }
