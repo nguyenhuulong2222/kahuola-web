@@ -1550,7 +1550,7 @@
     <section class="zone-brief-section" id="zoneBriefSection">
       <article class="card zone-brief-card">
         <div class="zone-brief-head">
-          <div class="zone-brief-kicker">LOCAL BRIEF — MAUI</div>
+          <div class="zone-brief-kicker" id="zoneBriefKicker">LOCAL BRIEF — MAUI</div>
           <h2 class="zone-brief-title" id="zoneBriefTitle">Find your area for a local brief</h2>
         </div>
 
@@ -1601,7 +1601,7 @@
           <!-- State 3: Confirm (zone matched from GPS) -->
           <div class="zone-confirm-card" id="zoneConfirmCard" hidden>
             <p class="zone-confirm-name" id="zoneConfirmName"></p>
-            <p class="zone-confirm-island">Maui · Hawaiʻi</p>
+            <p class="zone-confirm-island" id="zoneConfirmIsland">Maui · Hawaiʻi</p>
             <div class="zone-confirm-meta">
               <span class="zone-confirm-distance" id="zoneConfirmDistance">—</span>
               <span class="zone-confirm-risk" id="zoneConfirmRisk">Checking…</span>
@@ -3191,7 +3191,29 @@
         { id: "kula_lower",          name: "Kula Lower",                   lat: 20.7600, lng: -156.3600 },
         { id: "paia",                name: "Pāʻia",                        lat: 20.9151, lng: -156.3620 },
         { id: "hana",                name: "Hāna",                         lat: 20.7579, lng: -155.9899 },
-        { id: "upcountry_interface", name: "Upcountry Interface",          lat: 20.8450, lng: -156.3600 }
+        { id: "upcountry_interface", name: "Upcountry Interface",          lat: 20.8450, lng: -156.3600 },
+
+        // ── Hawaii Island ──
+        { id: "hilo",              name: "Hilo",                         lat: 19.7297, lng: -155.0900 },
+        { id: "puna",              name: "Puna District",                lat: 19.4969, lng: -154.9219 },
+        { id: "kona",              name: "Kailua-Kona",                  lat: 19.6400, lng: -155.9969 },
+        { id: "kohala",            name: "North Kohala",                 lat: 20.2300, lng: -155.8200 },
+        { id: "waimea_hi",         name: "Waimea (Kamuela)",             lat: 20.0233, lng: -155.6686 },
+        { id: "volcano_hi",        name: "Volcano Village",              lat: 19.4310, lng: -155.2348 },
+
+        // ── Oʻahu ──
+        { id: "honolulu",          name: "Honolulu",                     lat: 21.3069, lng: -157.8583 },
+        { id: "kailua_oahu",       name: "Kailua",                       lat: 21.4022, lng: -157.7394 },
+        { id: "kaneohe",           name: "Kāneʻohe",                     lat: 21.4183, lng: -157.7975 },
+        { id: "pearl_city",        name: "Pearl City",                   lat: 21.3972, lng: -157.9756 },
+        { id: "waianae",           name: "Waiʻanae",                     lat: 21.4450, lng: -158.1850 },
+        { id: "north_shore_oahu",  name: "North Shore",                  lat: 21.6394, lng: -158.0536 },
+
+        // ── Kauaʻi ──
+        { id: "lihue",             name: "Līhuʻe",                       lat: 21.9811, lng: -159.3711 },
+        { id: "hanalei",           name: "Hanalei",                      lat: 22.2036, lng: -159.4975 },
+        { id: "poipu",             name: "Poʻipū",                       lat: 21.8794, lng: -159.4569 },
+        { id: "kapaa",             name: "Kapaʻa",                       lat: 22.0750, lng: -159.3190 }
       ];
 
       var ZONE_KEY = "kahuola_zone";
@@ -3337,6 +3359,22 @@
       function zoneById(zoneId) {
         for (var i = 0; i < ZONES.length; i++) if (ZONES[i].id === zoneId) return ZONES[i];
         return null;
+      }
+
+      var ISLAND_MAP = {
+        lahaina: "Maui", lahaina_mauka: "Maui", kaanapali: "Maui",
+        kihe_north: "Maui", kihe_south: "Maui", kahului_harbor: "Maui",
+        wailuku_central: "Maui", wailuku_mauka: "Maui", pukalani: "Maui",
+        makawao: "Maui", kula_upper: "Maui", kula_lower: "Maui",
+        paia: "Maui", hana: "Maui", upcountry_interface: "Maui",
+        hilo: "Hawaiʻi Island", puna: "Hawaiʻi Island", kona: "Hawaiʻi Island",
+        kohala: "Hawaiʻi Island", waimea_hi: "Hawaiʻi Island", volcano_hi: "Hawaiʻi Island",
+        honolulu: "Oʻahu", kailua_oahu: "Oʻahu", kaneohe: "Oʻahu",
+        pearl_city: "Oʻahu", waianae: "Oʻahu", north_shore_oahu: "Oʻahu",
+        lihue: "Kauaʻi", hanalei: "Kauaʻi", poipu: "Kauaʻi", kapaa: "Kauaʻi"
+      };
+      function islandForZone(zoneId) {
+        return ISLAND_MAP[zoneId] || "Hawaiʻi";
       }
 
       // ── URL query building ──────────────────────────────
@@ -3811,9 +3849,10 @@
         var z = zoneById(zoneId);
         if (!z) { selectedBar.hidden = true; return; }
         selectedName.textContent = z.name;
-        // Risk badge starts as placeholder; renderBrief() repaints it.
         paintBadge(selectedRisk, null, "Checking…");
         selectedBar.hidden = false;
+        var kickerEl = document.getElementById("zoneBriefKicker");
+        if (kickerEl) kickerEl.textContent = "LOCAL BRIEF — " + islandForZone(zoneId).toUpperCase();
       }
 
       // ── Confirm/save flow ───────────────────────────────
@@ -3823,7 +3862,7 @@
       function commitZone(zoneId) {
         var z = zoneById(zoneId);
         if (!z) return;
-        saveZone({ island: "Maui", zone_id: z.id });
+        saveZone({ island: islandForZone(z.id), zone_id: z.id });
         showState("selected");
         showSelectedBar(z.id);
         if (zoneLangWrap) { zoneLangWrap.hidden = false; markActiveLangBtn(); }
@@ -3873,10 +3912,10 @@
       function presentConfirm(zone, miles) {
         pendingZone = zone;
         confirmName.textContent = zone.name;
+        var confirmIslandEl = document.getElementById("zoneConfirmIsland");
+        if (confirmIslandEl) confirmIslandEl.textContent = islandForZone(zone.id) + " · Hawaiʻi";
         var rounded = miles < 1 ? miles.toFixed(1) : Math.round(miles);
         confirmDistance.textContent = rounded + " mi away";
-        // Reset risk badge to "Checking…" — it stays that way until
-        // the user confirms and the brief fetch returns.
         confirmRisk.className = "zone-confirm-risk";
         confirmRisk.textContent = "Checking…";
         showState("confirm");
