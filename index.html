@@ -1416,6 +1416,40 @@
       box-shadow:0 0 0 3px rgba(22,163,74,.18);
     }
     .zone-brief-trust.ai{color:#bbf7d0}
+
+    /* ── Section 4: Why this area is different ──────────── */
+    .zone-why-section{border-top:.5px solid #21262d;margin-top:8px;padding-top:8px}
+    .zone-why-toggle{
+      width:100%;display:flex;justify-content:space-between;align-items:center;
+      background:none;border:none;color:#8b949e;font-size:13px;
+      padding:8px 0;cursor:pointer;text-align:left;font-family:inherit;
+    }
+    .zone-why-toggle:hover{color:#c9d1d9}
+    .zone-why-chevron{transition:transform .2s;flex-shrink:0}
+    .zone-why-toggle.expanded .zone-why-chevron{transform:rotate(180deg)}
+    .zone-why-body p{font-size:13px;color:#8b949e;line-height:1.7;margin:0 0 6px}
+    .zone-why-body p:last-child{margin-bottom:0}
+
+    /* ── Section 5: Schools & Facilities ────────────────── */
+    .zone-school-section{border-top:.5px solid #21262d;margin-top:8px;padding-top:10px}
+    .zone-school-label{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#6e7681;margin:0 0 8px}
+    .zone-school-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:.5px solid #21262d}
+    .zone-school-item:last-child{border-bottom:none}
+    .zone-school-name{display:block;font-size:13px;color:#c9d1d9;margin-bottom:2px}
+    .zone-school-status{display:block;font-size:11px;color:#6e7681}
+    .zone-school-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;margin-top:4px}
+
+    /* ── Section 6: Calm Window Detector ────────────────── */
+    .zone-calm-section{margin-top:10px}
+    .zone-calm-card{
+      background:rgba(245,158,11,.08);
+      border:1px solid rgba(245,158,11,.25);
+      border-radius:12px;
+      padding:14px;
+    }
+    .zone-calm-title{font-size:14px;font-weight:500;color:#fbbf24;margin:0 0 6px}
+    .zone-calm-text{font-size:13px;color:#d97706;line-height:1.6;margin:0 0 8px}
+    .zone-calm-source{font-size:11px;color:#92400e;margin:0}
   </style>
 </head>
 <body>
@@ -1649,6 +1683,34 @@
             </div>
           </div>
         </div>
+
+        <!-- ── Section 4: Why this area is different ── -->
+        <div class="zone-why-section" id="zoneWhySection" hidden>
+          <button class="zone-why-toggle" id="zoneWhyToggle" type="button" aria-expanded="false">
+            <span id="zoneWhyTitle">Why this area is different</span>
+            <svg class="zone-why-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="zone-why-body" id="zoneWhyBody" hidden>
+            <p id="zoneWhyTerrain"></p>
+            <p id="zoneWhyDynamic"></p>
+          </div>
+        </div>
+
+        <!-- ── Section 5: Schools & Facilities ── -->
+        <div class="zone-school-section" id="zoneSchoolSection" hidden>
+          <p class="zone-school-label">In your area</p>
+          <div id="zoneSchoolList"></div>
+        </div>
+
+        <!-- ── Section 6: Calm Window Detector ── -->
+        <div class="zone-calm-section" id="zoneCalmSection" hidden>
+          <div class="zone-calm-card">
+            <p class="zone-calm-title">When is it safer to move?</p>
+            <p class="zone-calm-text" id="zoneCalmText"></p>
+            <p class="zone-calm-source">Kahu Ola estimate — always follow official NWS guidance</p>
+          </div>
+        </div>
+
       </article>
     </section>
 
@@ -3259,6 +3321,13 @@
         contentEl.hidden = true;
         loadingEl.hidden = true;
         deltaEl.hidden = true;
+        // Also hide sections 4–6 so they don't linger after zone clear.
+        var ws = document.getElementById("zoneWhySection");
+        var ss = document.getElementById("zoneSchoolSection");
+        var cs = document.getElementById("zoneCalmSection");
+        if (ws) ws.hidden = true;
+        if (ss) ss.hidden = true;
+        if (cs) cs.hidden = true;
       }
 
       function showLoading() {
@@ -3314,6 +3383,104 @@
         loadingEl.hidden = true;
         contentEl.hidden = false;
         briefBody.hidden = false;
+
+        // ── Section 4: Why this area is different ─────────
+        var whySection = document.getElementById("zoneWhySection");
+        var whyTitle   = document.getElementById("zoneWhyTitle");
+        var whyTerrain = document.getElementById("zoneWhyTerrain");
+        var whyDynamic = document.getElementById("zoneWhyDynamic");
+        var whyToggle  = document.getElementById("zoneWhyToggle");
+        var whyBody    = document.getElementById("zoneWhyBody");
+
+        if (whySection && envelope.zone) {
+          whyTitle.textContent = "Why " + envelope.zone.zone_name + " is different";
+          whyTerrain.textContent = envelope.zone.terrain_type +
+            (envelope.zone.zone_notes && envelope.zone.zone_notes[0]
+              ? " — " + envelope.zone.zone_notes[0] : "");
+          var means = (brief.what_it_means || "");
+          whyDynamic.textContent = means.split(".")[0] + (means.indexOf(".") !== -1 ? "." : "");
+          whySection.hidden = false;
+          // Collapse by default each time a new zone loads.
+          whyBody.hidden = true;
+          whyToggle.setAttribute("aria-expanded", "false");
+          whyToggle.classList.remove("expanded");
+          // Wire toggle (use a named handler to avoid stacking listeners).
+          whyToggle.onclick = function () {
+            var exp = whyToggle.getAttribute("aria-expanded") === "true";
+            whyToggle.setAttribute("aria-expanded", String(!exp));
+            whyBody.hidden = exp;
+            if (exp) whyToggle.classList.remove("expanded");
+            else whyToggle.classList.add("expanded");
+          };
+        } else if (whySection) {
+          whySection.hidden = true;
+        }
+
+        // ── Section 5: Schools & Facilities ───────────────
+        var schoolSection = document.getElementById("zoneSchoolSection");
+        var schoolList    = document.getElementById("zoneSchoolList");
+        var hhNow = readHhCards();
+        var locations = (envelope.zone && envelope.zone.notable_locations) || [];
+        var zoneAlerts = (envelope.state && envelope.state.nws_alerts) || [];
+        var hasAlerts = zoneAlerts.length > 0;
+
+        var toShow = [];
+        for (var si = 0; si < locations.length; si++) {
+          var loc = locations[si];
+          if (loc.type === "school") toShow.push(loc);
+          else if (loc.type === "medical" && (hhNow.medical || hhNow.oxygen)) toShow.push(loc);
+        }
+
+        if (schoolSection && schoolList && toShow.length > 0) {
+          var html = "";
+          for (var sj = 0; sj < toShow.length; sj++) {
+            var l = toShow[sj];
+            var dotColor = hasAlerts ? "#f59e0b" : "#22c55e";
+            var status = hasAlerts
+              ? "Monitor — " + zoneAlerts[0] + " in effect"
+              : "No active alerts today";
+            var icon = l.type === "medical" ? "\uD83C\uDFE5 " : "\uD83C\uDFEB ";
+            html +=
+              '<div class="zone-school-item">' +
+              '<span class="zone-school-dot" style="background:' + dotColor + '"></span>' +
+              '<div><span class="zone-school-name">' + icon + l.name + '</span>' +
+              '<span class="zone-school-status">' + status + '</span></div>' +
+              '</div>';
+          }
+          schoolList.innerHTML = html;
+          schoolSection.hidden = false;
+        } else if (schoolSection) {
+          schoolSection.hidden = true;
+        }
+
+        // ── Section 6: Calm Window Detector ───────────────
+        var calmSection = document.getElementById("zoneCalmSection");
+        var calmText    = document.getElementById("zoneCalmText");
+        var cfr = (envelope.state && envelope.state.fire_risk) || "LOW";
+        var cfl = (envelope.state && envelope.state.flood_risk) || "LOW";
+        var cal = zoneAlerts;
+        var showCalm = cfr === "HIGH" || cfr === "EXTREME" ||
+                       cfl === "HIGH" || cfl === "EXTREME" ||
+                       cal.length > 0;
+
+        if (calmSection && calmText) {
+          if (showCalm) {
+            var cMsg = "";
+            if (cal.length > 0) {
+              cMsg = "Wait for official NWS all-clear before traveling. Active: " + cal[0];
+            } else if (cfr === "EXTREME") {
+              cMsg = "No calm window predicted under extreme fire conditions. Stay sheltered until official all-clear.";
+            } else if (cfr === "HIGH") {
+              cMsg = "Conditions remain elevated. Avoid unnecessary travel until fire weather improves.";
+            } else if (cfl === "HIGH" || cfl === "EXTREME") {
+              cMsg = "Wait for rainfall to ease before traveling. Monitor NWS flash flood status.";
+            }
+            calmText.textContent = cMsg;
+            calmSection.hidden = false;
+          } else {
+            calmSection.hidden = true;
+          }
+        }
       }
 
       // ── Fetch ───────────────────────────────────────────
