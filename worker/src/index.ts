@@ -887,6 +887,10 @@ export default {
         return handleBriefPost(request, env, cors);
       }
 
+      if (request.method === 'POST' && path === '/api/push/subscribe') {
+        return handlePushSubscribe(request, env, cors);
+      }
+
       if (!['GET', 'HEAD'].includes(request.method)) return err(405, 'Method not allowed', cors);
       if (origin && !ALLOWED_ORIGINS.includes(origin)) return err(403, 'Forbidden', cors);
 
@@ -963,6 +967,11 @@ export default {
     try {
       const brief = await buildMorningBrief(url, env, cors);
       await postBriefToWebhook(brief, env);
+    } catch (e) {
+      // Fail silently — cron never crashes Worker
+    }
+    try {
+      await sendDailyBriefNotifications(env);
     } catch (e) {
       // Fail silently — cron never crashes Worker
     }
@@ -2405,6 +2414,167 @@ async function handleZoneBrief(
 //
 // Failure discipline: every path returns HTTP 200 with a JSON envelope so
 // n8n parsing is trivial and the workflow never breaks on errors.
+
+// ══════════════════════════════════════════════════════════
+// Push notifications — mobile app subscription + daily dispatch
+// ══════════════════════════════════════════════════════════
+//
+// Subscribers post their Expo push token + zone_id + lang to
+// /api/push/subscribe. We store them under push_sub:{sha256(token)}
+// so repeat registrations idempotently refresh the record.
+//
+// A daily cron (06:00 HST / 16:00 UTC) walks all push_sub:* keys,
+// fetches each subscriber's zone brief, and sends via the Expo
+// push API. This endpoint is defensive: unknown payloads, malformed
+// tokens, and upstream failures all fail open (no 5xx to caller,
+// no cron crash).
+
+interface KvNamespace {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(options?: { prefix?: string; cursor?: string; limit?: number }): Promise<{
+    keys: Array<{ name: string }>;
+    list_complete: boolean;
+    cursor?: string;
+  }>;
+}
+
+interface PushSubscription {
+  token: string;
+  zone_id: string;
+  lang: string;
+  created_at: string;
+}
+
+const PUSH_LANGS = ['en', 'vi', 'tl', 'ilo', 'haw', 'ja'];
+// Expo push tokens look like ExponentPushToken[...] or ExpoPushToken[...]
+const EXPO_TOKEN_RE = /^Expo(nent)?PushToken\[[^\]]+\]$/;
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function handlePushSubscribe(
+  request: Request,
+  env: Env,
+  cors: CorsHeaders,
+): Promise<Response> {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResp({ ok: false, error: 'invalid_json' }, 200, cors);
+  }
+
+  const token = typeof body?.token === 'string' ? body.token : '';
+  const zoneId = typeof body?.zone_id === 'string' ? body.zone_id : '';
+  const langRaw = typeof body?.lang === 'string' ? body.lang.toLowerCase() : 'en';
+  const lang = PUSH_LANGS.includes(langRaw) ? langRaw : 'en';
+
+  if (!EXPO_TOKEN_RE.test(token)) {
+    return jsonResp({ ok: false, error: 'invalid_token' }, 200, cors);
+  }
+  if (!getZoneById(zoneId)) {
+    return jsonResp({ ok: false, error: 'invalid_zone' }, 200, cors);
+  }
+
+  const kv = env.KAHUOLA_CACHE as KvNamespace | undefined;
+  if (!kv || typeof kv.put !== 'function') {
+    return jsonResp({ ok: false, error: 'kv_unavailable' }, 200, cors);
+  }
+
+  try {
+    const hash = await sha256Hex(token);
+    const record: PushSubscription = {
+      token,
+      zone_id: zoneId,
+      lang,
+      created_at: new Date().toISOString(),
+    };
+    await kv.put(`push_sub:${hash}`, JSON.stringify(record));
+    return jsonResp({ ok: true, subscribed: true }, 200, cors);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown';
+    console.error('handlePushSubscribe failure:', msg);
+    return jsonResp({ ok: false, error: 'store_failed' }, 200, cors);
+  }
+}
+
+// Daily brief dispatch — called from the scheduled handler at 16:00 UTC.
+// Walks all push_sub:* keys and sends each subscriber a short brief via
+// the Expo Push API. Never throws; cron must not crash the Worker.
+async function sendDailyBriefNotifications(env: Env): Promise<void> {
+  const kv = env.KAHUOLA_CACHE as KvNamespace | undefined;
+  if (!kv || typeof kv.list !== 'function') return;
+
+  const messages: Array<{
+    to: string;
+    title: string;
+    body: string;
+    sound: 'default';
+    priority: 'high';
+  }> = [];
+
+  try {
+    let cursor: string | undefined;
+    // Page through all subscription keys. list_complete signals end.
+    for (let page = 0; page < 50; page++) {
+      const listing = await kv.list({ prefix: 'push_sub:', cursor, limit: 100 });
+      for (const entry of listing.keys) {
+        try {
+          const raw = await kv.get(entry.name);
+          if (!raw) continue;
+          const sub: PushSubscription = JSON.parse(raw);
+          if (!EXPO_TOKEN_RE.test(sub.token)) continue;
+          const zone = getZoneById(sub.zone_id);
+          if (!zone) continue;
+
+          // Build brief for this subscriber (no household info — we don't store it).
+          const defaultHousehold: HouseholdProfile = {
+            kupuna: false, keiki: false, pets: false, medical: false, car: true,
+          };
+          const state = await buildZoneDynamicState(zone, {});
+          const brief = generateZoneBrief({ zone, state, household: defaultHousehold, lang: sub.lang });
+
+          messages.push({
+            to: sub.token,
+            title: brief.headline,
+            body: brief.what_to_do.slice(0, 180),
+            sound: 'default',
+            priority: 'high',
+          });
+        } catch (inner) {
+          console.warn('push iteration error:', inner instanceof Error ? inner.message : 'unknown');
+        }
+      }
+      if (listing.list_complete) break;
+      cursor = listing.cursor;
+      if (!cursor) break;
+    }
+
+    // Expo accepts batches of up to 100 messages per request.
+    for (let i = 0; i < messages.length; i += 100) {
+      const chunk = messages.slice(i, i + 100);
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(chunk),
+        });
+      } catch (e) {
+        console.warn('expo push batch failed:', e instanceof Error ? e.message : 'unknown');
+      }
+    }
+  } catch (e) {
+    console.error('sendDailyBriefNotifications top-level failure:', e instanceof Error ? e.message : 'unknown');
+  }
+}
 
 const BRIEF_STATIC_FALLBACK =
   "Aloha mai kākou. Kahu Ola is monitoring hazard conditions across Hawaiʻi. Stay informed — kahuola.org 🌺";
