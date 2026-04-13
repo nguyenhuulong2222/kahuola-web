@@ -255,9 +255,11 @@ function buildHazardEnvelope(layer: string, source: string, region: string, sign
   };
 }
 
-async function fetchNwsAlerts(cors: CorsHeaders): Promise<any> {
+async function fetchNwsAlerts(cors: CorsHeaders, areas: string[] | null = ['HI']): Promise<any> {
   const nwsUrl = new URL('https://api.weather.gov/alerts/active');
-  nwsUrl.searchParams.set('area', 'HI');
+  if (areas && areas.length > 0) {
+    for (const a of areas) nwsUrl.searchParams.append('area', a);
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
@@ -279,9 +281,18 @@ async function fetchNwsAlerts(cors: CorsHeaders): Promise<any> {
   }
 }
 
+// NWS state-code buckets matching REGION_BBOXES. `null` disables the
+// area filter entirely so the full national feed is returned.
+const REGION_NWS_AREAS: Record<string, string[] | null> = {
+  hawaii: ['HI'],
+  west: ['CA', 'OR', 'WA', 'NV', 'AZ', 'ID', 'MT'],
+  usa: null,
+};
+
 async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
-  const upstream = await fetchNwsAlerts(cors);
+  const areas = REGION_NWS_AREAS[region] ?? ['HI'];
+  const upstream = await fetchNwsAlerts(cors, areas);
   if (!upstream.ok) {
     return jsonResp(
       buildHazardEnvelope(
@@ -1320,6 +1331,14 @@ async function handlePushNow(url: URL, env: Env, cors: CorsHeaders): Promise<Res
   }
 }
 
+// Region-scoped bounding boxes for FIRMS + NWS queries. `region` is the
+// canonical param; `scope` is kept as a legacy alias.
+const REGION_BBOXES: Record<string, [number, number, number, number]> = {
+  hawaii: [-161.2, 18.5, -154.5, 22.5],
+  west: [-125.0, 32.0, -104.0, 49.0],
+  usa: [-125.0, 24.0, -66.5, 49.5],
+};
+
 function resolveFirmsBBox(url: URL): [number, number, number, number] | null {
   const bboxRaw = (url.searchParams.get('bbox') || '').trim();
   if (bboxRaw) {
@@ -1332,11 +1351,12 @@ function resolveFirmsBBox(url: URL): [number, number, number, number] | null {
     return [west, south, east, north];
   }
 
-  const scope = (url.searchParams.get('scope') || '').toLowerCase();
-  if (scope === 'hawaii') return [-161.2, 18.5, -154.5, 22.5];
-  if (scope === 'usa') return [-125.0, 24.0, -66.5, 49.5];
-
-  return null;
+  const region = (
+    url.searchParams.get('region') ||
+    url.searchParams.get('scope') ||
+    'hawaii'
+  ).toLowerCase();
+  return REGION_BBOXES[region] || REGION_BBOXES.hawaii;
 }
 
 async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
