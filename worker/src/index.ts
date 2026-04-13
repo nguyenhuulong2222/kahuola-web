@@ -289,11 +289,16 @@ const REGION_NWS_AREAS: Record<string, string[] | null> = {
   usa: null,
 };
 
-// NWS UGC zone code → approximate centroid [lng, lat]. Used to synthesize
-// a Point geometry for flood alerts whose upstream `geometry` is null,
-// so client maps can render a marker instead of silently dropping them.
-// Prefix fallbacks (CAZ, ORZ, WAZ) cover all zones in that state.
+// NWS UGC code → approximate centroid [lng, lat]. Used to synthesize a
+// Point geometry for flood alerts whose upstream `geometry` is null, so
+// client maps can render a marker instead of silently dropping them.
+//
+// UGC format: SSXNNN where SS=state, X=Z (forecast zone) or C (county
+// FIPS), NNN=3-digit code. Example: HIC009 = Hawaiʻi state, County,
+// FIPS 009 = Maui. Prefix keys (HIC, HIZ, CAC, ...) act as fallbacks,
+// and 2-letter state keys (HI, CA, ...) as a last resort.
 const NWS_ZONE_CENTROIDS: Record<string, [number, number]> = {
+  // NWS Forecast Zones (HIZ)
   HIZ001: [-156.3, 20.8],
   HIZ002: [-155.5, 19.6],
   HIZ003: [-155.9, 19.6],
@@ -301,16 +306,42 @@ const NWS_ZONE_CENTROIDS: Record<string, [number, number]> = {
   HIZ005: [-159.5, 22.0],
   HIZ006: [-156.9, 21.1],
   HIZ007: [-156.9, 20.8],
+
+  // Hawaiʻi County FIPS (HIC)
+  HIC001: [-156.3, 20.8], // Maui (alt FIPS)
+  HIC003: [-157.9, 21.4], // Honolulu (Oʻahu)
+  HIC005: [-159.5, 22.0], // Kauaʻi
+  HIC007: [-155.5, 19.6], // Hawaiʻi Island
+  HIC009: [-156.3, 20.8], // Maui
+
+  // Prefix fallbacks
+  HIC: [-157.0, 20.8],
+  HIZ: [-157.0, 20.8],
+  HI: [-157.0, 20.8],
+
+  // US State prefixes
   CAZ: [-119.4, 36.7],
+  CAC: [-119.4, 36.7],
+  CA: [-119.4, 36.7],
   ORZ: [-120.5, 43.8],
+  ORC: [-120.5, 43.8],
+  OR: [-120.5, 43.8],
   WAZ: [-120.5, 47.5],
+  WAC: [-120.5, 47.5],
+  WA: [-120.5, 47.5],
 };
 
 function centroidsForUgc(codes: string[]): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   for (const raw of codes) {
     const code = String(raw || '').toUpperCase();
-    const hit = NWS_ZONE_CENTROIDS[code] || NWS_ZONE_CENTROIDS[code.slice(0, 3)];
+    if (!code) continue;
+    // Exact code (HIC009, HIZ001, ...)
+    let hit = NWS_ZONE_CENTROIDS[code];
+    // 3-char prefix (HIC, HIZ, CAC, ...)
+    if (!hit) hit = NWS_ZONE_CENTROIDS[code.slice(0, 3)];
+    // 2-char state (HI, CA, ...)
+    if (!hit) hit = NWS_ZONE_CENTROIDS[code.slice(0, 2)];
     if (hit) out.push(hit);
   }
   return out;
