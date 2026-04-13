@@ -289,6 +289,33 @@ const REGION_NWS_AREAS: Record<string, string[] | null> = {
   usa: null,
 };
 
+// NWS UGC zone code → approximate centroid [lng, lat]. Used to synthesize
+// a Point geometry for flood alerts whose upstream `geometry` is null,
+// so client maps can render a marker instead of silently dropping them.
+// Prefix fallbacks (CAZ, ORZ, WAZ) cover all zones in that state.
+const NWS_ZONE_CENTROIDS: Record<string, [number, number]> = {
+  HIZ001: [-156.3, 20.8],
+  HIZ002: [-155.5, 19.6],
+  HIZ003: [-155.9, 19.6],
+  HIZ004: [-157.9, 21.4],
+  HIZ005: [-159.5, 22.0],
+  HIZ006: [-156.9, 21.1],
+  HIZ007: [-156.9, 20.8],
+  CAZ: [-119.4, 36.7],
+  ORZ: [-120.5, 43.8],
+  WAZ: [-120.5, 47.5],
+};
+
+function centroidsForUgc(codes: string[]): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const raw of codes) {
+    const code = String(raw || '').toUpperCase();
+    const hit = NWS_ZONE_CENTROIDS[code] || NWS_ZONE_CENTROIDS[code.slice(0, 3)];
+    if (hit) out.push(hit);
+  }
+  return out;
+}
+
 async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
   const areas = REGION_NWS_AREAS[region] ?? ['HI'];
@@ -310,25 +337,43 @@ async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> 
       const event = String(f?.properties?.event || '').toLowerCase();
       return event.includes('flash flood warning') || event.includes('flash flood watch') || event.includes('flash flood statement');
     })
-    .map((f: any, idx: number) => ({
-      type: 'Feature',
-      geometry: f.geometry,
-      properties: {
-        id: f?.id || f?.properties?.id || `nws-flash-flood-${idx}`,
-        source: 'NWS',
-        event: f?.properties?.event || '',
-        severity: f?.properties?.severity || '',
-        urgency: f?.properties?.urgency || '',
-        certainty: f?.properties?.certainty || '',
-        headline: f?.properties?.headline || '',
-        sent: f?.properties?.sent || '',
-        onset: f?.properties?.onset || '',
-        ends: f?.properties?.ends || '',
-        areaDesc: f?.properties?.areaDesc || '',
-        instruction: f?.properties?.instruction || '',
-        response: f?.properties?.response || '',
-      },
-    }))
+    .map((f: any, idx: number) => {
+      const ugcCodes: string[] = Array.isArray(f?.properties?.geocode?.UGC)
+        ? f.properties.geocode.UGC
+        : [];
+      const centroids = centroidsForUgc(ugcCodes);
+      // Synthesize a Point geometry from the first centroid when the
+      // upstream geometry is null — NWS often omits polygons for
+      // forecast-zone alerts, which would otherwise drop the signal.
+      const geometry =
+        f.geometry ||
+        (centroids.length > 0
+          ? { type: 'Point', coordinates: centroids[0] }
+          : null);
+      return {
+        type: 'Feature',
+        geometry,
+        properties: {
+          id: f?.id || f?.properties?.id || `nws-flash-flood-${idx}`,
+          source: 'NWS',
+          event: f?.properties?.event || '',
+          severity: f?.properties?.severity || '',
+          urgency: f?.properties?.urgency || '',
+          certainty: f?.properties?.certainty || '',
+          headline: f?.properties?.headline || '',
+          sent: f?.properties?.sent || '',
+          onset: f?.properties?.onset || '',
+          ends: f?.properties?.ends || '',
+          areaDesc: f?.properties?.areaDesc || '',
+          area_desc: f?.properties?.areaDesc || '',
+          instruction: f?.properties?.instruction || '',
+          response: f?.properties?.response || '',
+          ugc_codes: ugcCodes,
+          centroids,
+          geometry_synthesized: !f.geometry && centroids.length > 0,
+        },
+      };
+    })
     .filter((f: Feature) => !!f.geometry);
 
   const warningCount = signals.filter(
