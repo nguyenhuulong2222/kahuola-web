@@ -702,7 +702,7 @@
       // Get Started
       "gs.label": "Get Started",
       "gs.title_l1": "Available now on web",
-      "gs.title_l2": "and iOS.",
+      "gs.title_l2": "and iPhone.",
       "gs.lead": "Open Kahu Ola in any browser, or download the iOS app for native alerts and offline-first hazard awareness.",
       "gs.web_badge": "Web \xb7 Available Now",
       "gs.web_title": "Kahu Ola Live Map",
@@ -713,7 +713,7 @@
       "gs.web_li4": "Fire weather + wind context",
       "gs.web_li5": "FRESH / STALE data transparency",
       "gs.web_cta": "Open Live Map \u2192",
-      "gs.mobile_badge": "IOS \xb7 AVAILABLE NOW",
+      "gs.mobile_badge": "iOS \xb7 Available Now",
       "gs.mobile_title": "Kahu Ola iOS App",
       "gs.mobile_desc": "The Kahu Ola iOS app brings the full hazard intelligence dashboard to iPhone with native notifications for critical alerts and offline-first resilience.",
       "gs.mobile_li1": "Push alerts for active warnings",
@@ -721,6 +721,7 @@
       "gs.mobile_li3": "Offline-first \u2014 works without signal",
       "gs.mobile_li4": "Zero PII \xb7 No account required",
       "gs.mobile_cta": "Download on the App Store \u2192",
+      "gs.mobile_meta": "Available on the App Store for iPhone.",
 
       // Footer
       "footer.follow": "Follow for daily hazard briefs:",
@@ -1437,7 +1438,7 @@
       // Get Started
       "gs.label": "B\u1eaft \u0110\u1ea7u",
       "gs.title_l1": "\u0110\xe3 c\xf3 tr\xean web",
-      "gs.title_l2": "v\xe0 iOS.",
+      "gs.title_l2": "v\xe0 iPhone.",
       "gs.lead": "M\u1edf Kahu Ola tr\xean b\u1ea5t k\u1ef3 tr\xecnh duy\u1ec7t n\xe0o, ho\u1eb7c t\u1ea3i \u1ee9ng d\u1ee5ng iOS \u0111\u1ec3 nh\u1eadn c\u1ea3nh b\xe1o g\u1ed1c v\xe0 theo d\xf5i nguy c\u01a1 ngay c\u1ea3 khi m\u1ea1ng y\u1ebfu.",
       "gs.web_badge": "Web \xb7 C\xf3 s\u1eb5n ngay",
       "gs.web_title": "B\u1ea3n \u0111\u1ed3 Tr\u1ef1c ti\u1ebfp Kahu Ola",
@@ -1448,7 +1449,7 @@
       "gs.web_li4": "Th\u1eddi ti\u1ebft ch\xe1y + b\u1ed1i c\u1ea3nh gi\xf3",
       "gs.web_li5": "Minh b\u1ea1ch d\u1eef li\u1ec7u M\u1edaI / C\u0168",
       "gs.web_cta": "M\u1edf B\u1ea3n \u0111\u1ed3 Tr\u1ef1c ti\u1ebfp \u2192",
-      "gs.mobile_badge": "IOS \xb7 \u0110\u00c3 C\xd3",
+      "gs.mobile_badge": "iOS \xb7 \u0110\xe3 c\xf3",
       "gs.mobile_title": "\u1ee8ng d\u1ee5ng Kahu Ola iOS",
       "gs.mobile_desc": "\u1ee8ng d\u1ee5ng Kahu Ola iOS \u0111\u01b0a b\u1ea3ng \u0111i\u1ec1u khi\u1ec3n hazard intelligence l\xean iPhone v\u1edbi th\xf4ng b\xe1o g\u1ed1c cho c\u1ea3nh b\xe1o quan tr\u1ecdng v\xe0 kh\u1ea3 n\u0103ng ho\u1ea1t \u0111\u1ed9ng \u01b0u ti\xean ngo\u1ea1i tuy\u1ebfn.",
       "gs.mobile_li1": "Th\xf4ng b\xe1o \u0111\u1ea9y cho c\u1ea3nh b\xe1o \u0111ang ho\u1ea1t \u0111\u1ed9ng",
@@ -1456,6 +1457,7 @@
       "gs.mobile_li3": "\u01afu ti\xean ngo\u1ea1i tuy\u1ebfn \u2014 v\u1eabn h\u1eefu \xedch khi m\u1ea5t s\xf3ng",
       "gs.mobile_li4": "Kh\xf4ng PII \xb7 Kh\xf4ng c\u1ea7n t\xe0i kho\u1ea3n",
       "gs.mobile_cta": "T\u1ea3i tr\xean App Store \u2192",
+      "gs.mobile_meta": "\u0110\xe3 c\xf3 tr\xean App Store cho iPhone.",
 
       // Footer
       "footer.follow": "Theo d\xf5i \u0111\u1ec3 nh\u1eadn b\u1ea3n tin nguy c\u01a1 h\xe0ng ng\xe0y:",
