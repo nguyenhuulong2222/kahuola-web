@@ -29,6 +29,12 @@
 /support.html
   Cache-Control: public, max-age=3600
 
+/storm
+  Cache-Control: public, max-age=3600
+
+/storm.html
+  Cache-Control: public, max-age=3600
+
 /styles.css
   Cache-Control: public, max-age=31536000, immutable
 

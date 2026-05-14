@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta http-equiv="content-language" content="en-US" />
+
+  <title>Active Storm Tracker — Kahu Ola | Hawaiʻi Hazard Awareness</title>
+  <meta name="description" content="Current storm conditions across Hawaiʻi with post-storm wildfire risk context. Civic awareness platform — not an official weather service." />
+
+  <link rel="canonical" href="https://kahuola.org/storm" />
+  <link rel="alternate" hreflang="en-US" href="https://kahuola.org/storm" />
+  <link rel="alternate" hreflang="x-default" href="https://kahuola.org/storm" />
+
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="theme-color" content="#0c6fbf" />
+
+  <meta name="geo.region" content="US-HI" />
+  <meta name="geo.placename" content="Hawaiʻi" />
+  <meta name="geo.position" content="20.7984;-156.3319" />
+  <meta name="ICBM" content="20.7984, -156.3319" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Kahu Ola" />
+  <meta property="og:title" content="Active Storm Tracker — Kahu Ola | Hawaiʻi Hazard Awareness" />
+  <meta property="og:description" content="Current storm conditions across Hawaiʻi with post-storm wildfire risk context. Civic awareness platform — not an official weather service." />
+  <meta property="og:url" content="https://kahuola.org/storm" />
+  <meta property="og:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="vi_VN" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Active Storm Tracker — Kahu Ola | Hawaiʻi Hazard Awareness" />
+  <meta name="twitter:description" content="Current storm conditions across Hawaiʻi with post-storm wildfire risk context. Civic awareness platform — not an official weather service." />
+  <meta name="twitter:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://kahuola.org/#organization",
+    "name": "Kahu Ola",
+    "alternateName": "Kahu Ola Hawaiʻi Hazard Awareness",
+    "url": "https://kahuola.org",
+    "logo": "https://kahuola.org/assets/brand/logo-mark.svg",
+    "description": "Independent civic hazard intelligence platform for Hawaiʻi. Aggregates publicly available government data for situational awareness. Not affiliated with any government agency.",
+    "areaServed": { "@type": "AdministrativeArea", "name": "Hawaiʻi" },
+    "knowsAbout": ["Storm awareness", "Wildfire awareness", "Flood awareness", "Air quality", "Civic technology"],
+    "disambiguatingDescription": "Kahu Ola is not a government agency and does not issue official emergency directives. Always follow guidance from HIEMA, county emergency management, and the National Weather Service."
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://kahuola.org/" },
+      { "@type": "ListItem", "position": 2, "name": "Active Storm Tracker", "item": "https://kahuola.org/storm" }
+    ]
+  }
+  </script>
+
+  <style>
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#101b27;
+      --surface-2:#142232;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.14);
+      --text:#eef4fb;
+      --text-dim:#c4d2df;
+      --muted:#8ea3b7;
+      --ok:#67c27e;
+      --ok-soft:rgba(103,194,126,.10);
+      --warn:#ffcc66;
+      --warn-soft:rgba(255,204,102,.10);
+      --accent:#4da8ff;
+      --accent-soft:rgba(77,168,255,.12);
+      --storm:#6cbcff;
+      --storm-soft:rgba(108,188,255,.14);
+      --radius-xl:28px;
+      --radius-lg:22px;
+      --radius-md:18px;
+      --radius-sm:14px;
+      --shadow:0 18px 46px rgba(0,0,0,.28);
+      --max:900px;
+      --font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%) fixed;
+      color:var(--text);font-family:var(--font);min-height:100vh;
+    }
+    a{text-decoration:none;color:inherit}
+
+    .app{width:min(100%,1280px);margin:0 auto;padding:16px 16px 60px}
+
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:6px 0 18px}
+    .brand{display:flex;gap:12px;min-width:0}
+    .brand-mark{width:42px;height:42px;flex:0 0 42px;border-radius:14px;display:grid;place-items:center;font-size:20px;background:linear-gradient(180deg,rgba(108,188,255,.18),rgba(108,188,255,.08));border:1px solid rgba(108,188,255,.22);box-shadow:0 10px 26px rgba(0,0,0,.24)}
+    .brand-kicker{color:var(--text-dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:4px}
+    .brand-title{font-size:22px;line-height:1.02;letter-spacing:-.03em;font-weight:900;color:var(--text)}
+    .brand-sub{margin-top:4px;color:var(--muted);font-size:12px}
+    .top-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    .pill{min-height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:var(--text);font-size:12px;font-weight:800;white-space:nowrap}
+    .pill.link{color:var(--text-dim);background:rgba(255,255,255,.03)}
+    .pill.active{color:var(--storm);border-color:rgba(108,188,255,.28);background:var(--storm-soft)}
+
+    .page-grid{display:grid;grid-template-columns:1fr 280px;gap:18px;align-items:start;max-width:var(--max);margin:0 auto}
+    @media(max-width:900px){.page-grid{grid-template-columns:1fr}}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden}
+    .hero-card{padding:28px 28px 24px}
+    .page-kicker{color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:10px}
+    .page-title{margin:0 0 14px;font-size:clamp(26px,4vw,36px);line-height:1.08;letter-spacing:-.03em;font-weight:900}
+    .page-lead{margin:0 0 18px;color:var(--text-dim);font-size:15px;line-height:1.65}
+    .page-lead a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+    .meta-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .chip{min-height:28px;padding:0 10px;display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:#dce8f4;font:700 11px var(--mono);white-space:nowrap}
+    .btn-row{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{min-height:44px;padding:0 18px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--text);font-weight:800;font-size:14px}
+    .btn.primary{background:linear-gradient(180deg,rgba(108,188,255,.18),rgba(108,188,255,.11));border-color:rgba(108,188,255,.28);color:#dceeff}
+    .btn.ghost{background:rgba(255,255,255,.04);border-color:var(--line)}
+
+    .stack{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+    .block{padding:20px 22px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-lg)}
+    .block h2{margin:0 0 14px;font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--text)}
+    .block p{margin:0 0 10px;color:var(--text-dim);font-size:14px;line-height:1.65}
+    .block p:last-child{margin-bottom:0}
+    .block a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+    .block.disclaimer{border-color:rgba(255,204,102,.18);background:var(--warn-soft)}
+    .block.disclaimer h2{color:#ffe9b5}
+    .block.disclaimer p{color:#ffe9b5;opacity:.88}
+
+    .official-links{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    .official-links li a{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:11px 14px;border-radius:12px;border:1px solid var(--line);
+      background:var(--surface-2);color:var(--text-dim);font-size:13px;
+    }
+    .official-links li a:hover{background:rgba(255,255,255,.05);color:var(--text)}
+    .official-links li a::after{content:"↗";color:var(--muted);font-size:14px}
+
+    .sidebar{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px}
+    .sidebar-card{padding:18px 20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-lg)}
+    .sidebar-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+    .sidebar-nav{display:flex;flex-direction:column;gap:4px}
+    .sidebar-link{padding:8px 10px;border-radius:10px;font-size:13px;color:var(--text-dim)}
+    .sidebar-link:hover{background:rgba(255,255,255,.05);color:var(--text)}
+    .live-map-card{padding:16px;border-radius:var(--radius-md);border:1px solid rgba(108,188,255,.22);background:linear-gradient(180deg,rgba(108,188,255,.10),rgba(108,188,255,.05));display:flex;flex-direction:column;gap:8px}
+    .live-map-title{font-size:13px;font-weight:800;color:#dceeff}
+    .live-map-desc{font-size:12px;color:var(--text-dim);opacity:.75;line-height:1.5}
+    .live-map-btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:12px;background:linear-gradient(180deg,rgba(108,188,255,.22),rgba(108,188,255,.14));border:1px solid rgba(108,188,255,.3);color:#dceeff;font-size:13px;font-weight:800;text-align:center}
+
+    .footer{margin-top:40px;padding:20px 0 0;border-top:1px solid var(--line);max-width:var(--max);margin-left:auto;margin-right:auto}
+    .footer-inner{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .footer-brand{font-size:13px;color:var(--text-dim);display:flex;gap:10px;align-items:center}
+    .footer-brand strong{color:var(--text);font-weight:800}
+    .footer-links{display:flex;flex-wrap:wrap;gap:14px}
+    .footer-links a{font-size:12px;color:var(--muted)}
+    .footer-links a:hover{color:var(--text)}
+    .footer-links a[aria-current]{color:var(--storm)}
+    .footer-legal{font-size:11px;color:var(--muted);line-height:1.6;opacity:.65;margin-top:10px}
+
+    @media(max-width:720px){
+      .app{padding:14px 12px 40px}
+      .topbar{flex-direction:column;align-items:flex-start}
+      .hero-card{padding:20px}
+      .brand-title{font-size:20px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <header class="topbar">
+      <a class="brand" href="./index.html" aria-label="Kahu Ola home">
+        <div class="brand-mark">🌀</div>
+        <div>
+          <div class="brand-kicker">Kahu Ola · Guardian of Life</div>
+          <span class="brand-title">Hawaiʻi Hazard Signals</span>
+          <div class="brand-sub">Active Storm Tracker</div>
+        </div>
+      </a>
+      <nav class="top-actions" aria-label="Primary">
+        <a class="pill link" href="./index.html">← Home</a>
+        <a class="pill link" href="./live-map.html">Live Map</a>
+        <a class="pill active" href="./storm.html" aria-current="page">Storm</a>
+        <a class="pill link" href="./privacy.html">Privacy</a>
+        <a class="pill link" href="./support.html">Support</a>
+      </nav>
+    </header>
+
+    <main class="page-grid">
+
+      <article>
+
+        <section class="card hero-card">
+          <p class="page-kicker">Storm Event Page</p>
+          <h1 class="page-title">Active Storm Conditions — Hawaiʻi</h1>
+          <p class="page-lead">
+            Current storm tracking with post-storm wildfire risk context for Maui, Hawaiʻi Island,
+            and the rest of the Hawaiian Islands. Drawn from NWS, NOAA, and NHC sources.
+          </p>
+          <div class="meta-chips">
+            <span class="chip">Civic awareness · Hawaiʻi</span>
+            <span class="chip">Situational reference</span>
+            <span class="chip">Snapshot-driven</span>
+          </div>
+          <div class="btn-row">
+            <a class="btn primary" href="./live-map.html">Open Live Hazard Map →</a>
+            <a class="btn ghost" href="./index.html">← Back to Home</a>
+          </div>
+        </section>
+
+        <div class="stack">
+
+          <section class="block" id="status">
+            <h2>Current status</h2>
+            <p>
+              Storm event page is prepared for active-event use. When a tropical cyclone, severe
+              thunderstorm, or other named storm event is active in the Hawaiian Islands region,
+              Kahu Ola will surface civic-relevant context here — track, post-storm wildfire risk,
+              and links to the authoritative sources residents should follow.
+            </p>
+            <p>
+              For current warnings and official directives, follow
+              <a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">NWS Honolulu</a>,
+              <a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">HIEMA</a>,
+              and your county emergency management agency.
+            </p>
+          </section>
+
+          <section class="block" id="map">
+            <h2>Live situational awareness</h2>
+            <p>
+              The <a href="./live-map.html">Kahu Ola Live Hazard Map</a> is the active situational
+              awareness surface for storm-period hazards. It aggregates wildfire detections, flash
+              flood signals, air quality, and fire weather context across the islands.
+            </p>
+            <p>
+              The live map is the primary place to look during a storm event. This page documents
+              storm scope and routing; the live map shows what is happening right now.
+            </p>
+          </section>
+
+          <section class="block" id="official-sources">
+            <h2>Official sources residents should follow</h2>
+            <p style="margin-bottom:12px">
+              Kahu Ola provides situational awareness only. For emergency decisions during a storm
+              event, always follow these official authorities:
+            </p>
+            <ul class="official-links">
+              <li><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">Hawaiʻi Emergency Management Agency (HIEMA)</a></li>
+              <li><a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">National Weather Service Honolulu</a></li>
+              <li><a href="https://www.mauicounty.gov/983/Emergency-Management-Agency" target="_blank" rel="noopener">Maui County Emergency Management Agency</a></li>
+              <li><a href="https://www.hawaiicounty.gov/departments/civil-defense" target="_blank" rel="noopener">Hawaiʻi County Civil Defense</a></li>
+              <li><a href="https://www.honolulu.gov/dem" target="_blank" rel="noopener">Honolulu Department of Emergency Management</a></li>
+              <li><a href="https://www.kauai.gov/Government/Departments-Agencies/Emergency-Management-Agency" target="_blank" rel="noopener">Kauaʻi Emergency Management Agency</a></li>
+              <li><a href="https://www.nhc.noaa.gov/" target="_blank" rel="noopener">NOAA National Hurricane Center</a></li>
+              <li><a href="https://www.tsunami.gov/" target="_blank" rel="noopener">U.S. Tsunami Warning System</a></li>
+            </ul>
+          </section>
+
+          <section class="block disclaimer" id="disclaimer">
+            <h2>Civic posture</h2>
+            <p>
+              Kahu Ola is not an official weather service and does not issue emergency directives.
+              It is an independent civic technology platform that aggregates publicly available
+              government data sources for situational awareness. It is not affiliated with, endorsed
+              by, or officially connected to NOAA, the National Weather Service, the National
+              Hurricane Center, HIEMA, or any county or federal emergency management agency.
+            </p>
+            <p>
+              For evacuation guidance, shelter information, and binding emergency directives during
+              a storm, always follow your county emergency management agency and the National
+              Weather Service.
+            </p>
+          </section>
+
+        </div>
+      </article>
+
+      <aside class="sidebar" aria-label="Page navigation">
+        <div class="sidebar-card">
+          <div class="sidebar-label">On this page</div>
+          <nav class="sidebar-nav">
+            <a class="sidebar-link" href="#status">Current status</a>
+            <a class="sidebar-link" href="#map">Live situational awareness</a>
+            <a class="sidebar-link" href="#official-sources">Official sources</a>
+            <a class="sidebar-link" href="#disclaimer">Civic posture</a>
+          </nav>
+        </div>
+        <div class="sidebar-card">
+          <div class="live-map-card">
+            <div class="live-map-title">🗺 Live Hazard Map</div>
+            <div class="live-map-desc">Wildfire, flood, tsunami, rain radar, and storm context for Hawaiʻi.</div>
+            <a class="live-map-btn" href="./live-map.html">Open Live Map →</a>
+          </div>
+        </div>
+        <div class="sidebar-card">
+          <div class="sidebar-label">Quick links</div>
+          <div class="sidebar-nav">
+            <a class="sidebar-link" href="./index.html">← Home dashboard</a>
+            <a class="sidebar-link" href="./privacy.html">Privacy policy</a>
+            <a class="sidebar-link" href="./support.html">Support &amp; FAQ</a>
+          </div>
+        </div>
+      </aside>
+
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <strong>Kahu Ola</strong>
+          <span>Guardian of Life</span>
+        </div>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="./index.html">Home</a>
+          <a href="./live-map.html">Live Map</a>
+          <a href="./storm.html" aria-current="page">Storm</a>
+          <a href="./privacy.html">Privacy</a>
+          <a href="./support.html">Support</a>
+          <a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">HIEMA</a>
+          <a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">NWS Honolulu</a>
+        </nav>
+      </div>
+      <p class="footer-legal">
+        Kahu Ola is an independent civic technology platform that aggregates publicly available
+        government data sources. It does not represent or replace official emergency services or
+        governmental directives. Always follow official county, state, and federal guidance.
+      </p>
+    </footer>
+
+  </div>
+</body>
+</html>
