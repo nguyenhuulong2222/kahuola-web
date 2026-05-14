@@ -132,6 +132,8 @@
       "links.official_copy": "Kahu Ola does not issue emergency orders. Follow official authorities for urgent decisions.",
 
       // Map page (live-map.html) — Class A + B
+      "map.intro_title": "Live Hawai\u02bfi Hazard Map",
+      "map.intro_lead": "Real-time wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.",
       "map.panel_head_hawaii": "Fire Signals \xb7 Hawai\u02bfi",
       "map.panel_head_usa": "Fire Signals \xb7 USA",
       "map.scope_hint_hawaii": "Showing satellite fire detections for Hawai\u02bfi only.",
