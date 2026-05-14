@@ -158,7 +158,7 @@ All schema must reflect Kahu Ola's actual civic posture. No `GovernmentOrganizat
   "name": "Kahu Ola",
   "alternateName": "Kahu Ola Hawaiʻi Hazard Awareness",
   "url": "https://kahuola.org",
-  "logo": "https://kahuola.org/assets/logo.svg",
+  "logo": "https://kahuola.org/assets/brand/logo-mark.svg",
   "description": "Independent civic hazard intelligence platform for Hawaiʻi. Aggregates publicly available government data for situational awareness. Not affiliated with any government agency.",
   "areaServed": {
     "@type": "AdministrativeArea",
