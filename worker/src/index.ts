@@ -75,7 +75,11 @@ const ALLOWED_ORIGINS = [
 const FETCH_TIMEOUT = 8_000;
 
 function corsHeaders(origin: string | null): CorsHeaders {
-  const base: CorsHeaders = { Vary: 'Origin' };
+  const base: CorsHeaders = {
+    Vary: 'Origin',
+    // SEO Doctrine V1.1 §8.1 — /api/* responses are not user-facing SEO content.
+    'X-Robots-Tag': 'noindex, nofollow, nosnippet',
+  };
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     base['Access-Control-Allow-Origin'] = origin;
     base['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
