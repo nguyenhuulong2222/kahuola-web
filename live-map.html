@@ -1988,6 +1988,53 @@
     .lm-civic-links a:hover {
       text-decoration: underline;
     }
+
+    /* SEO-C2B-PATCH — collapse intro + civic footer to details
+       Added 2026-05-14. Cleaner map UX, doctrine §11.2 preserved
+       (content remains crawlable inside <details>). */
+    .lm-intro-details,
+    .lm-civic-details {
+      width: 100%;
+    }
+    .lm-intro-summary,
+    .lm-civic-summary {
+      cursor: pointer;
+      padding: 8px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text, #ececec);
+      list-style: none;
+      user-select: none;
+    }
+    .lm-intro-summary::-webkit-details-marker,
+    .lm-civic-summary::-webkit-details-marker {
+      display: none;
+    }
+    .lm-intro-summary::before,
+    .lm-civic-summary::before {
+      content: "▸ ";
+      display: inline-block;
+      transition: transform 0.15s ease;
+      color: var(--muted, #7a7a7a);
+      margin-right: 4px;
+    }
+    .lm-intro-details[open] > .lm-intro-summary::before,
+    .lm-civic-details[open] > .lm-civic-summary::before {
+      transform: rotate(90deg);
+    }
+    .lm-intro-summary:hover,
+    .lm-civic-summary:hover {
+      color: var(--blue, #4da3ff);
+    }
+    .lm-intro-content,
+    .lm-civic-content {
+      padding-top: 8px;
+      animation: lm-details-fade-in 0.2s ease-out;
+    }
+    @keyframes lm-details-fade-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     @media (max-width: 480px) {
       .lm-intro { margin: 12px auto 4px; }
       .lm-intro h1 { font-size: 18px; }
@@ -2153,8 +2200,13 @@
   </div>
 
   <section class="lm-intro" aria-labelledby="lm-intro-title">
-    <h1 id="lm-intro-title" data-i18n="map.intro_title">Live Hawaiʻi Hazard Map</h1>
-    <p class="lm-intro-lead" data-i18n="map.intro_lead">Real-time wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.</p>
+    <details class="lm-intro-details">
+      <summary class="lm-intro-summary">About this hazard map</summary>
+      <div class="lm-intro-content">
+        <h1 id="lm-intro-title" data-i18n="map.intro_title">Live Hawaiʻi Hazard Map</h1>
+        <p class="lm-intro-lead" data-i18n="map.intro_lead">Real-time wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.</p>
+      </div>
+    </details>
   </section>
 
   <template id="panel-template">
@@ -4616,18 +4668,23 @@
   </div>
 
   <footer class="lm-civic-footer" role="contentinfo" aria-label="Civic disclaimer and official sources">
-    <p class="lm-civic-disclaimer" data-i18n="civic.guardian_note">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
-    <nav class="lm-civic-links" aria-label="Official emergency sources">
-      <p class="lm-civic-links-title">Official sources for emergency directives:</p>
-      <ul>
-        <li><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">Hawaiʻi Emergency Management Agency (HIEMA)</a></li>
-        <li><a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">National Weather Service — Honolulu</a></li>
-        <li><a href="https://www.mauicounty.gov/238/Maui-Emergency-Management-Agency" target="_blank" rel="noopener">Maui County Emergency Management</a></li>
-        <li><a href="https://www.hawaiicounty.gov/departments/civil-defense" target="_blank" rel="noopener">Hawaiʻi County Civil Defense</a></li>
-        <li><a href="https://www.honolulu.gov/dem" target="_blank" rel="noopener">Honolulu Department of Emergency Management</a></li>
-        <li><a href="https://www.kauai.gov/Government/Departments-Agencies/Emergency-Management-Agency" target="_blank" rel="noopener">Kauaʻi Emergency Management Agency</a></li>
-      </ul>
-    </nav>
+    <details class="lm-civic-details">
+      <summary class="lm-civic-summary">Civic disclaimer · Official emergency sources</summary>
+      <div class="lm-civic-content">
+        <p class="lm-civic-disclaimer" data-i18n="civic.guardian_note">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
+        <nav class="lm-civic-links" aria-label="Official emergency sources">
+          <p class="lm-civic-links-title">Official sources for emergency directives:</p>
+          <ul>
+            <li><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">Hawaiʻi Emergency Management Agency (HIEMA)</a></li>
+            <li><a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">National Weather Service — Honolulu</a></li>
+            <li><a href="https://www.mauicounty.gov/238/Maui-Emergency-Management-Agency" target="_blank" rel="noopener">Maui County Emergency Management</a></li>
+            <li><a href="https://www.hawaiicounty.gov/departments/civil-defense" target="_blank" rel="noopener">Hawaiʻi County Civil Defense</a></li>
+            <li><a href="https://www.honolulu.gov/dem" target="_blank" rel="noopener">Honolulu Department of Emergency Management</a></li>
+            <li><a href="https://www.kauai.gov/Government/Departments-Agencies/Emergency-Management-Agency" target="_blank" rel="noopener">Kauaʻi Emergency Management Agency</a></li>
+          </ul>
+        </nav>
+      </div>
+    </details>
   </footer>
 
   <!-- ── Safe Routes + Responder JS ── -->
