@@ -128,6 +128,79 @@
     ]
   }
   </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Kahu Ola?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Kahu Ola is an independent civic technology platform that aggregates publicly available government hazard data into a single situational awareness interface for Hawaiʻi communities. It covers wildfire detections, flash floods, air quality, fire weather, tsunamis, hurricanes, and storm conditions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Kahu Ola an official government service?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Kahu Ola is an independent civic technology project, not affiliated with any government agency. It does not issue evacuation orders or replace official emergency services. Always follow guidance from HIEMA, county emergency management, and the National Weather Service for official directives."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Where does Kahu Ola's hazard data come from?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Kahu Ola aggregates publicly available data from NASA FIRMS (satellite wildfire detection), NOAA HMS (smoke plumes), the National Weather Service (alerts and warnings), NIFC WFIGS (fire perimeters), EPA AirNow (air quality), USGS HVO (volcanic activity), PacIOOS (coastal sensors), and MapTiler (map tiles)."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Kahu Ola track my location?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Kahu Ola collects zero personal information. We do not track location, store device identifiers, or transmit personal data. All proximity calculations happen on your device only. See our Privacy Policy for full details."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Kahu Ola free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Kahu Ola is completely free with no advertising and no tracking. It is operated as an independent civic technology project serving Hawaiʻi communities."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which Hawaiian islands does Kahu Ola cover?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Kahu Ola covers all Hawaiian Islands: Maui, Hawaiʻi (Big Island), Oʻahu, Kauaʻi, Molokaʻi, and Lānaʻi. Coverage is wildfire-first with Maui as primary focus, but all hazard signals are statewide. Future expansion to US Pacific territories under the Kahu Ola Network branding is planned."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How fresh is Kahu Ola's hazard data?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Data freshness varies by source. NASA FIRMS satellite detections update every 5-15 minutes. NWS alerts are real-time. Fire perimeters from NIFC update as conditions warrant. Every signal in Kahu Ola displays its source timestamp so you can verify data age."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Who built Kahu Ola?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Kahu Ola is built and operated by Long Nguyen, an independent civic technologist based in Waikoloa, Hawaiʻi. It is a solo civic technology project built in response to the 2023 Maui wildfires that devastated Lahaina."
+        }
+      }
+    ]
+  }
+  </script>
   <style>
     :root{
       --bg:#08111a;
@@ -259,6 +332,36 @@
     .about-block li{margin-bottom:6px}
     .about-block a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
     .about-block strong{color:var(--text);font-weight:700}
+
+    /* FAQ details/summary styling */
+    .faq-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .faq-list details{
+      border:1px solid var(--line);border-radius:var(--radius-md);
+      background:rgba(255,255,255,.02);
+      transition:background .15s,border-color .15s;
+    }
+    .faq-list details[open]{
+      border-color:rgba(77,168,255,.22);
+      background:var(--accent-soft);
+    }
+    .faq-list summary{
+      list-style:none;cursor:pointer;
+      padding:14px 18px;
+      font-size:14px;font-weight:700;color:var(--text);
+      display:flex;align-items:center;gap:10px;
+    }
+    .faq-list summary::-webkit-details-marker{display:none}
+    .faq-list summary::before{
+      content:"+";display:inline-block;width:18px;
+      color:var(--accent);font-weight:800;font-size:18px;line-height:1;
+      transition:transform .15s;
+    }
+    .faq-list details[open] summary::before{content:"−"}
+    .faq-list summary:hover{color:var(--accent)}
+    .faq-list .faq-answer{
+      padding:0 18px 14px 46px;
+      color:var(--text-dim);font-size:14px;line-height:1.65;
+    }
 
     /* Two-column do/don't lists */
     .do-dont{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
@@ -467,6 +570,45 @@
             <p>The platform's invariants, data sources, and failure modes are documented so any interested resident, journalist, or auditor can verify how Kahu Ola behaves before relying on it.</p>
           </div>
 
+          <div class="about-block" id="faq">
+            <h2>Frequently Asked Questions</h2>
+            <p>The questions we hear most often from residents, journalists, and partner agencies.</p>
+            <div class="faq-list">
+              <details>
+                <summary>What is Kahu Ola?</summary>
+                <p class="faq-answer">Kahu Ola is an independent civic technology platform that aggregates publicly available government hazard data into a single situational awareness interface for Hawaiʻi communities. It covers wildfire detections, flash floods, air quality, fire weather, tsunamis, hurricanes, and storm conditions.</p>
+              </details>
+              <details>
+                <summary>Is Kahu Ola an official government service?</summary>
+                <p class="faq-answer">No. Kahu Ola is an independent civic technology project, not affiliated with any government agency. It does not issue evacuation orders or replace official emergency services. Always follow guidance from HIEMA, county emergency management, and the National Weather Service for official directives.</p>
+              </details>
+              <details>
+                <summary>Where does Kahu Ola's hazard data come from?</summary>
+                <p class="faq-answer">Kahu Ola aggregates publicly available data from NASA FIRMS (satellite wildfire detection), NOAA HMS (smoke plumes), the National Weather Service (alerts and warnings), NIFC WFIGS (fire perimeters), EPA AirNow (air quality), USGS HVO (volcanic activity), PacIOOS (coastal sensors), and MapTiler (map tiles).</p>
+              </details>
+              <details>
+                <summary>Does Kahu Ola track my location?</summary>
+                <p class="faq-answer">No. Kahu Ola collects zero personal information. We do not track location, store device identifiers, or transmit personal data. All proximity calculations happen on your device only. See our <a href="./privacy">Privacy Policy</a> for full details.</p>
+              </details>
+              <details>
+                <summary>Is Kahu Ola free?</summary>
+                <p class="faq-answer">Yes. Kahu Ola is completely free with no advertising and no tracking. It is operated as an independent civic technology project serving Hawaiʻi communities.</p>
+              </details>
+              <details>
+                <summary>Which Hawaiian islands does Kahu Ola cover?</summary>
+                <p class="faq-answer">Kahu Ola covers all Hawaiian Islands: Maui, Hawaiʻi (Big Island), Oʻahu, Kauaʻi, Molokaʻi, and Lānaʻi. Coverage is wildfire-first with Maui as primary focus, but all hazard signals are statewide. Future expansion to US Pacific territories under the Kahu Ola Network branding is planned.</p>
+              </details>
+              <details>
+                <summary>How fresh is Kahu Ola's hazard data?</summary>
+                <p class="faq-answer">Data freshness varies by source. NASA FIRMS satellite detections update every 5-15 minutes. NWS alerts are real-time. Fire perimeters from NIFC update as conditions warrant. Every signal in Kahu Ola displays its source timestamp so you can verify data age.</p>
+              </details>
+              <details>
+                <summary>Who built Kahu Ola?</summary>
+                <p class="faq-answer">Kahu Ola is built and operated by Long Nguyen, an independent civic technologist based in Waikoloa, Hawaiʻi. It is a solo civic technology project built in response to the 2023 Maui wildfires that devastated Lahaina.</p>
+              </details>
+            </div>
+          </div>
+
           <div class="about-block" id="contact">
             <h2>Contact</h2>
             <p>General inquiries, partnership requests, and resource-listing questions: <a href="mailto:long@kahuola.org">long@kahuola.org</a></p>
@@ -487,6 +629,7 @@
             <a class="sidebar-link" href="#data-sources">Where Our Data Comes From</a>
             <a class="sidebar-link" href="#principles">How We Operate</a>
             <a class="sidebar-link" href="#open-source">Open Source &amp; Transparency</a>
+            <a class="sidebar-link" href="#faq">Frequently Asked Questions</a>
             <a class="sidebar-link" href="#contact">Contact</a>
           </nav>
         </div>
