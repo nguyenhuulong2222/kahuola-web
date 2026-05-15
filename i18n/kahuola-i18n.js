@@ -54,6 +54,7 @@
       "nav.privacy": "Privacy",
       "nav.support": "Support",
       "nav.home": "Home",
+      "nav.about": "About",
       "nav.data_sources": "Data Sources",
 
       // Brand
