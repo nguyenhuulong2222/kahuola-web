@@ -9,4 +9,4 @@ _merge_work
 .DS_Store
 
 # graphify tool output (knowledge-graph build artifact, rebuilt locally)
-graphify-out/
+graphify-out/SEO_*.md # Or specific filenames
