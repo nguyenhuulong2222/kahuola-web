@@ -58,15 +58,25 @@
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
+    "@id": "https://kahuola.org/live-map#webapp",
     "name": "Kahu Ola Live Hazard Map",
     "url": "https://kahuola.org/live-map",
     "description": "Live hazard map for Hawaiʻi showing wildfire hotspots, flash flood alerts, air quality, fire weather, and storm context. Aggregates data from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS.",
     "applicationCategory": "PublicSafetyApplication",
+    "applicationSubCategory": "Emergency Information",
     "operatingSystem": "Any (web browser)",
-    "browserRequirements": "Requires JavaScript and modern browser",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "browserRequirements": "Requires JavaScript and modern browser with WebGL support",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
     "isAccessibleForFree": true,
     "inLanguage": "en-US",
+    "datePublished": "2026-03-04",
+    "dateModified": "2026-05-15",
+    "author": { "@id": "https://kahuola.org/about#founder" },
     "publisher": { "@id": "https://kahuola.org/#organization" }
   }
   </script>
