@@ -118,7 +118,7 @@ resource that complements (never replaces) official channels.
 > Long Nguyen
 > Founder & Architect, Kahu Ola
 > long@kahuola.org
-> Waikoloa, Hawaiʻi
+> Wailuku, Maui, Hawaiʻi
 
 ---
 
@@ -129,7 +129,7 @@ resource that complements (never replaces) official channels.
 > Hi [Reporter Name],
 >
 > I noticed your reporting on [recent Hawaiʻi tech / civic / disaster
-> piece]. I'm a solo developer in Waikoloa who built kahuola.org —
+> piece]. I'm a solo developer in Wailuku, Maui who built kahuola.org —
 > an independent civic hazard intelligence platform — in response to
 > the 2023 Lahaina wildfires.
 >
@@ -179,7 +179,7 @@ resource that complements (never replaces) official channels.
 > About + technical detail: https://kahuola.org/about
 > Live platform: https://kahuola.org/live-map
 > Founded: 2026-03
-> Location: Waikoloa, Hawaiʻi
+> Location: Wailuku, Maui, Hawaiʻi
 >
 > Categories that apply: Civic Technology, Emergency Information Service,
 > Public Safety Information Platform.

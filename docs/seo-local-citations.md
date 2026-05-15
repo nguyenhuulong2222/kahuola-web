@@ -19,7 +19,7 @@ Use these exact values on every external directory submission. Do not deviate.
 Name:           Kahu Ola
 Alternate name: Kahu Ola — Hawaiʻi Civic Hazard Intelligence
 Tagline:        Guardian of Life
-Location:       Waikoloa, Hawaiʻi, USA
+Location:       Wailuku, Maui, Hawaiʻi, USA
 Address:        (no street address — solo civic technology project,
                  service-area-only listing)
 Service area:   Hawaiʻi (statewide); Maui-first focus; expansion to all
@@ -152,7 +152,7 @@ echo "Kahu Ola canonical NAP (verify these match every directory entry):"
 echo ""
 echo "  Name:     Kahu Ola"
 echo "  Email:    long@kahuola.org"
-echo "  Location: Waikoloa, Hawaiʻi, USA"
+echo "  Location: Wailuku, Maui, Hawaiʻi, USA"
 echo "  Website:  https://kahuola.org"
 echo "  Founded:  2026-03-04"
 echo "  Tagline:  Guardian of Life"
