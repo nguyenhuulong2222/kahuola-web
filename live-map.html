@@ -1933,6 +1933,67 @@
     }
     .lm-resp-stat:last-child{border-bottom:none}
     .lm-resp-stat-label{font-size:11px;color:#6e7681;font-family:var(--font-mono,monospace);letter-spacing:.04em;min-width:90px;flex-shrink:0}
+
+    /* SEO-C2B B.1 — Intro section and civic footer
+       Added 2026-05-14. Doctrine §11.2 body content compliance.
+       Uses :root palette: --text (#ececec), --muted (#7a7a7a),
+       --border (rgba 8% white), --blue (#4da3ff). */
+    .lm-intro {
+      max-width: 960px;
+      margin: 20px auto 8px;
+      padding: 0 16px;
+      color: var(--text, #ececec);
+    }
+    .lm-intro h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.01em;
+    }
+    .lm-intro-lead {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--muted, #7a7a7a);
+      margin: 0;
+    }
+    .lm-civic-footer {
+      max-width: 960px;
+      margin: 32px auto 24px;
+      padding: 16px;
+      border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+      color: var(--muted, #7a7a7a);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .lm-civic-disclaimer {
+      margin: 0 0 16px 0;
+    }
+    .lm-civic-links-title {
+      margin: 16px 0 8px 0;
+      font-weight: 600;
+      color: var(--text, #ececec);
+    }
+    .lm-civic-links ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .lm-civic-links a {
+      color: var(--blue, #4da3ff);
+      text-decoration: none;
+    }
+    .lm-civic-links a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 480px) {
+      .lm-intro { margin: 12px auto 4px; }
+      .lm-intro h1 { font-size: 18px; }
+      .lm-intro-lead { font-size: 13px; }
+      .lm-civic-footer { font-size: 11px; padding: 12px; }
+    }
   </style>
 </head>
 
@@ -2090,6 +2151,11 @@
       </footer>
     </div>
   </div>
+
+  <section class="lm-intro" aria-labelledby="lm-intro-title">
+    <h1 id="lm-intro-title" data-i18n="map.intro_title">Live Hawaiʻi Hazard Map</h1>
+    <p class="lm-intro-lead" data-i18n="map.intro_lead">Real-time wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.</p>
+  </section>
 
   <template id="panel-template">
     <div class="metric">
@@ -4548,6 +4614,21 @@
     </div>
     <p class="lm-panel-source">Situational awareness only — not a dispatch system</p>
   </div>
+
+  <footer class="lm-civic-footer" role="contentinfo" aria-label="Civic disclaimer and official sources">
+    <p class="lm-civic-disclaimer" data-i18n="civic.guardian_note">Kahu Ola is an independent civic technology platform that aggregates publicly available government data sources. It does not represent or replace official emergency services, evacuation orders, or governmental directives. Always follow official county, state, and federal guidance.</p>
+    <nav class="lm-civic-links" aria-label="Official emergency sources">
+      <p class="lm-civic-links-title">Official sources for emergency directives:</p>
+      <ul>
+        <li><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">Hawaiʻi Emergency Management Agency (HIEMA)</a></li>
+        <li><a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">National Weather Service — Honolulu</a></li>
+        <li><a href="https://www.mauicounty.gov/238/Maui-Emergency-Management-Agency" target="_blank" rel="noopener">Maui County Emergency Management</a></li>
+        <li><a href="https://www.hawaiicounty.gov/departments/civil-defense" target="_blank" rel="noopener">Hawaiʻi County Civil Defense</a></li>
+        <li><a href="https://www.honolulu.gov/dem" target="_blank" rel="noopener">Honolulu Department of Emergency Management</a></li>
+        <li><a href="https://www.kauai.gov/Government/Departments-Agencies/Emergency-Management-Agency" target="_blank" rel="noopener">Kauaʻi Emergency Management Agency</a></li>
+      </ul>
+    </nav>
+  </footer>
 
   <!-- ── Safe Routes + Responder JS ── -->
   <script>
