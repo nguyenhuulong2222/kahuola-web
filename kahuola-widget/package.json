@@ -1,0 +1,18 @@
+{
+  "name": "kahuola-widget",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kahu Ola embeddable safety widget — Phase 1 skeleton (Cloudflare Worker)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "health": "curl -sL https://widget.kahuola.org/v1/health"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260516.1",
+    "typescript": "5.4",
+    "wrangler": "^3.57.0"
+  }
+}

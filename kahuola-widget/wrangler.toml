@@ -1,0 +1,34 @@
+# Kahu Ola Embeddable Safety Widget — Worker config
+# Phase 1: Safe Widget Skeleton (placeholder data, no upstream calls)
+#
+# Lives at kahuola-web/kahuola-widget/ — a SECOND Worker, sibling of worker/.
+# Deploys independently from the main hazard Worker.
+#
+# DEPLOY (manual only — GitHub Actions deploys Pages, never Workers):
+#   cd kahuola-widget
+#   npm install
+#   npm run deploy
+#
+# VERIFY after deploy:
+#   npm run health
+#   curl -sL "https://widget.kahuola.org/v1/embed.js" | head -c 200
+
+name = "kahuola-widget"
+main = "src/index.ts"
+compatibility_date = "2026-05-16"
+
+# Subdomain route per GROWTH_FEATURES embed example:
+#   <script src="https://widget.kahuola.org/v1/embed.js" defer></script>
+# Requires widget.kahuola.org DNS record + zone on Cloudflare (kahuola.org).
+routes = [
+  { pattern = "widget.kahuola.org/v1/*", zone_name = "kahuola.org" }
+]
+
+# Phase 3 ONLY — uncomment when wiring live data.
+# Widget Worker calls Kahu Ola Worker API server-side; browser never calls upstream.
+# [vars]
+# KAHUOLA_API_BASE = "https://kahuola.org/api"
+
+# No secrets required in Phase 1.
+# Phase 3: no API keys in widget either — it reads cached public hazard status
+# from the main Kahu Ola Worker, which owns all upstream credentials.
