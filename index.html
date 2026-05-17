@@ -1611,7 +1611,7 @@
     <section class="zone-brief-section" id="zoneBriefSection">
       <article class="card zone-brief-card">
         <div class="zone-brief-head">
-          <div class="zone-brief-kicker" id="zoneBriefKicker">LOCAL BRIEF — MAUI</div>
+          <div class="zone-brief-kicker" id="zoneBriefKicker" data-i18n="brief.kicker.maui">LOCAL BRIEF — MAUI</div>
           <h2 class="zone-brief-title" id="zoneBriefTitle">Find your area for a local brief</h2>
         </div>
 
@@ -3913,8 +3913,27 @@
         selectedName.textContent = z.name;
         paintBadge(selectedRisk, null, "Checking…");
         selectedBar.hidden = false;
+        applyKicker(zoneId);
+      }
+
+      function kickerKeyForIsland(island) {
+        if (island === "Hawaiʻi Island") return "brief.kicker.hawaii_island";
+        if (island === "Oʻahu")          return "brief.kicker.oahu";
+        if (island === "Kauaʻi")         return "brief.kicker.kauai";
+        return "brief.kicker.maui";
+      }
+      // Update kicker for a given zone, or reset to Maui default when null.
+      // Sets data-i18n so language switches (KAHUOLA_I18N.applyAll) repaint it.
+      function applyKicker(zoneId) {
         var kickerEl = document.getElementById("zoneBriefKicker");
-        if (kickerEl) kickerEl.textContent = "LOCAL BRIEF — " + islandForZone(zoneId).toUpperCase();
+        if (!kickerEl) return;
+        var key = zoneId ? kickerKeyForIsland(islandForZone(zoneId)) : "brief.kicker.maui";
+        kickerEl.setAttribute("data-i18n", key);
+        var i18n = window.KAHUOLA_I18N;
+        if (i18n && typeof i18n.t === "function") {
+          var v = i18n.t(key);
+          if (v && v !== key) kickerEl.textContent = v;
+        }
       }
 
       // ── Confirm/save flow ───────────────────────────────
@@ -4078,6 +4097,7 @@
           selectedBar.hidden = true;
           hideBrief();
           showState("idle");
+          applyKicker(null);
         });
       }
 

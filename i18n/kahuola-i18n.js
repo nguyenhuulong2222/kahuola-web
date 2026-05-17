@@ -519,6 +519,12 @@
       "hero.kicker.fire_watch": "FIRE WEATHER WATCH",
       "hero.kicker.degraded": "DATA DELAYED",
 
+      // ── Local brief kicker (per-island) ───────────────────────
+      "brief.kicker.maui": "LOCAL BRIEF — MAUI",
+      "brief.kicker.hawaii_island": "LOCAL BRIEF — HAWAIʻI ISLAND",
+      "brief.kicker.oahu": "LOCAL BRIEF — OʻAHU",
+      "brief.kicker.kauai": "LOCAL BRIEF — KAUAʻI",
+
       // ── Hero titles (innerHTML — developer-controlled static HTML only) ──
       // These contain <span class="hero-title-key"> for visual emphasis.
       // Use ONLY as innerHTML on a trusted, developer-controlled element.
@@ -1252,6 +1258,12 @@
       // hazard.fire_weather LOCKED vi: Th\u1eddi ti\u1ebft ch\u00e1y r\u1eebng
       "hero.kicker.fire_watch": "THEO D\xd5I TH\u1edci TI\u1ebeT CH\u00c1Y R\u1eebNG",
       "hero.kicker.degraded": "D\u1eee LI\u1ec6U B\u1eca TR\u1ec4",
+
+      // \u2500\u2500 Local brief kicker (per-island) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+      "brief.kicker.maui": "B\u1ea2N TIN \u0110\u1ecaA PH\u01af\u01a0NG \u2014 MAUI",
+      "brief.kicker.hawaii_island": "B\u1ea2N TIN \u0110\u1ecaA PH\u01af\u01a0NG \u2014 HAWAI\u02bbI ISLAND",
+      "brief.kicker.oahu": "B\u1ea2N TIN \u0110\u1ecaA PH\u01af\u01a0NG \u2014 O\u02bbAHU",
+      "brief.kicker.kauai": "B\u1ea2N TIN \u0110\u1ecaA PH\u01af\u01a0NG \u2014 KAUA\u02bbI",
 
       // ── Hero titles (innerHTML — developer-controlled) ────────
       "hero.title_html.monitoring": "Hawai\u02bfi \u0111ang <span class=\"hero-title-key\">b\u00ecnh y\xean</span> l\xfac n\xe0y.",
