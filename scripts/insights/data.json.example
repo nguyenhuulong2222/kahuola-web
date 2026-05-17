@@ -1,0 +1,16 @@
+{
+  "source_fetched_at": "2026-05-16T14:00:00Z",
+  "region": "Maui County",
+  "air_quality": {
+    "wailuku": 38,
+    "lahaina": 52
+  },
+  "fires": [
+    { "location": "Upcountry near Kula", "confidence": "nominal" }
+  ],
+  "weather": {
+    "wind_mph": 18,
+    "red_flag_warning": false,
+    "humidity_pct": 61
+  }
+}

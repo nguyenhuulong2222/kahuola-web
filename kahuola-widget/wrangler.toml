@@ -24,11 +24,10 @@ routes = [
   { pattern = "widget.kahuola.org/v1/*", zone_name = "kahuola.org" }
 ]
 
-# Phase 3 ONLY — uncomment when wiring live data.
-# Widget Worker calls Kahu Ola Worker API server-side; browser never calls upstream.
-# [vars]
-# KAHUOLA_API_BASE = "https://kahuola.org/api"
+# Phase 3: widget Worker calls Kahu Ola Worker API server-side.
+# The partner-site browser never calls upstream — only widget.kahuola.org.
+[vars]
+KAHUOLA_API_BASE = "https://kahuola.org/api"
 
-# No secrets required in Phase 1.
-# Phase 3: no API keys in widget either — it reads cached public hazard status
-# from the main Kahu Ola Worker, which owns all upstream credentials.
+# No secrets in the widget. The main Kahu Ola Worker owns all upstream
+# credentials; the widget only reads its cached public hazard summary.

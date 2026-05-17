@@ -50,10 +50,19 @@ export default {
     if (url.pathname === '/v1/health') {
       return json({
         ok: true,
-        phase: 1,
+        phase: env.KAHUOLA_API_BASE ? 3 : 1,
         api_wired: Boolean(env.KAHUOLA_API_BASE),
         ts: new Date().toISOString(),
       });
+    }
+
+    // Phase 3: the WIDGET WORKER fetches Kahu Ola data server-side.
+    // The partner-site browser only ever touches widget.kahuola.org —
+    // it never calls kahuola.org/api directly (load isolation +
+    // no CORS widening on the main hazard Worker).
+    if (url.pathname === '/v1/status') {
+      const loc = sanitizeLocation(url.searchParams.get('location'));
+      return await handleStatus(loc, env);
     }
 
     if (url.pathname === '/v1/embed.js') {
@@ -79,6 +88,130 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/** Allowlist-shaped: lowercase, [a-z-] only, max 32 chars. No PII, no GPS. */
+function sanitizeLocation(raw: string | null): string {
+  const v = (raw || 'maui').toLowerCase().replace(/[^a-z-]/g, '').slice(0, 32);
+  return v.length ? v : 'maui';
+}
+
+/**
+ * Phase 3 status path. Doctrine-critical behavior:
+ *  - Invariant I: this fetch runs in the WIDGET Worker, server-side. The
+ *    embedded browser never reaches kahuola.org/api or any upstream.
+ *  - Invariant II/III: ANY failure (no base, network, non-200, bad JSON,
+ *    timeout) returns a deterministic degraded payload — never an error
+ *    the card can't render, never inferred fields.
+ *  - Edge-cached 90s so a traffic spike on partner sites cannot stampede
+ *    the main hazard Worker (GROWTH_FEATURES §2 load isolation).
+ */
+interface WidgetStatus {
+  location: string;
+  aqi: number | null;
+  fire_risk: string;
+  status: 'fresh' | 'stale' | 'unavailable';
+  generated_at: string | null;
+  source_note: string;
+}
+
+async function handleStatus(location: string, env: Env): Promise<Response> {
+  const degraded: WidgetStatus = {
+    location,
+    aqi: null,
+    fire_risk: '\u2014',
+    status: 'unavailable',
+    generated_at: null,
+    source_note: 'Live status temporarily unavailable.',
+  };
+
+  if (!env.KAHUOLA_API_BASE) {
+    // Phase 1 mode (no base configured) — honest degraded, still rend, 200.
+    return json(degraded);
+  }
+
+  const cache = caches.default;
+  const cacheKey = new Request(
+    `https://widget.kahuola.org/v1/status?location=${location}`,
+  );
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
+
+  let payload: WidgetStatus = degraded;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const base = env.KAHUOLA_API_BASE.replace(/\/+$/, '');
+    const upstream = await fetch(
+      `${base}/hazards/summary?region=maui`,
+      { signal: ctrl.signal, headers: { Accept: 'application/json' } },
+    );
+    clearTimeout(timer);
+
+    if (upstream.ok) {
+      let data: unknown = null;
+      try {
+        data = await upstream.json();
+      } catch {
+        data = null; // Invariant III: bad JSON → drop, keep degraded.
+      }
+      const mapped = mapSummary(data, location);
+      if (mapped) payload = mapped;
+    }
+  } catch {
+    // network / abort / anything → keep degraded. Never throw to the card.
+  }
+
+  const resp = json(payload);
+  // Cache only a usable (non-degraded) payload, briefly.
+  if (payload.status !== 'unavailable') {
+    const cacheable = new Response(resp.clone().body, resp);
+    cacheable.headers.set('Cache-Control', 'public, max-age=90');
+    await cache.put(cacheKey, cacheable);
+  }
+  return resp;
+}
+
+/**
+ * Map the main Worker's aggregated summary into the widget's tiny shape.
+ * Defensive: any missing/oddly-typed field → degraded, never guessed.
+ * Returns null if the payload can't be trusted.
+ */
+function mapSummary(
+  data: unknown,
+  location: string,
+): WidgetStatus | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+
+  const aqiRaw = d['aqi'];
+  const aqi =
+    typeof aqiRaw === 'number' && Number.isFinite(aqiRaw) ? aqiRaw : null;
+
+  const fr = d['fire_risk'];
+  const fire_risk = typeof fr === 'string' && fr.trim() ? fr.trim() : '\u2014';
+
+  const gen = d['generated_at'];
+  const generated_at = typeof gen === 'string' ? gen : null;
+
+  // Freshness: trust an explicit flag if present, else infer from age only
+  // as fresh/stale label (never STALE_DROP — that just shows unavailable).
+  let status: 'fresh' | 'stale' = 'fresh';
+  const fresh = d['freshness'];
+  if (fresh === 'STALE_OK' || fresh === 'stale') status = 'stale';
+  if (fresh === 'STALE_DROP') return null; // drop → caller stays degraded
+
+  return {
+    location,
+    aqi,
+    fire_risk,
+    status,
+    generated_at,
+    source_note:
+      status === 'stale'
+        ? 'Data may be outdated — see official sources.'
+        : 'Public hazard data · situational awareness only.',
+  };
+}
+
 /**
  * The embeddable Web Component.
  * Vanilla JS only. Shadow DOM. No React/Vue/Tailwind/Bootstrap/external CSS.
@@ -100,10 +233,10 @@ const EMBED_JS = String.raw`(function () {
     return {
       location: loc || "maui",
       aqi: null,
-      fire_risk: "—",
+      fire_risk: "\u2014",
       status: "unavailable",       // unavailable | fresh | stale
       generated_at: null,
-      source_note: "Phase 1 preview — live data not yet wired."
+      source_note: "Phase 1 preview \u2014 live data not yet wired."
     };
   }
 
@@ -152,16 +285,16 @@ const EMBED_JS = String.raw`(function () {
         '.k-foot a{color:' + ACCENT + ';text-decoration:none;font-weight:600}' +
         '.k-foot a:hover{text-decoration:underline}' +
       '</style>' +
-      '<div class="k-card" role="region" aria-label="Kahu Ola hazard status for ' + locLabel + '">' +
+      '<div class="x-card" role="region" aria-label="Kahu Ola hazard status for ' + locLabel + '">' +
         '<div class="k-head">' +
-          '<span class="k-loc">' + locLabel + ', Hawaiʻi</span>' +
+          '<span class="k-loc">' + locLabel + ', Hawai\u02bbi</span>' +
           '<span class="k-stat"><span class="k-dot"></span>' + esc(statusText(data.status)) + '</span>' +
         '</div>' +
         '<div class="k-rows">' +
           '<div class="k-row"><span class="k-key">Air Quality (AQI)</span>' +
-            '<span class="k-val">' + esc(data.aqi == null ? "—" : data.aqi) + '</span></div>' +
+            '<span class="k-val">' + esc(data.aqi == null ? "\u2014" : data.aqi) + '</span></div>' +
           '<div class="k-row"><span class="k-key">Fire Risk</span>' +
-            '<span class="k-val">' + esc(data.fire_risk || "—") + '</span></div>' +
+            '<span class="k-val">' + esc(data.fire_risk || "\u2014") + '</span></div>' +
         '</div>' +
         '<div class="k-foot">' +
           '<span>' + esc(data.source_note || "Situational awareness only") + '</span>' +
@@ -174,18 +307,56 @@ const EMBED_JS = String.raw`(function () {
     class KahuOlaWidget extends HTMLElement {
       static get observedAttributes() { return ["location", "theme"]; }
 
-      _paint() {
+      _paint(data) {
         if (!this.shadowRoot) this.attachShadow({ mode: "open" });
         var loc = (this.getAttribute("location") || "maui").toLowerCase();
         var theme = (this.getAttribute("theme") || "dark").toLowerCase();
-        // Phase 1: render placeholder immediately. Invariant II -- never blank.
-        // Phase 3 hook: fetchStatus() would call the Kahu Ola Worker API here,
-        // wrapped in try/catch -> on ANY failure, keep this degraded card.
-        render(this.shadowRoot, placeholder(loc), theme);
+        render(this.shadowRoot, data || placeholder(loc), theme);
       }
 
-      connectedCallback() { this._paint(); }
-      attributeChangedCallback() { if (this.shadowRoot) this._paint(); }
+      _refresh() {
+        var self = this;
+        var loc = (this.getAttribute("location") || "maui").toLowerCase();
+        // Resolve the widget Worker origin from THIS script's own src,
+        // so the partner browser only ever talks to widget.kahuola.org.
+        var origin = self._origin();
+        if (!origin) return; // can't resolve → keep placeholder, never error
+        try {
+          fetch(origin + "/v1/status?location=" + encodeURIComponent(loc), {
+            method: "GET",
+            credentials: "omit",
+            cache: "no-store"
+          }).then(function (r) {
+            if (!r || !r.ok) return null;
+            return r.json();
+          }).then(function (j) {
+            // Invariant III: only repaint if the payload looks usable.
+            if (j && typeof j === "object" && j.status) self._paint(j);
+          }).catch(function () {
+            // network/parse fail → silently keep the placeholder card.
+          });
+        } catch (e) { /* keep placeholder */ }
+      }
+
+      _origin() {
+        try {
+          var cs = document.currentScript;
+          if (cs && cs.src) return new URL(cs.src).origin;
+          var s = document.querySelector('script[src*="/v1/embed.js"]');
+          if (s && s.src) return new URL(s.src).origin;
+        } catch (e) {}
+        return "";
+      }
+
+      connectedCallback() {
+        // Invariant II: paint immediately, unconditionally.
+        this._paint(null);
+        // Then try live data. Any failure leaves the card intact.
+        this._refresh();
+      }
+      attributeChangedCallback() {
+        if (this.shadowRoot) { this._paint(null); this._refresh(); }
+      }
     }
     if (!customElements.get("kahuola-safety-widget")) {
       customElements.define("kahuola-safety-widget", KahuOlaWidget);
