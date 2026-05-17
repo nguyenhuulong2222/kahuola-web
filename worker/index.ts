@@ -4,6 +4,7 @@ import { handleContext } from "./routes/context";
 import { handleHealth } from "./routes/health";
 import { handleStatus } from "./routes/status";
 import { handleMrmsQpe } from "./routes/mrms-qpe";
+import { handleMauiSummary } from "./handlers/maui-summary";
 
 function normalizePath(pathname: string): string {
   return pathname.startsWith("/api/") ? pathname.slice(4) : pathname;
@@ -36,6 +37,11 @@ export default {
 
       if (path === "/hazards/mrms-qpe" || path === "/v1/hazards/mrms-qpe") {
         response = await handleMrmsQpe(request, env);
+        return withCors(response);
+      }
+
+      if (path === "/hazards/summary" || path === "/v1/hazards/summary") {
+        response = await handleMauiSummary(request, env);
         return withCors(response);
       }
 
