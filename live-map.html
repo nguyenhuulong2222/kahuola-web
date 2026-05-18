@@ -2259,6 +2259,20 @@
             load live status.</div>
         </div>
 
+        <!-- Coastal & Surf — High Surf, Coastal Flood, Beach Hazards (NWS), lazy -->
+        <div class="priority-module priority-module--secondary" id="coastal-card" tabindex="0" role="button"
+          aria-label="Coastal and surf alerts">
+          <div class="priority-module-head">
+            <div>
+              <div class="priority-kicker" data-i18n="map.kicker_nws_coastal">Official · National Weather Service</div>
+              <div class="priority-title" data-i18n="map.hazard_coastal">Coastal &amp; Surf</div>
+            </div>
+            <div class="status-badge status-none" id="coastal-badge">·</div>
+          </div>
+          <div class="priority-note" id="coastal-note" data-i18n="map.coastal_tap_note">High Surf · Coastal Flood ·
+            Beach Hazards — tap to load live status.</div>
+        </div>
+
         <div class="blueprint-footnote" data-i18n="map.blueprint_footnote">Official sources are shown for each hazard.
           Kahu Ola aggregates public hazard signals for situational awareness and does not issue emergency orders.
           Always follow county, state, and federal guidance.</div>
@@ -2482,6 +2496,7 @@
     let tsunamiVisible = true;
     let hurricaneVisible = true;
     let landslideVisible = true;
+    let coastalVisible = false;
     let localHazardsVisible = true;
     let airnowVisible = false;   // Default OFF — user toggles on
 
@@ -2505,6 +2520,7 @@
         tsunami: createHazardState("tsunami"),
         hurricane: createHazardState("hurricane"),
         landslide: createHazardState("landslide"),
+        coastal: createHazardState("coastal"),
         mrmsRain: createHazardState("mrmsRain"),
       }
     };
@@ -3158,6 +3174,14 @@
         onFetchComplete() { updateLandslideStatusUI(getState("landslide")); renderUnifiedPanels(); },
         visible() { return landslideVisible; }
       },
+      coastal: {
+        key: "coastal", enabled: false, affectsGlobalHealth: false, // lazy — enabled on user request
+        endpoint: IS_LOCAL ? "./coastal-test.json" : "https://kahuola.org/api/hazards/coastal",
+        parsePayload(json) { const raw = parseCanonicalSignals(json, "coastal"); return { features: normalizeCoastalFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "NWS" }; },
+        ensureLayers, applyData(features) { updateCoastalSource(features); },
+        onFetchComplete() { updateCoastalStatusUI(getState("coastal")); renderUnifiedPanels(); },
+        visible() { return coastalVisible; }
+      },
       localHazards: {
         key: "localHazards",
         endpoint: IS_LOCAL
@@ -3252,6 +3276,38 @@
           }
         };
       }).filter(Boolean);
+    }
+
+    function normalizeCoastalFeatures(rawSignals) {
+      // Coastal alerts often have geometry: null (zone-text alerts).
+      // Card-only render path is intentional — never drop null-geometry signals.
+      return (Array.isArray(rawSignals) ? rawSignals : []).map((s, i) => {
+        const props = s.properties || {};
+        const event = String(props.event || "Coastal Alert");
+        const severityRaw = String(props.severity || "Minor");
+        const severity = ["Extreme", "Severe", "Moderate", "Minor"].includes(severityRaw) ? severityRaw : "Minor";
+        const risk = String(props.risk_index || (severity === "Extreme" || severity === "Severe" ? "HIGH" : severity === "Moderate" ? "MEDIUM" : "LOW")).toUpperCase();
+        const area = String(props.areaDesc || "Hawaiʻi");
+        const areaShort = area.length > 120 ? area.slice(0, 120) + "…" : area;
+        return {
+          type: "Feature",
+          geometry: s.geometry || null,
+          properties: {
+            id: props.id || s.id || `coastal-${i}`,
+            event,
+            severity,
+            risk_index: risk,
+            areaDesc: area,
+            areaDescShort: areaShort,
+            headline: String(props.headline || ""),
+            onset: props.onset || s.event_time || null,
+            ends: props.ends || null,
+            instruction: String(props.instruction || "Follow official NWS guidance."),
+            source: props.source || "NWS",
+            source_label: props.source_label || "NWS",
+          }
+        };
+      });
     }
 
     function normalizeLocalHazardFeatures(rawSignals) {
@@ -3368,6 +3424,7 @@
       ensureWindRiskLayers();
       ensureTsunamiLayers();       // official tsunami — red (high priority)
       ensureHurricaneLayers();     // NHC storm points
+      ensureCoastalLayers();       // NWS coastal/surf — geometry-bearing alerts only
       ensureLocalHazardLayers();
       ensureFireLayers();          // fire always topmost
     }
@@ -3622,6 +3679,49 @@
     }
 
     function updateLandslideSource(features) { const s = map.getSource("landslide"); if (s) s.setData({ type: "FeatureCollection", features }); }
+
+    function ensureCoastalLayers() {
+      ensureSource("coastal", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureLayer({
+        id: "coastal-fill", type: "fill", source: "coastal",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+        layout: { visibility: coastalVisible ? "visible" : "none" },
+        paint: {
+          "fill-color": ["match", ["get", "severity"], "Extreme", "#ff1744", "Severe", "#ff1744", "Moderate", "#ff9800", "#58a6ff"],
+          "fill-opacity": 0.18
+        }
+      });
+      ensureLayer({
+        id: "coastal-outline", type: "line", source: "coastal",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+        layout: { visibility: coastalVisible ? "visible" : "none" },
+        paint: {
+          "line-color": ["match", ["get", "severity"], "Extreme", "#ff1744", "Severe", "#ff1744", "Moderate", "#ff9800", "#58a6ff"],
+          "line-width": 1.6, "line-opacity": 0.82
+        }
+      });
+      ensureLayer({
+        id: "coastal-point", type: "circle", source: "coastal",
+        filter: ["==", ["geometry-type"], "Point"],
+        layout: { visibility: coastalVisible ? "visible" : "none" },
+        paint: {
+          "circle-radius": 8,
+          "circle-color": ["match", ["get", "severity"], "Extreme", "#ff1744", "Severe", "#ff1744", "Moderate", "#ff9800", "#58a6ff"],
+          "circle-stroke-width": 2, "circle-stroke-color": "#ffffff", "circle-opacity": 0.95
+        }
+      });
+    }
+    function updateCoastalSource(features) {
+      // Card-only render path: signals with null geometry stay in state but never reach the map source.
+      const geoFeatures = (Array.isArray(features) ? features : []).filter((f) => f && f.geometry);
+      const s = map.getSource("coastal");
+      if (s) s.setData({ type: "FeatureCollection", features: geoFeatures });
+    }
+    function syncCoastalLayerVisibility() {
+      setLayerVisibility("coastal-fill", coastalVisible);
+      setLayerVisibility("coastal-outline", coastalVisible);
+      setLayerVisibility("coastal-point", coastalVisible);
+    }
 
     function syncFlashFloodLayerVisibility() {
       setLayerVisibility("flash-flood-fill", flashFloodVisible);
@@ -4249,6 +4349,45 @@
           if (n) n.textContent = ntxt;
         });
       }
+      function updateCoastalStatusUI(state) {
+        const features = Array.isArray(state.features) ? state.features : [];
+        const count = features.length;
+        const hasHigh = features.some(f => ["Extreme", "Severe"].includes(f?.properties?.severity));
+        const status = count === 0 ? "none" : hasHigh ? "warning" : "advisory";
+        // Update map-side layer visibility for any geometry-bearing signals; card always renders.
+        if (coastalVisible) syncCoastalLayerVisibility();
+        const cls = state.sourceStatus === "unavailable" ? "status-unavailable"
+          : status === "warning" ? "status-detected"
+          : status === "advisory" ? "status-detected"
+          : "status-none";
+        const badgeText = state.sourceStatus === "unavailable" ? (_t("map.s_unavailable") || "Unavailable")
+          : status === "warning" ? (_tmpl("map.s_coastal_warn_n", { n: count }) || `WARNING · ${count}`)
+          : status === "advisory" ? (_tmpl("map.s_coastal_adv_n", { n: count }) || `ADVISORY · ${count}`)
+          : (_t("map.s_clear") || "Clear");
+        // Primary surface: shared updateModuleBadge helper (writes desktop + mobile + bare).
+        updateModuleBadge("coastal", badgeText, cls);
+        // Card body: event / area / onset / ends / instruction. Truncate area to 120 chars.
+        const top = features[0]?.properties || null;
+        const moreCount = Math.max(0, count - 1);
+        let noteText;
+        if (state.sourceStatus === "unavailable") {
+          noteText = _t("map.s_coastal_unavail_note") || "NWS coastal alert source unavailable.";
+        } else if (!top) {
+          noteText = _t("map.s_coastal_none_note") || "No active coastal alerts for Hawaiʻi.";
+        } else {
+          const area = top.areaDescShort || top.areaDesc || "Hawaiʻi";
+          const onset = top.onset ? String(top.onset).replace("T", " ").slice(0, 16) : "—";
+          const ends = top.ends ? String(top.ends).replace("T", " ").slice(0, 16) : "—";
+          const more = moreCount > 0 ? ` · +${moreCount} more` : "";
+          noteText = `${top.event} · ${area} · ${onset} → ${ends}${more}. ${top.instruction || ""} Source: NWS.`;
+        }
+        ["desktop", "mobile"].forEach(sfx => {
+          const note = document.getElementById(`coastal-note-${sfx}`);
+          if (note) note.textContent = noteText;
+        });
+        const bareNote = document.getElementById("coastal-note");
+        if (bareNote) bareNote.textContent = noteText;
+      }
 
       // ── Popups ────────────────────────────────────────────────
       function openTsunamiPopup(feature, lngLat) {
@@ -4303,6 +4442,24 @@
           note: _t("map.hd_landslide_note") || "Source: Kahu Ola terrain + NWS alerts (contextual).",
           body: _t("map.hd_landslide_body") || "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
         })));
+        document.getElementById(`coastal-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("coastal", (st) => {
+          const feats = Array.isArray(st.features) ? st.features : [];
+          const n = feats.length;
+          const hasHigh = feats.some(f => ["Extreme", "Severe"].includes(f?.properties?.severity));
+          const top = feats[0]?.properties;
+          let statusTxt;
+          if (st.status === "loading") statusTxt = _t("map.hd_coastal_st_loading") || "Loading NWS data\u2026";
+          else if (n === 0) statusTxt = _t("map.hd_coastal_st_none") || "Clear \u2014 no active coastal alerts";
+          else if (hasHigh) statusTxt = _tmpl("map.hd_coastal_st_warn_n", { n }) || `${n} active warning(s)`;
+          else statusTxt = _tmpl("map.hd_coastal_st_adv_n", { n }) || `${n} active advisory(ies)`;
+          const bodyDetail = top ? `${top.event} \u2014 ${top.areaDescShort || top.areaDesc || "Hawai\u02bbi"}. ${top.instruction || ""}` : "";
+          return {
+            title: _t("map.hd_coastal_title") || "Coastal & Surf",
+            status: statusTxt,
+            note: _t("map.hd_coastal_note") || "Source: National Weather Service (NWS) \u2014 High Surf, Coastal Flood, Beach Hazards.",
+            body: bodyDetail || (_t("map.hd_coastal_body") || "Coastal alerts from NWS cover High Surf, Coastal Flood, and Beach Hazards statements across all Hawaiian islands.")
+          };
+        }));
       });
     }
 
@@ -4336,12 +4493,13 @@
 
     bindButtons();
     // Init lazy module badges
-    ["tsunami", "hurricane", "landslide"].forEach(key => {
+    ["tsunami", "hurricane", "landslide", "coastal"].forEach(key => {
       updateModuleBadge(key, "·", "status-none");
       const note = document.getElementById(`${key}-note`);
       if (note && key === "tsunami") note.textContent = "NWS Tsunami Warning Center"; // agency name — keep English
       if (note && key === "hurricane") note.textContent = "NHC Pacific basin"; // agency name — keep English
       if (note && key === "landslide") note.textContent = _t("map.s_landslide_context") || "Terrain + rainfall context";
+      if (note && key === "coastal") note.textContent = _t("map.s_coastal_context") || "High Surf · Coastal Flood · Beach Hazards (NWS)";
     });
     syncDiag();
     syncSatelliteButtons();
