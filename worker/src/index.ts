@@ -1021,6 +1021,10 @@ export default {
       if (path === '/api/hazards/tsunami' || path === '/hazards/tsunami')
         return handleTsunami(cors);
 
+      // Coastal alerts — High Surf, Coastal Flood, Beach Hazards
+      if (path === '/api/hazards/coastal' || path === '/hazards/coastal')
+        return handleCoastal(cors);
+
       // Hurricane tracks — NHC active storms
       if (path === '/api/hazards/hurricane' || path === '/hazards/hurricane')
         return handleHurricane(cors);
@@ -1996,6 +2000,16 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
   }
 }
 
+const COASTAL_EVENTS: Record<string, { severity: string; risk_index: string }> = {
+  'high surf warning':       { severity: 'Extreme',  risk_index: 'HIGH' },
+  'high surf advisory':      { severity: 'Moderate', risk_index: 'MEDIUM' },
+  'coastal flood warning':   { severity: 'Severe',   risk_index: 'HIGH' },
+  'coastal flood watch':     { severity: 'Moderate', risk_index: 'MEDIUM' },
+  'coastal flood advisory':  { severity: 'Minor',    risk_index: 'LOW' },
+  'beach hazards statement': { severity: 'Minor',    risk_index: 'LOW' },
+  'coastal flood statement': { severity: 'Minor',    risk_index: 'LOW' },
+};
+
 // ── TSUNAMI ALERTS — NWS Tsunami Warning Center ──────────────────────
 async function handleTsunami(cors: CorsHeaders): Promise<Response> {
   const now = new Date().toISOString();
@@ -2046,6 +2060,80 @@ async function handleTsunami(cors: CorsHeaders): Promise<Response> {
       { status: 'none', count: 0, message: 'No active tsunami warnings.' },
       { authority: 'official', note: msg }
     ), 200, cors);
+  }
+}
+
+// ── COASTAL ALERTS — High Surf, Coastal Flood, Beach Hazards ─────────
+async function handleCoastal(cors: CorsHeaders): Promise<Response> {
+  const now = new Date().toISOString();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    const res = await fetch('https://api.weather.gov/alerts/active?area=HI', {
+      signal: controller.signal,
+      headers: { Accept: 'application/geo+json', 'User-Agent': 'Kahu Ola / kahuola.org' },
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`NWS ${res.status}`);
+
+    const data: any = await res.json();
+    const rawFeatures = Array.isArray(data?.features) ? data.features : [];
+
+    const signals: Feature[] = rawFeatures
+      .filter((f: any) => {
+        const event = String(f?.properties?.event || '').toLowerCase();
+        return Object.keys(COASTAL_EVENTS).some(k => event.includes(k));
+      })
+      .map((f: any, idx: number) => {
+        const eventKey = String(f?.properties?.event || '').toLowerCase();
+        const meta = Object.entries(COASTAL_EVENTS).find(([k]) => eventKey.includes(k));
+        const { severity, risk_index } = meta ? meta[1] : { severity: 'Minor', risk_index: 'LOW' };
+        return {
+          type: 'Feature',
+          geometry: f.geometry ?? null,
+          properties: {
+            id: f?.id || `coastal-${idx}`,
+            source: 'NWS',
+            source_label: 'NWS',
+            event: f?.properties?.event || 'Coastal Alert',
+            severity,
+            risk_index,
+            areaDesc: f?.properties?.areaDesc || 'Hawaiʻi',
+            headline: f?.properties?.headline || '',
+            onset: f?.properties?.onset || now,
+            ends: f?.properties?.ends || '',
+            instruction: f?.properties?.instruction || 'Follow official NWS guidance.',
+          },
+        } as Feature;
+      });
+
+    const hasHigh = signals.some(s =>
+      ['Extreme', 'Severe'].includes(s.properties.severity as string)
+    );
+    const status = signals.length === 0 ? 'none' : hasHigh ? 'warning' : 'advisory';
+
+    const envelope = buildHazardEnvelope(
+      'coastal', 'NWS', 'hawaii', signals,
+      {
+        status,
+        count: signals.length,
+        message: signals.length > 0
+          ? `${signals.length} active coastal alert(s) for Hawaiʻi.`
+          : 'No active coastal alerts for Hawaiʻi.',
+      },
+      { authority: 'official', note: 'Live NWS coastal and surf alerts for all Hawaiian islands.' }
+    );
+    return jsonResp({ ...envelope, stale_after_seconds: 300 }, 200, cors);
+
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown';
+    return jsonResp(
+      buildHazardEnvelope('coastal', 'NWS', 'hawaii', [],
+        { status: 'none', count: 0, message: 'Coastal alert source unavailable.' },
+        { authority: 'official', note: msg }
+      ),
+      200, cors
+    );
   }
 }
 
