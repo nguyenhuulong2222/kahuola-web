@@ -1597,6 +1597,244 @@
       </div>
     </header>
 
+    <section class="hero-grid">
+      <article class="card hero-card">
+
+        <!-- ── NARRATIVE HEADER — answers "should I worry?" in one line ── -->
+        <div class="hero-head">
+          <div style="min-width:0;flex:1">
+            <div class="hero-state-kicker" id="heroKicker">SYSTEM NORMAL</div>
+            <h2 class="hero-title calm" id="heroTitle">Hawaiʻi is <span class="hero-title-key">calm</span> right now.</h2>
+            <p class="hero-narrative" id="heroNarrative">
+              No active watches, warnings, or satellite fire detections across the state.
+            </p>
+          </div>
+          <div class="freshness" id="freshnessChip">
+            <span class="dot"></span>
+            <span id="freshnessLabel">Loading…</span>
+          </div>
+        </div>
+
+        <!-- ── WHAT CHANGED — delta since last check ── -->
+        <div class="hero-delta" id="heroDelta" aria-live="polite">
+          <span class="hero-delta-icon" id="heroDeltaIcon">↔</span>
+          <span id="heroDeltaText" data-i18n="signal.conditions_unchanged">Conditions unchanged since your last visit</span>
+          <span class="hero-delta-time" id="heroDeltaTime"></span>
+        </div>
+
+        <!-- ── PRIMARY ANSWER BANNER ── -->
+        <div class="primary-banner" id="primaryBanner">
+          <div id="heroBannerTitle">✅ No Active Hazards Detected</div>
+          <div class="primary-banner-source" id="heroBannerCopy">NASA FIRMS · NWS · NEXRAD · checked just now</div>
+        </div>
+
+        <!-- ── SIGNAL STRIP — 3 answers, not 3 data points ── -->
+        <div class="signal-strip">
+          <div class="signal-strip-item" id="fireStrip">
+            <div class="signal-strip-icon">🔥</div>
+            <div class="signal-strip-body">
+              <div class="signal-strip-answer" id="fireStripAnswer">No fire detections</div>
+              <div class="signal-strip-source">NASA FIRMS · <span id="fireFreshnessChip">—</span></div>
+            </div>
+            <div class="signal-strip-status ok" id="fireStatus">CLEAR</div>
+          </div>
+          <div class="signal-strip-divider"></div>
+          <div class="signal-strip-item" id="floodStrip">
+            <div class="signal-strip-icon">🌊</div>
+            <div class="signal-strip-body">
+              <div class="signal-strip-answer" id="floodStripAnswer">No flood watches</div>
+              <div class="signal-strip-source">NWS Official · <span id="floodFreshnessChip">—</span></div>
+            </div>
+            <div class="signal-strip-status ok" id="floodStatus">CLEAR</div>
+          </div>
+          <div class="signal-strip-divider"></div>
+          <div class="signal-strip-item" id="weatherStrip">
+            <div class="signal-strip-icon">💨</div>
+            <div class="signal-strip-body">
+              <div class="signal-strip-answer" id="weatherStripAnswer">Fire weather moderate</div>
+              <div class="signal-strip-source" data-i18n="signal.strip.wx_source">NWS / RAWS terrain</div>
+            </div>
+            <div class="signal-strip-status ok" id="windStatus">NORMAL</div>
+          </div>
+        </div>
+
+        <!-- ── CONTEXT METRICS — supporting evidence, not primary ── -->
+        <div class="hero-context-strip">
+          <div class="hero-context-item">
+            <div class="hero-context-value" id="windValue">—</div>
+            <div class="hero-context-label" data-i18n="context.fire_weather">Fire Weather</div>
+            <div class="hero-context-source" id="windSource">NWS Official</div>
+          </div>
+          <div class="hero-context-item">
+            <div class="hero-context-value" id="rainValue">—</div>
+            <div class="hero-context-label" data-i18n="context.rainfall">Rainfall</div>
+            <div class="hero-context-source" id="rainSource">NEXRAD / MRMS</div>
+          </div>
+          <div class="hero-context-item">
+            <div class="hero-context-value" id="floodRiskValue">—</div>
+            <div class="hero-context-label" data-i18n="context.flood_risk">Flood Risk</div>
+            <div class="hero-context-source" id="floodSource">NWS Official</div>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <a class="btn primary" href="live-map" data-i18n="cta.view_live_map">View Live Map</a>
+          <a class="btn" href="#official-links" data-i18n="cta.official_alerts">Official Alerts</a>
+        </div>
+
+        <!-- ── DETAIL SIGNALS — collapsed behind strip, progressive disclosure ── -->
+        <details class="signal-detail-group" id="signalDetails">
+          <summary class="signal-detail-toggle">
+            <span id="signalDetailLabel" data-i18n="signal.detail_label">Signal detail</span>
+            <span class="signal-detail-chevron">▾</span>
+          </summary>
+          <div class="signal-stack">
+            <section class="signal-card fire">
+              <div class="signal-top">
+                <div>
+                  <div class="signal-label" data-i18n="signal.fire_label">Fire · NASA FIRMS</div>
+                  <h3 class="signal-title" id="fireTitle">🔥 Fire Signal — Monitoring</h3>
+                </div>
+                <div class="status ok" id="fireStatusDetail">CLEAR</div>
+              </div>
+              <p class="signal-copy" id="fireCopy">
+                No satellite wildfire detections in the current statewide snapshot.
+              </p>
+              <div class="meta-row">
+                <span class="chip" id="fireSourceChip">NASA FIRMS</span>
+                <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
+              </div>
+            </section>
+            <section class="signal-card flood">
+              <div class="signal-top">
+                <div>
+                  <div class="signal-label" data-i18n="signal.flood_label">Flood · NWS Official</div>
+                  <h3 class="signal-title" id="floodTitle">🌊 Flood Signal — Monitoring</h3>
+                </div>
+                <div class="status ok" id="floodStatusDetail">CLEAR</div>
+              </div>
+              <p class="signal-copy" id="floodCopy">
+                No active NWS flash flood watches or warnings statewide.
+              </p>
+              <div class="meta-row">
+                <span class="chip" id="floodSourceChip">NWS / PacIOOS</span>
+                <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
+              </div>
+            </section>
+          </div>
+        </details>
+
+        <div class="cultural-note" id="kupunaNote">
+          <strong id="kupunaTitle">Kūpuna &amp; Keiki Safety</strong>
+          <span id="kupunaBody">Statewide conditions are calm. Kūpuna, keiki, and those in low-lying areas should remain informed through official alerts. E mālama pono — care for one another.</span>
+        </div>
+
+        <div class="note" id="systemNote">
+          Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.
+        </div>
+
+        <div class="debug-context" aria-hidden="true">
+          <span id="stateChip">MONITORING</span>
+          <span id="contextPrimary">MONITORING</span>
+          <span id="contextFireCount">0</span>
+          <span id="contextFloodCount">0</span>
+          <span id="contextStormCount">0</span>
+        </div>
+      </article>
+
+      <aside class="card map-card">
+        <div class="map-head">
+          <div>
+            <h2 data-i18n="map.preview_title">Mini Hawaiʻi Map</h2>
+            <p data-i18n="map.preview_desc">
+              Visual confirmation of statewide hazard context. Tap anywhere on the map to open interactive mode.
+            </p>
+          </div>
+          <div class="chip" data-i18n="map.preview_chip">Map Preview</div>
+        </div>
+
+        <a href="live-map" class="map-box" style="display:block;cursor:pointer;text-decoration:none;" aria-label="Open interactive live hazard map">
+          <!-- Ocean depth + graticule -->
+          <div class="map-graticule"></div>
+          <div class="map-ocean"></div>
+
+          <!-- LIVE indicator -->
+          <div class="map-live" aria-hidden="true">
+            <div class="map-live-dot"></div>LIVE
+          </div>
+
+          <!-- SVG island silhouettes — approximate Hawaii archipelago shapes -->
+          <svg class="map-svg" viewBox="0 0 480 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <filter id="islandGlow">
+                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+            <!-- Kauaʻi — roughly circular, northwest -->
+            <ellipse class="map-island-shape" cx="68" cy="96" rx="22" ry="18"
+              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
+            <!-- Oʻahu — elongated east-west -->
+            <ellipse class="map-island-shape" cx="152" cy="162" rx="26" ry="15"
+              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
+            <!-- Molokaʻi — thin, east of Oahu -->
+            <ellipse class="map-island-shape" cx="226" cy="176" rx="20" ry="8"
+              fill="rgba(28,80,112,.50)" stroke="rgba(100,180,220,.18)" stroke-width="1"/>
+            <!-- Lānaʻi — small -->
+            <ellipse class="map-island-shape" cx="222" cy="200" rx="11" ry="9"
+              fill="rgba(26,76,108,.48)" stroke="rgba(100,180,220,.16)" stroke-width="1"/>
+            <!-- Maui — figure-8 shape approximated with two ellipses -->
+            <ellipse class="map-island-shape" cx="256" cy="196" rx="24" ry="14"
+              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
+            <ellipse class="map-island-shape" cx="277" cy="208" rx="14" ry="18"
+              fill="rgba(30,85,120,.52)" stroke="rgba(100,180,220,.18)" stroke-width="1"/>
+            <!-- Hawaiʻi Island — large triangle/oval, southeast -->
+            <ellipse class="map-island-shape" cx="382" cy="290" rx="52" ry="48"
+              fill="rgba(30,85,120,.58)" stroke="rgba(100,180,220,.24)" stroke-width="1" filter="url(#islandGlow)"/>
+          </svg>
+
+          <!-- Island labels with status dots -->
+          <div class="map-island" style="left:6%;top:16%;">
+            <div class="map-island-dot" id="kauaiDot" style="background:var(--ok)"></div>Kauaʻi
+          </div>
+          <div class="map-island" style="left:22%;top:34%;">
+            <div class="map-island-dot" id="oahuDot" style="background:var(--ok)"></div>Oʻahu
+          </div>
+          <div class="map-island" style="left:42%;top:43%;">
+            <div class="map-island-dot" id="mauiDot" style="background:var(--ok)"></div>Maui Nui
+          </div>
+          <div class="map-island" style="left:67%;top:61%;">
+            <div class="map-island-dot" id="bigIslandDot" style="background:var(--ok)"></div>Hawaiʻi Island
+          </div>
+
+          <!-- Status badges -->
+          <div class="map-badge ok" id="kauaiBadge" style="left:15%;top:27%;"></div>
+          <div class="map-badge ok" id="oahuBadge" style="left:33%;top:44%;"></div>
+          <div class="map-badge ok" id="mauiBadge" style="left:53%;top:48%;"></div>
+          <div class="map-badge ok" id="bigIslandBadge" style="left:80%;top:69%;"></div>
+
+          <!-- Scale bar -->
+          <div class="map-scale" aria-hidden="true">
+            <div class="map-scale-bar"></div>
+            <div class="map-scale-label">~100 mi</div>
+          </div>
+        </a>
+
+        <div class="map-explanation">
+          <strong><span class="map-explanation-icon">⚡</span><span data-i18n="map.preview_low_bandwidth">Low-Bandwidth Mode</span></strong>
+          <span data-i18n="map.preview_static_note">Static preview — loads instantly during network outages.</span>
+          <a href="live-map" data-i18n="map.preview_open_cta" style="color:var(--accent);margin-left:auto;white-space:nowrap;font-size:12px">Open Full Map ↗</a>
+        </div>
+
+        <div class="legend">
+          <span class="legend-label" data-i18n="legend.signal">Signal</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span><span data-i18n="legend.monitoring">Monitoring</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span><span data-i18n="legend.fire_active">Fire Active</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span><span data-i18n="legend.flood_alert">Flood Alert</span></span>
+        </div>
+      </aside>
+    </section>
+
     <!-- ══════════════════════════════════════════════════════
          LOCAL ZONE BRIEF (Phase 2.2) — GPS smart detect + manual
          search. Fetches /api/hazards/zone/:id (Gemma 4 / template
@@ -1862,244 +2100,6 @@
         </div>
 
       </article>
-    </section>
-
-    <section class="hero-grid">
-      <article class="card hero-card">
-
-        <!-- ── NARRATIVE HEADER — answers "should I worry?" in one line ── -->
-        <div class="hero-head">
-          <div style="min-width:0;flex:1">
-            <div class="hero-state-kicker" id="heroKicker">SYSTEM NORMAL</div>
-            <h2 class="hero-title calm" id="heroTitle">Hawaiʻi is <span class="hero-title-key">calm</span> right now.</h2>
-            <p class="hero-narrative" id="heroNarrative">
-              No active watches, warnings, or satellite fire detections across the state.
-            </p>
-          </div>
-          <div class="freshness" id="freshnessChip">
-            <span class="dot"></span>
-            <span id="freshnessLabel">Loading…</span>
-          </div>
-        </div>
-
-        <!-- ── WHAT CHANGED — delta since last check ── -->
-        <div class="hero-delta" id="heroDelta" aria-live="polite">
-          <span class="hero-delta-icon" id="heroDeltaIcon">↔</span>
-          <span id="heroDeltaText" data-i18n="signal.conditions_unchanged">Conditions unchanged since your last visit</span>
-          <span class="hero-delta-time" id="heroDeltaTime"></span>
-        </div>
-
-        <!-- ── PRIMARY ANSWER BANNER ── -->
-        <div class="primary-banner" id="primaryBanner">
-          <div id="heroBannerTitle">✅ No Active Hazards Detected</div>
-          <div class="primary-banner-source" id="heroBannerCopy">NASA FIRMS · NWS · NEXRAD · checked just now</div>
-        </div>
-
-        <!-- ── SIGNAL STRIP — 3 answers, not 3 data points ── -->
-        <div class="signal-strip">
-          <div class="signal-strip-item" id="fireStrip">
-            <div class="signal-strip-icon">🔥</div>
-            <div class="signal-strip-body">
-              <div class="signal-strip-answer" id="fireStripAnswer">No fire detections</div>
-              <div class="signal-strip-source">NASA FIRMS · <span id="fireFreshnessChip">—</span></div>
-            </div>
-            <div class="signal-strip-status ok" id="fireStatus">CLEAR</div>
-          </div>
-          <div class="signal-strip-divider"></div>
-          <div class="signal-strip-item" id="floodStrip">
-            <div class="signal-strip-icon">🌊</div>
-            <div class="signal-strip-body">
-              <div class="signal-strip-answer" id="floodStripAnswer">No flood watches</div>
-              <div class="signal-strip-source">NWS Official · <span id="floodFreshnessChip">—</span></div>
-            </div>
-            <div class="signal-strip-status ok" id="floodStatus">CLEAR</div>
-          </div>
-          <div class="signal-strip-divider"></div>
-          <div class="signal-strip-item" id="weatherStrip">
-            <div class="signal-strip-icon">💨</div>
-            <div class="signal-strip-body">
-              <div class="signal-strip-answer" id="weatherStripAnswer">Fire weather moderate</div>
-              <div class="signal-strip-source" data-i18n="signal.strip.wx_source">NWS / RAWS terrain</div>
-            </div>
-            <div class="signal-strip-status ok" id="windStatus">NORMAL</div>
-          </div>
-        </div>
-
-        <!-- ── CONTEXT METRICS — supporting evidence, not primary ── -->
-        <div class="hero-context-strip">
-          <div class="hero-context-item">
-            <div class="hero-context-value" id="windValue">—</div>
-            <div class="hero-context-label" data-i18n="context.fire_weather">Fire Weather</div>
-            <div class="hero-context-source" id="windSource">NWS Official</div>
-          </div>
-          <div class="hero-context-item">
-            <div class="hero-context-value" id="rainValue">—</div>
-            <div class="hero-context-label" data-i18n="context.rainfall">Rainfall</div>
-            <div class="hero-context-source" id="rainSource">NEXRAD / MRMS</div>
-          </div>
-          <div class="hero-context-item">
-            <div class="hero-context-value" id="floodRiskValue">—</div>
-            <div class="hero-context-label" data-i18n="context.flood_risk">Flood Risk</div>
-            <div class="hero-context-source" id="floodSource">NWS Official</div>
-          </div>
-        </div>
-
-        <div class="hero-actions">
-          <a class="btn primary" href="live-map" data-i18n="cta.view_live_map">View Live Map</a>
-          <a class="btn" href="#official-links" data-i18n="cta.official_alerts">Official Alerts</a>
-        </div>
-
-        <!-- ── DETAIL SIGNALS — collapsed behind strip, progressive disclosure ── -->
-        <details class="signal-detail-group" id="signalDetails">
-          <summary class="signal-detail-toggle">
-            <span id="signalDetailLabel" data-i18n="signal.detail_label">Signal detail</span>
-            <span class="signal-detail-chevron">▾</span>
-          </summary>
-          <div class="signal-stack">
-            <section class="signal-card fire">
-              <div class="signal-top">
-                <div>
-                  <div class="signal-label" data-i18n="signal.fire_label">Fire · NASA FIRMS</div>
-                  <h3 class="signal-title" id="fireTitle">🔥 Fire Signal — Monitoring</h3>
-                </div>
-                <div class="status ok" id="fireStatusDetail">CLEAR</div>
-              </div>
-              <p class="signal-copy" id="fireCopy">
-                No satellite wildfire detections in the current statewide snapshot.
-              </p>
-              <div class="meta-row">
-                <span class="chip" id="fireSourceChip">NASA FIRMS</span>
-                <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
-              </div>
-            </section>
-            <section class="signal-card flood">
-              <div class="signal-top">
-                <div>
-                  <div class="signal-label" data-i18n="signal.flood_label">Flood · NWS Official</div>
-                  <h3 class="signal-title" id="floodTitle">🌊 Flood Signal — Monitoring</h3>
-                </div>
-                <div class="status ok" id="floodStatusDetail">CLEAR</div>
-              </div>
-              <p class="signal-copy" id="floodCopy">
-                No active NWS flash flood watches or warnings statewide.
-              </p>
-              <div class="meta-row">
-                <span class="chip" id="floodSourceChip">NWS / PacIOOS</span>
-                <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
-              </div>
-            </section>
-          </div>
-        </details>
-
-        <div class="cultural-note" id="kupunaNote">
-          <strong id="kupunaTitle">Kūpuna &amp; Keiki Safety</strong>
-          <span id="kupunaBody">Statewide conditions are calm. Kūpuna, keiki, and those in low-lying areas should remain informed through official alerts. E mālama pono — care for one another.</span>
-        </div>
-
-        <div class="note" id="systemNote">
-          Kahu Ola provides public hazard situational awareness using trusted scientific and government data sources.
-        </div>
-
-        <div class="debug-context" aria-hidden="true">
-          <span id="stateChip">MONITORING</span>
-          <span id="contextPrimary">MONITORING</span>
-          <span id="contextFireCount">0</span>
-          <span id="contextFloodCount">0</span>
-          <span id="contextStormCount">0</span>
-        </div>
-      </article>
-
-      <aside class="card map-card">
-        <div class="map-head">
-          <div>
-            <h2 data-i18n="map.preview_title">Mini Hawaiʻi Map</h2>
-            <p data-i18n="map.preview_desc">
-              Visual confirmation of statewide hazard context. Tap anywhere on the map to open interactive mode.
-            </p>
-          </div>
-          <div class="chip" data-i18n="map.preview_chip">Map Preview</div>
-        </div>
-
-        <a href="live-map" class="map-box" style="display:block;cursor:pointer;text-decoration:none;" aria-label="Open interactive live hazard map">
-          <!-- Ocean depth + graticule -->
-          <div class="map-graticule"></div>
-          <div class="map-ocean"></div>
-
-          <!-- LIVE indicator -->
-          <div class="map-live" aria-hidden="true">
-            <div class="map-live-dot"></div>LIVE
-          </div>
-
-          <!-- SVG island silhouettes — approximate Hawaii archipelago shapes -->
-          <svg class="map-svg" viewBox="0 0 480 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <filter id="islandGlow">
-                <feGaussianBlur stdDeviation="2.5" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
-            </defs>
-            <!-- Kauaʻi — roughly circular, northwest -->
-            <ellipse class="map-island-shape" cx="68" cy="96" rx="22" ry="18"
-              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
-            <!-- Oʻahu — elongated east-west -->
-            <ellipse class="map-island-shape" cx="152" cy="162" rx="26" ry="15"
-              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
-            <!-- Molokaʻi — thin, east of Oahu -->
-            <ellipse class="map-island-shape" cx="226" cy="176" rx="20" ry="8"
-              fill="rgba(28,80,112,.50)" stroke="rgba(100,180,220,.18)" stroke-width="1"/>
-            <!-- Lānaʻi — small -->
-            <ellipse class="map-island-shape" cx="222" cy="200" rx="11" ry="9"
-              fill="rgba(26,76,108,.48)" stroke="rgba(100,180,220,.16)" stroke-width="1"/>
-            <!-- Maui — figure-8 shape approximated with two ellipses -->
-            <ellipse class="map-island-shape" cx="256" cy="196" rx="24" ry="14"
-              fill="rgba(30,85,120,.55)" stroke="rgba(100,180,220,.22)" stroke-width="1" filter="url(#islandGlow)"/>
-            <ellipse class="map-island-shape" cx="277" cy="208" rx="14" ry="18"
-              fill="rgba(30,85,120,.52)" stroke="rgba(100,180,220,.18)" stroke-width="1"/>
-            <!-- Hawaiʻi Island — large triangle/oval, southeast -->
-            <ellipse class="map-island-shape" cx="382" cy="290" rx="52" ry="48"
-              fill="rgba(30,85,120,.58)" stroke="rgba(100,180,220,.24)" stroke-width="1" filter="url(#islandGlow)"/>
-          </svg>
-
-          <!-- Island labels with status dots -->
-          <div class="map-island" style="left:6%;top:16%;">
-            <div class="map-island-dot" id="kauaiDot" style="background:var(--ok)"></div>Kauaʻi
-          </div>
-          <div class="map-island" style="left:22%;top:34%;">
-            <div class="map-island-dot" id="oahuDot" style="background:var(--ok)"></div>Oʻahu
-          </div>
-          <div class="map-island" style="left:42%;top:43%;">
-            <div class="map-island-dot" id="mauiDot" style="background:var(--ok)"></div>Maui Nui
-          </div>
-          <div class="map-island" style="left:67%;top:61%;">
-            <div class="map-island-dot" id="bigIslandDot" style="background:var(--ok)"></div>Hawaiʻi Island
-          </div>
-
-          <!-- Status badges -->
-          <div class="map-badge ok" id="kauaiBadge" style="left:15%;top:27%;"></div>
-          <div class="map-badge ok" id="oahuBadge" style="left:33%;top:44%;"></div>
-          <div class="map-badge ok" id="mauiBadge" style="left:53%;top:48%;"></div>
-          <div class="map-badge ok" id="bigIslandBadge" style="left:80%;top:69%;"></div>
-
-          <!-- Scale bar -->
-          <div class="map-scale" aria-hidden="true">
-            <div class="map-scale-bar"></div>
-            <div class="map-scale-label">~100 mi</div>
-          </div>
-        </a>
-
-        <div class="map-explanation">
-          <strong><span class="map-explanation-icon">⚡</span><span data-i18n="map.preview_low_bandwidth">Low-Bandwidth Mode</span></strong>
-          <span data-i18n="map.preview_static_note">Static preview — loads instantly during network outages.</span>
-          <a href="live-map" data-i18n="map.preview_open_cta" style="color:var(--accent);margin-left:auto;white-space:nowrap;font-size:12px">Open Full Map ↗</a>
-        </div>
-
-        <div class="legend">
-          <span class="legend-label" data-i18n="legend.signal">Signal</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span><span data-i18n="legend.monitoring">Monitoring</span></span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span><span data-i18n="legend.fire_active">Fire Active</span></span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span><span data-i18n="legend.flood_alert">Flood Alert</span></span>
-        </div>
-      </aside>
     </section>
 
     <section class="section">
