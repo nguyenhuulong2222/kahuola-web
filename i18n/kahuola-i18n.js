@@ -402,6 +402,16 @@
       "map.s_tsunami_warn_note": "\u26a0 Tsunami warning active \u2014 follow official guidance.",
       "map.s_tsunami_none_note": "No active tsunami warnings.",
       "map.s_tsunami_unavail_note": "NWS data unavailable.",
+      // Other NWS Alerts (superset) status + card
+      "map.s_alerts_n": "{n} alert(s)",
+      "map.s_alerts_note": "Other active NWS alerts for Hawaiʻi.",
+      "map.s_alerts_none_note": "No other active NWS alerts.",
+      "map.s_alerts_unavail_note": "NWS data unavailable.",
+      "map.kicker_nws_alerts": "Official \xb7 National Weather Service",
+      "map.hazard_alerts": "Other NWS Alerts",
+      "map.alerts_tap_note": "Other active NWS alerts for Hawaiʻi.",
+      "map.popup_title_alert": "NWS Alert",
+      // map.popup_area reused from existing key (already defined below)
       // Hurricane status
       "map.s_hurricane_active_n": "ACTIVE \xb7 {n}",
       "map.s_hurricane_active_note": "{n} active Pacific storm(s). Monitor NHC.",
@@ -1134,6 +1144,16 @@
       "map.s_tsunami_warn_note": "\u26a0 Cảnh báo sóng thần đang hoạt động \u2014 làm theo hướng dẫn chính thức.",
       "map.s_tsunami_none_note": "Không có cảnh báo sóng thần nào đang hoạt động.",
       "map.s_tsunami_unavail_note": "Dữ liệu NWS không khả dụng.",
+      // Other NWS Alerts (superset) status + card
+      "map.s_alerts_n": "{n} cảnh báo",
+      "map.s_alerts_note": "Các cảnh báo NWS khác đang hoạt động cho Hawaiʻi.",
+      "map.s_alerts_none_note": "Không có cảnh báo NWS nào khác.",
+      "map.s_alerts_unavail_note": "Dữ liệu NWS không khả dụng.",
+      "map.kicker_nws_alerts": "Chính thức \xb7 Cơ quan Thời tiết Quốc gia",
+      "map.hazard_alerts": "Cảnh báo NWS khác",
+      "map.alerts_tap_note": "Các cảnh báo NWS khác cho Hawaiʻi.",
+      "map.popup_title_alert": "Cảnh báo NWS",
+      // map.popup_area reused from existing key (already defined below)
       // Hurricane status
       "map.s_hurricane_active_n": "ĐANG HOẠT ĐỘNG \xb7 {n}",
       "map.s_hurricane_active_note": "{n} cơn bão Thái Bình Dương đang hoạt động. Theo dõi NHC.",

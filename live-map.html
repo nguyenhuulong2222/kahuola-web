@@ -2325,6 +2325,20 @@
 
           </div>
         </div>
+        <!-- Other NWS Alerts — enabled module, full active-alert superset (delegated detail via js-hazard-detail) -->
+        <div class="priority-module priority-module--secondary js-hazard-detail" id="alerts-card" tabindex="0" role="button" aria-label="Other NWS alerts status"
+             data-hazard-title="Other NWS Alerts"
+             data-hazard-note="Source: National Weather Service (official)."
+             data-hazard-detail="Other active NWS alerts for Hawaiʻi not shown by the dedicated fire, flood, surf, or tsunami layers — e.g. High Wind, Wind Advisory, Special Weather Statement.">
+          <div class="priority-module-head">
+            <div>
+              <div class="priority-kicker" data-i18n="map.kicker_nws_alerts">Official · National Weather Service</div>
+              <div class="priority-title" data-i18n="map.hazard_alerts">Other NWS Alerts</div>
+            </div>
+            <div class="status-badge status-none" id="alerts-badge">·</div>
+          </div>
+          <div class="priority-note" id="alerts-note" data-i18n="map.alerts_tap_note">Other active NWS alerts for Hawaiʻi.</div>
+        </div>
       </div>
     </details>
 
@@ -2493,6 +2507,7 @@
     let mrmsVisible = true;
     let rainRadarVisible = false; // Default OFF — user toggles on when needed
     let windRiskVisible = false; // Hidden by default — only shows when NWS Red Flag Warning OR CRITICAL/HIGH risk is active
+    let alertsVisible = true;
     let tsunamiVisible = true;
     let hurricaneVisible = true;
     let landslideVisible = true;
@@ -2517,6 +2532,7 @@
         localHazards: createHazardState("localHazards"),
         rainRadar: createHazardState("rainRadar"),
         windRisk: createHazardState("windRisk"),
+        alerts: createHazardState("alerts"),
         tsunami: createHazardState("tsunami"),
         hurricane: createHazardState("hurricane"),
         landslide: createHazardState("landslide"),
@@ -2931,6 +2947,44 @@
         };
       }).filter(Boolean);
     }
+    // Events already covered by dedicated modules — excluded from the
+    // "Other NWS Alerts" superset to avoid duplicate markers (Invariant 10).
+    const ALERTS_EXCLUDED_PATTERNS = [
+      "flash flood", "red flag", "fire weather watch",
+      "tsunami", "tidal wave",
+      "high surf", "coastal flood", "beach hazard",
+      "debris flow", "landslide"
+    ];
+    function isExcludedAlertEvent(eventStr) {
+      const e = String(eventStr || "").toLowerCase();
+      return ALERTS_EXCLUDED_PATTERNS.some((p) => e.includes(p));
+    }
+    function normalizeAlertsFeatures(rawSignals) {
+      return (Array.isArray(rawSignals) ? rawSignals : []).map((s) => {
+        const props = s.properties || {};
+        if (isExcludedAlertEvent(props.event)) return null;   // covered elsewhere
+        // Worker already synthesizes a Point for zone-based alerts; keep whatever geometry exists.
+        if (!s.geometry) return null;
+        return {
+          type: "Feature", geometry: s.geometry,
+          properties: {
+            id: props.id || s.id || "nws-alert",
+            severity: props.kahu_severity || "INFO",       // kahu tier drives color/sort
+            nws_severity: props.severity || "",
+            event: props.event || "NWS Alert",
+            headline: props.headline || "",
+            area_desc: props.area_desc || props.areaDesc || "",
+            instruction: props.instruction || "",
+            urgency: props.urgency || "",
+            onset: props.onset || null,
+            ends: props.ends || props.expires || null,
+            zone_based: !!props.zone_based,
+            source: "NWS",
+            source_label: "National Weather Service",
+          }
+        };
+      }).filter(Boolean);
+    }
     function normalizeFloodContextFeatures(rawSignals) {
       return safeArray(rawSignals).map((raw, index) => {
         const signal = normalizeBasePolygonSignal(raw, index, { type: "FloodRiskSignal", idPrefix: "flood-context", provider: "PACIOOS", product: "RAINFALL_WATERSHED_CONTEXT", official: false, fallbackSeverity: "LOW", ttlSeconds: 1800 });
@@ -3149,6 +3203,22 @@
           updateLandslideStatusUI(getState("landslide"));
           renderUnifiedPanels();
         }, visible() { return windRiskVisible; }
+      },
+      alerts: {
+        key: "alerts", enabled: true, affectsGlobalHealth: false,
+        endpoint: IS_LOCAL ? "./alerts-test.json" : "https://kahuola.org/api/hazards/alerts?region=hawaii",
+        parsePayload(json) {
+          const raw = parseCanonicalSignals(json, "alerts");
+          return { features: normalizeAlertsFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "National Weather Service" };
+        },
+        ensureLayers, applyData(features) { updateAlertsSource(features); },
+        onFetchComplete() {
+          const s = getState("alerts");
+          s.sourceStatus = s.features.length > 0 ? "detected" : "none";
+          updateAlertsStatusUI(s);
+          renderUnifiedPanels();
+        },
+        visible() { return alertsVisible; }
       },
       tsunami: {
         key: "tsunami", enabled: false, affectsGlobalHealth: true, // lazy — enabled on user request or seismic alert
@@ -3426,6 +3496,7 @@
       ensureHurricaneLayers();     // NHC storm points
       ensureCoastalLayers();       // NWS coastal/surf — geometry-bearing alerts only
       ensureLocalHazardLayers();
+      ensureAlertsLayers();        // other NWS alerts (superset) — just below fire
       ensureFireLayers();          // fire always topmost
     }
     function ensureSmokeLayers() {
@@ -3451,6 +3522,15 @@
       ensureLayer({ id: "flash-flood-point", type: "circle", source: "flash-flood", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 7, "circle-color": ["match", ["get", "severity"], "WARNING", "#ff1744", "WATCH", "#58a6ff", "#8bc4ff"], "circle-stroke-width": 1.5, "circle-stroke-color": "#e9f4ff", "circle-opacity": flashFloodVisible ? 1 : 0, "circle-stroke-opacity": flashFloodVisible ? 1 : 0 } });
       if (!map.__flashFloodHoverBound) { map.__flashFloodHoverBound = true;["flash-flood-fill", "flash-flood-point"].forEach((id) => { map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; }); }); }
       syncFlashFloodLayerVisibility();
+    }
+    function ensureAlertsLayers() {
+      ensureSource("alerts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      const sevColor = ["match", ["get", "severity"], "CRITICAL", "#b71c1c", "WARNING", "#ff6a00", "WATCH", "#ff9800", "ADVISORY", "#ffca28", "#90a4ae"];
+      ensureLayer({ id: "alerts-fill", type: "fill", source: "alerts", filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]], paint: { "fill-color": sevColor, "fill-opacity": alertsVisible ? 0.12 : 0 } });
+      ensureLayer({ id: "alerts-outline", type: "line", source: "alerts", filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]], paint: { "line-color": sevColor, "line-width": 1.8, "line-opacity": alertsVisible ? 0.7 : 0 } });
+      ensureLayer({ id: "alerts-point", type: "circle", source: "alerts", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 6, "circle-color": sevColor, "circle-stroke-width": 1.5, "circle-stroke-color": "#fff", "circle-opacity": alertsVisible ? 0.9 : 0, "circle-stroke-opacity": alertsVisible ? 0.9 : 0 } });
+      if (!map.__alertsHoverBound) { map.__alertsHoverBound = true; ["alerts-fill", "alerts-point"].forEach((id) => { map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; }); }); }
+      syncAlertsLayerVisibility();
     }
     function ensureFloodContextLayers() {
       ensureSource("flood-context", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -3651,6 +3731,8 @@
     function updateMrmsSource(features) { const s = map.getSource("mrms-rain"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updateWindRiskSource(features) { const s = map.getSource("wind-risk"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updateTsunamiSource(features) { const s = map.getSource("tsunami"); if (s) s.setData({ type: "FeatureCollection", features }); }
+    function updateAlertsSource(features) { const s = map.getSource("alerts"); if (s) s.setData({ type: "FeatureCollection", features }); }
+    function syncAlertsLayerVisibility() { ["alerts-fill", "alerts-outline", "alerts-point"].forEach(id => setLayerVisibility(id, alertsVisible)); }
     function updateHurricaneSource(features) { const s = map.getSource("hurricane"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updateLocalHazardsSource(features) {
       const s = map.getSource("local-hazards");
@@ -4251,6 +4333,7 @@
         if (tsunamiVisible) { const tsu = queryTopFeature(e.point, ["tsunami-fill", "tsunami-point"]); if (tsu) { openTsunamiPopup(tsu, e.lngLat); return; } }
         if (hurricaneVisible) { const hur = queryTopFeature(e.point, ["hurricane-point"]); if (hur) { openHurricanePopup(hur, e.lngLat); return; } }
         if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
+        if (alertsVisible) { const al = queryTopFeature(e.point, ["alerts-fill", "alerts-point"]); if (al) { openAlertsPopup(al, e.lngLat); return; } }
         if (localHazardsVisible) {
           const localHazard = queryTopFeature(e.point, ["local-hazards-point", "local-hazards-fill", "local-hazards-line"]);
           if (localHazard) { openLocalHazardPopup(localHazard, e.lngLat); return; }
@@ -4321,6 +4404,17 @@
             state.sourceStatus === "none" ? (_t("map.s_tsunami_none_note") || "No active tsunami warnings.") : (_t("map.s_tsunami_unavail_note") || "NWS data unavailable.");
           [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
           [note, n].forEach(el => { if (el) el.textContent = ntxt; });
+        });
+      }
+      function updateAlertsStatusUI(state) {
+        const count = state.features?.length || 0;
+        const cls = state.sourceStatus === "detected" ? "status-detected" : state.sourceStatus === "none" ? "status-none" : "status-unavailable";
+        const txt = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_n", { n: count }) || `${count} alert${count === 1 ? "" : "s"}`) : state.sourceStatus === "none" ? (_t("map.s_clear") || "Clear") : (_t("map.s_unavailable") || "Unavailable");
+        updateModuleBadge("alerts", txt, cls);
+        ["desktop", "mobile", ""].forEach(sfx => {
+          const id = sfx ? `alerts-note-${sfx}` : "alerts-note";
+          const note = document.getElementById(id);
+          if (note) note.textContent = state.sourceStatus === "detected" ? (_t("map.s_alerts_note") || "Other active NWS alerts for Hawaiʻi.") : state.sourceStatus === "none" ? (_t("map.s_alerts_none_note") || "No other active NWS alerts.") : (_t("map.s_alerts_unavail_note") || "NWS data unavailable.");
         });
       }
       function updateHurricaneStatusUI(state) {
@@ -4394,6 +4488,13 @@
         const p = feature.properties || {};
         if (activePopup) activePopup.remove();
         const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 ${_L("map.popup_title_tsunami", "Tsunami Alert")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NWS TWC")}</div></div><div class="popup-severity crit">${escapeHtml(p.severity || "Extreme")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_event", "Event")}</div><div class="popup-metric-value">${escapeHtml(p.event || "Tsunami Alert")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_onset", "Onset")}</div><div class="popup-metric-value">${escapeHtml(p.onset || "—")}</div></div></div><div class="popup-note">⚠ ${escapeHtml(p.instruction || (_t("map.popup_tsunami_evac") || "Follow official evacuation guidance immediately."))}</div></div>`;
+        activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
+      }
+      function openAlertsPopup(feature, lngLat) {
+        const p = feature.properties || {};
+        if (activePopup) activePopup.remove();
+        const sevCls = p.severity === "CRITICAL" ? "crit" : p.severity === "WARNING" ? "warn" : "";
+        const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}</div>`;
         activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
       }
       function openHurricanePopup(feature, lngLat) {
