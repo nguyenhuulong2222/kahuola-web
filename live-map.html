@@ -4411,6 +4411,18 @@
         const cls = state.sourceStatus === "detected" ? "status-detected" : state.sourceStatus === "none" ? "status-none" : "status-unavailable";
         const txt = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_n", { n: count }) || `${count} alert${count === 1 ? "" : "s"}`) : state.sourceStatus === "none" ? (_t("map.s_clear") || "Clear") : (_t("map.s_unavailable") || "Unavailable");
         updateModuleBadge("alerts", txt, cls);
+        // Mirror live status into the card's data-hazard-status so the detail
+        // sheet (openHazardDetailFromElement reads dataset) shows live state,
+        // not the static "Planned" default.
+        const detailStatus = state.sourceStatus === "detected"
+          ? (_tmpl("map.hd_alerts_st_n", { n: state.features?.length || 0 }) || `${state.features?.length || 0} active alert(s)`)
+          : state.sourceStatus === "none"
+            ? (_t("map.hd_alerts_st_none") || "Clear — no other active NWS alerts")
+            : (_t("map.hd_alerts_st_unavail") || "NWS alert data unavailable");
+        ["alerts-card-desktop", "alerts-card-mobile", "alerts-card"].forEach(id => {
+          const card = document.getElementById(id);
+          if (card) card.dataset.hazardStatus = detailStatus;
+        });
         ["desktop", "mobile", ""].forEach(sfx => {
           const id = sfx ? `alerts-note-${sfx}` : "alerts-note";
           const note = document.getElementById(id);
