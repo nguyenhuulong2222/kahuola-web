@@ -351,6 +351,107 @@ function centroidsForUgc(codes: string[]): Array<[number, number]> {
   return out;
 }
 
+async function handleAlerts(url: URL, cors: CorsHeaders): Promise<Response> {
+  const region = resolveRegion(url);
+  const areas = REGION_NWS_AREAS[region] ?? ['HI'];
+  const upstream = await fetchNwsAlerts(cors, areas);
+  if (!upstream.ok) {
+    return jsonResp(
+      buildHazardEnvelope(
+        'alerts', 'NWS', region, [],
+        { status: 'unavailable', count: 0, message: 'NWS alerts endpoint temporarily unavailable.' },
+        { authority: 'official', note: 'Live NWS integration via api.weather.gov alerts endpoint.', upstream_error: upstream.error },
+      ),
+      200, cors,
+    );
+  }
+
+  const rawFeatures = Array.isArray(upstream.data?.features) ? upstream.data.features : [];
+  // Full active-alert superset — NO event whitelist, and zone-based
+  // (null-geometry) alerts are RETAINED (flagged zone_based) rather than
+  // dropped, so the client can render them as text cards.
+  const signals: Feature[] = rawFeatures.map((f: any, idx: number) => {
+    const ugcCodes: string[] = Array.isArray(f?.properties?.geocode?.UGC)
+      ? f.properties.geocode.UGC
+      : [];
+    const centroids = centroidsForUgc(ugcCodes);
+    const geometry =
+      f.geometry ||
+      (centroids.length > 0
+        ? { type: 'Point', coordinates: centroids[0] }
+        : null);
+    const rawSeverity = f?.properties?.severity || '';
+    const kahu_severity =
+      rawSeverity === 'Extreme' ? 'CRITICAL'
+        : rawSeverity === 'Severe' ? 'WARNING'
+        : rawSeverity === 'Moderate' ? 'WATCH'
+        : rawSeverity === 'Minor' ? 'ADVISORY'
+        : 'INFO';
+    return {
+      type: 'Feature',
+      geometry,
+      properties: {
+        id: f?.id || f?.properties?.id || `nws-alert-${idx}`,
+        source: 'NWS',
+        event: f?.properties?.event || '',
+        severity: rawSeverity,
+        kahu_severity,
+        urgency: f?.properties?.urgency || '',
+        certainty: f?.properties?.certainty || '',
+        headline: f?.properties?.headline || '',
+        sent: f?.properties?.sent || '',
+        onset: f?.properties?.onset || '',
+        ends: f?.properties?.ends || '',
+        expires: f?.properties?.expires || '',
+        areaDesc: f?.properties?.areaDesc || '',
+        area_desc: f?.properties?.areaDesc || '',
+        instruction: f?.properties?.instruction || '',
+        response: f?.properties?.response || '',
+        ugc_codes: ugcCodes,
+        centroids,
+        geometry_synthesized: !f.geometry && centroids.length > 0,
+        zone_based: !f.geometry,
+      },
+    };
+  });
+
+  const by_severity = {
+    critical: signals.filter((f) => f.properties.kahu_severity === 'CRITICAL').length,
+    warning: signals.filter((f) => f.properties.kahu_severity === 'WARNING').length,
+    watch: signals.filter((f) => f.properties.kahu_severity === 'WATCH').length,
+    advisory: signals.filter((f) => f.properties.kahu_severity === 'ADVISORY').length,
+    info: signals.filter((f) => f.properties.kahu_severity === 'INFO').length,
+  };
+
+  const event_types = Array.from(
+    new Set(signals.map((f) => String(f.properties.event || '')).filter((e) => e.length > 0))
+  );
+
+  return jsonResp(
+    buildHazardEnvelope(
+      'alerts',
+      'NWS',
+      region,
+      signals,
+      {
+        status: signals.length > 0 ? 'active' : 'none',
+        count: signals.length,
+        by_severity,
+        event_types,
+        message: signals.length > 0
+          ? `${signals.length} active National Weather Service alert(s) for Hawaiʻi.`
+          : 'No active National Weather Service alerts in this snapshot.',
+      },
+      {
+        authority: 'official',
+        note: 'Live NWS integration via api.weather.gov alerts endpoint. Full active-alert superset.',
+      },
+    ),
+    200,
+    cors,
+  );
+}
+
 async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
   const areas = REGION_NWS_AREAS[region] ?? ['HI'];
@@ -986,6 +1087,7 @@ export default {
       if (origin && !ALLOWED_ORIGINS.includes(origin)) return err(403, 'Forbidden', cors);
 
       if (path === '/api/tiles/health' || path === '/api/health') return handleHealth(env, cors);
+      if (path === '/api/hazards/alerts' || path === '/hazards/alerts') return handleAlerts(url, cors);
       if (path === '/api/hazards/flash-flood' || path === '/hazards/flash-flood') return handleFlashFlood(url, cors);
       if (path === '/api/hazards/flood-context' || path === '/hazards/flood-context') return handleFloodContext(url, cors);
       if (path === '/api/hazards/rain-radar' || path === '/hazards/rain-radar') return handleRainRadar(url, cors);
