@@ -407,12 +407,14 @@
       "map.s_alerts_note": "Other active NWS alerts for Hawaiʻi.",
       "map.s_alerts_none_note": "No other active NWS alerts.",
       "map.s_alerts_unavail_note": "NWS data unavailable.",
+      "map.s_alerts_events_note": "Active NWS alerts: {events}.",
       "map.hd_alerts_st_n": "{n} active alert(s)",
       "map.hd_alerts_st_none": "Clear — no other active NWS alerts",
       "map.hd_alerts_st_unavail": "NWS alert data unavailable",
+      "map.hd_alerts_st_events": "Active: {events}",
       "map.kicker_nws_alerts": "Official \xb7 National Weather Service",
-      "map.hazard_alerts": "Other NWS Alerts",
-      "map.alerts_tap_note": "Other active NWS alerts for Hawaiʻi.",
+      "map.hazard_alerts": "Wind, Heat & Other Alerts",
+      "map.alerts_tap_note": "Wind, heat, and other NWS alerts not in the dedicated layers.",
       "map.popup_title_alert": "NWS Alert",
       // map.popup_area reused from existing key (already defined below)
       // Hurricane status
@@ -1152,12 +1154,14 @@
       "map.s_alerts_note": "Các cảnh báo NWS khác đang hoạt động cho Hawaiʻi.",
       "map.s_alerts_none_note": "Không có cảnh báo NWS nào khác.",
       "map.s_alerts_unavail_note": "Dữ liệu NWS không khả dụng.",
+      "map.s_alerts_events_note": "Cảnh báo NWS đang hoạt động: {events}.",
       "map.hd_alerts_st_n": "{n} cảnh báo đang hoạt động",
       "map.hd_alerts_st_none": "Không có cảnh báo NWS nào khác",
       "map.hd_alerts_st_unavail": "Dữ liệu cảnh báo NWS không khả dụng",
+      "map.hd_alerts_st_events": "Đang hoạt động: {events}",
       "map.kicker_nws_alerts": "Chính thức \xb7 Cơ quan Thời tiết Quốc gia",
-      "map.hazard_alerts": "Cảnh báo NWS khác",
-      "map.alerts_tap_note": "Các cảnh báo NWS khác cho Hawaiʻi.",
+      "map.hazard_alerts": "Cảnh báo Gió, Nắng nóng & Khác",
+      "map.alerts_tap_note": "Cảnh báo gió, nắng nóng và các cảnh báo NWS khác ngoài các lớp riêng.",
       "map.popup_title_alert": "Cảnh báo NWS",
       // map.popup_area reused from existing key (already defined below)
       // Hurricane status

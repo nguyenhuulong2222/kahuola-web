@@ -2326,14 +2326,14 @@
           </div>
         </div>
         <!-- Other NWS Alerts — enabled module, full active-alert superset (delegated detail via js-hazard-detail) -->
-        <div class="priority-module priority-module--secondary js-hazard-detail" id="alerts-card" tabindex="0" role="button" aria-label="Other NWS alerts status"
-             data-hazard-title="Other NWS Alerts"
+        <div class="priority-module priority-module--secondary js-hazard-detail" id="alerts-card" tabindex="0" role="button" aria-label="Wind, heat and other NWS alerts status"
+             data-hazard-title="Wind, Heat & Other Alerts"
              data-hazard-note="Source: National Weather Service (official)."
              data-hazard-detail="Other active NWS alerts for Hawaiʻi not shown by the dedicated fire, flood, surf, or tsunami layers — e.g. High Wind, Wind Advisory, Special Weather Statement.">
           <div class="priority-module-head">
             <div>
               <div class="priority-kicker" data-i18n="map.kicker_nws_alerts">Official · National Weather Service</div>
-              <div class="priority-title" data-i18n="map.hazard_alerts">Other NWS Alerts</div>
+              <div class="priority-title" data-i18n="map.hazard_alerts">Wind, Heat & Other Alerts</div>
             </div>
             <div class="status-badge status-none" id="alerts-badge">·</div>
           </div>
@@ -4374,6 +4374,15 @@
       }
       function updateAlertsStatusUI(state) {
         const count = state.features?.length || 0;
+        // Unique active event types (e.g. "High Wind Warning", "Heat Advisory")
+        const eventTypes = [...new Set(
+          (state.features || [])
+            .map(f => String(f?.properties?.event || "").trim())
+            .filter(Boolean)
+        )];
+        const MAX_SHOWN = 3;
+        const eventList = eventTypes.slice(0, MAX_SHOWN).join(", ")
+          + (eventTypes.length > MAX_SHOWN ? `, +${eventTypes.length - MAX_SHOWN}` : "");
         const cls = state.sourceStatus === "detected" ? "status-detected" : state.sourceStatus === "none" ? "status-none" : "status-unavailable";
         const txt = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_n", { n: count }) || `${count} alert${count === 1 ? "" : "s"}`) : state.sourceStatus === "none" ? (_t("map.s_clear") || "Clear") : (_t("map.s_unavailable") || "Unavailable");
         updateModuleBadge("alerts", txt, cls);
@@ -4381,7 +4390,9 @@
         // sheet (openHazardDetailFromElement reads dataset) shows live state,
         // not the static "Planned" default.
         const detailStatus = state.sourceStatus === "detected"
-          ? (_tmpl("map.hd_alerts_st_n", { n: state.features?.length || 0 }) || `${state.features?.length || 0} active alert(s)`)
+          ? (eventList
+            ? (_tmpl("map.hd_alerts_st_events", { events: eventList }) || `Active: ${eventList}`)
+            : (_tmpl("map.hd_alerts_st_n", { n: count }) || `${count} active alert(s)`))
           : state.sourceStatus === "none"
             ? (_t("map.hd_alerts_st_none") || "Clear — no other active NWS alerts")
             : (_t("map.hd_alerts_st_unavail") || "NWS alert data unavailable");
@@ -4392,7 +4403,7 @@
         ["desktop", "mobile", ""].forEach(sfx => {
           const id = sfx ? `alerts-note-${sfx}` : "alerts-note";
           const note = document.getElementById(id);
-          if (note) note.textContent = state.sourceStatus === "detected" ? (_t("map.s_alerts_note") || "Other active NWS alerts for Hawaiʻi.") : state.sourceStatus === "none" ? (_t("map.s_alerts_none_note") || "No other active NWS alerts.") : (_t("map.s_alerts_unavail_note") || "NWS data unavailable.");
+          if (note) note.textContent = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_events_note", { events: eventList }) || `Active NWS alerts: ${eventList}.`) : state.sourceStatus === "none" ? (_t("map.s_alerts_none_note") || "No other active NWS alerts.") : (_t("map.s_alerts_unavail_note") || "NWS data unavailable.");
         });
       }
       function updateHurricaneStatusUI(state) {
