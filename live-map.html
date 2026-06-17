@@ -4354,40 +4354,6 @@
       if (el) { el.className = `status-badge ${cls}`; el.textContent = text; }
     }
 
-    function bindButtons() {
-      document.getElementById("refresh-btn-desktop")?.addEventListener("click", () => refreshEnabledHazards({ silent: false }));
-      document.getElementById("refresh-btn-mobile")?.addEventListener("click", () => refreshEnabledHazards({ silent: false }));
-      document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
-      document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
-      document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
-      document.getElementById("satellite-btn-panel-desktop")?.addEventListener("click", toggleBasemap);
-      document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
-      document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
-      document.getElementById("smoke-btn-panel-desktop")?.addEventListener("click", toggleSmokeLayer);
-      document.getElementById("smoke-btn-panel-mobile")?.addEventListener("click", toggleSmokeLayer);
-      document.getElementById("smoke-btn-mobile")?.addEventListener("click", toggleSmokeLayer);
-      document.getElementById("airnow-btn-panel-desktop")?.addEventListener("click", toggleAirnowLayer);
-      document.getElementById("airnow-btn-panel-mobile")?.addEventListener("click", toggleAirnowLayer);
-      document.getElementById("airnow-btn-mobile")?.addEventListener("click", toggleAirnowLayer);
-      document.getElementById("perimeter-btn-panel-desktop")?.addEventListener("click", togglePerimeterLayer);
-      document.getElementById("perimeter-btn-panel-mobile")?.addEventListener("click", togglePerimeterLayer);
-      document.getElementById("perimeter-btn-mobile")?.addEventListener("click", togglePerimeterLayer);
-      document.getElementById("flood-btn-panel-desktop")?.addEventListener("click", toggleFlashFloodLayer);
-      document.getElementById("flood-btn-panel-mobile")?.addEventListener("click", toggleFlashFloodLayer);
-      document.getElementById("flood-btn-mobile")?.addEventListener("click", toggleFlashFloodLayer);
-      document.getElementById("flood-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("flood"));
-      document.getElementById("flood-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("flood"));
-      document.getElementById("flood-context-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("context"));
-      document.getElementById("flood-context-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("context"));
-      document.getElementById("mrms-rain-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
-      document.getElementById("mrms-rain-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
-      document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
-      document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
-      document.getElementById("fire-scope-opt-hawaii-desktop")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
-      document.getElementById("fire-scope-opt-hawaii-mobile")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
-      document.getElementById("fire-scope-opt-usa-desktop")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
-      document.getElementById("fire-scope-opt-usa-mobile")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
-
       // ── Status UI functions ───────────────────────────────────
       function updateTsunamiStatusUI(state) {
         ["desktop", "mobile"].forEach(sfx => {
@@ -4494,6 +4460,40 @@
         const bareNote = document.getElementById("coastal-note");
         if (bareNote) bareNote.textContent = noteText;
       }
+
+    function bindButtons() {
+      document.getElementById("refresh-btn-desktop")?.addEventListener("click", () => refreshEnabledHazards({ silent: false }));
+      document.getElementById("refresh-btn-mobile")?.addEventListener("click", () => refreshEnabledHazards({ silent: false }));
+      document.getElementById("locate-btn-panel-desktop")?.addEventListener("click", useMyLocation);
+      document.getElementById("locate-btn-panel-mobile")?.addEventListener("click", useMyLocation);
+      document.getElementById("locate-btn-mobile")?.addEventListener("click", useMyLocation);
+      document.getElementById("satellite-btn-panel-desktop")?.addEventListener("click", toggleBasemap);
+      document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
+      document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
+      document.getElementById("smoke-btn-panel-desktop")?.addEventListener("click", toggleSmokeLayer);
+      document.getElementById("smoke-btn-panel-mobile")?.addEventListener("click", toggleSmokeLayer);
+      document.getElementById("smoke-btn-mobile")?.addEventListener("click", toggleSmokeLayer);
+      document.getElementById("airnow-btn-panel-desktop")?.addEventListener("click", toggleAirnowLayer);
+      document.getElementById("airnow-btn-panel-mobile")?.addEventListener("click", toggleAirnowLayer);
+      document.getElementById("airnow-btn-mobile")?.addEventListener("click", toggleAirnowLayer);
+      document.getElementById("perimeter-btn-panel-desktop")?.addEventListener("click", togglePerimeterLayer);
+      document.getElementById("perimeter-btn-panel-mobile")?.addEventListener("click", togglePerimeterLayer);
+      document.getElementById("perimeter-btn-mobile")?.addEventListener("click", togglePerimeterLayer);
+      document.getElementById("flood-btn-panel-desktop")?.addEventListener("click", toggleFlashFloodLayer);
+      document.getElementById("flood-btn-panel-mobile")?.addEventListener("click", toggleFlashFloodLayer);
+      document.getElementById("flood-btn-mobile")?.addEventListener("click", toggleFlashFloodLayer);
+      document.getElementById("flood-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("flood"));
+      document.getElementById("flood-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("flood"));
+      document.getElementById("flood-context-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("context"));
+      document.getElementById("flood-context-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("context"));
+      document.getElementById("mrms-rain-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
+      document.getElementById("mrms-rain-card-mobile")?.addEventListener("click", () => openFloodModuleDetail("mrms"));
+      document.getElementById("rain-radar-card-desktop")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
+      document.getElementById("rain-radar-card-mobile")?.addEventListener("click", () => { rainRadarVisible = !rainRadarVisible; syncRainRadarLayerVisibility(); renderUnifiedPanels(); openFloodModuleDetail("radar"); });
+      document.getElementById("fire-scope-opt-hawaii-desktop")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
+      document.getElementById("fire-scope-opt-hawaii-mobile")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
+      document.getElementById("fire-scope-opt-usa-desktop")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
+      document.getElementById("fire-scope-opt-usa-mobile")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
 
       // ── Popups ────────────────────────────────────────────────
       function openTsunamiPopup(feature, lngLat) {
