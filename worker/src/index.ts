@@ -1095,6 +1095,11 @@ export default {
       if (path === '/api/hazards/landslide' || path === '/hazards/landslide') return handleLandslide(url, cors);
       if (path === '/api/hazards/smoke' || path === '/hazards/smoke') return handleSmoke(url, cors);
       if (path === '/api/hazards/perimeters' || path === '/hazards/perimeters') return handlePerimeters(url, cors);
+      // Read-only aggregated summary for the embeddable widget + insight script.
+      // Reuses caches populated by smoke/perimeters/firms handlers; no new
+      // upstream, no write to primary snapshot keys. Invariant II/III: always
+      // 200 + valid JSON, degrades deterministically on cache miss / parse fail.
+      if (path === '/api/hazards/summary' || path === '/hazards/summary') return handleHazardsSummary(url, cors);
       if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
       if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
       if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
@@ -1772,6 +1777,21 @@ async function handleGeojson(id: string, cors: CorsHeaders): Promise<Response> {
   return proxyFetch(upstream.url, upstream.url, upstream.ttl, cors);
 }
 
+// ── Aggregated hazard summary — shared cache keys ────────────────────────────
+// /api/hazards/summary is READ-ONLY: it reuses snapshots already written by the
+// smoke / perimeters / FIRMS handlers. It never calls upstream and never writes
+// a primary snapshot key. The *-status-v1 keys hold ONLY short-TTL failure
+// envelopes, kept separate so a transient upstream error can never clobber the
+// last good snapshot (smoke-hawaii-v1 / perimeters-hawaii-v1). Invariant III.
+const SUMMARY_SMOKE_KEY = 'https://kahuola.org/cache/smoke-hawaii-v1';
+const SUMMARY_PERIM_KEY = 'https://kahuola.org/cache/perimeters-hawaii-v1';
+const SUMMARY_SMOKE_STATUS_KEY = 'https://kahuola.org/cache/smoke-hawaii-status-v1';
+const SUMMARY_PERIM_STATUS_KEY = 'https://kahuola.org/cache/perimeters-hawaii-status-v1';
+// Default hawaii-bbox FIRMS cache key — mirrors handleFirmsHotspots (dataset
+// VIIRS_SNPP_NRT, days 1, REGION_BBOXES.hawaii). Verified against the writer.
+const SUMMARY_FIRMS_KEY =
+  'https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/VIIRS_SNPP_NRT/-161.2,18.5,-154.5,22.5/1';
+
 // ── SMOKE SIGNALS — NOAA HMS Smoke Polygons ──────────────────────────────
 async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
@@ -1859,13 +1879,19 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown';
-    return jsonResp(
-      buildHazardEnvelope('smoke', 'NOAA HMS', region, [],
-        { status: 'unavailable', count: 0, message: 'Smoke data temporarily unavailable.' },
-        { authority: 'observational', note: `Upstream unavailable: ${msg}` },
-      ),
-      200, cors,
+    // Publish an honest per-source status to a SEPARATE short-TTL key so
+    // /api/hazards/summary can report 'unavailable' WITHOUT clobbering the last
+    // good snapshot at smoke-hawaii-v1. 60s TTL — never mask upstream recovery.
+    const envelope = buildHazardEnvelope('smoke', 'NOAA HMS', region, [],
+      { status: 'unavailable', count: 0, message: 'Smoke data temporarily unavailable.' },
+      { authority: 'observational', note: `Upstream unavailable: ${msg}` },
     );
+    const statusResponse = new Response(
+      JSON.stringify({ ...envelope, stale_after_seconds: 60 }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', 'X-Kahuola-Cache': 'MISS', ...cors } },
+    );
+    await cache.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
+    return statusResponse;
   }
 }
 
@@ -1953,14 +1979,109 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown';
-    return jsonResp(
-      buildHazardEnvelope('perimeters', 'NIFC WFIGS', region, [],
-        { status: 'unavailable', count: 0, message: 'Perimeter data temporarily unavailable.' },
-        { authority: 'official', note: `Upstream unavailable: ${msg}` },
-      ),
-      200, cors,
+    // Publish per-source status to a SEPARATE short-TTL key (never clobber the
+    // last good snapshot at perimeters-hawaii-v1). 60s TTL.
+    const envelope = buildHazardEnvelope('perimeters', 'NIFC WFIGS', region, [],
+      { status: 'unavailable', count: 0, message: 'Perimeter data temporarily unavailable.' },
+      { authority: 'official', note: `Upstream unavailable: ${msg}` },
     );
+    const statusResponse = new Response(
+      JSON.stringify({ ...envelope, stale_after_seconds: 60 }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', 'X-Kahuola-Cache': 'MISS', ...cors } },
+    );
+    await cache.put(new Request(SUMMARY_PERIM_STATUS_KEY), statusResponse.clone());
+    return statusResponse;
   }
+}
+
+// ── /api/hazards/summary — readers + handler (all module scope) ──────────────
+// Every reader is module-scope (never a nested closure) and never throws, so
+// Promise.all cannot swallow a ReferenceError. Each returns a deterministic
+// degraded shape on any miss / parse failure (Invariant III). Zero PII.
+
+type SummarySrc = { count: number | null; status: string; age_seconds: number | null };
+
+// Seconds since an ISO timestamp, clamped to >= 0. null if unparseable.
+function summaryAgeSeconds(generatedAt: unknown, nowMs: number): number | null {
+  if (typeof generatedAt !== 'string') return null;
+  const t = Date.parse(generatedAt);
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.round((nowMs - t) / 1000));
+}
+
+function summarySrcIsBad(s: SummarySrc): boolean {
+  return s.count === null || s.status === 'unavailable' || s.status === 'miss';
+}
+
+// Read a hazard-envelope snapshot (smoke / perimeters shape). Never throws.
+async function readSummaryEnvelope(key: string, nowMs: number): Promise<SummarySrc> {
+  try {
+    const c = await caches.default.match(new Request(key));
+    if (!c) return { count: null, status: 'miss', age_seconds: null };
+    const ct = (c.headers.get('content-type') || '').toLowerCase();
+    if (!ct.includes('json')) return { count: null, status: 'miss', age_seconds: null };
+    const j: any = await c.json();
+    const status = typeof j?.summary?.status === 'string' ? j.summary.status : 'unknown';
+    const age = summaryAgeSeconds(j?.generated_at, nowMs);
+    const n = j?.summary?.count;
+    if (typeof n === 'number' && Number.isFinite(n)) return { count: n, status, age_seconds: age };
+    if (Array.isArray(j?.signals)) return { count: j.signals.length, status, age_seconds: age };
+    return { count: null, status, age_seconds: age };
+  } catch {
+    return { count: null, status: 'miss', age_seconds: null };
+  }
+}
+
+// Good snapshot first; only on a primary miss fall back to the short-TTL failure
+// status key. A transient upstream error must never override last-known-good.
+async function readSummarySource(primaryKey: string, statusKey: string, nowMs: number): Promise<SummarySrc> {
+  const primary = await readSummaryEnvelope(primaryKey, nowMs);
+  if (primary.status !== 'miss') return primary;
+  return readSummaryEnvelope(statusKey, nowMs);
+}
+
+// Read the FIRMS GeoJSON snapshot (properties.returnedRecords / features). Never throws.
+async function readSummaryFirms(key: string, nowMs: number): Promise<SummarySrc> {
+  try {
+    const c = await caches.default.match(new Request(key));
+    if (!c) return { count: null, status: 'miss', age_seconds: null };
+    const ct = (c.headers.get('content-type') || '').toLowerCase();
+    if (!ct.includes('json') && !ct.includes('geo+json')) return { count: null, status: 'miss', age_seconds: null };
+    const j: any = await c.json();
+    const age = summaryAgeSeconds(j?.properties?.generated_at, nowMs);
+    const n = j?.properties?.returnedRecords;
+    if (typeof n === 'number' && Number.isFinite(n)) return { count: n, status: n > 0 ? 'detected' : 'none', age_seconds: age };
+    if (Array.isArray(j?.features)) return { count: j.features.length, status: j.features.length > 0 ? 'detected' : 'none', age_seconds: age };
+    return { count: null, status: 'miss', age_seconds: age };
+  } catch {
+    return { count: null, status: 'miss', age_seconds: null };
+  }
+}
+
+// Aggregated read-only Hawaiʻi hazard summary for the widget + insight script.
+// No upstream call, no primary-key write. Always HTTP 200 + valid JSON (Inv II).
+async function handleHazardsSummary(_url: URL, cors: CorsHeaders): Promise<Response> {
+  const nowMs = Date.now();
+  const [smoke, perim, fire] = await Promise.all([
+    readSummarySource(SUMMARY_SMOKE_KEY, SUMMARY_SMOKE_STATUS_KEY, nowMs),
+    readSummarySource(SUMMARY_PERIM_KEY, SUMMARY_PERIM_STATUS_KEY, nowMs),
+    readSummaryFirms(SUMMARY_FIRMS_KEY, nowMs),
+  ]);
+
+  const degraded = summarySrcIsBad(smoke) || summarySrcIsBad(perim) || summarySrcIsBad(fire);
+
+  const body: Record<string, unknown> = {
+    region: 'hawaii',
+    generated_at: new Date(nowMs).toISOString(),
+    stale: degraded,
+    fire: { count: fire.count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS' },
+    smoke: { present: (smoke.count ?? 0) > 0, count: smoke.count ?? 0, status: smoke.status, age_seconds: smoke.age_seconds, source: 'NOAA HMS' },
+    perimeters: { count: perim.count ?? 0, status: perim.status, age_seconds: perim.age_seconds, source: 'NIFC WFIGS' },
+    note: 'Situational awareness only. Follow official sources.',
+  };
+  if (degraded) body.degraded = true;
+
+  return jsonResp(body, 200, { ...cors, 'Cache-Control': 'public, max-age=60' });
 }
 
 // Fire Weather Context — NWS Red Flag + RAWS wind/humidity derived scoring
