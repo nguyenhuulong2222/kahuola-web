@@ -183,9 +183,12 @@
       padding: 6px 10px !important;
       border-radius: 16px 16px 0 0 !important;
     }
-    .mobile-app .sheet .sheet-handle-wrap {
+    .mobile-app .sheet .sheet-handle-btn {
+      min-height: 0 !important;
       padding: 4px 0 !important;
     }
+    /* App keeps the legacy thin-handle look — label + caret are browser-only. */
+    .mobile-app .sheet-handle-face { display: none !important; }
     /* Collapsed: hide quick-action buttons, keep only the drag handle. */
     .mobile-app .sheet:not(.open) .sheet-quick-actions { display: none !important; }
     /* Expanded: restore the sheet so the full panel is visible. */
@@ -488,12 +491,56 @@
       max-height: 52dvh;
     }
 
-    .sheet-handle-wrap {
+    .sheet-handle-btn {
       display: flex;
-      justify-content: center;
-      padding: 0 0 8px;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      width: 100%;
+      min-height: 48px;              /* Apple HIG / Kupuna touch target >= 44pt */
+      padding: 7px 12px;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
       cursor: pointer;
       touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sheet-handle-face {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      opacity: .92;
+    }
+
+    .sheet-handle-caret {
+      transition: transform .2s ease;   /* transform only — never animate height */
+    }
+
+    .sheet-handle-btn[aria-expanded="true"] .sheet-handle-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Expanded: caret only — "Hide Details" lives solely on the quick-actions
+       toggle, so the handle label hides to avoid a duplicate control. */
+    .sheet.open .sheet-handle-label {
+      display: none;
+    }
+
+    /* Mobile browser (non-app): COLLAPSED = handle only. Quick-actions, metrics
+       and the scope hint appear on expand so the map is the hero (Invariant II). */
+    body:not(.mobile-app) .sheet:not(.open) .sheet-quick-actions,
+    body:not(.mobile-app) .sheet:not(.open) .fire-scope-hint {
+      display: none;
+    }
+
+    body:not(.mobile-app) .sheet:not(.open) .sheet-topbar {
+      padding: 4px 8px 6px;
     }
 
     .sheet-handle {
@@ -2011,9 +2058,13 @@
       <section class="sheet" id="mobile-sheet" aria-label="Mobile fire metrics">
         <div class="sheet-card" id="sheet-card">
           <div class="sheet-topbar">
-            <div class="sheet-handle-wrap" id="sheet-handle-wrap" aria-hidden="true">
-              <div class="sheet-handle"></div>
-            </div>
+            <button class="sheet-handle-btn" id="sheet-handle-wrap" type="button" aria-expanded="false" aria-controls="sheet-card">
+              <span class="sheet-handle" aria-hidden="true"></span>
+              <span class="sheet-handle-face">
+                <svg class="sheet-handle-caret" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+                <span class="sheet-handle-label" data-i18n="map.map_details">Map Details</span>
+              </span>
+            </button>
             <div class="sheet-quick-actions">
               <button class="action-btn" id="sheet-toggle-btn" type="button" data-i18n="map.map_details">Map
                 Details</button>
@@ -4612,7 +4663,7 @@
       const st = getState(key);
       openHazardDetail(detailConfig(st));
     }
-    function setSheetOpen(open) { if (!IS_MOBILE_APP && window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? (_t("map.hide_details") || "Hide Details") : (_t("map.map_details") || "Map Details"); setTimeout(safeMapResize, 280); }
+    function setSheetOpen(open) { if (!IS_MOBILE_APP && window.innerWidth > MOBILE_BREAKPOINT) return; mobileSheet.classList.toggle("open", open); sheetToggleBtn.textContent = open ? (_t("map.hide_details") || "Hide Details") : (_t("map.map_details") || "Map Details"); if (sheetHandleWrap) sheetHandleWrap.setAttribute("aria-expanded", open ? "true" : "false"); setTimeout(safeMapResize, 280); }
     function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
     bindButtons();
