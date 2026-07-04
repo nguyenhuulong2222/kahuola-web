@@ -1792,6 +1792,134 @@ const SUMMARY_PERIM_STATUS_KEY = 'https://kahuola.org/cache/perimeters-hawaii-st
 const SUMMARY_FIRMS_KEY =
   'https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/VIIRS_SNPP_NRT/-161.2,18.5,-154.5,22.5/1';
 
+// ── NOAA HMS smoke — KML upstream (GeoJSON dir retired ~2026-01) ─────────────
+// New layout: .../Smoke_Polygons/KML/{YYYY}/{MM}/hms_smoke{YYYYMMDD}.kml (UTC).
+// All helpers are module scope + never throw so the fetch chain stays fail-closed.
+const HMS_MAX_KML_BYTES = 20 * 1024 * 1024;   // size guard — large CONUS fire days
+
+function hmsPad2(n: number): string { return String(n).padStart(2, '0'); }
+
+function hmsDateStr(d: Date): string {
+  return `${d.getUTCFullYear()}-${hmsPad2(d.getUTCMonth() + 1)}-${hmsPad2(d.getUTCDate())}`;
+}
+
+// Build the UTC-dated HMS smoke KML URL for a given date.
+function hmsKmlUrl(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = hmsPad2(date.getUTCMonth() + 1);
+  const d = hmsPad2(date.getUTCDate());
+  return `https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/KML/${y}/${m}/hms_smoke${y}${m}${d}.kml`;
+}
+
+// Fetch one day's KML with an 8s timeout + size guard. Never throws.
+async function fetchHmsKml(date: Date): Promise<{ ok: boolean; text: string | null; status: number }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  try {
+    const res = await fetch(hmsKmlUrl(date), {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Kahu Ola / kahuola.org', Accept: 'application/vnd.google-earth.kml+xml, application/xml, */*' },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, text: null, status: res.status };
+    const declared = Number(res.headers.get('content-length') || '0');
+    if (Number.isFinite(declared) && declared > HMS_MAX_KML_BYTES) {
+      return { ok: false, text: null, status: 413 };   // too large → unavailable
+    }
+    const text = await res.text();
+    if (text.length > HMS_MAX_KML_BYTES) return { ok: false, text: null, status: 413 };
+    return { ok: true, text, status: res.status };
+  } catch {
+    clearTimeout(timer);
+    return { ok: false, text: null, status: 0 };        // timeout / network
+  }
+}
+
+type HmsSmoke = { ring: number[][]; density: 'light' | 'medium' | 'heavy' | null };
+
+// Validate one KML <coordinates> string into a closed lon/lat ring.
+// Fail-closed: any malformed / out-of-range / non-closed ring → null (DROP,
+// never auto-correct or auto-close — Invariant III).
+function parseKmlRing(raw: string): number[][] | null {
+  const tuples = raw.trim().split(/\s+/).filter(Boolean);
+  if (tuples.length < 4) return null;                    // ring needs >= 4 vertices
+  const ring: number[][] = [];
+  for (const t of tuples) {
+    const parts = t.split(',');
+    if (parts.length < 2) return null;
+    const lon = Number(parts[0]);
+    const lat = Number(parts[1]);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+    if (lon < -180 || lon > 180 || lat < -90 || lat > 90) return null;
+    ring.push([lon, lat]);
+  }
+  const a = ring[0];
+  const b = ring[ring.length - 1];
+  if (a[0] !== b[0] || a[1] !== b[1]) return null;       // not closed → drop
+  return ring;
+}
+
+// Extract smoke polygons from HMS KML. Module scope, never throws, fail-closed.
+// Any bad Placemark/Polygon is dropped; a wholly-bad file yields [].
+function parseHmsKml(text: string): HmsSmoke[] {
+  const out: HmsSmoke[] = [];
+  if (typeof text !== 'string' || text.length === 0) return out;
+  try {
+    const placemarks = text.match(/<Placemark\b[\s\S]*?<\/Placemark>/gi);
+    if (!placemarks) return out;
+    for (const pm of placemarks) {
+      try {
+        let density: HmsSmoke['density'] = null;
+        const dm = pm.match(/\b(Light|Medium|Heavy)\b/i);   // absent → null (no fabrication)
+        if (dm) {
+          const d = dm[1].toLowerCase();
+          density = d === 'heavy' ? 'heavy' : d === 'medium' ? 'medium' : 'light';
+        }
+        const polys = pm.match(/<Polygon\b[\s\S]*?<\/Polygon>/gi);
+        if (!polys) continue;
+        for (const poly of polys) {
+          const outer = poly.match(/<outerBoundaryIs\b[\s\S]*?<\/outerBoundaryIs>/i);
+          const scope = outer ? outer[0] : poly;
+          const cm = scope.match(/<coordinates\b[^>]*>([\s\S]*?)<\/coordinates>/i);
+          if (!cm) continue;
+          const ring = parseKmlRing(cm[1]);
+          if (ring) out.push({ ring, density });            // invalid ring → already dropped
+        }
+      } catch { /* drop this placemark, continue with the next */ }
+    }
+  } catch {
+    return [];
+  }
+  return out;
+}
+
+// Bbox overlap between a ring and a [west, south, east, north] box.
+function ringIntersectsBbox(ring: number[][], west: number, south: number, east: number, north: number): boolean {
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const c of ring) {
+    if (c[0] < minLon) minLon = c[0];
+    if (c[0] > maxLon) maxLon = c[0];
+    if (c[1] < minLat) minLat = c[1];
+    if (c[1] > maxLat) maxLat = c[1];
+  }
+  return maxLon >= west && minLon <= east && maxLat >= south && minLat <= north;
+}
+
+// Unavailable path — writes the 60s status key ONLY (no-clobber of the primary
+// snapshot smoke-hawaii-v1). Mirrors the shipped summary status-key contract.
+async function smokeUnavailable(region: string, cors: CorsHeaders, note: string): Promise<Response> {
+  const envelope = buildHazardEnvelope('smoke', 'NOAA HMS', region, [],
+    { status: 'unavailable', count: 0, message: 'Smoke data temporarily unavailable.' },
+    { authority: 'observational', note },
+  );
+  const statusResponse = new Response(
+    JSON.stringify({ ...envelope, stale_after_seconds: 60 }),
+    { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', 'X-Kahuola-Cache': 'MISS', ...cors } },
+  );
+  await caches.default.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
+  return statusResponse;
+}
+
 // ── SMOKE SIGNALS — NOAA HMS Smoke Polygons ──────────────────────────────
 async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
@@ -1801,98 +1929,76 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
   const cachedJson = cachedJsonResponse(cached, cors, 200);
   if (cachedJson) return cachedJson;
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-    // NOAA HMS smoke polygons — daily GeoJSON feed
-    const res = await fetch(
-      'https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/hms_smoke_latest.json',
-      {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'Kahu Ola / kahuola.org', Accept: 'application/geo+json' },
-      },
-    );
-    clearTimeout(timer);
-    if (!res.ok) throw new Error(`HMS HTTP ${res.status}`);
+  // Fetch chain (UTC): today's KML → 404/err → yesterday's KML → both fail.
+  const todayUtc = new Date();
+  const yesterdayUtc = new Date(todayUtc.getTime() - 86_400_000);
 
-    const data: any = await res.json();
-    const rawFeatures: any[] = Array.isArray(data?.features) ? data.features : [];
-    const now = new Date().toISOString();
-
-    // Hawaii bounding box filter: lon [-161.5, -154.5], lat [18.5, 22.8]
-    const signals: Feature[] = rawFeatures
-      .filter((f: any) => {
-        const geomType = String(f?.geometry?.type || '');
-        if (!['Polygon', 'MultiPolygon'].includes(geomType)) return false;
-        // Basic bbox overlap check using first coordinate
-        const coords = f.geometry.type === 'Polygon'
-          ? f.geometry.coordinates[0]
-          : f.geometry.coordinates[0][0];
-        if (!Array.isArray(coords) || coords.length === 0) return false;
-        const lons = coords.map((c: number[]) => c[0]);
-        const lats = coords.map((c: number[]) => c[1]);
-        const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-        const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-        return maxLon >= -161.5 && minLon <= -154.5 && maxLat >= 18.5 && minLat <= 22.8;
-      })
-      .map((f: any, idx: number) => {
-        const p = f?.properties || {};
-        const densityRaw = String(p.Density || p.density || p.smoke_density || 'Light').toLowerCase();
-        const density = densityRaw.includes('heavy') ? 'heavy' :
-          densityRaw.includes('medium') ? 'medium' : 'light';
-        const severity = density === 'heavy' ? 'WARNING' : density === 'medium' ? 'WATCH' : 'INFO';
-        return {
-          type: 'Feature',
-          geometry: f.geometry,
-          properties: {
-            id: `smoke-${idx}`,
-            smoke_density: density,
-            density,
-            severity,
-            source: 'NOAA HMS',
-            source_provider: 'NOAA_HMS',
-            source_label: 'NOAA HMS',
-            event_time: p.Start || p.start || now,
-            advisory: 'Smoke detected in area. Air quality may be reduced.',
-          },
-        };
-      });
-
-    const envelope = buildHazardEnvelope(
-      'smoke', 'NOAA HMS', region, signals,
-      {
-        status: signals.length > 0 ? 'detected' : 'none',
-        count: signals.length,
-        message: signals.length > 0
-          ? `${signals.length} smoke polygon(s) detected near Hawaiʻi.`
-          : 'No significant smoke polygons detected near Hawaiʻi.',
-      },
-      { authority: 'observational', note: 'NOAA HMS satellite smoke detection. Advisory only.' },
-    );
-
-    const response = new Response(
-      JSON.stringify({ ...envelope, stale_after_seconds: 900 }),
-      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'X-Kahuola-Cache': 'MISS', ...cors } },
-    );
-    await cache.put(new Request(cacheKey), response.clone());
-    return response;
-
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'unknown';
-    // Publish an honest per-source status to a SEPARATE short-TTL key so
-    // /api/hazards/summary can report 'unavailable' WITHOUT clobbering the last
-    // good snapshot at smoke-hawaii-v1. 60s TTL — never mask upstream recovery.
-    const envelope = buildHazardEnvelope('smoke', 'NOAA HMS', region, [],
-      { status: 'unavailable', count: 0, message: 'Smoke data temporarily unavailable.' },
-      { authority: 'observational', note: `Upstream unavailable: ${msg}` },
-    );
-    const statusResponse = new Response(
-      JSON.stringify({ ...envelope, stale_after_seconds: 60 }),
-      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', 'X-Kahuola-Cache': 'MISS', ...cors } },
-    );
-    await cache.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
-    return statusResponse;
+  let kml = await fetchHmsKml(todayUtc);
+  let usedDate = todayUtc;
+  let stale = false;
+  if (!kml.ok) {
+    const ykml = await fetchHmsKml(yesterdayUtc);
+    if (!ykml.ok) {
+      // Both UTC days unavailable → no-clobber status key, primary snapshot intact.
+      return smokeUnavailable(region, cors, `Upstream unavailable: HMS KML HTTP ${kml.status || 'error'}`);
+    }
+    kml = ykml;
+    usedDate = yesterdayUtc;
+    stale = true;   // serving previous UTC day — labelled honestly below
   }
+
+  const parsed = parseHmsKml(kml.text || '');
+  const [hwWest, hwSouth, hwEast, hwNorth] = REGION_BBOXES.hawaii;
+  const nowIso = new Date().toISOString();
+
+  // Hawaii bbox filter — KML covers all of North America; keep only overlaps.
+  const signals: Feature[] = parsed
+    .filter((p) => ringIntersectsBbox(p.ring, hwWest, hwSouth, hwEast, hwNorth))
+    .map((p, idx) => {
+      const density = p.density ?? 'light';   // observational default; never fabricate medium/heavy
+      const severity = density === 'heavy' ? 'WARNING' : density === 'medium' ? 'WATCH' : 'INFO';
+      return {
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [p.ring] },
+        properties: {
+          id: `smoke-${idx}`,
+          smoke_density: density,
+          density,
+          severity,
+          source: 'NOAA HMS',
+          source_provider: 'NOAA_HMS',
+          source_label: 'NOAA HMS',
+          event_time: nowIso,
+          advisory: 'Smoke detected in area. Air quality may be reduced.',
+        },
+      };
+    });
+
+  const dateStr = hmsDateStr(usedDate);
+  const message = signals.length > 0
+    ? `${signals.length} smoke polygon(s) detected near Hawaiʻi.`
+    : 'No significant smoke polygons detected near Hawaiʻi.';
+  // Honest freshness label: fallback day is stated explicitly + shorter stale TTL.
+  const note = stale
+    ? `NOAA HMS smoke from previous UTC day (${dateStr}); today's file not yet published. Advisory only.`
+    : `NOAA HMS satellite smoke detection (${dateStr}). Advisory only.`;
+
+  const envelope = buildHazardEnvelope(
+    'smoke', 'NOAA HMS', region, signals,
+    {
+      status: signals.length > 0 ? 'detected' : 'none',
+      count: signals.length,
+      message,
+    },
+    { authority: 'observational', note },
+  );
+
+  const response = new Response(
+    JSON.stringify({ ...envelope, stale_after_seconds: stale ? 300 : 900 }),
+    { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'X-Kahuola-Cache': 'MISS', ...cors } },
+  );
+  await cache.put(new Request(cacheKey), response.clone());
+  return response;
 }
 
 // ── FIRE PERIMETERS — NIFC WFIGS ─────────────────────────────────────────
