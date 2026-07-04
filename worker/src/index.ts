@@ -1099,7 +1099,7 @@ export default {
       // Reuses caches populated by smoke/perimeters/firms handlers; no new
       // upstream, no write to primary snapshot keys. Invariant II/III: always
       // 200 + valid JSON, degrades deterministically on cache miss / parse fail.
-      if (path === '/api/hazards/summary' || path === '/hazards/summary') return handleHazardsSummary(url, cors);
+      if (path === '/api/hazards/summary' || path === '/hazards/summary') return handleHazardsSummary(url, env, cors);
       if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
       if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
       if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
@@ -1550,6 +1550,13 @@ function resolveFirmsBBox(url: URL): [number, number, number, number] | null {
   return REGION_BBOXES[region] || REGION_BBOXES.hawaii;
 }
 
+// Canonical FIRMS cache-key builder. The reader (SUMMARY_FIRMS_KEY) and the
+// writer (handleFirmsHotspots) both build the key HERE so they cannot drift.
+// Module scope, pure, never throws. `_` is the redacted MAP_KEY slot.
+function firmsCacheKey(dataset: string, bbox: readonly number[], days: number): string {
+  return `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/${dataset}/${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}/${days}`;
+}
+
 async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
   if (!env.NASA_FIRMS_MAP_KEY) return err(503, 'NASA_FIRMS_MAP_KEY not configured', cors);
 
@@ -1565,7 +1572,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   const [west, south, east, north] = bbox;
 
   const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/${dataset}/${west},${south},${east},${north}/${days}`;
-  const cacheUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/${dataset}/${west},${south},${east},${north}/${days}`;
+  const cacheUrl = firmsCacheKey(dataset, bbox, days);   // same value, shared builder (no drift)
   const cache = caches.default;
   const cacheReq = new Request(cacheUrl);
   const cached = await cache.match(cacheReq);
@@ -1787,10 +1794,9 @@ const SUMMARY_SMOKE_KEY = 'https://kahuola.org/cache/smoke-hawaii-v1';
 const SUMMARY_PERIM_KEY = 'https://kahuola.org/cache/perimeters-hawaii-v1';
 const SUMMARY_SMOKE_STATUS_KEY = 'https://kahuola.org/cache/smoke-hawaii-status-v1';
 const SUMMARY_PERIM_STATUS_KEY = 'https://kahuola.org/cache/perimeters-hawaii-status-v1';
-// Default hawaii-bbox FIRMS cache key — mirrors handleFirmsHotspots (dataset
-// VIIRS_SNPP_NRT, days 1, REGION_BBOXES.hawaii). Verified against the writer.
-const SUMMARY_FIRMS_KEY =
-  'https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/VIIRS_SNPP_NRT/-161.2,18.5,-154.5,22.5/1';
+// Default hawaii FIRMS cache key — built by the SAME helper the writer
+// (handleFirmsHotspots) uses, so the read key and the written key cannot drift.
+const SUMMARY_FIRMS_KEY = firmsCacheKey('VIIRS_SNPP_NRT', REGION_BBOXES.hawaii, 1);
 
 // ── NOAA HMS smoke — KML upstream (GeoJSON dir retired ~2026-01) ─────────────
 // New layout: .../Smoke_Polygons/KML/{YYYY}/{MM}/hms_smoke{YYYYMMDD}.kml (UTC).
@@ -2164,15 +2170,48 @@ async function readSummaryFirms(key: string, nowMs: number): Promise<SummarySrc>
   }
 }
 
-// Aggregated read-only Hawaiʻi hazard summary for the widget + insight script.
-// No upstream call, no primary-key write. Always HTTP 200 + valid JSON (Inv II).
-async function handleHazardsSummary(_url: URL, cors: CorsHeaders): Promise<Response> {
+// Aggregated Hawaiʻi hazard summary for the widget + homepage insight card.
+// SELF-WARMING: caches.default is per-colo, so a colo with no live-map traffic
+// would otherwise return a false miss. On a genuine miss (primary AND status key
+// both absent in THIS colo) we invoke the OWNING handler — which fetches upstream
+// and writes its OWN cache — then re-read the key once, so any colo serves real
+// data. This handler still never writes a primary key itself and never changes a
+// handler's write logic. Always HTTP 200 + valid JSON; degrades deterministically
+// and fail-closed on any remaining miss (Invariant II/III).
+async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
   const nowMs = Date.now();
-  const [smoke, perim, fire] = await Promise.all([
+  let [smoke, perim, fire] = await Promise.all([
     readSummarySource(SUMMARY_SMOKE_KEY, SUMMARY_SMOKE_STATUS_KEY, nowMs),
     readSummarySource(SUMMARY_PERIM_KEY, SUMMARY_PERIM_STATUS_KEY, nowMs),
     readSummaryFirms(SUMMARY_FIRMS_KEY, nowMs),
   ]);
+
+  // Warm only genuinely-missing sources. Each warm task is isolated via
+  // Promise.allSettled: one source failing never blocks another, and a source
+  // still missing after warming keeps the existing degraded shape (fail-closed).
+  const origin = url.origin;
+  const warmTasks: Promise<void>[] = [];
+  if (smoke.status === 'miss') {
+    warmTasks.push((async () => {
+      await handleSmoke(new URL(`${origin}/api/hazards/smoke?region=hawaii`), cors);
+      smoke = await readSummarySource(SUMMARY_SMOKE_KEY, SUMMARY_SMOKE_STATUS_KEY, nowMs);
+    })());
+  }
+  if (perim.status === 'miss') {
+    warmTasks.push((async () => {
+      await handlePerimeters(new URL(`${origin}/api/hazards/perimeters?region=hawaii`), cors);
+      perim = await readSummarySource(SUMMARY_PERIM_KEY, SUMMARY_PERIM_STATUS_KEY, nowMs);
+    })());
+  }
+  if (fire.status === 'miss') {
+    // scope=hawaii + default dataset/days => firmsCacheKey(...) === SUMMARY_FIRMS_KEY
+    // (reader and this writer build the key via the shared firmsCacheKey helper).
+    warmTasks.push((async () => {
+      await handleFirmsHotspots(new URL(`${origin}/api/hazards/firms?scope=hawaii`), env, cors);
+      fire = await readSummaryFirms(SUMMARY_FIRMS_KEY, nowMs);
+    })());
+  }
+  if (warmTasks.length) await Promise.allSettled(warmTasks);
 
   const degraded = summarySrcIsBad(smoke) || summarySrcIsBad(perim) || summarySrcIsBad(fire);
 
