@@ -18,7 +18,7 @@
 ## Monthly detail
 
 ### 2026-07
-- Visits: **29** · Page views: **57** · collected 2026-07-05T23:07:56Z
+- Visits: **29** · Page views: **57** · collected 2026-07-05T23:44:44Z
 - Note: partial month (collected 2026-07-05; month not yet complete)
 - Events:
   - 2026-07-03 · [product] Live-map summary API ported to monolith (cross-colo) (PR #14/#15)
@@ -34,3 +34,26 @@
   - /support — 2 page views
   - /about — 1 page views
 - Countries (Zero-PII, country-level only): United States (US): 57 pv / 29 visits
+
+## Finances (expenses)
+
+| Date | Item | Amount (USD) | Category | Recurring | Note |
+|------|------|-------------:|----------|-----------|------|
+| 2026 | Apple Developer Program | $99 | services | yes | Annual membership — standard public price; confirm exact charge date/amount from the Apple receipt. |
+| 2026 | Domain: kahuola.org | — | infra | yes | Annual registration — fill actual amount from the registrar invoice. |
+| 2026 | Cloudflare (Pages / Workers / Web Analytics) | $0 | infra | yes | Free tier as of 2026-07; update if a paid plan is added. |
+
+_Confirmed total: **$99** (excludes rows with amount not yet confirmed — filled from invoices)._
+
+## Contributed hours (estimates)
+
+| Month | Hours (est.) | Category | Note |
+|-------|-------------:|----------|------|
+| 2026-07 | 40 | engineering | ESTIMATE (rough placeholder — founder to confirm). Hazard-platform development: summary read-through, homepage insights card, volcanic-zone classification + advisory, 6-locale i18n, morning-brief generator, impact-metrics tooling (PRs #14–#23). |
+
+_Total (rough estimate): **40 hours**. Founder-owned figures — refine with actuals._
+
+## Engagement & reach
+
+- (date TBD) · [partnership] iOS app live on the Apple App Store _(Fill the actual approval/live date from App Store Connect.)_
+- 2026-07-05 · [community-review] ʻŌlelo Hawaiʻi + Ilocano translation review requested (AI-drafted volcanic/VOG strings; awaiting native/community confirmation) — PR #20 _(Pending — track resolution and add a follow-up entry when reviewed.)_

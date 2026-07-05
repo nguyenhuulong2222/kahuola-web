@@ -20,16 +20,19 @@
 // Secrets (never in repo): CF_ANALYTICS_TOKEN / CF_ACCOUNT_ID env, else read
 // from ~/.kahuola-secrets/{cf-analytics-token,cf-account-id} (trimmed).
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const DOCS = join(HERE, '..', '..', 'docs', 'impact');
-const METRICS_JSON = join(DOCS, 'metrics.json');
-const EVENTS_JSON = join(DOCS, 'events.json');
-const METRICS_MD = join(DOCS, 'METRICS.md');
+// Output dir: default = the repo archive (docs/impact). IMPACT_OUTPUT_DIR overrides
+// it — used by the n8n container for a scratch VERIFICATION run (proves token +
+// query + numbers work); the real append-only archive is committed locally.
+function docsDir() { return process.env.IMPACT_OUTPUT_DIR || join(HERE, '..', '..', 'docs', 'impact'); }
+function metricsPath() { return join(docsDir(), 'metrics.json'); }
+function eventsPath() { return join(docsDir(), 'events.json'); }
+function mdPath() { return join(docsDir(), 'METRICS.md'); }
 
 const GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql';
 // Account-owned token → verify at the ACCOUNT endpoint. The user endpoint
@@ -147,8 +150,8 @@ function buildRecord(apiData, month, collectedAt, isPartial) {
 
 // ── pure: append-only merge (finalized immutable; partial refreshable) ────────
 function loadMetrics() {
-  if (!existsSync(METRICS_JSON)) return { _meta: META, months: [] };
-  const j = JSON.parse(readFileSync(METRICS_JSON, 'utf8'));
+  if (!existsSync(metricsPath())) return { _meta: META, months: [] };
+  const j = JSON.parse(readFileSync(metricsPath(), 'utf8'));
   j._meta = META;                 // keep meta labels current (definitions only)
   if (!Array.isArray(j.months)) j.months = [];
   return j;
@@ -168,12 +171,20 @@ function appendOrUpdate(store, rec) {
   throw new Error(`immutable: finalized month ${rec.month} already recorded with different data — refusing to modify the archive`);
 }
 
-// ── pure: render METRICS.md from json + events annotations ────────────────────
-function loadEvents() {
-  if (!existsSync(EVENTS_JSON)) return [];
-  try { const j = JSON.parse(readFileSync(EVENTS_JSON, 'utf8')); return Array.isArray(j.events) ? j.events : []; }
+// ── pure: render METRICS.md from json + hand-editable records ─────────────────
+// Generic loader for the append-only sibling records (events / finances /
+// contributions / engagement). Missing file → [] (never throws).
+function loadArrayDoc(fileName, key) {
+  const p = join(docsDir(), fileName);
+  if (!existsSync(p)) return [];
+  try { const j = JSON.parse(readFileSync(p, 'utf8')); return Array.isArray(j[key]) ? j[key] : []; }
   catch { return []; }
 }
+function loadEvents() { return loadArrayDoc('events.json', 'events'); }
+function loadFinances() { return loadArrayDoc('finances.json', 'expenses'); }
+function loadContributions() { return loadArrayDoc('contributions.json', 'contributions'); }
+function loadEngagement() { return loadArrayDoc('engagement.json', 'engagement'); }
+function money(n) { return (typeof n === 'number') ? `$${n.toLocaleString('en-US')}` : '—'; }
 function fmt(n) { return (typeof n === 'number') ? n.toLocaleString('en-US') : '—'; }
 // Static ISO-3166 alpha-2 → name map for METRICS.md rendering only (metrics.json
 // keeps the raw code as source of truth). Codes not in the map render as the raw
@@ -185,7 +196,7 @@ const COUNTRY_NAMES = {
   IT: 'Italy', ES: 'Spain', NL: 'Netherlands', SG: 'Singapore', TW: 'Taiwan',
 };
 function countryLabel(code) { return COUNTRY_NAMES[code] ? `${COUNTRY_NAMES[code]} (${code})` : code; }
-function renderMarkdown(store, events) {
+function renderMarkdown(store, events, finances = [], contributions = [], engagement = []) {
   const L = [];
   L.push('# Kahu Ola — Impact Metrics');
   L.push('');
@@ -232,6 +243,51 @@ function renderMarkdown(store, events) {
       L.push('- Countries (Zero-PII, country-level only): ' + rows.join(' · '));
     }
   }
+
+  // ── Finances (append-only; null amount = not yet confirmed) ─────────────────
+  if (finances.length) {
+    L.push('');
+    L.push('## Finances (expenses)');
+    L.push('');
+    L.push('| Date | Item | Amount (USD) | Category | Recurring | Note |');
+    L.push('|------|------|-------------:|----------|-----------|------|');
+    let confirmed = 0, hasNull = false;
+    for (const e of finances) {
+      if (typeof e.amount_usd === 'number') confirmed += e.amount_usd; else hasNull = true;
+      L.push(`| ${e.date || '—'} | ${e.item || '—'} | ${money(e.amount_usd)} | ${e.category || '—'} | ${e.recurring ? 'yes' : 'no'} | ${e.note || ''} |`);
+    }
+    L.push('');
+    L.push(`_Confirmed total: **${money(confirmed)}**${hasNull ? ' (excludes rows with amount not yet confirmed — filled from invoices)' : ''}._`);
+  }
+
+  // ── Contributed hours (founder/volunteer; estimates, clearly marked) ────────
+  if (contributions.length) {
+    L.push('');
+    L.push('## Contributed hours (estimates)');
+    L.push('');
+    L.push('| Month | Hours (est.) | Category | Note |');
+    L.push('|-------|-------------:|----------|------|');
+    let total = 0;
+    for (const c of contributions) {
+      if (typeof c.hours_estimate === 'number') total += c.hours_estimate;
+      L.push(`| ${c.month || '—'} | ${fmt(c.hours_estimate)} | ${c.category || '—'} | ${c.note || ''} |`);
+    }
+    L.push('');
+    L.push(`_Total (rough estimate): **${fmt(total)} hours**. Founder-owned figures — refine with actuals._`);
+  }
+
+  // ── Engagement / reach (media, community review, feedback, partnership) ─────
+  if (engagement.length) {
+    L.push('');
+    L.push('## Engagement & reach');
+    L.push('');
+    for (const g of engagement.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))) {
+      const link = g.source_link ? ` — ${g.source_link}` : '';
+      const note = g.note ? ` _(${g.note})_` : '';
+      L.push(`- ${g.date || '(date TBD)'} · [${g.type}] ${g.description}${link}${note}`);
+    }
+  }
+
   L.push('');
   return L.join('\n');
 }
@@ -242,12 +298,12 @@ function assertNoSecret(text, token) {
 }
 
 function writeArchive(store, token) {
-  const events = loadEvents();
   const jsonOut = JSON.stringify(store, null, 2) + '\n';
-  const mdOut = renderMarkdown(store, events);
+  const mdOut = renderMarkdown(store, loadEvents(), loadFinances(), loadContributions(), loadEngagement());
   assertNoSecret(jsonOut, token); assertNoSecret(mdOut, token);
-  writeFileSync(METRICS_JSON, jsonOut, 'utf8');
-  writeFileSync(METRICS_MD, mdOut, 'utf8');
+  mkdirSync(docsDir(), { recursive: true });   // scratch dir may not exist yet
+  writeFileSync(metricsPath(), jsonOut, 'utf8');
+  writeFileSync(mdPath(), mdOut, 'utf8');
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
@@ -339,10 +395,31 @@ function runTests() {
   ok('render: US → "United States (US)"', md2.includes('United States (US)'));
   ok('render: unmapped code ZZ stays raw (not guessed)', md2.includes('ZZ: 1 pv'));
 
+  // finances / contributions / engagement render into METRICS.md.
+  const mdRec = renderMarkdown(
+    { _meta: META, months: [] }, [],
+    [{ date: '2026', item: 'Apple Developer Program', amount_usd: 99, category: 'services', recurring: true, note: 'annual' },
+     { date: '2026', item: 'Domain', amount_usd: null, category: 'infra', recurring: true, note: 'fill' }],
+    [{ month: '2026-07', hours_estimate: 40, category: 'engineering', note: 'estimate' }],
+    [{ date: '2026-07-05', type: 'community-review', description: 'HAW/ILO review', source_link: 'PR #20' }]);
+  ok('render: finances confirmed total = $99 (null row excluded)', /## Finances/.test(mdRec) && mdRec.includes('Confirmed total: **$99**'));
+  ok('render: null amount shows — (not fabricated)', /\| Domain \| \$?—? ?\|? ?/.test(mdRec) && mdRec.includes('| Domain | — |'));
+  ok('render: contributions marked estimate + total', /## Contributed hours \(estimates\)/.test(mdRec) && /40 hours/.test(mdRec) && /Founder-owned/.test(mdRec));
+  ok('render: engagement lists community-review row', /## Engagement & reach/.test(mdRec) && /\[community-review\] HAW\/ILO review/.test(mdRec));
+  ok('render: sections omitted when their arrays are empty', !/## Finances/.test(renderMarkdown({ _meta: META, months: [] }, [])));
+
   // token guard.
   let guard = false;
   try { assertNoSecret('...abcSECRETxyz...', 'abcSECRETxyz'); } catch { guard = true; }
   ok('guard: refuses output containing the token', guard);
+
+  // IMPACT_OUTPUT_DIR override (used by the n8n scratch verification run).
+  const savedEnv = process.env.IMPACT_OUTPUT_DIR;
+  process.env.IMPACT_OUTPUT_DIR = '/tmp/impact-scratch-xyz';
+  ok('docsDir: env override honored', docsDir() === '/tmp/impact-scratch-xyz');
+  delete process.env.IMPACT_OUTPUT_DIR;
+  ok('docsDir: default is docs/impact', docsDir().endsWith(join('docs', 'impact')));
+  if (savedEnv) process.env.IMPACT_OUTPUT_DIR = savedEnv;
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
@@ -350,7 +427,7 @@ function runTests() {
 
 // ── entry ────────────────────────────────────────────────────────────────────
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
-export { buildRecord, appendOrUpdate, renderMarkdown, loadMetrics, monthBounds, currentMonthHST };
+export { buildRecord, appendOrUpdate, renderMarkdown, loadMetrics, monthBounds, currentMonthHST, docsDir };
 if (isMain) {
   const argv = process.argv.slice(2);
   if (argv.includes('--test')) runTests();
