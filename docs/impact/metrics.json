@@ -1,0 +1,51 @@
+{
+  "_meta": {
+    "source": "cloudflare-web-analytics",
+    "dataset": "rumPageloadEventsAdaptiveGroups",
+    "site_tag": "e7eea5e964e04af89c1fcbc0b1a4bb67",
+    "visits_definition": "visits (sessions — cookie-free measurement; not unique individuals)",
+    "page_views_definition": "page views = count of pageload events; bots excluded by Cloudflare RUM",
+    "geo_note": "country is the deepest geographic level collected (Zero-PII: no IP, no user-level data)",
+    "generated_by": "scripts/impact/collect-metrics.mjs"
+  },
+  "months": [
+    {
+      "month": "2026-07",
+      "visits": 29,
+      "page_views": 57,
+      "top_pages": [
+        {
+          "path": "/",
+          "page_views": 39
+        },
+        {
+          "path": "/live-map",
+          "page_views": 11
+        },
+        {
+          "path": "/privacy",
+          "page_views": 4
+        },
+        {
+          "path": "/support",
+          "page_views": 2
+        },
+        {
+          "path": "/about",
+          "page_views": 1
+        }
+      ],
+      "countries": {
+        "US": {
+          "page_views": 57,
+          "visits": 29
+        }
+      },
+      "collected_at": "2026-07-05T23:07:56Z",
+      "source": "cloudflare-web-analytics",
+      "notes": [
+        "partial month (collected 2026-07-05; month not yet complete)"
+      ]
+    }
+  ]
+}

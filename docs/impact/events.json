@@ -1,0 +1,11 @@
+{
+  "_note": "Hand-editable annotations merged into METRICS.md by month. Add real, dated milestones: hazard events (Kona storm, vog episode), product launches (App Store, Morning Brief), media mentions. type ∈ {product, hazard, media}. Never fabricate dates — leave unknown ones out.",
+  "events": [
+    { "date": "2026-07-03", "type": "product", "title": "Live-map summary API ported to monolith (cross-colo)", "source": "PR #14/#15" },
+    { "date": "2026-07-04", "type": "product", "title": "Homepage Hawaiʻi Hazard Snapshot card launched", "source": "PR #18" },
+    { "date": "2026-07-04", "type": "product", "title": "Summary read-through warming (cross-colo consistency)", "source": "PR #17" },
+    { "date": "2026-07-05", "type": "product", "title": "Volcanic zone classification — FIRMS thermal tagging (Layer A)", "source": "PR #19" },
+    { "date": "2026-07-05", "type": "product", "title": "Honest FIRMS wording + volcanic advisory switching, 6-locale i18n (Layer B)", "source": "PR #20/#21" },
+    { "date": "2026-07-05", "type": "product", "title": "Morning brief generator (Layer-A template + gated Gemma)", "source": "PR #22" }
+  ]
+}
