@@ -2186,11 +2186,19 @@
                   .filter(function (x) { return typeof x === 'number' && isFinite(x) && x >= 0; });
                 var maxAge = ages.length ? Math.max.apply(null, ages) : null;
                 var smokeVal = smokeOn ? (_t('card.snapshot.detected') || 'Detected') : (_t('card.snapshot.none') || 'None');
+                // Volcanic vs wildland split (Layer B wording; Layer A owns the count).
+                var volc = (typeof d.fire.volcanic_zone_count === 'number') ? d.fire.volcanic_zone_count : 0;
+                var wild = (typeof d.fire.wildland_count === 'number') ? d.fire.wildland_count : (fireN - volc);
                 var html =
-                  row('🔥', _t('card.snapshot.wildfire') || 'Wildfire Detections', String(fireN), fireN > 0) +
+                  row('🔥', _t('card.snapshot.heat') || 'Satellite Heat Signals', String(fireN), fireN > 0) +
                   row('💨', _t('card.snapshot.smoke') || 'Smoke', smokeVal, smokeOn) +
-                  row('🗺️', _t('card.snapshot.perimeters') || 'Official Perimeters', String(perimN), perimN > 0) +
-                  '<p class="hzsnap-fresh">' + esc(freshText(maxAge)) + '</p>';
+                  row('🗺️', _t('card.snapshot.perimeters') || 'Official Perimeters', String(perimN), perimN > 0);
+                if (volc > 0) {
+                  html += '<p class="hzsnap-fresh">' +
+                    esc(_tmpl('card.snapshot.heat_volcanic', { n: volc }) || (volc + ' in Kīlauea/Mauna Loa volcanic zone (likely volcanic activity)')) +
+                    (wild > 0 ? ' · ' + esc(_tmpl('card.snapshot.heat_wildland', { n: wild }) || (wild + ' outside volcanic zones')) : '') + '</p>';
+                }
+                html += '<p class="hzsnap-fresh">' + esc(freshText(maxAge)) + '</p>';
                 if (d.stale === true || d.degraded === true) {
                   html += '<p class="hzsnap-fresh hzsnap-stale"><span aria-hidden="true">⚠</span> ' +
                     esc(_t('card.snapshot.stale') || 'Some data may be delayed') + '</p>';
@@ -2931,6 +2939,11 @@
 
         const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
+        // 100%-volcanic wording override (text only; SAME shared classifier as the
+        // Kūpuna advisory). Colour/state unchanged — hero state machine is backlog.
+        const hv = (primaryEvent === "FIRE_ACTIVE" && !redFlag && counts.fireSplit &&
+          classifyHeatSignals(counts.fireSplit.volcanic, counts.fireSplit.wildland) === "VOG")
+          ? heroVolcanicWording(counts.fireSplit.total || fireCount) : null;
 
         // Narrative — title with key word highlight
         // hero.title_html.* are developer-controlled static strings with span markup — innerHTML-safe
@@ -2944,14 +2957,14 @@
             DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Latest data temporarily <span class="hero-title-key">delayed</span>.',           cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
-          titleEl.innerHTML = titleData.html;
+          titleEl.innerHTML = hv ? hv.titleHtml : titleData.html;
           titleEl.className = `hero-title ${titleData.cls}`;
         }
-        setText("heroNarrative", n.narrative);
-        setText("heroBannerTitle", n.bannerTitle);
+        setText("heroNarrative", hv ? hv.narrative : n.narrative);
+        setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
         const kicker = document.getElementById("heroKicker");
-        if (kicker) { kicker.textContent = n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
+        if (kicker) { kicker.textContent = hv ? hv.kicker : n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
 
         // Banner state class
         const banner = document.getElementById("primaryBanner");
@@ -3115,7 +3128,39 @@
         setText("floodFreshnessChip", freshness);
       }
 
-      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload) {
+      // Volcanic vs wildland split of raw FIRMS features (Layer A tagged each
+      // feature with properties.volcanic_zone). A missing field → counted as
+      // wildland (fail-closed: keeps the fire advisory when we cannot tell).
+      function fireZoneSplit(firePayload) {
+        const items = getItems(firePayload);
+        let volcanic = 0;
+        for (const it of items) { if (it && it.properties && it.properties.volcanic_zone === true) volcanic++; }
+        return { total: items.length, volcanic: volcanic, wildland: items.length - volcanic };
+      }
+      // SINGLE shared advisory decision — used by BOTH the hero and the Kūpuna
+      // advisory so the two surfaces never diverge. Decision table:
+      //   wildland >= 1                 → 'FIRE' (keep the fire advisory; never relax)
+      //   wildland == 0 && volcanic > 0 → 'VOG'  (volcanic air-quality advisory)
+      //   anything else (no data)       → 'FIRE' (fail-closed to the safer default)
+      // Red Flag is handled by the caller (always → FIRE).
+      function classifyHeatSignals(volcanic, wildland) {
+        const v = Number(volcanic) || 0, w = Number(wildland) || 0;
+        if (w >= 1) return "FIRE";
+        if (w === 0 && v > 0) return "VOG";
+        return "FIRE";
+      }
+      // Volcanic hero WORDING (text only). Applied inside the existing FIRE_ACTIVE
+      // state — the hero state machine / Event Priority is intentionally unchanged.
+      function heroVolcanicWording(count) {
+        const n = Number(count) || 0, s = n > 1 ? "s" : "";
+        return {
+          kicker:      _t("hero.kicker.volcanic_heat")      || "VOLCANIC HEAT SIGNAL",
+          titleHtml:   _t("hero.title_html.volcanic_heat")  || 'Heat signals in the <span class="hero-title-key">Kīlauea/Mauna Loa</span> volcanic zone.',
+          narrative:   _t("hero.narrative.volcanic_heat")   || "NASA FIRMS detected satellite heat inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire. Open the live map and check air quality (vog).",
+          bannerTitle: _tmpl("hero.banner.volcanic_heat", { n: n, s: s }) || `🌋 ${n} Heat Signal${s} · Kīlauea/Mauna Loa Volcanic Zone`,
+        };
+      }
+      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit) {
         const titleEl = document.getElementById("kupunaTitle");
         const bodyEl  = document.getElementById("kupunaBody");
         const noteEl  = document.getElementById("kupunaNote");
@@ -3128,11 +3173,26 @@
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
 
         if (primaryEvent === "FIRE_ACTIVE" || redFlag) {
-          titleEl.textContent = _t("kupuna.title.fire")         || "K\u016bpuna & Keiki Fire Safety";
-          bodyEl.textContent  = _t("kupuna.body.fire")          || "Active wildfire signals detected. K\u016bpuna, keiki, and those with respiratory conditions should stay indoors with windows closed. Monitor official evacuation orders and keep go-bags ready. E m\u0101lama pono.";
-          noteEl.style.borderColor = "rgba(255,122,0,.28)";
-          noteEl.style.background  = "rgba(255,122,0,.08)";
-          titleEl.style.color      = "#ffd8ba";
+          // Advisory switching via the SHARED classifier (same decision as the
+          // hero). Red Flag always \u2192 FIRE. Otherwise classify the raw split:
+          // all-volcanic (zero wildland) \u2192 VOG; any wildland / missing field /
+          // no data \u2192 FIRE (fail-closed to the safer default).
+          const advisory = (!redFlag && fireSplit) ? classifyHeatSignals(fireSplit.volcanic, fireSplit.wildland) : "FIRE";
+          if (advisory === "VOG") {
+            titleEl.textContent = _t("kupuna.title.vog") || "K\u016bpuna & Keiki Air Quality \u2014 Volcanic";
+            bodyEl.innerHTML = (_t("kupuna.body.vog") || "Satellite heat signals are inside the K\u012blauea/Mauna Loa volcanic zone \u2014 this is likely volcanic activity, not a wildfire. Volcanic smog (vog) and ash can affect air quality. K\u016bpuna, keiki, and those with asthma, COPD, or heart conditions should limit time outdoors and keep windows closed. Check current air quality (turn on the Air Quality layer on the Live Map) and follow USGS HVO for official volcanic updates. E m\u0101lama pono.") +
+              ' <a href="https://www.usgs.gov/observatories/hvo" target="_blank" rel="noopener" style="color:#ffe0a3;text-decoration:underline">' + (_t("kupuna.link.hvo") || "USGS HVO updates") + '</a> \u00b7 ' +
+              '<a href="live-map" style="color:#ffe0a3;text-decoration:underline">' + (_t("kupuna.link.aqi") || "Air Quality layer") + '</a>';
+            noteEl.style.borderColor = "rgba(255,204,102,.28)";
+            noteEl.style.background  = "rgba(255,204,102,.08)";
+            titleEl.style.color      = "#ffe9b5";
+          } else {
+            titleEl.textContent = _t("kupuna.title.fire")         || "K\u016bpuna & Keiki Fire Safety";
+            bodyEl.textContent  = _t("kupuna.body.fire")          || "Active wildfire signals detected. K\u016bpuna, keiki, and those with respiratory conditions should stay indoors with windows closed. Monitor official evacuation orders and keep go-bags ready. E m\u0101lama pono.";
+            noteEl.style.borderColor = "rgba(255,122,0,.28)";
+            noteEl.style.background  = "rgba(255,122,0,.08)";
+            titleEl.style.color      = "#ffd8ba";
+          }
         } else if (floodWarn) {
           titleEl.textContent = _t("kupuna.title.flood_warning") || "K\u016bpuna & Keiki Flood Safety";
           bodyEl.textContent  = _t("kupuna.body.flood_warning")  || "Flash flood warning is active. K\u016bpuna, keiki, and residents near streams or low-lying roads should move to higher ground immediately. Do not attempt to cross flooded roadways. Follow official NWS and county emergency instructions. E m\u0101lama pono.";
@@ -3193,14 +3253,15 @@
         applyHero(primaryEvent, {
           fireCount:  fireItems.length,
           floodCount: floodPayload?.summary?.count || 0,
-          stormCount: 0
+          stormCount: 0,
+          fireSplit:  fireZoneSplit(firePayload)
         }, freshnessStr, fireWeatherPayload, floodPayload);
 
         renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload);
         renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload);
         renderFireCard(firePayload);
         renderFloodCard(floodPayload);
-        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload);
+        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload));
 
         // Re-apply locale translations after all JS renders — ensures data-i18n elements
         // that were overwritten by render functions (e.g. signalDetailLabel) get the
@@ -3257,6 +3318,11 @@
         const floodWatch = flood?.summary?.watch_count > 0;
         const redFlag    = fireWeather?.summary?.red_flag_active;
         const highWind   = redFlag || (fireWeather?.summary?.red_flag_count > 0) || (fireWeather?.summary?.watch_count > 0);
+        // 100%-volcanic wording override (text only; SAME shared classifier).
+        const heroSplit = fireZoneSplit(fire);
+        const hv = (primaryEvent === "FIRE_ACTIVE" && !redFlag &&
+          classifyHeatSignals(heroSplit.volcanic, heroSplit.wildland) === "VOG")
+          ? heroVolcanicWording(heroSplit.total || fireCount) : null;
 
         // Re-render hero title (innerHTML — developer-controlled strings only)
         const titleEl = document.getElementById("heroTitle");
@@ -3269,18 +3335,18 @@
             DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Latest data temporarily <span class="hero-title-key">delayed</span>.',         cls: 'warn'  },
           };
           const td = titleMap[primaryEvent] || titleMap.MONITORING;
-          titleEl.innerHTML = td.html;
+          titleEl.innerHTML = hv ? hv.titleHtml : td.html;
           titleEl.className = `hero-title ${td.cls}`;
         }
 
         // Re-render hero narrative / kicker / banner
         // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
         const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
-        setText("heroNarrative", n.narrative);
-        setText("heroBannerTitle", n.bannerTitle);
+        setText("heroNarrative", hv ? hv.narrative : n.narrative);
+        setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
         const kicker = document.getElementById("heroKicker");
-        if (kicker) { kicker.textContent = n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
+        if (kicker) { kicker.textContent = hv ? hv.kicker : n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
 
         // Signal detail toggle label
         const detailLabel = document.getElementById("signalDetailLabel");
@@ -3312,7 +3378,7 @@
         // renderFloodCard(payload)
         renderFloodCard(flood);
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
-        renderKupunaNote(primaryEvent, flood, fireWeather);
+        renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire));
 
         // Final applyAll — must be last. JS renders above can overwrite data-i18n elements
         // (e.g. signalDetailLabel overwritten at L2331 with KEEP_ENGLISH dynamic text).
