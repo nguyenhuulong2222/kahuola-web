@@ -10,3 +10,6 @@ _merge_work
 
 # graphify tool output (knowledge-graph build artifact, rebuilt locally)
 graphify-out/SEO_*.md # Or specific filenames
+
+# morning-brief runtime output (regenerated each run)
+scripts/insights/brief-latest.json
