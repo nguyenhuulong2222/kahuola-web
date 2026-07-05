@@ -1654,6 +1654,29 @@ function buildModisSet(modisCsv: string): Set<string> {
   return set;
 }
 
+// ── Volcanic zone classification (Layer A owns truth) ───────────────────────
+// USGS Hawaiian Volcano Observatory (HVO) active volcanic areas, public
+// reference as of 2026-07-05. Bboxes are DELIBERATELY GENEROUS: it is safer to
+// tag a near-volcano thermal detection as volcanic-zone than to let lava/vent
+// heat trigger an urban wildfire advisory. This is NOT inference — it is a
+// geometry test on already-validated coordinates (Invariant III safe).
+//   Kīlauea:   summit 19.421°N/155.287°W (Halemaʻumaʻu) + East Rift Zone
+//              (2018 lower-ERZ / Leilani ~19.47°N/154.90°W → ocean entry).
+//   Mauna Loa: summit 19.475°N/155.608°W (Mokuʻāweoweo) + NE/SW Rift Zones
+//              (2022 NERZ fissures ~19.55°N/155.45–155.50°W).
+const VOLCANIC_ZONES: ReadonlyArray<{ id: string; west: number; south: number; east: number; north: number }> = [
+  { id: 'kilauea-summit-erz', west: -155.35, south: 19.25, east: -154.80, north: 19.50 },
+  { id: 'mauna-loa',          west: -155.75, south: 19.30, east: -155.40, north: 19.60 },
+];
+
+// Pure point-in-bbox on already-validated [lng, lat]. Module scope, never throws.
+function inVolcanicZone(lng: number, lat: number): boolean {
+  for (const z of VOLCANIC_ZONES) {
+    if (lng >= z.west && lng <= z.east && lat >= z.south && lat <= z.north) return true;
+  }
+  return false;
+}
+
 function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: string; features: unknown[] } {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return { type: 'FeatureCollection', features: [] };
@@ -1700,6 +1723,9 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: s
         daynight: row.daynight || '',
         track: row.track || '',
         scan: row.scan || '',
+        // Additive geometry tag — never removes/changes existing fields.
+        // true => detection falls inside a USGS HVO active volcanic bbox.
+        volcanic_zone: inVolcanicZone(lng, lat),
       },
     });
   }
@@ -2111,7 +2137,7 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
 // Promise.all cannot swallow a ReferenceError. Each returns a deterministic
 // degraded shape on any miss / parse failure (Invariant III). Zero PII.
 
-type SummarySrc = { count: number | null; status: string; age_seconds: number | null };
+type SummarySrc = { count: number | null; status: string; age_seconds: number | null; volcanic_zone_count?: number; wildland_count?: number };
 
 // Seconds since an ISO timestamp, clamped to >= 0. null if unparseable.
 function summaryAgeSeconds(generatedAt: unknown, nowMs: number): number | null {
@@ -2161,10 +2187,19 @@ async function readSummaryFirms(key: string, nowMs: number): Promise<SummarySrc>
     if (!ct.includes('json') && !ct.includes('geo+json')) return { count: null, status: 'miss', age_seconds: null };
     const j: any = await c.json();
     const age = summaryAgeSeconds(j?.properties?.generated_at, nowMs);
+    const feats: any[] = Array.isArray(j?.features) ? j.features : [];
     const n = j?.properties?.returnedRecords;
-    if (typeof n === 'number' && Number.isFinite(n)) return { count: n, status: n > 0 ? 'detected' : 'none', age_seconds: age };
-    if (Array.isArray(j?.features)) return { count: j.features.length, status: j.features.length > 0 ? 'detected' : 'none', age_seconds: age };
-    return { count: null, status: 'miss', age_seconds: age };
+    // Preserve existing count semantics: returnedRecords, else features.length.
+    const total = (typeof n === 'number' && Number.isFinite(n)) ? n
+      : (Array.isArray(j?.features) ? feats.length : null);
+    if (total === null) return { count: null, status: 'miss', age_seconds: age };
+    // Additive breakdown. Old caches without volcanic_zone → volcanic 0, all
+    // wildland. Invariant (asserted in test): count === volcanic + wildland.
+    let volcanic = 0;
+    for (const f of feats) { if (f?.properties?.volcanic_zone === true) volcanic++; }
+    const wildland = Math.max(0, total - volcanic);
+    return { count: total, status: total > 0 ? 'detected' : 'none', age_seconds: age,
+      volcanic_zone_count: volcanic, wildland_count: wildland };
   } catch {
     return { count: null, status: 'miss', age_seconds: null };
   }
@@ -2219,7 +2254,7 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
     region: 'hawaii',
     generated_at: new Date(nowMs).toISOString(),
     stale: degraded,
-    fire: { count: fire.count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS' },
+    fire: { count: fire.count ?? 0, volcanic_zone_count: fire.volcanic_zone_count ?? 0, wildland_count: fire.wildland_count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS' },
     smoke: { present: (smoke.count ?? 0) > 0, count: smoke.count ?? 0, status: smoke.status, age_seconds: smoke.age_seconds, source: 'NOAA HMS' },
     perimeters: { count: perim.count ?? 0, status: perim.status, age_seconds: perim.age_seconds, source: 'NIFC WFIGS' },
     note: 'Situational awareness only. Follow official sources.',
