@@ -13,3 +13,10 @@ graphify-out/SEO_*.md # Or specific filenames
 
 # morning-brief runtime output (regenerated each run)
 scripts/insights/brief-latest.json
+
+# secrets — never commit (tokens live in ~/.kahuola-secrets, outside the repo)
+.kahuola-secrets/
+*.token
+*cf-analytics-token*
+*cf-account-id*
+CF_ANALYTICS_TOKEN*
