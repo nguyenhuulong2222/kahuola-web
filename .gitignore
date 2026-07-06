@@ -8,8 +8,11 @@ _merge_work
 # macOS metadata — never belongs in the repo
 .DS_Store
 
-# graphify tool output (knowledge-graph build artifact, rebuilt locally)
-graphify-out/SEO_*.md # Or specific filenames
+# local tool output & session archives (rebuilt/kept locally, never in repo)
+.agents/
+.codex/
+graphify-out/
+docs/seo-session-archive-2026-05/
 
 # morning-brief runtime output (regenerated each run)
 scripts/insights/brief-latest.json
