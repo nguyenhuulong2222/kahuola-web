@@ -1,8 +1,10 @@
 # Kahu Ola — Impact Metrics
 
-> Auto-generated from `metrics.json` (the source of truth) by
-> `scripts/impact/collect-metrics.mjs`. **Do not edit by hand** — edit the JSON /
-> `events.json` and regenerate. Every figure carries source + collection date.
+> Auto-generated from `metrics.json` + the sibling records (`events`, `finances`,
+> `contributions`, `engagement`) by `scripts/impact/collect-metrics.mjs`. **Do not
+> edit by hand** — edit the JSON and regenerate (`node scripts/impact/collect-metrics.mjs
+> --render-only`). Every figure carries source + collection date. `⚠ TBD — cần điền` = a
+> placeholder awaiting a real, human-confirmed value (never fabricated).
 
 **Source:** Cloudflare Web Analytics (RUM), dataset `rumPageloadEventsAdaptiveGroups`, bots excluded.
 **visits** = visits (sessions — cookie-free measurement; not unique individuals).
@@ -40,8 +42,10 @@
 | Date | Item | Amount (USD) | Category | Recurring | Note |
 |------|------|-------------:|----------|-----------|------|
 | 2026 | Apple Developer Program | $99 | services | yes | Annual membership — standard public price; confirm exact charge date/amount from the Apple receipt. |
-| 2026 | Domain: kahuola.org | — | infra | yes | Annual registration — fill actual amount from the registrar invoice. |
+| 2026 | Domain: kahuola.org | ⚠ TBD — cần điền | infra | yes | Annual registration — fill actual amount from the registrar invoice. |
 | 2026 | Cloudflare (Pages / Workers / Web Analytics) | $0 | infra | yes | Free tier as of 2026-07; update if a paid plan is added. |
+| 2026 | MapTiler (map tiles / basemaps API) | ⚠ TBD — cần điền | services | yes | Plan/tier TBD — fill actual amount and cadence (monthly/yearly) from the MapTiler invoice; may still be on the free tier. |
+| 2026 | Mac Mini (self-hosted infra) | ⚠ TBD — cần điền | hardware | no | One-time hardware for self-hosted tooling (n8n, collectors). Ongoing electricity is minor/self-absorbed — treat as in-kind unless separately claimed. Fill purchase price from the receipt if capitalizing. |
 
 _Confirmed total: **$99** (excludes rows with amount not yet confirmed — filled from invoices)._
 
@@ -55,5 +59,8 @@ _Total (rough estimate): **40 hours**. Founder-owned figures — refine with act
 
 ## Engagement & reach
 
-- (date TBD) · [partnership] iOS app live on the Apple App Store _(Fill the actual approval/live date from App Store Connect.)_
+- ⚠ TBD — cần điền · [partnership] iOS app live on the Apple App Store _(Fill the actual approval/live date from App Store Connect.)_
 - 2026-07-05 · [community-review] ʻŌlelo Hawaiʻi + Ilocano translation review requested (AI-drafted volcanic/VOG strings; awaiting native/community confirmation) — PR #20 _(Pending — track resolution and add a follow-up entry when reviewed.)_
+- 2026-07-05 · [milestone] Volcanic-zone classification + honest FIRMS advisory wording shipped (thermal tagging, advisory switching) — PR #19/#20 _(Dates from events.json (product history); PR-linked.)_
+- 2026-07-05 · [milestone] 6-locale internationalization complete across the hazard UI (incl. ʻŌlelo Hawaiʻi and Ilocano) — PR #20/#21 _(Dates from events.json (product history); PR-linked.)_
+- 2026-07-05 · [milestone] Morning Brief generation pipeline built (Layer-A template + gated Gemma summarizer) — PR #22 _(Dates from events.json (product history); PR-linked.)_

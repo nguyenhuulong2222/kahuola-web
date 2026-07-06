@@ -3,6 +3,8 @@
   "expenses": [
     { "date": "2026", "item": "Apple Developer Program", "amount_usd": 99, "category": "services", "recurring": true, "note": "Annual membership — standard public price; confirm exact charge date/amount from the Apple receipt." },
     { "date": "2026", "item": "Domain: kahuola.org", "amount_usd": null, "category": "infra", "recurring": true, "note": "Annual registration — fill actual amount from the registrar invoice." },
-    { "date": "2026", "item": "Cloudflare (Pages / Workers / Web Analytics)", "amount_usd": 0, "category": "infra", "recurring": true, "note": "Free tier as of 2026-07; update if a paid plan is added." }
+    { "date": "2026", "item": "Cloudflare (Pages / Workers / Web Analytics)", "amount_usd": 0, "category": "infra", "recurring": true, "note": "Free tier as of 2026-07; update if a paid plan is added." },
+    { "date": "2026", "item": "MapTiler (map tiles / basemaps API)", "amount_usd": null, "category": "services", "recurring": true, "note": "Plan/tier TBD — fill actual amount and cadence (monthly/yearly) from the MapTiler invoice; may still be on the free tier." },
+    { "date": "2026", "item": "Mac Mini (self-hosted infra)", "amount_usd": null, "category": "hardware", "recurring": false, "note": "One-time hardware for self-hosted tooling (n8n, collectors). Ongoing electricity is minor/self-absorbed — treat as in-kind unless separately claimed. Fill purchase price from the receipt if capitalizing." }
   ]
 }

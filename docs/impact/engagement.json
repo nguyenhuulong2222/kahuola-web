@@ -1,7 +1,10 @@
 {
-  "_note": "Append-only record of external engagement / reach. Human-committed. type ∈ {media, community-review, user-feedback, partnership}. date = YYYY | YYYY-MM | YYYY-MM-DD (null if not yet confirmed — add a note). source_link may be a URL, PR, or empty.",
+  "_note": "Append-only record of external engagement / reach. Human-committed. type ∈ {media, community-review, user-feedback, partnership, milestone}. date = YYYY | YYYY-MM | YYYY-MM-DD (null if not yet confirmed — add a note; use month + \"approximate\" if the exact day is unknown). source_link may be a URL, PR, or empty.",
   "engagement": [
     { "date": null, "type": "partnership", "description": "iOS app live on the Apple App Store", "source_link": "", "note": "Fill the actual approval/live date from App Store Connect." },
-    { "date": "2026-07-05", "type": "community-review", "description": "ʻŌlelo Hawaiʻi + Ilocano translation review requested (AI-drafted volcanic/VOG strings; awaiting native/community confirmation)", "source_link": "PR #20", "note": "Pending — track resolution and add a follow-up entry when reviewed." }
+    { "date": "2026-07-05", "type": "community-review", "description": "ʻŌlelo Hawaiʻi + Ilocano translation review requested (AI-drafted volcanic/VOG strings; awaiting native/community confirmation)", "source_link": "PR #20", "note": "Pending — track resolution and add a follow-up entry when reviewed." },
+    { "date": "2026-07-05", "type": "milestone", "description": "Volcanic-zone classification + honest FIRMS advisory wording shipped (thermal tagging, advisory switching)", "source_link": "PR #19/#20", "note": "Dates from events.json (product history); PR-linked." },
+    { "date": "2026-07-05", "type": "milestone", "description": "6-locale internationalization complete across the hazard UI (incl. ʻŌlelo Hawaiʻi and Ilocano)", "source_link": "PR #20/#21", "note": "Dates from events.json (product history); PR-linked." },
+    { "date": "2026-07-05", "type": "milestone", "description": "Morning Brief generation pipeline built (Layer-A template + gated Gemma summarizer)", "source_link": "PR #22", "note": "Dates from events.json (product history); PR-linked." }
   ]
 }

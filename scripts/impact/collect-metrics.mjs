@@ -184,8 +184,82 @@ function loadEvents() { return loadArrayDoc('events.json', 'events'); }
 function loadFinances() { return loadArrayDoc('finances.json', 'expenses'); }
 function loadContributions() { return loadArrayDoc('contributions.json', 'contributions'); }
 function loadEngagement() { return loadArrayDoc('engagement.json', 'engagement'); }
+
+// ── schema validators for the hand-edited sibling records ─────────────────────
+// Each throws on the FIRST violation so the caller fail-closes (writes nothing).
+// Extra/unknown keys are allowed (forward-compatible: e.g. `note`, `estimate`);
+// required fields and enums are not. amount/hours = number|null only — a `null`
+// placeholder is honest ("not yet confirmed"); a guessed number would not be.
+const FINANCE_CATEGORIES = new Set(['infra', 'services', 'hardware']);
+const CONTRIB_CATEGORIES = new Set(['engineering', 'outreach', 'ops', 'governance']);
+const ENGAGEMENT_TYPES = new Set(['media', 'community-review', 'user-feedback', 'partnership', 'milestone']);
+const isStr = (x) => typeof x === 'string';
+const numOrNull = (x) => x === null || typeof x === 'number';
+
+function validateFinance(e, i) {
+  if (!e || typeof e !== 'object') throw new Error(`finances[${i}]: not an object`);
+  if (!isStr(e.date) || !e.date.trim()) throw new Error(`finances[${i}]: date must be a non-empty string (YYYY | YYYY-MM | YYYY-MM-DD)`);
+  if (!isStr(e.item) || !e.item.trim()) throw new Error(`finances[${i}]: item is required`);
+  if (!numOrNull(e.amount_usd)) throw new Error(`finances[${i}]: amount_usd must be a number or null (never a guessed figure)`);
+  if (!FINANCE_CATEGORIES.has(e.category)) throw new Error(`finances[${i}]: category must be one of infra|services|hardware`);
+  // recurring: boolean (current archive) OR the "monthly"|"yearly"|null cadence enum — both accepted.
+  if (!(typeof e.recurring === 'boolean' || e.recurring === null || e.recurring === 'monthly' || e.recurring === 'yearly')) {
+    throw new Error(`finances[${i}]: recurring must be boolean, "monthly", "yearly", or null`);
+  }
+  return e;
+}
+function validateContribution(c, i) {
+  if (!c || typeof c !== 'object') throw new Error(`contributions[${i}]: not an object`);
+  if (!/^\d{4}-\d{2}$/.test(c.month || '')) throw new Error(`contributions[${i}]: month must be YYYY-MM`);
+  if (!numOrNull(c.hours_estimate)) throw new Error(`contributions[${i}]: hours_estimate must be a number or null`);
+  if (!CONTRIB_CATEGORIES.has(c.category)) throw new Error(`contributions[${i}]: category must be one of engineering|outreach|ops|governance`);
+  return c;
+}
+function validateEngagement(g, i) {
+  if (!g || typeof g !== 'object') throw new Error(`engagement[${i}]: not an object`);
+  if (!(g.date === null || isStr(g.date))) throw new Error(`engagement[${i}]: date must be a string or null`);
+  if (!ENGAGEMENT_TYPES.has(g.type)) throw new Error(`engagement[${i}]: type must be one of media|community-review|user-feedback|partnership|milestone`);
+  if (!isStr(g.description) || !g.description.trim()) throw new Error(`engagement[${i}]: description is required`);
+  return g;
+}
+
+// Strict loader: bad JSON, wrong container shape, or any schema-violating entry
+// THROWS → the collector fail-closes and writes NOTHING. Missing file → [].
+function loadArrayDocStrict(fileName, key, validate) {
+  const p = join(docsDir(), fileName);
+  if (!existsSync(p)) return [];
+  let j;
+  try { j = JSON.parse(readFileSync(p, 'utf8')); }
+  catch (e) { throw new Error(`${fileName}: invalid JSON (${e.message})`); }
+  const arr = j[key];
+  if (!Array.isArray(arr)) throw new Error(`${fileName}: "${key}" must be an array`);
+  arr.forEach((entry, i) => validate(entry, i));
+  return arr;
+}
+// Validate all three sibling records; throws (fail-closed) on the first problem.
+function validateSiblingDocs() {
+  loadArrayDocStrict('finances.json', 'expenses', validateFinance);
+  loadArrayDocStrict('contributions.json', 'contributions', validateContribution);
+  loadArrayDocStrict('engagement.json', 'engagement', validateEngagement);
+}
+
+// Pure append-only guard for a hand-edited record diff: every prior entry must
+// survive byte-for-byte (order-independent); a modified or deleted entry throws.
+// Adding new entries is allowed. Cross-commit history is enforced by git — this
+// guards a single before/after diff (used in fixtures; reusable by tooling).
+function assertAppendOnly(prev, next, label = 'record') {
+  const nextSet = new Set(next.map((e) => JSON.stringify(e)));
+  prev.forEach((e, i) => {
+    if (!nextSet.has(JSON.stringify(e))) {
+      throw new Error(`append-only violation: ${label}[${i}] was modified or removed — prior entries are immutable`);
+    }
+  });
+  return true;
+}
 function money(n) { return (typeof n === 'number') ? `$${n.toLocaleString('en-US')}` : '—'; }
 function fmt(n) { return (typeof n === 'number') ? n.toLocaleString('en-US') : '—'; }
+// A not-yet-confirmed placeholder renders loudly so no one forgets to fill it.
+const TBD = '⚠ TBD — cần điền';
 // Static ISO-3166 alpha-2 → name map for METRICS.md rendering only (metrics.json
 // keeps the raw code as source of truth). Codes not in the map render as the raw
 // code — never guessed.
@@ -200,9 +274,11 @@ function renderMarkdown(store, events, finances = [], contributions = [], engage
   const L = [];
   L.push('# Kahu Ola — Impact Metrics');
   L.push('');
-  L.push('> Auto-generated from `metrics.json` (the source of truth) by');
-  L.push('> `scripts/impact/collect-metrics.mjs`. **Do not edit by hand** — edit the JSON /');
-  L.push('> `events.json` and regenerate. Every figure carries source + collection date.');
+  L.push('> Auto-generated from `metrics.json` + the sibling records (`events`, `finances`,');
+  L.push('> `contributions`, `engagement`) by `scripts/impact/collect-metrics.mjs`. **Do not');
+  L.push('> edit by hand** — edit the JSON and regenerate (`node scripts/impact/collect-metrics.mjs');
+  L.push('> --render-only`). Every figure carries source + collection date. `' + TBD + '` = a');
+  L.push('> placeholder awaiting a real, human-confirmed value (never fabricated).');
   L.push('');
   L.push('**Source:** Cloudflare Web Analytics (RUM), dataset `' + META.dataset + '`, bots excluded.');
   L.push('**visits** = ' + META.visits_definition + '.');
@@ -254,7 +330,9 @@ function renderMarkdown(store, events, finances = [], contributions = [], engage
     let confirmed = 0, hasNull = false;
     for (const e of finances) {
       if (typeof e.amount_usd === 'number') confirmed += e.amount_usd; else hasNull = true;
-      L.push(`| ${e.date || '—'} | ${e.item || '—'} | ${money(e.amount_usd)} | ${e.category || '—'} | ${e.recurring ? 'yes' : 'no'} | ${e.note || ''} |`);
+      const amount = (typeof e.amount_usd === 'number') ? money(e.amount_usd) : TBD;
+      const recurring = (e.recurring === 'monthly' || e.recurring === 'yearly') ? e.recurring : (e.recurring ? 'yes' : 'no');
+      L.push(`| ${e.date || '—'} | ${e.item || '—'} | ${amount} | ${e.category || '—'} | ${recurring} | ${e.note || ''} |`);
     }
     L.push('');
     L.push(`_Confirmed total: **${money(confirmed)}**${hasNull ? ' (excludes rows with amount not yet confirmed — filled from invoices)' : ''}._`);
@@ -270,7 +348,8 @@ function renderMarkdown(store, events, finances = [], contributions = [], engage
     let total = 0;
     for (const c of contributions) {
       if (typeof c.hours_estimate === 'number') total += c.hours_estimate;
-      L.push(`| ${c.month || '—'} | ${fmt(c.hours_estimate)} | ${c.category || '—'} | ${c.note || ''} |`);
+      const hours = (typeof c.hours_estimate === 'number') ? fmt(c.hours_estimate) : TBD;
+      L.push(`| ${c.month || '—'} | ${hours} | ${c.category || '—'} | ${c.note || ''} |`);
     }
     L.push('');
     L.push(`_Total (rough estimate): **${fmt(total)} hours**. Founder-owned figures — refine with actuals._`);
@@ -284,7 +363,7 @@ function renderMarkdown(store, events, finances = [], contributions = [], engage
     for (const g of engagement.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))) {
       const link = g.source_link ? ` — ${g.source_link}` : '';
       const note = g.note ? ` _(${g.note})_` : '';
-      L.push(`- ${g.date || '(date TBD)'} · [${g.type}] ${g.description}${link}${note}`);
+      L.push(`- ${g.date || TBD} · [${g.type}] ${g.description}${link}${note}`);
     }
   }
 
@@ -308,6 +387,20 @@ function writeArchive(store, token) {
 
 // ── main ─────────────────────────────────────────────────────────────────────
 async function main(argv) {
+  // --render-only: regenerate METRICS.md from the committed JSON only (no network,
+  // no token). Fail-closed on a malformed sibling record. This is the offline
+  // step of the mùng-1 ritual: after hand-adding rows, re-render then commit.
+  if (argv.includes('--render-only')) {
+    try { validateSiblingDocs(); }
+    catch (e) { console.error(`SIBLING SCHEMA MISMATCH: ${e.message}. Nothing written (fail-closed).`); return 1; }
+    const store = loadMetrics();
+    const md = renderMarkdown(store, loadEvents(), loadFinances(), loadContributions(), loadEngagement());
+    mkdirSync(docsDir(), { recursive: true });
+    writeFileSync(mdPath(), md, 'utf8');
+    console.log(JSON.stringify({ mode: 'render-only', wrote: 'METRICS.md', months: store.months.length }));
+    return 0;
+  }
+
   const monthArg = (argv.find((a) => a.startsWith('--month=')) || '').split('=')[1];
   const targetMonth = monthArg || prevMonth(currentMonthHST());
   if (!/^\d{4}-\d{2}$/.test(targetMonth)) { console.error(`bad --month: ${targetMonth}`); return 2; }
@@ -333,6 +426,10 @@ async function main(argv) {
   let action;
   try { action = appendOrUpdate(store, record); }
   catch (e) { console.error(String(e.message)); return 1; }
+
+  // Fail-closed: a malformed sibling record must not reach METRICS.md.
+  try { validateSiblingDocs(); }
+  catch (e) { console.error(`SIBLING SCHEMA MISMATCH: ${e.message}. Nothing written (fail-closed).`); return 1; }
 
   writeArchive(store, token);
   console.log(JSON.stringify({ month: targetMonth, action, partial: isPartial, visits: record.visits, page_views: record.page_views, countries: Object.keys(record.countries).length }));
@@ -403,10 +500,43 @@ function runTests() {
     [{ month: '2026-07', hours_estimate: 40, category: 'engineering', note: 'estimate' }],
     [{ date: '2026-07-05', type: 'community-review', description: 'HAW/ILO review', source_link: 'PR #20' }]);
   ok('render: finances confirmed total = $99 (null row excluded)', /## Finances/.test(mdRec) && mdRec.includes('Confirmed total: **$99**'));
-  ok('render: null amount shows — (not fabricated)', /\| Domain \| \$?—? ?\|? ?/.test(mdRec) && mdRec.includes('| Domain | — |'));
+  ok('render: null amount shows ⚠ TBD (not fabricated)', mdRec.includes('| Domain | ⚠ TBD — cần điền |'));
   ok('render: contributions marked estimate + total', /## Contributed hours \(estimates\)/.test(mdRec) && /40 hours/.test(mdRec) && /Founder-owned/.test(mdRec));
   ok('render: engagement lists community-review row', /## Engagement & reach/.test(mdRec) && /\[community-review\] HAW\/ILO review/.test(mdRec));
   ok('render: sections omitted when their arrays are empty', !/## Finances/.test(renderMarkdown({ _meta: META, months: [] }, [])));
+
+  // ── sibling-record schema validators (fail-closed on bad data) ───────────────
+  const okThrow = (n, fn) => { let t = false; try { fn(); } catch { t = true; } ok(n, t); };
+  ok('validate: good finance row passes', validateFinance({ date: '2026', item: 'Domain', amount_usd: null, category: 'infra', recurring: true }, 0));
+  ok('validate: finance recurring cadence enum accepted', validateFinance({ date: '2026', item: 'MapTiler', amount_usd: null, category: 'services', recurring: 'yearly' }, 0));
+  okThrow('validate: finance bad category → throws', () => validateFinance({ date: '2026', item: 'x', amount_usd: 1, category: 'bogus', recurring: true }, 0));
+  okThrow('validate: finance guessed-string amount → throws', () => validateFinance({ date: '2026', item: 'x', amount_usd: '99', category: 'infra', recurring: true }, 0));
+  okThrow('validate: finance missing item → throws', () => validateFinance({ date: '2026', item: '', amount_usd: null, category: 'infra', recurring: true }, 0));
+  ok('validate: contribution governance category accepted', validateContribution({ month: '2026-07', hours_estimate: 5, category: 'governance' }, 0));
+  okThrow('validate: contribution bad month → throws', () => validateContribution({ month: '2026', hours_estimate: 5, category: 'ops' }, 0));
+  ok('validate: engagement milestone type accepted', validateEngagement({ date: '2026-07-05', type: 'milestone', description: 'i18n complete' }, 0));
+  ok('validate: engagement null date accepted (unknown date)', validateEngagement({ date: null, type: 'partnership', description: 'App Store live' }, 0));
+  okThrow('validate: engagement bad type → throws', () => validateEngagement({ date: null, type: 'press', description: 'x' }, 0));
+  okThrow('validate: engagement missing description → throws', () => validateEngagement({ date: null, type: 'media', description: '' }, 0));
+
+  // ── append-only guard: add ok; modify/remove a prior entry → caught ──────────
+  const prev = [{ date: '2026', item: 'Apple', amount_usd: 99 }, { date: '2026', item: 'Domain', amount_usd: null }];
+  ok('append-only: adding a new row is allowed', assertAppendOnly(prev, [...prev, { date: '2026', item: 'MapTiler', amount_usd: null }], 'finances'));
+  ok('append-only: identical set is allowed', assertAppendOnly(prev, prev.slice(), 'finances'));
+  okThrow('append-only: modifying a prior entry → caught', () => assertAppendOnly(prev, [{ date: '2026', item: 'Apple', amount_usd: 120 }, prev[1]], 'finances'));
+  okThrow('append-only: removing a prior entry → caught', () => assertAppendOnly(prev, [prev[0]], 'finances'));
+
+  // ── strict loader fail-closes on a schema-violating file (write nothing) ─────
+  const scratch = join(process.env.TMPDIR || '/tmp', `impact-guard-${pass}${fail}`);
+  mkdirSync(scratch, { recursive: true });
+  const savedDir = process.env.IMPACT_OUTPUT_DIR;
+  process.env.IMPACT_OUTPUT_DIR = scratch;
+  writeFileSync(join(scratch, 'finances.json'), JSON.stringify({ expenses: [{ date: '2026', item: 'x', amount_usd: 1, category: 'not-a-category', recurring: true }] }), 'utf8');
+  okThrow('fail-closed: malformed sibling file makes validateSiblingDocs throw', () => validateSiblingDocs());
+  writeFileSync(join(scratch, 'finances.json'), JSON.stringify({ expenses: [{ date: '2026', item: 'x', amount_usd: 1, category: 'infra', recurring: true }] }), 'utf8');
+  let cleanPass = true; try { validateSiblingDocs(); } catch { cleanPass = false; }
+  ok('fail-closed: valid sibling files pass validation', cleanPass);
+  if (savedDir) process.env.IMPACT_OUTPUT_DIR = savedDir; else delete process.env.IMPACT_OUTPUT_DIR;
 
   // token guard.
   let guard = false;
@@ -427,7 +557,8 @@ function runTests() {
 
 // ── entry ────────────────────────────────────────────────────────────────────
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
-export { buildRecord, appendOrUpdate, renderMarkdown, loadMetrics, monthBounds, currentMonthHST, docsDir };
+export { buildRecord, appendOrUpdate, renderMarkdown, loadMetrics, monthBounds, currentMonthHST, docsDir,
+  validateFinance, validateContribution, validateEngagement, validateSiblingDocs, assertAppendOnly };
 if (isMain) {
   const argv = process.argv.slice(2);
   if (argv.includes('--test')) runTests();
