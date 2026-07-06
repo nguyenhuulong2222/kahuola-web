@@ -1,0 +1,7 @@
+{
+  "_note": "Append-only record of external engagement / reach. Human-committed. type ∈ {media, community-review, user-feedback, partnership}. date = YYYY | YYYY-MM | YYYY-MM-DD (null if not yet confirmed — add a note). source_link may be a URL, PR, or empty.",
+  "engagement": [
+    { "date": null, "type": "partnership", "description": "iOS app live on the Apple App Store", "source_link": "", "note": "Fill the actual approval/live date from App Store Connect." },
+    { "date": "2026-07-05", "type": "community-review", "description": "ʻŌlelo Hawaiʻi + Ilocano translation review requested (AI-drafted volcanic/VOG strings; awaiting native/community confirmation)", "source_link": "PR #20", "note": "Pending — track resolution and add a follow-up entry when reviewed." }
+  ]
+}

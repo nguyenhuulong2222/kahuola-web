@@ -1,0 +1,6 @@
+{
+  "_note": "Append-only record of founder/volunteer contributed hours. Rough estimates are acceptable but MUST be marked as estimates — the founder owns and confirms every number. category ∈ {engineering, outreach, ops}. Add one row per month per category.",
+  "contributions": [
+    { "month": "2026-07", "hours_estimate": 40, "category": "engineering", "note": "ESTIMATE (rough placeholder — founder to confirm). Hazard-platform development: summary read-through, homepage insights card, volcanic-zone classification + advisory, 6-locale i18n, morning-brief generator, impact-metrics tooling (PRs #14–#23)." }
+  ]
+}
