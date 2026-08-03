@@ -1804,6 +1804,12 @@ type FirmsIngest = {
   // Counted and REPORTED, never silently dropped — a detection that simply
   // vanishes from the envelope is its own kind of dishonesty.
   volcanic_count: number;
+  // Retained for PER-ISLAND COUNTING ONLY. These are never scored and never
+  // reach buildIslandResult's cell loop — the exclusion above is absolute.
+  // They exist so an island can report how many volcanic detections sit inside
+  // its own bbox, which is the only meaningful attribution for a hotspot that
+  // drives no cells.
+  volcanic_hotspots: FirmsHotspot[];
   health: 'ok' | 'degraded' | 'unconfigured';
   sensors_used: string[];
 };
@@ -1902,7 +1908,7 @@ async function fetchFirmsMultiSensor(
 ): Promise<FirmsIngest> {
   if (!env.NASA_FIRMS_MAP_KEY) {
     // Missing secret degrades the layer; it does not fail the request.
-    return { hotspots: [], volcanic_count: 0, health: 'unconfigured', sensors_used: [] };
+    return { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'unconfigured', sensors_used: [] };
   }
 
   const [west, south, east, north] = bbox;
@@ -1954,15 +1960,17 @@ async function fetchFirmsMultiSensor(
 
   // Every sensor failed → degraded. This is NOT the same as "zero hotspots".
   if (sensorsUsed.length === 0) {
-    return { hotspots: [], volcanic_count: 0, health: 'degraded', sensors_used: [] };
+    return { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'degraded', sensors_used: [] };
   }
   // Split AFTER dedupe so a fire seen by three satellites is counted once on
   // whichever side it belongs to.
   const deduped = dedupeHotspots(merged);
   const wildland = deduped.filter((h) => !h.volcanic);
+  const volcanic = deduped.filter((h) => h.volcanic);
   return {
     hotspots: wildland,
-    volcanic_count: deduped.length - wildland.length,
+    volcanic_count: volcanic.length,
+    volcanic_hotspots: volcanic,   // counting only — never scored
     health: 'ok',
     sensors_used: sensorsUsed,
   };
@@ -2433,6 +2441,7 @@ function buildIslandResult(
   const { cells: grid, stepUsed } = buildGrid(spec.bbox, spec.step);
 
   let noneCount = 0;
+  const drivingHotspots = new Set<number>();
   const cells = grid.map((cell) => {
     const [lon, lat] = cell.centroid;
     const windSrc = nearestReading(lon, lat, windReadings);
@@ -2460,14 +2469,18 @@ function buildIslandResult(
       };
     }
 
-    // Nearest hotspot by great-circle distance.
+    // Nearest hotspot by great-circle distance. `firms.hotspots` is WILDLAND
+    // ONLY — volcanic detections never enter this loop.
     let nearestKm: number | null = null;
     let nearestBearing = 0;
-    for (const h of firms.hotspots) {
+    let nearestIdx = -1;
+    for (let hi = 0; hi < firms.hotspots.length; hi++) {
+      const h = firms.hotspots[hi];
       const km = haversineKm(lon, lat, h.lon, h.lat);
       if (nearestKm === null || km < nearestKm) {
         nearestKm = km;
         nearestBearing = bearingDeg(h.lon, h.lat, lon, lat);
+        nearestIdx = hi;
       }
     }
 
@@ -2480,6 +2493,12 @@ function buildIslandResult(
     const score = clamp01(proximityTerm(effectiveKm));
     const band = bandFor(score);
     if (band === 'NONE') noneCount++;
+    // ATTRIBUTION, not partition: record which hotspot actually produced shading
+    // on THIS island. A hotspot within the 20 km radius of two islands (Maui W ↔
+    // Lānaʻi E is 4.7 km) is legitimately counted by both, so per-island counts
+    // can sum to MORE than the statewide total. That is correct — hence the copy
+    // says "affecting <island>", never "on <island>".
+    else if (nearestIdx >= 0) drivingHotspots.add(nearestIdx);
 
     return {
       cell_id: cell.cell_id,
@@ -2510,6 +2529,17 @@ function buildIslandResult(
     label: spec.label,
     grid: { step_deg: stepUsed, cell_count: grid.length, bbox: spec.bbox },
     none_cell_count: noneCount,
+    // Wildland detections DRIVING this island's shading — an attribution, not a
+    // partition (see the note in the cell loop). Sums across islands may exceed
+    // the top-level statewide hotspot_count.
+    hotspot_count: drivingHotspots.size,
+    // Volcanic detections INSIDE this island's bbox. Different definition on
+    // purpose: volcanic hotspots are excluded from scoring, so they drive no
+    // cells and "driving" is undefined for them. Bbox membership is the only
+    // meaningful attribution.
+    volcanic_hotspot_count: firms.volcanic_hotspots.filter(
+      (h) => h.lon >= spec.bbox[0] && h.lon <= spec.bbox[2] && h.lat >= spec.bbox[1] && h.lat <= spec.bbox[3],
+    ).length,
     degraded_inputs: degradedInputs,
     stations_used: nws.readings.map((r) => ({
       id: r.station_id,
@@ -2553,7 +2583,7 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
   const firms: FirmsIngest =
     firmsSettled.status === 'fulfilled'
       ? firmsSettled.value
-      : { hotspots: [], volcanic_count: 0, health: 'degraded', sensors_used: [] };
+      : { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'degraded', sensors_used: [] };
   const nwsAll: NwsConditions =
     nwsSettled.status === 'fulfilled' ? nwsSettled.value : { readings: [], health: 'degraded' };
 
@@ -2580,10 +2610,15 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
         ? r.value
         : {
             // Island-level failure is still a valid, renderable island entry.
+            // Shape must match the success case field-for-field — this literal
+            // is not type-checked against buildIslandResult's return, so a
+            // missing key here would surface as `undefined` in the client.
             island: targets[i].key,
             label: targets[i].label,
             grid: { step_deg: targets[i].step, cell_count: 0, bbox: targets[i].bbox },
             none_cell_count: 0,
+            hotspot_count: 0,
+            volcanic_hotspot_count: 0,
             degraded_inputs: ['wind', 'humidity'],
             stations_used: [],
             cells: [],
