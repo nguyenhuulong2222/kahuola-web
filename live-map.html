@@ -1622,6 +1622,74 @@
       font-size: 10px !important;
     }
 
+    /* On-map legend for the fire-spread estimate. The side panel explains the
+       shading, but the panel collapses and is hidden entirely in mobile
+       fullscreen — the meaning has to travel with the map itself, or a wide
+       magenta wash reads as "this area is on fire". Sits under the zoom
+       control; chrome matches .maplibregl-ctrl-group / -scale. */
+    .fd-legend {
+      position: absolute;
+      top: calc(160px + var(--safe-top));
+      left: 12px;
+      z-index: 20;
+      max-width: 190px;
+      padding: 7px 9px;
+      background: rgba(20, 20, 20, .90);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .26);
+      pointer-events: none;
+    }
+
+    .fd-legend[hidden] {
+      display: none;
+    }
+
+    .fd-legend-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .fd-legend-scale {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-bottom: 5px;
+    }
+
+    .fd-legend-sw {
+      width: 20px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .fd-legend-ends {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .fd-legend-note {
+      font-size: 9.5px;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+
+    @media (max-width:980px) {
+      .fd-legend {
+        top: calc(154px + var(--safe-top));
+        left: 10px;
+        max-width: 168px;
+      }
+    }
+
     .maplibregl-ctrl-attrib a {
       color: var(--text-dim) !important;
     }
@@ -2048,6 +2116,26 @@
     <div id="map-wrap">
       <div id="map" role="main" aria-label="Hawaiʻi wildfire detection map"></div>
 
+      <!-- Fire-spread legend, on the map itself so the meaning survives a
+           collapsed panel / mobile fullscreen. Shown only when cells are
+           actually shaded AND the layer is on. Not inside #panel-template, so
+           its id is NOT cloned — plain getElementById works. -->
+      <div id="fire-danger-map-legend" class="fd-legend" hidden aria-hidden="true">
+        <div class="fd-legend-title" data-i18n="map.fire_danger_maplegend_title">Fire spread concern</div>
+        <div class="fd-legend-scale">
+          <span class="fd-legend-sw" style="background:#f48fb1"></span>
+          <span class="fd-legend-sw" style="background:#f06292"></span>
+          <span class="fd-legend-sw" style="background:#e91e63"></span>
+          <span class="fd-legend-sw" style="background:#b0003a"></span>
+        </div>
+        <div class="fd-legend-ends">
+          <span data-i18n="map.fire_danger_band_low">Low</span>
+          <span data-i18n="map.fire_danger_band_extreme">Extreme</span>
+        </div>
+        <div class="fd-legend-note" data-i18n="map.fire_danger_maplegend_note">Estimate. Shaded areas are not
+          burning.</div>
+      </div>
+
       <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
         <div class="panel-head" id="panel-head-desktop">Fire Signals · Hawaiʻi</div>
         <div class="fire-scope-hint" id="fire-scope-hint-desktop">Showing satellite fire detections for Hawaiʻi only.
@@ -2392,6 +2480,7 @@
           </div>
           <div class="priority-note" id="fire-danger-note" data-i18n="map.fire_danger_note_init">Where a fire could
             spread next, based on wind and dryness. Tap to show or hide the map layer.</div>
+          <div class="priority-subnote" id="fire-danger-meaning"></div>
           <div class="priority-subnote" id="fire-danger-legend" hidden></div>
           <div class="priority-subnote" id="fire-danger-coverage"></div>
           <div class="priority-subnote" id="fire-danger-stations"></div>
@@ -3941,10 +4030,23 @@
     }
     function updateFireDangerSource(features) { const s = map.getSource("fire-danger"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function syncFireDangerLayerVisibility() { setLayerVisibility("fire-danger-fill", fireDangerVisible); }
+    // The on-map legend must never outlive the shading it explains — a legend
+    // over an empty map is its own kind of false signal. Not inside
+    // panel-template, so the id is not suffixed.
+    let fireDangerHasShading = false;
+    function syncFireDangerMapLegend(hasShading) {
+      if (typeof hasShading === "boolean") fireDangerHasShading = hasShading;
+      const el = document.getElementById("fire-danger-map-legend");
+      if (!el) return;
+      const show = fireDangerHasShading && fireDangerVisible;
+      el.hidden = !show;
+      el.setAttribute("aria-hidden", show ? "false" : "true");
+    }
     function toggleFireDangerLayer() {
       fireDangerVisible = !fireDangerVisible;
       getState("fireDanger").visible = fireDangerVisible;
       syncFireDangerLayerVisibility();
+      syncFireDangerMapLegend();
       updateFireDangerStatusUI(getState("fireDanger"));
     }
     // Writes to both cloned copies (panel-template is mounted twice with
@@ -3975,10 +4077,12 @@
           _t("map.fire_danger_unavailable") ||
           "Fire spread estimate is temporarily unavailable. The map layer is not shown. For official fire information, follow HIEMA, County Emergency Management, and NWS.");
         setFireDangerHidden("fire-danger-legend", true);
+        setFireDangerText("fire-danger-meaning", "");
         setFireDangerText("fire-danger-coverage", "");
         setFireDangerText("fire-danger-stations", "");
         setFireDangerText("fire-danger-latency", "");
         setFireDangerText("fire-danger-disclaimer", "");
+        syncFireDangerMapLegend(false);
         return;
       }
 
@@ -3990,6 +4094,7 @@
           _t("map.fire_danger_degraded") ||
           "Satellite fire detection is not available right now, so spread concern cannot be estimated. This does not mean there is no fire.");
         setFireDangerHidden("fire-danger-legend", true);
+        setFireDangerText("fire-danger-meaning", "");
       } else if (feats.length === 0) {
         // Genuinely calm: checked, and nothing elevated. The safe, expected baseline.
         updateModuleBadge("fire-danger", _t("map.s_clear") || "Clear", "status-none");
@@ -3997,18 +4102,35 @@
           (_t("map.fire_danger_clear") ||
             "No elevated fire spread concern across the Hawaiian Islands right now. The map layer stays clear until there is something to show.") + offSuffix);
         setFireDangerHidden("fire-danger-legend", true);
+        setFireDangerText("fire-danger-meaning", "");
       } else {
         let top = "LOW";
         for (const f of feats) {
           if (FIRE_DANGER_BANDS.indexOf(f.properties.danger_level) > FIRE_DANGER_BANDS.indexOf(top)) top = f.properties.danger_level;
         }
         const topLabel = _t(`map.fire_danger_band_${top.toLowerCase()}`) || top;
-        updateModuleBadge("fire-danger",
-          _tmpl("map.s_fire_danger_n", { n: feats.length }) || `${feats.length} \xb7 ${topLabel}`,
+        // Badge carries SEVERITY, not the shaded-cell count. "347 areas" invites
+        // the reading "347 places are on fire" when the real cause may be a
+        // single detection — the grid is our internal 2 km mesh, not something
+        // a resident thinks in.
+        updateModuleBadge("fire-danger", topLabel,
           top === "EXTREME" || top === "HIGH" ? "status-detected" : "status-none");
+        // Lead with the CAUSE. The number that matters is how many fires were
+        // detected; the shaded area is a consequence of distance/wind/dryness.
+        const hs = Number(meta.hotspot_count);
         setFireDangerText("fire-danger-note",
-          (_tmpl("map.fire_danger_active", { n: feats.length, band: topLabel }) ||
-            `${feats.length} area(s) with possible fire spread. Highest concern: ${topLabel}. Tap a shaded area on the map for details.`) + offSuffix);
+          (isFinite(hs)
+            ? (_tmpl("map.fire_danger_active", { n: hs, band: topLabel }) ||
+              `${hs} satellite fire detection(s) in Hawaiʻi. Shaded zones show where fire could spread from them — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`)
+            : (_t("map.fire_danger_note_init") || "Where a fire could spread next, based on wind and dryness.")
+          ) + offSuffix);
+        // What the shading IS and IS NOT — stated on first read, not buried.
+        // A wide magenta wash from one detection is by design (the estimate
+        // reaches ~20 km), and that has to be said before someone reads it as
+        // an evacuation footprint.
+        setFireDangerText("fire-danger-meaning",
+          _t("map.fire_danger_meaning") ||
+          "Shaded areas are not burning, are not evacuation zones, and are not official. Shading can reach about 20 km from a detection, so a single fire can shade a wide area.");
         // Legend built from a fixed local table — no remote values interpolated.
         ["desktop", "mobile"].forEach((sfx) => {
           const el = document.getElementById(`fire-danger-legend-${sfx}`);
@@ -4019,6 +4141,9 @@
           ).join("");
         });
       }
+      // On-map legend tracks the drawn overlay exactly: shown only when cells
+      // are actually shaded AND the layer is switched on.
+      syncFireDangerMapLegend(feats.length > 0);
 
       // Coverage: which islands are actually estimated, and which are running
       // without wind/humidity. Named plainly rather than implying uniform cover.
