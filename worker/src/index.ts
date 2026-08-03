@@ -1095,6 +1095,7 @@ export default {
       if (path === '/api/hazards/landslide' || path === '/hazards/landslide') return handleLandslide(url, cors);
       if (path === '/api/hazards/smoke' || path === '/hazards/smoke') return handleSmoke(url, cors);
       if (path === '/api/hazards/perimeters' || path === '/hazards/perimeters') return handlePerimeters(url, cors);
+      if (path === '/api/hazards/fire-danger' || path === '/hazards/fire-danger') return handleFireDanger(url, env, cors);
       // Read-only aggregated summary for the embeddable widget + insight script.
       // Reuses caches populated by smoke/perimeters/firms handlers; no new
       // upstream, no write to primary snapshot keys. Invariant II/III: always
@@ -1526,6 +1527,11 @@ async function handlePushNow(url: URL, env: Env, cors: CorsHeaders): Promise<Res
 // canonical param; `scope` is kept as a legacy alias.
 const REGION_BBOXES: Record<string, [number, number, number, number]> = {
   hawaii: [-161.2, 18.5, -154.5, 22.5],
+  // Maui MVP window for the fire-spread danger layer. Additive: before this
+  // existed, `region=maui` fell through to `hawaii` at resolveFirmsBBox().
+  // Deliberately does NOT change the `hawaii` entry — SUMMARY_FIRMS_KEY is
+  // built from it and any drift there silently zeroes the summary fire count.
+  maui: [-156.75, 20.45, -155.95, 21.05],
   west: [-125.0, 32.0, -104.0, 49.0],
   usa: [-125.0, 24.0, -66.5, 49.5],
 };
@@ -1731,6 +1737,638 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: s
   }
 
   return { type: 'FeatureCollection', features };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIRE-SPREAD DANGER LAYER
+//   Stage 0 — multi-sensor VIIRS 375 m ingest  (fetchFirmsMultiSensor)
+//   Stage 1 — transparent danger heuristic     (handleFireDanger)
+//
+// Answers "where is the fire going", not "where is the fire". Pure TypeScript:
+// no ML, no raster. Every constant below is deliberately visible and commented
+// so the output is auditable rather than oracular.
+//
+// Scope notes, so future edits do not silently break neighbours:
+//   · No MODIS on this path (VIIRS 375 m only). The MODIS cross-reference in
+//     handleFirmsHotspots is a DIFFERENT contract and is left untouched.
+//   · Nothing here mutates handleFirmsHotspots, its default dataset, or
+//     SUMMARY_FIRMS_KEY. Cache keys are separately namespaced (see below).
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Sensor priority is load-bearing. Suomi NPP end-of-life is anticipated on or
+// before Oct 2026 — it may be dark during the Nov 2026 competition window — so
+// it is a FALLBACK, never a primary. NOAA-20 and NOAA-21 carry this layer.
+const FIRE_DANGER_SENSORS = [
+  'VIIRS_NOAA20_NRT',
+  'VIIRS_NOAA21_NRT',
+  'VIIRS_SNPP_NRT',
+] as const;
+
+// FIRMS direct-broadcast cadence for Hawaiʻi is ~20-30 min, so a 10 min TTL
+// never serves meaningfully stale data and keeps us far under the 5000-per-
+// 10-min rate limit (3 requests per cold cache period).
+const FIRE_DANGER_FIRMS_TTL = 600;
+
+type FirmsHotspot = {
+  lat: number;
+  lon: number;
+  frp: number;
+  acq_date: string;
+  acq_time: string;
+  confidence: string;
+  satellite: string;
+  version: string;
+  sensor: string;
+};
+
+type FirmsIngest = {
+  hotspots: FirmsHotspot[];
+  health: 'ok' | 'degraded' | 'unconfigured';
+  sensors_used: string[];
+};
+
+// Namespaced UNDER /fire-danger/ on purpose. firmsCacheKey() addresses the
+// GeoJSON written by handleFirmsHotspots and read back via SUMMARY_FIRMS_KEY;
+// for dataset=VIIRS_SNPP_NRT + hawaii + 1day the two would be byte-identical.
+// Storing raw CSV there would hand the summary reader a JSON.parse failure.
+function fireDangerFirmsCacheKey(sensor: string, bbox: readonly number[], days: number): string {
+  return `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/fire-danger/${sensor}/${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}/${days}`;
+}
+
+// Parse one FIRMS CSV payload. Invariant III: any row that fails validation is
+// DROPPED — never coerced, never defaulted, never inferred. Pure, never throws.
+function parseFirmsCsv(csv: string, sensor: string): FirmsHotspot[] {
+  const out: FirmsHotspot[] = [];
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return out;
+
+  const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+  const at = (name: string) => headers.indexOf(name);
+  const iLat = at('latitude');
+  const iLon = at('longitude');
+  // Unrecognised schema (e.g. an HTML error body that still parsed as text) —
+  // drop the whole payload rather than guess at column positions.
+  if (iLat < 0 || iLon < 0) return out;
+
+  const iFrp = at('frp');
+  const iTi4 = at('bright_ti4');
+  const iDate = at('acq_date');
+  const iTime = at('acq_time');
+  const iConf = at('confidence');
+  const iSat = at('satellite');
+  const iVer = at('version');
+
+  for (let i = 1; i < lines.length; i++) {
+    const v = lines[i].split(',').map((s) => s.trim().replace(/^"|"$/g, ''));
+    if (v.length < headers.length) continue;              // truncated row → drop
+
+    const lat = parseFloat(v[iLat] ?? '');
+    const lon = parseFloat(v[iLon] ?? '');
+    if (!isFinite(lat) || !isFinite(lon)) continue;       // non-numeric → drop
+    if (lat < -90 || lat > 90) continue;                  // out of range → drop
+    if (lon < -180 || lon > 180) continue;                // out of range → drop
+
+    // Radiative power: prefer frp, fall back to bright_ti4 as a proxy. A
+    // non-numeric power value is a parse failure, NOT a zero-power fire.
+    const rawPower = iFrp >= 0 ? v[iFrp] : iTi4 >= 0 ? v[iTi4] : '';
+    const frp = parseFloat(rawPower ?? '');
+    if (!isFinite(frp)) continue;                         // → drop
+
+    out.push({
+      lat,
+      lon,
+      frp,
+      acq_date: iDate >= 0 ? v[iDate] ?? '' : '',
+      acq_time: iTime >= 0 ? v[iTime] ?? '' : '',
+      confidence: iConf >= 0 ? v[iConf] ?? '' : '',
+      satellite: iSat >= 0 ? v[iSat] ?? '' : '',
+      version: iVer >= 0 ? v[iVer] ?? '' : '',            // carries the RT/URT/NRT tag
+      sensor,
+    });
+  }
+  return out;
+}
+
+// Collapse the same physical fire seen by multiple satellites into one record.
+// 0.005° ≈ 550 m ≈ 1.5 VIIRS pixels — tight enough to keep genuinely separate
+// ignitions apart, loose enough to absorb cross-sensor geolocation jitter.
+// Clustered by position + date + overpass hour.
+function dedupeHotspots(hotspots: FirmsHotspot[]): FirmsHotspot[] {
+  const seen = new Set<string>();
+  const out: FirmsHotspot[] = [];
+  for (const h of hotspots) {
+    const hour = (h.acq_time || '0000').padStart(4, '0').slice(0, 2);
+    const key = `${Math.round(h.lat / 0.005)},${Math.round(h.lon / 0.005)},${h.acq_date},${hour}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(h);
+  }
+  return out;
+}
+
+// Stage 0. Returns a health flag — NEVER a Response, never a throw. This is
+// what keeps the danger endpoint Invariant-II safe where handleFirmsHotspots
+// would have returned 503/502/504 (that handler's public contract is its own
+// and is deliberately not changed here).
+async function fetchFirmsMultiSensor(
+  env: Env,
+  bbox: readonly [number, number, number, number],
+  days = 1,
+): Promise<FirmsIngest> {
+  if (!env.NASA_FIRMS_MAP_KEY) {
+    // Missing secret degrades the layer; it does not fail the request.
+    return { hotspots: [], health: 'unconfigured', sensors_used: [] };
+  }
+
+  const [west, south, east, north] = bbox;
+  const cache = caches.default;
+
+  // One request per sensor, in parallel. 3 requests is trivial against the
+  // 5000/10-min budget, and allSettled means a dead sensor never blocks a live
+  // one — the whole point of demoting SNPP to fallback.
+  const settled = await Promise.allSettled(
+    FIRE_DANGER_SENSORS.map(async (sensor) => {
+      const cacheReq = new Request(fireDangerFirmsCacheKey(sensor, bbox, days));
+      const cached = await cache.match(cacheReq);
+      if (cached) return { sensor, csv: await cached.text() };
+
+      // MAP_KEY appears ONLY in this upstream URL — never in a cache key,
+      // never in a log line, never in the response envelope.
+      const upstream =
+        `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}` +
+        `/${sensor}/${west},${south},${east},${north}/${days}`;
+      const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
+      if (!res.ok) throw new Error(`upstream ${res.status}`);
+      const csv = await res.text();
+
+      await cache.put(
+        cacheReq,
+        new Response(csv, {
+          headers: {
+            'Content-Type': 'text/csv',
+            'Cache-Control': `public, max-age=${FIRE_DANGER_FIRMS_TTL}`,
+          },
+        }),
+      );
+      return { sensor, csv };
+    }),
+  );
+
+  const merged: FirmsHotspot[] = [];
+  const sensorsUsed: string[] = [];
+  settled.forEach((r, i) => {
+    const sensor = FIRE_DANGER_SENSORS[i];
+    if (r.status !== 'fulfilled') {
+      // Structured, key-free drop log.
+      console.warn(JSON.stringify({ layer: 'fire-danger', stage: 'firms', sensor, dropped: true }));
+      return;
+    }
+    sensorsUsed.push(sensor);
+    merged.push(...parseFirmsCsv(r.value.csv, sensor));
+  });
+
+  // Every sensor failed → degraded. This is NOT the same as "zero hotspots".
+  if (sensorsUsed.length === 0) {
+    return { hotspots: [], health: 'degraded', sensors_used: [] };
+  }
+  return { hotspots: dedupeHotspots(merged), health: 'ok', sensors_used: sensorsUsed };
+}
+
+// ── NWS surface conditions (wind vector + relative humidity) ────────────────
+// Nothing in the Worker supplied numeric wind/RH before this: handleFireWeather
+// fetches Red Flag / Fire Weather Watch ALERT TEXT only.
+//
+// Station choice matters. Kahului (PHOG) sits in the central valley and does
+// NOT represent West Maui leeward wind — the Lahaina failure mode — so the
+// leeward/West stations are first-class inputs, not garnish. Coordinates and
+// liveness verified against api.weather.gov on 2026-08-02.
+type MauiStation = { id: string; name: string; lon: number; lat: number };
+
+const MAUI_STATIONS: readonly MauiStation[] = [
+  { id: 'PHOG',  name: 'Kahului Airport',            lon: -156.43694, lat: 20.89250 },
+  { id: '092HE', name: 'MECO Upper Kapalua Airport', lon: -156.66603, lat: 20.95861 },
+  { id: '036HI', name: 'Lahaina WTP',                lon: -156.65490, lat: 20.89070 },
+  { id: '023HI', name: 'Hamoa (East Maui)',          lon: -156.00240, lat: 20.71950 },
+];
+
+// An observation older than this is treated as ABSENT, not as current
+// conditions. Observed in the wild on 2026-08-02: several MECO stations publish
+// a fresh timestamp with null wind/RH, and Lahaina WTP had stopped updating ~9h
+// earlier while still answering 200. Both are dropped rather than trusted.
+const MAX_OBS_AGE_SECONDS = 3 * 3600;
+
+type StationReading = {
+  station_id: string;
+  station_name: string;
+  lon: number;
+  lat: number;
+  wind_mph: number | null;
+  wind_dir_deg: number | null;
+  rh_pct: number | null;
+  observed_at: string;
+};
+
+type NwsConditions = { readings: StationReading[]; health: 'ok' | 'degraded' };
+
+// NWS returns SI units with an explicit unitCode. Convert what we recognise;
+// drop what we do not. Guessing at an unknown unit would fabricate a wind speed.
+function windToMph(value: number, unitCode: string): number | null {
+  if (unitCode.includes('km_h-1')) return value * 0.621371;
+  if (unitCode.includes('m_s-1')) return value * 2.236936;
+  if (unitCode.includes('mi_h-1')) return value;
+  return null;
+}
+
+function readQuantity(q: unknown): { value: number; unitCode: string } | null {
+  if (!q || typeof q !== 'object') return null;
+  const o = q as { value?: unknown; unitCode?: unknown };
+  if (typeof o.value !== 'number' || !isFinite(o.value)) return null;
+  return { value: o.value, unitCode: typeof o.unitCode === 'string' ? o.unitCode : '' };
+}
+
+// Fetch every station in parallel. Never throws; a total wipeout degrades the
+// wind/humidity terms to neutral rather than failing the request.
+async function fetchNwsConditions(nowMs: number): Promise<NwsConditions> {
+  const settled = await Promise.allSettled(
+    MAUI_STATIONS.map(async (st) => {
+      const res = await fetch(`https://api.weather.gov/stations/${st.id}/observations/latest`, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+        headers: { 'User-Agent': 'KahuOla/1.0 kahuola.org', Accept: 'application/geo+json' },
+      });
+      if (!res.ok) throw new Error(`obs ${res.status}`);
+      const body = (await res.json()) as { properties?: Record<string, unknown> };
+      const p = body?.properties ?? {};
+
+      const ts = typeof p.timestamp === 'string' ? p.timestamp : '';
+      const obsMs = ts ? Date.parse(ts) : NaN;
+      if (!isFinite(obsMs)) throw new Error('no timestamp');
+      const ageSeconds = (nowMs - obsMs) / 1000;
+      // Stale observation → treat as absent. Never present old air as current.
+      if (ageSeconds > MAX_OBS_AGE_SECONDS || ageSeconds < -600) throw new Error('stale');
+
+      const ws = readQuantity(p.windSpeed);
+      const wd = readQuantity(p.windDirection);
+      const rh = readQuantity(p.relativeHumidity);
+
+      const windMph = ws ? windToMph(ws.value, ws.unitCode) : null;
+      // Direction is required for the downwind test — speed alone is useless
+      // here, so a reading without a valid bearing contributes no wind at all.
+      const windDir =
+        wd && wd.value >= 0 && wd.value <= 360 ? ((wd.value % 360) + 360) % 360 : null;
+      const rhPct =
+        rh && rh.unitCode.includes('percent') && rh.value >= 0 && rh.value <= 100
+          ? rh.value
+          : null;
+
+      const reading: StationReading = {
+        station_id: st.id,
+        station_name: st.name,
+        lon: st.lon,
+        lat: st.lat,
+        wind_mph: windMph !== null && windDir !== null ? windMph : null,
+        wind_dir_deg: windMph !== null && windDir !== null ? windDir : null,
+        rh_pct: rhPct,
+        observed_at: ts,
+      };
+      // A station with neither usable wind nor usable RH carries no signal.
+      if (reading.wind_mph === null && reading.rh_pct === null) throw new Error('no usable fields');
+      return reading;
+    }),
+  );
+
+  const readings: StationReading[] = [];
+  settled.forEach((r, i) => {
+    if (r.status === 'fulfilled') readings.push(r.value);
+    else {
+      console.warn(
+        JSON.stringify({ layer: 'fire-danger', stage: 'nws', station: MAUI_STATIONS[i].id, dropped: true }),
+      );
+    }
+  });
+
+  return { readings, health: readings.length > 0 ? 'ok' : 'degraded' };
+}
+
+// ── Geometry ───────────────────────────────────────────────────────────────
+const EARTH_RADIUS_KM = 6371.0088;
+const toRad = (deg: number) => (deg * Math.PI) / 180;
+const toDeg = (rad: number) => (rad * 180) / Math.PI;
+
+function haversineKm(lon1: number, lat1: number, lon2: number, lat2: number): number {
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+// Initial great-circle bearing FROM point 1 TO point 2, degrees clockwise from
+// true north, normalised to [0,360).
+function bearingDeg(lon1: number, lat1: number, lon2: number, lat2: number): number {
+  const p1 = toRad(lat1);
+  const p2 = toRad(lat2);
+  const dl = toRad(lon2 - lon1);
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+// ── Grid ───────────────────────────────────────────────────────────────────
+// 0.02° ≈ 2.2 km N-S, ≈ 2.1 km E-W at 20.8°N. Maui yields 40 × 30 = 1200 cells.
+const FIRE_DANGER_GRID_STEP_DEG = 0.02;
+const FIRE_DANGER_MAX_CELLS = 1500;
+
+type GridCell = { cell_id: string; centroid: [number, number] };
+
+// Coarsens the step rather than truncating the grid, so a larger region returns
+// full coverage at lower resolution instead of a silently clipped map.
+function buildGrid(
+  bbox: readonly [number, number, number, number],
+  stepDeg: number,
+): { cells: GridCell[]; stepUsed: number } {
+  const [west, south, east, north] = bbox;
+  let step = stepDeg;
+  let cols = Math.max(1, Math.round((east - west) / step));
+  let rows = Math.max(1, Math.round((north - south) / step));
+
+  while (cols * rows > FIRE_DANGER_MAX_CELLS) {
+    step *= 1.25;
+    cols = Math.max(1, Math.round((east - west) / step));
+    rows = Math.max(1, Math.round((north - south) / step));
+  }
+
+  const cells: GridCell[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      cells.push({
+        cell_id: `r${r}c${c}`,
+        centroid: [
+          Number((west + (c + 0.5) * step).toFixed(5)),
+          Number((south + (r + 0.5) * step).toFixed(5)),
+        ],
+      });
+    }
+  }
+  return { cells, stepUsed: Number(step.toFixed(5)) };
+}
+
+// ── Heuristic constants — few, visible, and tuned for Hawaiʻi grass fire ────
+// Proximity: a VIIRS pixel is 375 m, so ≤2 km means the cell is effectively at
+// the fire edge. 20 km is about the far end of a wind-driven Hawaiʻi grass-fire
+// run within one detection cycle; past it proximity carries no signal.
+const PROX_FULL_KM = 2;
+const PROX_ZERO_KM = 20;
+
+// Downwind: a cell counts as downwind when the hotspot→cell bearing falls
+// within ±45° of the direction the wind is blowing TOWARD.
+const DOWNWIND_HALF_ANGLE_DEG = 45;
+// Boost scales with speed then saturates — 40 mph is not four times as
+// dangerous as 10 mph in a term that already multiplies proximity.
+const WIND_BOOST_MAX = 1.6;
+const WIND_SATURATION_MPH = 35;
+
+// Dry is dangerous. Neutral at/above 60% RH, maximum at/below 20% RH — roughly
+// Hawaiʻi leeward Red-Flag territory.
+const RH_NEUTRAL_PCT = 60;
+const RH_CRITICAL_PCT = 20;
+const HUMIDITY_BOOST_MAX = 1.3;
+
+// COMPOSITION — why the boosts act on DISTANCE, not on the score (Stage 1.1).
+// The obvious form, score = clamp01(proximity × wind × humidity), multiplies a
+// [0,1] proximity base by two >1 boosts, so the product clamps whenever
+//     proximity ≥ 1 / (WIND_BOOST_MAX × HUMIDITY_BOOST_MAX) = 1/2.08 = 0.481
+// — every cell within ~11.3 km of a hotspot under dry, downwind conditions.
+// Measured 2026-08-02: that pinned upwind AND downwind cells alike to EXTREME
+// across the whole near field, which both inflates severity and erases the
+// directional signal this layer exists to provide.
+//
+// Instead the boosts shorten the EFFECTIVE distance:
+//     effective_km = km / (windMult × humidityMult)
+// A downwind, dry cell behaves as though the fire were nearer, which is also
+// the physically honest reading. Neutral inputs (both multipliers 1.0, or
+// null wind/RH) leave effective_km === km exactly, so a missing input can
+// never manufacture danger. The result cannot saturate: proximity stays a
+// strictly decreasing function of distance at every range.
+
+const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+
+function proximityTerm(km: number | null): number {
+  if (km === null || !isFinite(km)) return 0;
+  if (km <= PROX_FULL_KM) return 1;
+  if (km >= PROX_ZERO_KM) return 0;
+  return 1 - (km - PROX_FULL_KM) / (PROX_ZERO_KM - PROX_FULL_KM);
+}
+
+// NWS reports the direction wind comes FROM, so the direction it blows TOWARD
+// is +180°. Getting this backwards would point the danger upwind — the single
+// easiest way to make this layer actively harmful.
+function windTerm(
+  hotspotToCellBearing: number,
+  windDirDeg: number | null,
+  windMph: number | null,
+): { term: number; downwind: boolean } {
+  if (windDirDeg === null || windMph === null || windMph <= 0) {
+    return { term: 1, downwind: false };
+  }
+  const blowingToward = (windDirDeg + 180) % 360;
+  let delta = Math.abs(hotspotToCellBearing - blowingToward);
+  if (delta > 180) delta = 360 - delta;
+  if (delta > DOWNWIND_HALF_ANGLE_DEG) return { term: 1, downwind: false };
+
+  const alignment = 1 - delta / DOWNWIND_HALF_ANGLE_DEG;   // 1 dead downwind → 0 at the edge
+  const speedFactor = Math.min(1, windMph / WIND_SATURATION_MPH);
+  return { term: 1 + (WIND_BOOST_MAX - 1) * alignment * speedFactor, downwind: true };
+}
+
+function humidityTerm(rhPct: number | null): number {
+  if (rhPct === null) return 1;
+  if (rhPct >= RH_NEUTRAL_PCT) return 1;
+  const dryness = Math.min(1, (RH_NEUTRAL_PCT - rhPct) / (RH_NEUTRAL_PCT - RH_CRITICAL_PCT));
+  return 1 + (HUMIDITY_BOOST_MAX - 1) * dryness;
+}
+
+function bandFor(score: number): string {
+  if (score <= 0) return 'NONE';
+  if (score < 0.25) return 'LOW';
+  if (score < 0.5) return 'MODERATE';
+  if (score < 0.75) return 'HIGH';
+  return 'EXTREME';
+}
+
+// Nearest station that actually carries the field we need. Wind and RH are
+// resolved independently so a wind-only station still contributes wind.
+function nearestReading(
+  lon: number,
+  lat: number,
+  readings: StationReading[],
+): StationReading | null {
+  let best: StationReading | null = null;
+  let bestKm = Infinity;
+  for (const r of readings) {
+    const km = haversineKm(lon, lat, r.lon, r.lat);
+    if (km < bestKm) {
+      bestKm = km;
+      best = r;
+    }
+  }
+  return best;
+}
+
+const FIRE_DANGER_STALE_AFTER_SECONDS = 1800;
+
+const FIRE_DANGER_LATENCY_NOTE =
+  'FIRMS detections for Hawaiʻi arrive via the Honolulu real-time direct-broadcast ' +
+  'station, typically 20–30 minutes after satellite overpass. Not near-instant detection.';
+
+const FIRE_DANGER_DISCLAIMER =
+  'Estimated fire-spread concern — model output for situational awareness only, not an ' +
+  'official fire-behavior forecast. Follow HIEMA, County Emergency Management, and NWS ' +
+  'for official guidance.';
+
+const FIRE_DANGER_CONDITIONS_NOTE =
+  'Wind and humidity are point observations from the nearest NWS/MECO station, not ' +
+  'per-cell measurements. Terrain between a station and a cell can change conditions ' +
+  'substantially — West Maui leeward wind in particular differs from Kahului.';
+
+// Stage 1. ALWAYS HTTP 200 with a valid envelope (Invariant II).
+// Invariant IV: consumes no user location, computes nothing per-user, logs and
+// stores nothing identifying. The grid is fixed, public, and identical for
+// every caller.
+async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
+  const nowMs = Date.now();
+  const generatedAt = new Date(nowMs).toISOString();
+
+  const requested = (url.searchParams.get('region') || 'maui').toLowerCase();
+  const region = REGION_BBOXES[requested] ? requested : 'maui';
+  const bbox = REGION_BBOXES[region];
+
+  // Neither helper rejects by design; allSettled is belt-and-braces so a
+  // surprise throw in one upstream can never take out the other.
+  const [firmsSettled, nwsSettled] = await Promise.allSettled([
+    fetchFirmsMultiSensor(env, bbox, 1),
+    fetchNwsConditions(nowMs),
+  ]);
+
+  const firms: FirmsIngest =
+    firmsSettled.status === 'fulfilled'
+      ? firmsSettled.value
+      : { hotspots: [], health: 'degraded', sensors_used: [] };
+  const nws: NwsConditions =
+    nwsSettled.status === 'fulfilled' ? nwsSettled.value : { readings: [], health: 'degraded' };
+
+  // ── FAIL-CLOSED CORE (Invariant III) ─────────────────────────────────────
+  // The band is derived from INGEST HEALTH, never from the hotspot count.
+  // "We could not look" and "we looked and it is quiet" are different answers
+  // and must never collapse into the same one:
+  //     health !== 'ok'                 → insufficient_data + DEGRADED
+  //     health === 'ok' && 0 hotspots   → NONE  (a real, safe observation)
+  const firmsOk = firms.health === 'ok';
+
+  const windReadings = nws.readings.filter((r) => r.wind_mph !== null && r.wind_dir_deg !== null);
+  const rhReadings = nws.readings.filter((r) => r.rh_pct !== null);
+
+  const degradedInputs: string[] = [];
+  if (windReadings.length === 0) degradedInputs.push('wind');
+  if (rhReadings.length === 0) degradedInputs.push('humidity');
+
+  const { cells: grid, stepUsed } = buildGrid(bbox, FIRE_DANGER_GRID_STEP_DEG);
+
+  const cells = grid.map((cell) => {
+    const [lon, lat] = cell.centroid;
+    const windSrc = nearestReading(lon, lat, windReadings);
+    const rhSrc = nearestReading(lon, lat, rhReadings);
+    const windMph = windSrc?.wind_mph ?? null;
+    const windDir = windSrc?.wind_dir_deg ?? null;
+    const rhPct = rhSrc?.rh_pct ?? null;
+
+    if (!firmsOk) {
+      // Detection unavailable → we cannot speak to fire proximity at all.
+      return {
+        cell_id: cell.cell_id,
+        centroid: cell.centroid,
+        danger_level: 'insufficient_data',
+        score: null,
+        reason: {
+          nearest_hotspot_km: null,
+          downwind: null,
+          wind_mph: windMph === null ? null : Number(windMph.toFixed(1)),
+          wind_dir_deg: windDir,
+          rh_pct: rhPct === null ? null : Number(rhPct.toFixed(1)),
+          wind_station: windSrc?.station_id ?? null,
+          rh_station: rhSrc?.station_id ?? null,
+        },
+      };
+    }
+
+    // Nearest hotspot by great-circle distance.
+    let nearestKm: number | null = null;
+    let nearestBearing = 0;
+    for (const h of firms.hotspots) {
+      const km = haversineKm(lon, lat, h.lon, h.lat);
+      if (nearestKm === null || km < nearestKm) {
+        nearestKm = km;
+        nearestBearing = bearingDeg(h.lon, h.lat, lon, lat);
+      }
+    }
+
+    const { term: wTerm, downwind } = windTerm(nearestBearing, windDir, windMph);
+    const hTerm = humidityTerm(rhPct);
+    // Boosts shorten the effective distance rather than inflating the score —
+    // see the COMPOSITION note above. Neutral multipliers are exactly 1.0, so
+    // effectiveKm === nearestKm when wind/RH are absent.
+    const effectiveKm = nearestKm === null ? null : nearestKm / (wTerm * hTerm);
+    const score = clamp01(proximityTerm(effectiveKm));
+
+    return {
+      cell_id: cell.cell_id,
+      centroid: cell.centroid,
+      danger_level: bandFor(score),
+      score: Number(score.toFixed(3)),
+      reason: {
+        nearest_hotspot_km: nearestKm === null ? null : Number(nearestKm.toFixed(2)),
+        // Wind/humidity-adjusted distance actually scored. Equals
+        // nearest_hotspot_km when both inputs are neutral or absent.
+        effective_km: effectiveKm === null ? null : Number(effectiveKm.toFixed(2)),
+        downwind: nearestKm === null ? false : downwind,
+        wind_mph: windMph === null ? null : Number(windMph.toFixed(1)),
+        wind_dir_deg: windDir,
+        rh_pct: rhPct === null ? null : Number(rhPct.toFixed(1)),
+        wind_station: windSrc?.station_id ?? null,
+        rh_station: rhSrc?.station_id ?? null,
+      },
+    };
+  });
+
+  const freshness = !firmsOk ? 'DEGRADED' : degradedInputs.length > 0 ? 'STALE_OK' : 'FRESH';
+
+  const body = {
+    generated_at: generatedAt,
+    stale_after_seconds: FIRE_DANGER_STALE_AFTER_SECONDS,
+    freshness,
+    region,
+    sensors_used: firms.sensors_used,
+    hotspot_count: firms.hotspots.length,
+    source_health: { firms: firms.health, nws: nws.health },
+    degraded_inputs: degradedInputs,
+    grid: { step_deg: stepUsed, cell_count: cells.length, bbox },
+    stations_used: nws.readings.map((r) => ({
+      id: r.station_id,
+      name: r.station_name,
+      observed_at: r.observed_at,
+      has_wind: r.wind_mph !== null,
+      has_humidity: r.rh_pct !== null,
+    })),
+    conditions_note: FIRE_DANGER_CONDITIONS_NOTE,
+    latency_note: FIRE_DANGER_LATENCY_NOTE,
+    disclaimer: FIRE_DANGER_DISCLAIMER,
+    cells,
+  };
+
+  return jsonResp(body, 200, {
+    ...cors,
+    'Cache-Control': firmsOk ? 'public, max-age=300' : 'no-store',
+  });
 }
 
 const WMS_UPSTREAMS: Record<string, { url: string; ttl: number; keySecret?: keyof Env; keyParam?: string }> = {
