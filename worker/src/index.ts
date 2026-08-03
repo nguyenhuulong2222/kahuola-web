@@ -1940,22 +1940,120 @@ async function fetchFirmsMultiSensor(
 //
 // Station choice matters. Kahului (PHOG) sits in the central valley and does
 // NOT represent West Maui leeward wind — the Lahaina failure mode — so the
-// leeward/West stations are first-class inputs, not garnish. Coordinates and
-// liveness verified against api.weather.gov on 2026-08-02.
-type MauiStation = { id: string; name: string; lon: number; lat: number };
+// leeward/West stations are first-class inputs, not garnish.
+//
+// P05c survey (2026-08-02): all 565 Hawaiʻi stations were paginated from
+// api.weather.gov and every station inside each island bbox was probed. Selection
+// is by GEOGRAPHIC ZONE per island, not by name recognition. Two findings drive
+// the shape below:
+//   · Airports are unreliable here. PHLI, PHKO, PHTO, PHMK, PHJR, PHHI and PHSF
+//     all served a FRESH timestamp with null wind/dir/RH. Only PHNL/PHNY/PHOG
+//     were usable. Airports are therefore extra members, never a sole source.
+//   · The HECO/HELCO/MECO mesonet (`nnnHE`) updates ~every 17 min with complete
+//     records, so it is the backbone of every island set.
+type NwsStation = { id: string; name: string; lon: number; lat: number };
+type IslandKey =
+  | 'kauai' | 'niihau' | 'oahu' | 'molokai'
+  | 'lanai' | 'maui' | 'kahoolawe' | 'hawaii';
 
-const MAUI_STATIONS: readonly MauiStation[] = [
-  { id: 'PHOG',  name: 'Kahului Airport',            lon: -156.43694, lat: 20.89250 },
-  { id: '092HE', name: 'MECO Upper Kapalua Airport', lon: -156.66603, lat: 20.95861 },
-  { id: '036HI', name: 'Lahaina WTP',                lon: -156.65490, lat: 20.89070 },
-  { id: '023HI', name: 'Hamoa (East Maui)',          lon: -156.00240, lat: 20.71950 },
-];
+const ISLAND_STATIONS: Record<IslandKey, readonly NwsStation[]> = {
+  // Kauaʻi — SOUTH SHORE (Poʻipū) HAS NO LIVE STATION. South cells fall back to
+  // the nearest of Waimea/Līhuʻe, which is disclosed in the card copy.
+  kauai: [
+    { id: 'G5892', name: 'Waimea (leeward W)',  lon: -159.66520, lat: 21.96000 },
+    { id: 'HLIH1', name: 'Hanalei (N)',         lon: -159.47440, lat: 22.20420 },
+    { id: 'MLDH1', name: 'Moloaʻa Dairy (E)',   lon: -159.33620, lat: 22.18070 },
+  ],
+  // Niʻihau — privately held; NO weather station exists. Proximity-only.
+  niihau: [],
+  oahu: [
+    { id: '018HE', name: 'Farrington Hwy (leeward W)', lon: -158.09060, lat: 21.33520 },
+    { id: '064HE', name: 'Mililani (central)',         lon: -158.02070, lat: 21.41920 },
+    { id: 'G7197', name: 'Haleʻiwa (N shore)',         lon: -158.11450, lat: 21.58880 },
+    { id: 'AU956', name: 'Honolulu (E/windward)',      lon: -157.79180, lat: 21.29830 },
+    { id: 'PHNL', name: 'Honolulu Airport',            lon: -157.94310, lat: 21.32750 },
+  ],
+  molokai: [
+    { id: '102HE', name: 'Mauna Loa Hwy (W)',   lon: -157.16520, lat: 21.14750 },
+    { id: '029HE', name: 'Kalae Hwy (central)', lon: -157.04730, lat: 21.14590 },
+    { id: 'MKPH1', name: 'Makapulapai (NE)',    lon: -156.96610, lat: 21.20330 },
+    { id: 'PAFH1', name: 'Puʻu Aliʻi (E)',      lon: -156.90230, lat: 21.14080 },
+  ],
+  lanai: [
+    { id: 'PHNY', name: 'Lānaʻi City Airport', lon: -156.95140, lat: 20.78560 },
+    { id: 'LNIH1', name: 'Lānaʻi 1 (N)',       lon: -157.00640, lat: 20.87330 },
+  ],
+  // Maui — RE-SELECTED in P05c. The P04 set (PHOG/092HE/036HI/023HI) had only
+  // 2 of 4 live while 58 live stations were available; 036HI and 023HI had been
+  // stale ~10.7 h. Zones: West-leeward ×2 (the Lahaina failure mode gets double
+  // coverage), central, upcountry, south.
+  // EAST MAUI / HĀNA HAS NO LIVE STATION — 14 exist, 0 usable. Disclosed in copy.
+  maui: [
+    { id: '092HE', name: 'Upper Kapalua (W leeward N)', lon: -156.66603, lat: 20.95861 },
+    { id: '002HE', name: 'Lahainaluna Rd (W leeward)',  lon: -156.65840, lat: 20.88580 },
+    { id: 'PHOG',  name: 'Kahului Airport (central)',   lon: -156.43694, lat: 20.89250 },
+    { id: '106HE', name: 'Kahului (central mesonet)',   lon: -156.46705, lat: 20.84634 },
+    { id: '015HE', name: 'Makawao Ave (upcountry)',     lon: -156.32803, lat: 20.83766 },
+    { id: '047HE', name: 'Ulupalakua Ranch (S)',        lon: -156.41320, lat: 20.68290 },
+  ],
+  // Kahoʻolawe — uninhabited (unexploded ordnance); NO station exists.
+  kahoolawe: [],
+  hawaii: [
+    { id: '041HE', name: 'Kailua-Kona (W leeward)',   lon: -155.95190, lat: 19.62730 },
+    { id: '075HE', name: 'Kaiminani Dr (N Kona)',     lon: -156.01930, lat: 19.72310 },
+    { id: '009HE', name: 'Kohala / Waikoloa (NW)',    lon: -155.81250, lat: 20.02400 },
+    { id: 'F9660', name: 'Laupāhoehoe (E windward)',  lon: -155.23670, lat: 19.96720 },
+    { id: '057HE', name: 'Kaʻū / Volcano (S)',        lon: -155.25240, lat: 19.46320 },
+  ],
+};
 
 // An observation older than this is treated as ABSENT, not as current
 // conditions. Observed in the wild on 2026-08-02: several MECO stations publish
 // a fresh timestamp with null wind/RH, and Lahaina WTP had stopped updating ~9h
 // earlier while still answering 200. Both are dropped rather than trusted.
 const MAX_OBS_AGE_SECONDS = 3 * 3600;
+
+// ── Per-island grids ───────────────────────────────────────────────────────
+// One tight bbox per island so ocean cells are never generated. A single
+// statewide bbox at 0.02° would be ~46,750 cells, ~10x these totals, almost all
+// of it open water.
+//
+// Hawaiʻi Island is the only island needing a coarser step: at 0.02° it is 4,824
+// cells on its own, so it runs at 0.04° (~4.4 km) for 1,224 — in line with Maui.
+// Every island therefore reports its OWN grid.step_deg in the envelope.
+//
+// Maui's bbox and step are LOCKED to P04 so `region=maui` keeps returning
+// exactly 1,200 cells with an unchanged envelope shape.
+type IslandSpec = {
+  key: IslandKey;
+  label: string;
+  bbox: [number, number, number, number];
+  step: number;
+};
+
+const FIRE_DANGER_ISLANDS: readonly IslandSpec[] = [
+  { key: 'kauai',     label: 'Kauaʻi',     bbox: [-159.83, 21.85, -159.28, 22.25], step: 0.02 }, //  560
+  { key: 'niihau',    label: 'Niʻihau',    bbox: [-160.28, 21.78, -160.06, 22.00], step: 0.02 }, //  121
+  { key: 'oahu',      label: 'Oʻahu',      bbox: [-158.31, 21.22, -157.63, 21.72], step: 0.02 }, //  850
+  { key: 'molokai',   label: 'Molokaʻi',   bbox: [-157.34, 21.03, -156.70, 21.23], step: 0.02 }, //  320
+  { key: 'lanai',     label: 'Lānaʻi',     bbox: [-157.07, 20.71, -156.79, 20.93], step: 0.02 }, //  154
+  { key: 'maui',      label: 'Maui',       bbox: [-156.75, 20.45, -155.95, 21.05], step: 0.02 }, // 1200 (P04-locked)
+  { key: 'kahoolawe', label: 'Kahoʻolawe', bbox: [-156.72, 20.49, -156.53, 20.60], step: 0.02 }, //   54
+  { key: 'hawaii',    label: 'Hawaiʻi',    bbox: [-156.10, 18.86, -154.75, 20.30], step: 0.04 }, // 1224
+];
+
+// One FIRMS query covers every island. This is a CORRECTNESS requirement, not an
+// optimisation: the proximity radius is 20 km and the channels are narrower than
+// that — Maui W ↔ Lānaʻi E is 4.7 km, Maui SW ↔ Kahoʻolawe 7.3 km, Maui W ↔
+// Molokaʻi SE 12.3 km, Lānaʻi E ↔ Molokaʻi S 17.5 km. Fetching per-island would
+// leave a West Maui cell blind to a Lānaʻi fire 4.7 km away — precisely the fire
+// this layer exists to catch. So: fetch statewide once, then score EVERY island's
+// cells against the FULL hotspot set.
+//
+// Behaviour note (auditable): as of P05c a Maui cell can be raised by a hotspot
+// outside the Maui bbox. P04 could not see those. The envelope shape is
+// unchanged; only the scores become more correct.
+const FIRE_DANGER_STATEWIDE_BBOX: [number, number, number, number] = [-160.3, 18.9, -154.8, 22.3];
 
 type StationReading = {
   station_id: string;
@@ -1986,18 +2084,49 @@ function readQuantity(q: unknown): { value: number; unitCode: string } | null {
   return { value: o.value, unitCode: typeof o.unitCode === 'string' ? o.unitCode : '' };
 }
 
-// Fetch every station in parallel. Never throws; a total wipeout degrades the
+// Station observations are cached separately from FIRMS. P04 made 4 station
+// calls; statewide needs ~25, so an uncached cold request would fan out to 25
+// upstream fetches. 600 s matches the mesonet's ~17 min cadence.
+const FIRE_DANGER_NWS_TTL = 600;
+
+function fireDangerNwsCacheKey(stationId: string): string {
+  return `https://api.weather.gov/_kahuola/fire-danger/nws/${stationId}/latest`;
+}
+
+// Fetch a station set in parallel. Never throws; a total wipeout degrades the
 // wind/humidity terms to neutral rather than failing the request.
-async function fetchNwsConditions(nowMs: number): Promise<NwsConditions> {
+async function fetchNwsConditions(
+  stations: readonly NwsStation[],
+  nowMs: number,
+): Promise<NwsConditions> {
+  if (stations.length === 0) return { readings: [], health: 'degraded' };
+  const cache = caches.default;
+
   const settled = await Promise.allSettled(
-    MAUI_STATIONS.map(async (st) => {
-      const res = await fetch(`https://api.weather.gov/stations/${st.id}/observations/latest`, {
-        signal: AbortSignal.timeout(FETCH_TIMEOUT),
-        headers: { 'User-Agent': 'KahuOla/1.0 kahuola.org', Accept: 'application/geo+json' },
-      });
-      if (!res.ok) throw new Error(`obs ${res.status}`);
-      const body = (await res.json()) as { properties?: Record<string, unknown> };
-      const p = body?.properties ?? {};
+    stations.map(async (st) => {
+      const cacheReq = new Request(fireDangerNwsCacheKey(st.id));
+      let p: Record<string, unknown>;
+      const cached = await cache.match(cacheReq);
+      if (cached) {
+        p = ((await cached.json()) as { properties?: Record<string, unknown> })?.properties ?? {};
+      } else {
+        const res = await fetch(`https://api.weather.gov/stations/${st.id}/observations/latest`, {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT),
+          headers: { 'User-Agent': 'KahuOla/1.0 kahuola.org', Accept: 'application/geo+json' },
+        });
+        if (!res.ok) throw new Error(`obs ${res.status}`);
+        const text = await res.text();
+        await cache.put(
+          cacheReq,
+          new Response(text, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': `public, max-age=${FIRE_DANGER_NWS_TTL}`,
+            },
+          }),
+        );
+        p = (JSON.parse(text) as { properties?: Record<string, unknown> })?.properties ?? {};
+      }
 
       const ts = typeof p.timestamp === 'string' ? p.timestamp : '';
       const obsMs = ts ? Date.parse(ts) : NaN;
@@ -2041,7 +2170,7 @@ async function fetchNwsConditions(nowMs: number): Promise<NwsConditions> {
     if (r.status === 'fulfilled') readings.push(r.value);
     else {
       console.warn(
-        JSON.stringify({ layer: 'fire-danger', stage: 'nws', station: MAUI_STATIONS[i].id, dropped: true }),
+        JSON.stringify({ layer: 'fire-danger', stage: 'nws', station: stations[i].id, dropped: true }),
       );
     }
   });
@@ -2226,6 +2355,16 @@ const FIRE_DANGER_DISCLAIMER =
   'official fire-behavior forecast. Follow HIEMA, County Emergency Management, and NWS ' +
   'for official guidance.';
 
+// Honest, specific coverage disclosure. These three gaps were measured on
+// 2026-08-02 by probing every station inside every island bbox — they are not
+// theoretical. Surfaced in the envelope so the client can repeat them to users
+// rather than implying uniform coverage.
+const FIRE_DANGER_COVERAGE_NOTE =
+  'Coverage gaps: Kauaʻi south shore (Poʻipū) has no live weather station, so south-shore ' +
+  'estimates use Waimea or Līhuʻe-area wind. East Maui (Hāna) has no live station, so east ' +
+  'Maui uses upcountry or central Maui wind. Niʻihau and Kahoʻolawe have no weather station ' +
+  'at all — those estimates use fire distance only, with no wind or humidity adjustment.';
+
 const FIRE_DANGER_CONDITIONS_NOTE =
   'Wind and humidity are point observations from the nearest NWS/MECO station, not ' +
   'per-cell measurements. Terrain between a station and a cell can change conditions ' +
@@ -2235,34 +2374,15 @@ const FIRE_DANGER_CONDITIONS_NOTE =
 // Invariant IV: consumes no user location, computes nothing per-user, logs and
 // stores nothing identifying. The grid is fixed, public, and identical for
 // every caller.
-async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
-  const nowMs = Date.now();
-  const generatedAt = new Date(nowMs).toISOString();
-
-  const requested = (url.searchParams.get('region') || 'maui').toLowerCase();
-  const region = REGION_BBOXES[requested] ? requested : 'maui';
-  const bbox = REGION_BBOXES[region];
-
-  // Neither helper rejects by design; allSettled is belt-and-braces so a
-  // surprise throw in one upstream can never take out the other.
-  const [firmsSettled, nwsSettled] = await Promise.allSettled([
-    fetchFirmsMultiSensor(env, bbox, 1),
-    fetchNwsConditions(nowMs),
-  ]);
-
-  const firms: FirmsIngest =
-    firmsSettled.status === 'fulfilled'
-      ? firmsSettled.value
-      : { hotspots: [], health: 'degraded', sensors_used: [] };
-  const nws: NwsConditions =
-    nwsSettled.status === 'fulfilled' ? nwsSettled.value : { readings: [], health: 'degraded' };
-
-  // ── FAIL-CLOSED CORE (Invariant III) ─────────────────────────────────────
-  // The band is derived from INGEST HEALTH, never from the hotspot count.
-  // "We could not look" and "we looked and it is quiet" are different answers
-  // and must never collapse into the same one:
-  //     health !== 'ok'                 → insufficient_data + DEGRADED
-  //     health === 'ok' && 0 hotspots   → NONE  (a real, safe observation)
+// Score one island against the SHARED statewide hotspot set. `omitNone` drops
+// NONE cells (statewide mode) — the client discards them anyway, and keeping
+// them would make a calm statewide payload ~1 MB of "nothing to report".
+function buildIslandResult(
+  spec: IslandSpec,
+  firms: FirmsIngest,
+  nws: NwsConditions,
+  omitNone: boolean,
+) {
   const firmsOk = firms.health === 'ok';
 
   const windReadings = nws.readings.filter((r) => r.wind_mph !== null && r.wind_dir_deg !== null);
@@ -2272,8 +2392,9 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
   if (windReadings.length === 0) degradedInputs.push('wind');
   if (rhReadings.length === 0) degradedInputs.push('humidity');
 
-  const { cells: grid, stepUsed } = buildGrid(bbox, FIRE_DANGER_GRID_STEP_DEG);
+  const { cells: grid, stepUsed } = buildGrid(spec.bbox, spec.step);
 
+  let noneCount = 0;
   const cells = grid.map((cell) => {
     const [lon, lat] = cell.centroid;
     const windSrc = nearestReading(lon, lat, windReadings);
@@ -2319,11 +2440,13 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
     // effectiveKm === nearestKm when wind/RH are absent.
     const effectiveKm = nearestKm === null ? null : nearestKm / (wTerm * hTerm);
     const score = clamp01(proximityTerm(effectiveKm));
+    const band = bandFor(score);
+    if (band === 'NONE') noneCount++;
 
     return {
       cell_id: cell.cell_id,
       centroid: cell.centroid,
-      danger_level: bandFor(score),
+      danger_level: band,
       score: Number(score.toFixed(3)),
       reason: {
         nearest_hotspot_km: nearestKm === null ? null : Number(nearestKm.toFixed(2)),
@@ -2340,18 +2463,16 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
     };
   });
 
-  const freshness = !firmsOk ? 'DEGRADED' : degradedInputs.length > 0 ? 'STALE_OK' : 'FRESH';
+  // cell_count always reports the FULL grid, even when NONE cells are omitted,
+  // so the count never silently shrinks.
+  const emitted = omitNone ? cells.filter((c) => c.danger_level !== 'NONE') : cells;
 
-  const body = {
-    generated_at: generatedAt,
-    stale_after_seconds: FIRE_DANGER_STALE_AFTER_SECONDS,
-    freshness,
-    region,
-    sensors_used: firms.sensors_used,
-    hotspot_count: firms.hotspots.length,
-    source_health: { firms: firms.health, nws: nws.health },
+  return {
+    island: spec.key,
+    label: spec.label,
+    grid: { step_deg: stepUsed, cell_count: grid.length, bbox: spec.bbox },
+    none_cell_count: noneCount,
     degraded_inputs: degradedInputs,
-    grid: { step_deg: stepUsed, cell_count: cells.length, bbox },
     stations_used: nws.readings.map((r) => ({
       id: r.station_id,
       name: r.station_name,
@@ -2359,16 +2480,116 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
       has_wind: r.wind_mph !== null,
       has_humidity: r.rh_pct !== null,
     })),
+    cells: emitted,
+  };
+}
+
+async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
+  const nowMs = Date.now();
+  const generatedAt = new Date(nowMs).toISOString();
+
+  const requested = (url.searchParams.get('region') || 'maui').toLowerCase();
+  const statewide = requested === 'statewide' || requested === 'hawaii-statewide';
+  const single = FIRE_DANGER_ISLANDS.find((i) => i.key === requested);
+  // Unknown region falls back to Maui, matching P04.
+  const targets: readonly IslandSpec[] = statewide
+    ? FIRE_DANGER_ISLANDS
+    : [single ?? FIRE_DANGER_ISLANDS.find((i) => i.key === 'maui')!];
+  const region = statewide ? 'statewide' : targets[0].key;
+
+  // Union of the stations the targeted islands need, de-duplicated (PHOG is
+  // shared) so a station is fetched at most once per request.
+  const stationMap = new Map<string, NwsStation>();
+  for (const t of targets) for (const s of ISLAND_STATIONS[t.key]) stationMap.set(s.id, s);
+  const stations = [...stationMap.values()];
+
+  // ONE statewide FIRMS query regardless of how many islands are requested —
+  // see FIRE_DANGER_STATEWIDE_BBOX for why this is a correctness requirement.
+  // Neither helper rejects by design; allSettled is belt-and-braces so a
+  // surprise throw in one upstream can never take out the other.
+  const [firmsSettled, nwsSettled] = await Promise.allSettled([
+    fetchFirmsMultiSensor(env, FIRE_DANGER_STATEWIDE_BBOX, 1),
+    fetchNwsConditions(stations, nowMs),
+  ]);
+
+  const firms: FirmsIngest =
+    firmsSettled.status === 'fulfilled'
+      ? firmsSettled.value
+      : { hotspots: [], health: 'degraded', sensors_used: [] };
+  const nwsAll: NwsConditions =
+    nwsSettled.status === 'fulfilled' ? nwsSettled.value : { readings: [], health: 'degraded' };
+
+  const firmsOk = firms.health === 'ok';
+
+  // Per-island scoring is isolated: one island throwing degrades only itself.
+  const perIsland = await Promise.allSettled(
+    targets.map(async (spec) => {
+      // Each island sees ONLY its own stations — a Kauaʻi cell must never
+      // inherit Kahului wind. Islands with no station (Niʻihau, Kahoʻolawe)
+      // get an empty set and fall through to neutral multipliers.
+      const ids = new Set(ISLAND_STATIONS[spec.key].map((s) => s.id));
+      const islandNws: NwsConditions = {
+        readings: nwsAll.readings.filter((r) => ids.has(r.station_id)),
+        health: nwsAll.readings.some((r) => ids.has(r.station_id)) ? 'ok' : 'degraded',
+      };
+      return buildIslandResult(spec, firms, islandNws, statewide);
+    }),
+  );
+
+  const islands = perIsland
+    .map((r, i) =>
+      r.status === 'fulfilled'
+        ? r.value
+        : {
+            // Island-level failure is still a valid, renderable island entry.
+            island: targets[i].key,
+            label: targets[i].label,
+            grid: { step_deg: targets[i].step, cell_count: 0, bbox: targets[i].bbox },
+            none_cell_count: 0,
+            degraded_inputs: ['wind', 'humidity'],
+            stations_used: [],
+            cells: [],
+          },
+    );
+
+  const anyDegradedInputs = islands.some((i) => i.degraded_inputs.length > 0);
+  const freshness = !firmsOk ? 'DEGRADED' : anyDegradedInputs ? 'STALE_OK' : 'FRESH';
+
+  const shared = {
+    generated_at: generatedAt,
+    stale_after_seconds: FIRE_DANGER_STALE_AFTER_SECONDS,
+    freshness,
+    region,
+    sensors_used: firms.sensors_used,
+    hotspot_count: firms.hotspots.length,
+    source_health: { firms: firms.health, nws: nwsAll.health },
     conditions_note: FIRE_DANGER_CONDITIONS_NOTE,
+    coverage_note: FIRE_DANGER_COVERAGE_NOTE,
     latency_note: FIRE_DANGER_LATENCY_NOTE,
     disclaimer: FIRE_DANGER_DISCLAIMER,
-    cells,
   };
 
-  return jsonResp(body, 200, {
-    ...cors,
-    'Cache-Control': firmsOk ? 'public, max-age=300' : 'no-store',
-  });
+  const headers = { ...cors, 'Cache-Control': firmsOk ? 'public, max-age=300' : 'no-store' };
+
+  if (statewide) {
+    return jsonResp({ ...shared, islands }, 200, headers);
+  }
+
+  // Single-island response keeps P04's FLAT shape exactly: grid/degraded_inputs/
+  // stations_used/cells at the top level, all cells included. Existing clients
+  // (and `region=maui`) see an unchanged envelope.
+  const only = islands[0];
+  return jsonResp(
+    {
+      ...shared,
+      degraded_inputs: only.degraded_inputs,
+      grid: only.grid,
+      stations_used: only.stations_used,
+      cells: only.cells,
+    },
+    200,
+    headers,
+  );
 }
 
 const WMS_UPSTREAMS: Record<string, { url: string; ttl: number; keySecret?: keyof Env; keyParam?: string }> = {
