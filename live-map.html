@@ -4957,10 +4957,44 @@
       const hits = map.queryRenderedFeatures(point, { layers: activeLayers });
       return hits.length ? hits[0] : null;
     }
+    // Clicking a cluster zooms in far enough to break it apart.
+    //
+    // REGRESSION from b2bb7cb (self-host maplibre-gl + SRI): that commit moved us
+    // to MapLibre GL JS 4.7.1, where getClusterExpansionZoom(clusterId) returns a
+    // PROMISE. The v1/v2 callback form this used —
+    //     source.getClusterExpansionZoom(id, (err, zoom) => …)
+    // — has no two-argument overload in v4 (verified against the bundle: the only
+    // parameter lists are `e` and `t`). The extra callback was silently ignored
+    // and the returned promise dropped, so easeTo never ran: the click did
+    // nothing, with no console error. Live and broken since b2bb7cb.
+    //
+    // Written to satisfy BOTH shapes so a library swap in either direction cannot
+    // silently break it again: we pass a legacy callback AND handle a promise
+    // return. v4 ignores the surplus callback and resolves the promise; v1/v2
+    // fires the callback and returns undefined. `settled` makes it idempotent so
+    // an API that somehow did both could not double-fire easeTo.
     function zoomToCluster(feature) {
-      const clusterId = feature?.properties?.cluster_id; const source = map.getSource("fires");
-      if (!clusterId || !source || typeof source.getClusterExpansionZoom !== "function") return;
-      source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
+      const clusterId = feature?.properties?.cluster_id;
+      const source = map.getSource("fires");
+      // cluster_id 0 is valid — the previous `!clusterId` guard swallowed it.
+      if (clusterId === undefined || clusterId === null || !source ||
+        typeof source.getClusterExpansionZoom !== "function") return;
+      let settled = false;
+      const applyZoom = (zoom) => {
+        if (settled) return;
+        settled = true;
+        if (typeof zoom !== "number" || !isFinite(zoom)) return;
+        map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 });
+      };
+      let ret;
+      try {
+        ret = source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (!err) applyZoom(zoom); });
+      } catch (_) {
+        return; // expansion unavailable — leave the view unchanged
+      }
+      if (ret && typeof ret.then === "function") {
+        ret.then(applyZoom).catch(() => { /* leave the view unchanged */ });
+      }
     }
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
