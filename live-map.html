@@ -3908,8 +3908,29 @@
         paint: {
           "fill-color": ["match", ["get", "danger_level"],
             "EXTREME", "#b0003a", "HIGH", "#e91e63", "MODERATE", "#f06292", "LOW", "#f48fb1", "#f48fb1"],
-          "fill-opacity": ["match", ["get", "danger_level"],
-            "EXTREME", 0.36, "HIGH", 0.28, "MODERATE", 0.20, "LOW", 0.14, 0.14],
+          // Zoom-interpolated so the wash reads as CONTEXT when you can see a
+          // whole island, and keeps its full weight up close. A single detection
+          // shades up to 20 km by design, so at island zoom the aggregate mass
+          // overstated severity — one Waipahu fire looked like half of Oʻahu
+          // burning.
+          //
+          // Stops chosen from measured zooms, not guessed: statewide sits at
+          // 5.5–7.4 and a single island at 7.7–10.8 (phone→desktop), with map
+          // init at 6.5 and fitHawaii capped at 8. Stops of 7→11 would have left
+          // Oʻahu-on-desktop (10.5) at ~87% weight — unmuted exactly where the
+          // problem is worst. 9→14 keeps the whole island band muted and only
+          // reaches full weight at street level.
+          //
+          // Composite zoom×data expression: ["zoom"] must be the OUTERMOST
+          // input, which it is. Opacity is never driven to 0 for a visible band —
+          // queryRenderedFeatures ignores paint opacity, so an invisible-but-
+          // clickable cell would reintroduce the hidden-layer-captures-clicks
+          // bug. Hiding still goes through setLayerVisibility only.
+          "fill-opacity": ["interpolate", ["linear"], ["zoom"],
+            9, ["match", ["get", "danger_level"],
+              "EXTREME", 0.20, "HIGH", 0.14, "MODERATE", 0.07, "LOW", 0.04, 0.04],
+            14, ["match", ["get", "danger_level"],
+              "EXTREME", 0.36, "HIGH", 0.28, "MODERATE", 0.20, "LOW", 0.14, 0.14]],
         },
       });
       if (!map.__fireDangerHoverBound) {
@@ -4171,13 +4192,34 @@
           top === "EXTREME" || top === "HIGH" ? "status-detected" : "status-none");
         // Lead with the CAUSE. The number that matters is how many fires were
         // detected; the shaded area is a consequence of distance/wind/dryness.
+        //
+        // Name the island(s) whose shading is actually being driven, so the copy
+        // matches what the resident is looking at. Deliberately "AFFECTING",
+        // never "on": the Worker attributes a detection to every island it
+        // shades, and the 20 km radius crosses the channels (Maui W ↔ Lānaʻi E
+        // is 4.7 km) — so a Lānaʻi fire shading West Maui affects Maui but is
+        // not on it. For the same reason these counts are an attribution, not a
+        // partition, and the copy never presents them as a breakdown of a total.
+        const drivingIslands = (Array.isArray(meta.islands) ? meta.islands : [])
+          .filter((i) => (i.cells || []).length > 0 && Number(i.hotspot_count) > 0);
         const hs = Number(meta.hotspot_count);
-        setFireDangerText("fire-danger-note",
-          (isFinite(hs)
-            ? (_tmpl("map.fire_danger_active", { n: hs, band: topLabel }) ||
-              `${hs} satellite fire detection(s) in Hawaiʻi. Shaded zones show where fire could spread from them — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`)
-            : (_t("map.fire_danger_note_init") || "Where a fire could spread next, based on wind and dryness.")
-          ) + offSuffix);
+        let lead;
+        if (drivingIslands.length === 1) {
+          const only = drivingIslands[0];
+          lead = _tmpl("map.fire_danger_active_island", { n: only.hotspot_count, island: only.label || only.island, band: topLabel }) ||
+            `${only.hotspot_count} satellite fire detection(s) affecting ${only.label || only.island}. Shaded zones show where fire could spread — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`;
+        } else if (drivingIslands.length > 1) {
+          lead = _tmpl("map.fire_danger_active_islands", { islands: drivingIslands.map((i) => i.label || i.island).join(", "), band: topLabel }) ||
+            `Satellite fire detections affecting ${drivingIslands.map((i) => i.label || i.island).join(", ")}. Shaded zones show where fire could spread — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`;
+        } else if (isFinite(hs)) {
+          // Single-island endpoint, or shading with no attributable island —
+          // fall back to the statewide phrasing rather than inventing a place.
+          lead = _tmpl("map.fire_danger_active", { n: hs, band: topLabel }) ||
+            `${hs} satellite fire detection(s) in Hawaiʻi. Shaded zones show where fire could spread from them — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`;
+        } else {
+          lead = _t("map.fire_danger_note_init") || "Where a fire could spread next, based on wind and dryness.";
+        }
+        setFireDangerText("fire-danger-note", lead + offSuffix);
         // What the shading IS and IS NOT — stated on first read, not buried.
         // A wide magenta wash from one detection is by design (the estimate
         // reaches ~20 km), and that has to be said before someone reads it as
