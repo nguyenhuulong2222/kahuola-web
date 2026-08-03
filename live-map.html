@@ -2376,6 +2376,28 @@
 
           </div>
         </div>
+
+        <!-- Fire Spread Concern — Kahu Ola MODEL ESTIMATE, not an official forecast.
+             Kicker deliberately reads "Estimate", never "Official" — this card sits in
+             Tier 2 (Supporting Evidence) precisely so it is never read as an agency
+             product. Renders /api/hazards/fire-danger as a grid overlay. -->
+        <div class="priority-module priority-module--secondary" id="fire-danger-card" tabindex="0" role="button"
+          aria-label="Fire spread concern estimate">
+          <div class="priority-module-head">
+            <div>
+              <div class="priority-kicker" data-i18n="map.kicker_fire_danger">Estimate · Kahu Ola model</div>
+              <div class="priority-title" data-i18n="map.hazard_fire_danger">Fire Spread Concern</div>
+            </div>
+            <div class="status-badge status-none" id="fire-danger-badge" data-i18n="map.loading">Loading</div>
+          </div>
+          <div class="priority-note" id="fire-danger-note" data-i18n="map.fire_danger_note_init">Where a fire could
+            spread next, based on wind and dryness. Tap to show or hide the map layer.</div>
+          <div class="priority-subnote" id="fire-danger-legend" hidden></div>
+          <div class="priority-subnote" id="fire-danger-stations"></div>
+          <div class="priority-subnote" id="fire-danger-latency"></div>
+          <div class="priority-subnote" id="fire-danger-disclaimer"></div>
+        </div>
+
         <!-- Other NWS Alerts — enabled module, full active-alert superset (delegated detail via js-hazard-detail) -->
         <div class="priority-module priority-module--secondary js-hazard-detail" id="alerts-card" tabindex="0" role="button" aria-label="Wind, heat and other NWS alerts status"
              data-hazard-title="Wind, Heat & Other Alerts"
@@ -2558,6 +2580,13 @@
     let mrmsVisible = true;
     let rainRadarVisible = false; // Default OFF — user toggles on when needed
     let windRiskVisible = false; // Hidden by default — only shows when NWS Red Flag Warning OR CRITICAL/HIGH risk is active
+    // Fire-spread danger grid. ON by default: when there is no danger the layer draws
+    // zero polygons (NONE cells are dropped at build time), so an idle map stays clean
+    // and the toggle costs nothing. Visibility is driven ONLY through
+    // setLayerVisibility() — never a paint-opacity ternary, so hidden cells cannot
+    // capture clicks (queryTopFeature filters on layout visibility).
+    let fireDangerVisible = true;
+    let fireDangerMeta = null; // last envelope's non-cell fields (freshness, disclaimer, …)
     let alertsVisible = true;
     let tsunamiVisible = true;
     let hurricaneVisible = true;
@@ -2583,6 +2612,7 @@
         localHazards: createHazardState("localHazards"),
         rainRadar: createHazardState("rainRadar"),
         windRisk: createHazardState("windRisk"),
+        fireDanger: createHazardState("fireDanger"),
         alerts: createHazardState("alerts"),
         tsunami: createHazardState("tsunami"),
         hurricane: createHazardState("hurricane"),
@@ -3257,6 +3287,37 @@
           renderUnifiedPanels();
         }, visible() { return windRiskVisible; }
       },
+      fireDanger: {
+        key: "fireDanger", enabled: true,
+        // affectsGlobalHealth false: this is a model estimate, not an official feed.
+        // Losing it must not flip the whole app to "offline".
+        affectsGlobalHealth: false,
+        // Always the live Worker route, even under IS_LOCAL. Every other module has an
+        // IS_LOCAL test fixture, but shipping a fire-danger fixture would mean inventing
+        // fire cells that do not exist — so there is deliberately no fixture here.
+        // Consequence: from a LAN origin the Worker's CORS allowlist returns 403 and this
+        // module renders its fail-closed state. That is correct, wanted behaviour.
+        endpoint: "https://kahuola.org/api/hazards/fire-danger?region=maui",
+        parsePayload(json) {
+          const errText = payloadError(json);
+          if (errText) throw new Error(errText); // routes into the fail-closed path
+          return {
+            features: normalizeFireDangerCells(json),
+            sourceTime: parseDateMaybe(json.generated_at) || new Date(),
+            sourceLabel: "Kahu Ola model",
+            meta: json,
+          };
+        },
+        ensureLayers, applyData(features) { updateFireDangerSource(features); },
+        onFetchComplete() {
+          const st = getState("fireDanger");
+          // Never let a previous good envelope decorate a failed fetch.
+          fireDangerMeta = st.status === "ready" ? (st.meta || null) : null;
+          updateFireDangerStatusUI(st);
+          renderUnifiedPanels();
+        },
+        visible() { return fireDangerVisible; }
+      },
       alerts: {
         key: "alerts", enabled: true, affectsGlobalHealth: false,
         endpoint: IS_LOCAL ? "./alerts-test.json" : "https://kahuola.org/api/hazards/alerts?region=hawaii",
@@ -3549,6 +3610,7 @@
       ensureHurricaneLayers();     // NHC storm points
       ensureCoastalLayers();       // NWS coastal/surf — geometry-bearing alerts only
       ensureLocalHazardLayers();
+      ensureFireDangerLayers();    // fire-spread estimate grid — BELOW alerts + fire markers
       ensureAlertsLayers();        // other NWS alerts (superset) — just below fire
       ensureFireLayers();          // fire always topmost
     }
@@ -3685,6 +3747,33 @@
       syncHurricaneLayerVisibility();
       syncLandslideLayerVisibility();
     }
+    // Fire-spread danger grid — one GeoJSON source, one fill layer, no stroke.
+    // Palette is magenta→crimson ON PURPOSE: the warm orange/amber band is already
+    // occupied by FIRMS detections (#ff8a00) and Fire Weather (#ffb74d), and a resident
+    // must be able to tell "where the fire IS" from "where it may GO" in one glance.
+    // fill-opacity is a CONSTANT data-driven ramp — deliberately NOT the
+    // `visible ? x : 0` ternary used by older modules. Hiding goes through
+    // setLayerVisibility() (layout visibility:none) so a hidden cell cannot swallow
+    // a click that belongs to another module.
+    function ensureFireDangerLayers() {
+      ensureSource("fire-danger", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureLayer({
+        id: "fire-danger-fill", type: "fill", source: "fire-danger",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+        paint: {
+          "fill-color": ["match", ["get", "danger_level"],
+            "EXTREME", "#b0003a", "HIGH", "#e91e63", "MODERATE", "#f06292", "LOW", "#f48fb1", "#f48fb1"],
+          "fill-opacity": ["match", ["get", "danger_level"],
+            "EXTREME", 0.36, "HIGH", 0.28, "MODERATE", 0.20, "LOW", 0.14, 0.14],
+        },
+      });
+      if (!map.__fireDangerHoverBound) {
+        map.__fireDangerHoverBound = true;
+        map.on("mouseenter", "fire-danger-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "fire-danger-fill", () => { map.getCanvas().style.cursor = ""; });
+      }
+      syncFireDangerLayerVisibility();
+    }
     function ensureTsunamiLayers() {
       ensureSource("tsunami", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       ensureLayer({ id: "tsunami-fill", type: "fill", source: "tsunami", paint: { "fill-color": "#ff1744", "fill-opacity": tsunamiVisible ? 0.20 : 0 } });
@@ -3784,6 +3873,156 @@
     function updateMrmsSource(features) { const s = map.getSource("mrms-rain"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updateWindRiskSource(features) { const s = map.getSource("wind-risk"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updateTsunamiSource(features) { const s = map.getSource("tsunami"); if (s) s.setData({ type: "FeatureCollection", features }); }
+
+    // ── Fire-spread danger grid ────────────────────────────────────────────
+    const FIRE_DANGER_BANDS = ["LOW", "MODERATE", "HIGH", "EXTREME"];
+    const FIRE_DANGER_SWATCH = { LOW: "#f48fb1", MODERATE: "#f06292", HIGH: "#e91e63", EXTREME: "#b0003a" };
+
+    // Envelope cells → square polygons. Only the four elevated bands are drawn:
+    // NONE is dropped so a calm day renders an empty, uncluttered map, and
+    // insufficient_data is surfaced through the CARD, never as a scary map colour.
+    // Any cell failing validation is skipped — never coerced (fail-closed).
+    function normalizeFireDangerCells(json) {
+      const cells = Array.isArray(json?.cells) ? json.cells : [];
+      const step = Number(json?.grid?.step_deg);
+      if (!isFinite(step) || step <= 0) return [];
+      const half = step / 2;
+      const out = [];
+      for (const c of cells) {
+        if (!c || !FIRE_DANGER_BANDS.includes(c.danger_level)) continue;
+        const lon = Number(c.centroid?.[0]);
+        const lat = Number(c.centroid?.[1]);
+        if (!isFinite(lon) || !isFinite(lat)) continue;
+        const r = c.reason || {};
+        out.push({
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [lon - half, lat - half], [lon + half, lat - half],
+              [lon + half, lat + half], [lon - half, lat + half],
+              [lon - half, lat - half],
+            ]],
+          },
+          // Flattened: queryRenderedFeatures does not preserve nested objects.
+          properties: {
+            cell_id: c.cell_id ?? "",
+            danger_level: c.danger_level,
+            score: c.score ?? null,
+            nearest_hotspot_km: r.nearest_hotspot_km ?? null,
+            effective_km: r.effective_km ?? null,
+            downwind: r.downwind === true,
+            wind_mph: r.wind_mph ?? null,
+            wind_dir_deg: r.wind_dir_deg ?? null,
+            rh_pct: r.rh_pct ?? null,
+            wind_station: r.wind_station ?? "",
+            rh_station: r.rh_station ?? "",
+          },
+        });
+      }
+      return out;
+    }
+    function updateFireDangerSource(features) { const s = map.getSource("fire-danger"); if (s) s.setData({ type: "FeatureCollection", features }); }
+    function syncFireDangerLayerVisibility() { setLayerVisibility("fire-danger-fill", fireDangerVisible); }
+    function toggleFireDangerLayer() {
+      fireDangerVisible = !fireDangerVisible;
+      getState("fireDanger").visible = fireDangerVisible;
+      syncFireDangerLayerVisibility();
+      updateFireDangerStatusUI(getState("fireDanger"));
+    }
+    // Writes to both cloned copies (panel-template is mounted twice with
+    // -desktop / -mobile id suffixes); the bare id inside <template> is inert.
+    function setFireDangerText(baseId, text) {
+      ["desktop", "mobile"].forEach((sfx) => {
+        const el = document.getElementById(`${baseId}-${sfx}`);
+        if (el) el.textContent = text;
+      });
+    }
+    function setFireDangerHidden(baseId, hidden) {
+      ["desktop", "mobile"].forEach((sfx) => {
+        const el = document.getElementById(`${baseId}-${sfx}`);
+        if (el) el.hidden = hidden;
+      });
+    }
+    function updateFireDangerStatusUI(state) {
+      const meta = fireDangerMeta;
+      const feats = state?.features || [];
+      const offSuffix = fireDangerVisible ? "" : ` · ${_t("map.fire_danger_hidden") || "layer hidden"}`;
+
+      // ── Fail-closed (Invariant II). Reached on network error, non-200, parse
+      // failure, or a 403 from the Worker's CORS allowlist (e.g. a LAN origin).
+      // Calm, plain language — never alarming, never blank.
+      if (!state || state.status === "unavailable" || !meta) {
+        updateModuleBadge("fire-danger", _t("map.s_unavailable") || "Unavailable", "status-unavailable");
+        setFireDangerText("fire-danger-note",
+          _t("map.fire_danger_unavailable") ||
+          "Fire spread estimate is temporarily unavailable. The map layer is not shown. For official fire information, follow HIEMA, County Emergency Management, and NWS.");
+        setFireDangerHidden("fire-danger-legend", true);
+        setFireDangerText("fire-danger-stations", "");
+        setFireDangerText("fire-danger-latency", "");
+        setFireDangerText("fire-danger-disclaimer", "");
+        return;
+      }
+
+      const degraded = meta.freshness === "DEGRADED" || meta.source_health?.firms !== "ok";
+      if (degraded) {
+        // Detection unavailable → we cannot speak to spread. Not "no danger".
+        updateModuleBadge("fire-danger", _t("map.s_limited") || "Limited", "status-unavailable");
+        setFireDangerText("fire-danger-note",
+          _t("map.fire_danger_degraded") ||
+          "Satellite fire detection is not available right now, so spread concern cannot be estimated. This does not mean there is no fire.");
+        setFireDangerHidden("fire-danger-legend", true);
+      } else if (feats.length === 0) {
+        // Genuinely calm: checked, and nothing elevated. The safe, expected baseline.
+        updateModuleBadge("fire-danger", _t("map.s_clear") || "Clear", "status-none");
+        setFireDangerText("fire-danger-note",
+          (_t("map.fire_danger_clear") ||
+            "No elevated fire spread concern on Maui right now. The map layer stays clear until there is something to show.") + offSuffix);
+        setFireDangerHidden("fire-danger-legend", true);
+      } else {
+        let top = "LOW";
+        for (const f of feats) {
+          if (FIRE_DANGER_BANDS.indexOf(f.properties.danger_level) > FIRE_DANGER_BANDS.indexOf(top)) top = f.properties.danger_level;
+        }
+        const topLabel = _t(`map.fire_danger_band_${top.toLowerCase()}`) || top;
+        updateModuleBadge("fire-danger",
+          _tmpl("map.s_fire_danger_n", { n: feats.length }) || `${feats.length} \xb7 ${topLabel}`,
+          top === "EXTREME" || top === "HIGH" ? "status-detected" : "status-none");
+        setFireDangerText("fire-danger-note",
+          (_tmpl("map.fire_danger_active", { n: feats.length, band: topLabel }) ||
+            `${feats.length} area(s) with possible fire spread. Highest concern: ${topLabel}. Tap a shaded area on the map for details.`) + offSuffix);
+        // Legend built from a fixed local table — no remote values interpolated.
+        ["desktop", "mobile"].forEach((sfx) => {
+          const el = document.getElementById(`fire-danger-legend-${sfx}`);
+          if (!el) return;
+          el.hidden = false;
+          el.innerHTML = FIRE_DANGER_BANDS.map((b) =>
+            `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px"><span style="width:10px;height:10px;border-radius:2px;background:${FIRE_DANGER_SWATCH[b]};display:inline-block"></span>${escapeHtml(_t(`map.fire_danger_band_${b.toLowerCase()}`) || b)}</span>`
+          ).join("");
+        });
+      }
+
+      // Honest provenance: these are point observations, not per-cell measurements.
+      const stations = Array.isArray(meta.stations_used) ? meta.stations_used : [];
+      setFireDangerText("fire-danger-stations", stations.length
+        ? (_t("map.fire_danger_stations") || "Wind and humidity from nearest weather station: ") +
+        stations.map((s) => s.name || s.id).join(", ")
+        : "");
+      setFireDangerText("fire-danger-latency", meta.latency_note || "");
+      setFireDangerText("fire-danger-disclaimer", meta.disclaimer || "");
+    }
+    function openFireDangerPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const band = String(p.danger_level || "");
+      const bandLabel = _t(`map.fire_danger_band_${band.toLowerCase()}`) || band;
+      // Properties survive queryRenderedFeatures as strings — normalise both forms.
+      const isDownwind = p.downwind === true || p.downwind === "true";
+      const num = (v, unit) => (v === null || v === undefined || v === "" || v === "null") ? "—" : `${escapeHtml(v)}${unit}`;
+      const station = [p.wind_station, p.rh_station].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" / ");
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${_L("map.popup_title_fire_danger", "Fire Spread Concern")}</div><div class="popup-coords">${_L("map.popup_fire_danger_src", "Estimate \xb7 Kahu Ola model")}</div></div><div class="popup-severity ${band === "EXTREME" || band === "HIGH" ? "crit" : "normal"}">${escapeHtml(bandLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_nearest_fire", "Nearest fire")}</div><div class="popup-metric-value">${num(p.nearest_hotspot_km, " km")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind_adjusted", "Wind-adjusted")}</div><div class="popup-metric-value">${num(p.effective_km, " km")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind", "Wind")}</div><div class="popup-metric-value">${num(p.wind_mph, " mph")}${p.wind_dir_deg !== null && p.wind_dir_deg !== undefined && p.wind_dir_deg !== "" ? ` @ ${escapeHtml(p.wind_dir_deg)}\xb0` : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_humidity", "Humidity")}</div><div class="popup-metric-value">${num(p.rh_pct, "%")}</div></div></div><div class="popup-note">${isDownwind ? _L("map.popup_downwind_yes", "This area is downwind of the nearest fire.") : _L("map.popup_downwind_no", "This area is not downwind of the nearest fire.")}${station ? ` ${_L("map.popup_station_from", "Conditions from station")} ${escapeHtml(station)}.` : ""} ${_L("map.popup_fire_danger_note", "Estimate for situational awareness only — not an official fire-behavior forecast.")}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
+    }
     function updateAlertsSource(features) { const s = map.getSource("alerts"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function syncAlertsLayerVisibility() { ["alerts-fill", "alerts-outline", "alerts-point"].forEach(id => setLayerVisibility(id, alertsVisible)); }
     function updateHurricaneSource(features) { const s = map.getSource("hurricane"); if (s) s.setData({ type: "FeatureCollection", features }); }
@@ -4364,7 +4603,9 @@
       source.getClusterExpansionZoom(clusterId, (err, zoom) => { if (err) return; map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 500 }); });
     }
     function raiseFireLayersAboveOverlays() {
-      ["smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
+      // every other overlay, and all fire markers, end up above the estimate grid.
+      ["fire-danger-fill", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -4387,6 +4628,10 @@
         if (hurricaneVisible) { const hur = queryTopFeature(e.point, ["hurricane-point"]); if (hur) { openHurricanePopup(hur, e.lngLat); return; } }
         if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
         if (alertsVisible) { const al = queryTopFeature(e.point, ["alerts-fill", "alerts-point"]); if (al) { openAlertsPopup(al, e.lngLat); return; } }
+        // Scoped to this layer ONLY. Sits low in the chain so an official signal
+        // always wins a contested click; queryTopFeature skips visibility:none, so a
+        // hidden danger grid can never intercept another module's popup.
+        if (fireDangerVisible) { const fd = queryTopFeature(e.point, ["fire-danger-fill"]); if (fd) { openFireDangerPopup(fd, e.lngLat); return; } }
         if (localHazardsVisible) {
           const localHazard = queryTopFeature(e.point, ["local-hazards-point", "local-hazards-fill", "local-hazards-line"]);
           if (localHazard) { openLocalHazardPopup(localHazard, e.lngLat); return; }
@@ -4592,6 +4837,13 @@
       document.getElementById("wind-btn-panel-desktop")?.addEventListener("click", toggleWindRiskLayer);
       document.getElementById("wind-btn-panel-mobile")?.addEventListener("click", toggleWindRiskLayer);
       document.getElementById("wind-btn-mobile")?.addEventListener("click", toggleWindRiskLayer);
+
+      // Fire Spread Concern — card taps toggle the estimate grid on/off.
+      // Bound per-element (NOT via LAZY_MODULES): the document-level bubble handler
+      // fires after the specific listener and would overwrite translated text.
+      ["desktop", "mobile"].forEach((sfx) => {
+        document.getElementById(`fire-danger-card-${sfx}`)?.addEventListener("click", toggleFireDangerLayer);
+      });
 
       // ── Lazy-load: Tsunami / Hurricane / Landslide ──────────────
       // Tsunami / Hurricane / Landslide — bind to both desktop and mobile cloned IDs
