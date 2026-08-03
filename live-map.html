@@ -2481,6 +2481,7 @@
           <div class="priority-note" id="fire-danger-note" data-i18n="map.fire_danger_note_init">Where a fire could
             spread next, based on wind and dryness. Tap to show or hide the map layer.</div>
           <div class="priority-subnote" id="fire-danger-meaning"></div>
+          <div class="priority-subnote" id="fire-danger-volcanic"></div>
           <div class="priority-subnote" id="fire-danger-legend" hidden></div>
           <div class="priority-subnote" id="fire-danger-coverage"></div>
           <div class="priority-subnote" id="fire-danger-stations"></div>
@@ -4078,6 +4079,7 @@
           "Fire spread estimate is temporarily unavailable. The map layer is not shown. For official fire information, follow HIEMA, County Emergency Management, and NWS.");
         setFireDangerHidden("fire-danger-legend", true);
         setFireDangerText("fire-danger-meaning", "");
+        setFireDangerText("fire-danger-volcanic", "");
         setFireDangerText("fire-danger-coverage", "");
         setFireDangerText("fire-danger-stations", "");
         setFireDangerText("fire-danger-latency", "");
@@ -4144,6 +4146,25 @@
       // On-map legend tracks the drawn overlay exactly: shown only when cells
       // are actually shaded AND the layer is switched on.
       syncFireDangerMapLegend(feats.length > 0);
+
+      // Volcanic thermal anomalies are excluded from the spread estimate (lava
+      // does not blow downwind), but they ARE real detections — name them and
+      // route to the agency that owns them rather than letting them vanish.
+      // Shown independently of wildland shading: Hawaiʻi Island can have zero
+      // wildland fire while Kīlauea is thermally active.
+      //
+      // The COUNT is deliberately NOT printed, though it still gates the line.
+      // This path (3 VIIRS sensors, statewide bbox) and Layer A's legacy path
+      // (SNPP, region=hawaii) legitimately resolve different numbers of caldera
+      // pixels — 11 vs 9 on 2026-08-03. Both are right for their own query, but
+      // a resident sees one page showing two numbers for one volcano, which
+      // reads as the system contradicting itself. The pixel count changes
+      // nobody's action; the routing to HVO does.
+      const volc = Number(meta.volcanic_hotspot_count);
+      setFireDangerText("fire-danger-volcanic", isFinite(volc) && volc > 0
+        ? (_t("map.fire_danger_volcanic") ||
+          "Volcanic thermal activity near Kīlauea is not included in this fire-spread estimate — lava heat does not spread with the wind like a brush fire. For volcanic activity, follow USGS Hawaiian Volcano Observatory.")
+        : "");
 
       // Coverage: which islands are actually estimated, and which are running
       // without wind/humidity. Named plainly rather than implying uniform cover.
