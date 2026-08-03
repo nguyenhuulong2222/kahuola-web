@@ -2142,8 +2142,12 @@ async function fetchNwsConditions(
       const windMph = ws ? windToMph(ws.value, ws.unitCode) : null;
       // Direction is required for the downwind test — speed alone is useless
       // here, so a reading without a valid bearing contributes no wind at all.
+      // Rounded at the source: NWS emits values like 36.54000000000002, and the
+      // raw float reaches the popup verbatim otherwise.
       const windDir =
-        wd && wd.value >= 0 && wd.value <= 360 ? ((wd.value % 360) + 360) % 360 : null;
+        wd && wd.value >= 0 && wd.value <= 360
+          ? Number(((((wd.value % 360) + 360) % 360)).toFixed(1))
+          : null;
       const rhPct =
         rh && rh.unitCode.includes('percent') && rh.value >= 0 && rh.value <= 100
           ? rh.value
@@ -2552,7 +2556,21 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
           },
     );
 
-  const anyDegradedInputs = islands.some((i) => i.degraded_inputs.length > 0);
+  // An island with no configured station set has no weather station in
+  // EXISTENCE — Niʻihau is privately held, Kahoʻolawe is uninhabited. Their
+  // permanent lack of wind/RH is a COVERAGE fact, not a freshness signal.
+  // Folding it into `freshness` pinned the statewide envelope to STALE_OK
+  // forever on completely healthy data, which teaches residents to ignore the
+  // freshness label — destroying the signal the label exists to carry. So
+  // freshness is computed over instrumented islands only, and the structural
+  // gap is reported separately via `uninstrumented_islands`.
+  // Per-island `degraded_inputs` is deliberately UNCHANGED, so the gap stays
+  // visible exactly where it belongs.
+  const uninstrumented = targets
+    .filter((t) => ISLAND_STATIONS[t.key].length === 0)
+    .map((t) => t.key);
+  const instrumented = islands.filter((i) => !uninstrumented.includes(i.island as IslandKey));
+  const anyDegradedInputs = instrumented.some((i) => i.degraded_inputs.length > 0);
   const freshness = !firmsOk ? 'DEGRADED' : anyDegradedInputs ? 'STALE_OK' : 'FRESH';
 
   const shared = {
@@ -2563,6 +2581,9 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
     sensors_used: firms.sensors_used,
     hotspot_count: firms.hotspots.length,
     source_health: { firms: firms.health, nws: nwsAll.health },
+    // Structural coverage gap, NOT a data-quality problem: no weather station
+    // exists on these islands, so their cells are scored on fire distance alone.
+    uninstrumented_islands: uninstrumented,
     conditions_note: FIRE_DANGER_CONDITIONS_NOTE,
     coverage_note: FIRE_DANGER_COVERAGE_NOTE,
     latency_note: FIRE_DANGER_LATENCY_NOTE,
