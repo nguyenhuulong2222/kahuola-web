@@ -602,6 +602,21 @@
       color: var(--text-dim);
     }
 
+    /* Plain explanatory line under a metric. Deliberately uncoloured and
+       unbadged: it carries context (how old the newest detection is, how many
+       detections are volcanic), never alarm. Collapses to nothing when empty so
+       it costs no vertical space on a quiet day. */
+    .metric-subnote {
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--muted);
+      padding: 0 0 8px;
+    }
+
+    .metric-subnote:empty {
+      display: none;
+    }
+
     .metric-value {
       font-size: 13px;
       font-weight: 600;
@@ -2241,10 +2256,15 @@
   </div>
 
   <template id="panel-template">
+    <!-- D4: "All thermal detections" — this panel is Layer A truth and counts
+         EVERY thermal detection, volcanic included. The fire-danger card counts
+         wildland only. Labelling them apart is what stops 10-vs-1 reading as the
+         system contradicting itself. -->
     <div class="metric">
-      <span class="metric-label" data-i18n="map.metric_detections">Detections</span>
+      <span class="metric-label" data-i18n="map.metric_detections_all">All thermal detections</span>
       <span class="metric-value v-fire" id="fire-count"><span class="spinner"></span></span>
     </div>
+    <div class="metric-subnote" id="fire-volcanic-note"></div>
 
     <div class="metric">
       <span class="metric-label" data-i18n="map.metric_nearest">Nearest</span>
@@ -2256,12 +2276,25 @@
       <span class="metric-value" id="critical-count">—</span>
     </div>
 
+    <!-- D1: two DIFFERENT clocks, previously conflated under one "Fetched"
+         caption fed by sourceTime. "Latest detection" is when a satellite last
+         saw something; "Updated" is when we last polled. On a quiet day those
+         are hours apart, and showing only the former made a healthy system look
+         stalled. -->
     <div class="metric">
-      <span class="metric-label" data-i18n="map.metric_fetched">Fetched</span>
+      <span class="metric-label" data-i18n="map.metric_latest_detection">Latest detection</span>
       <span class="metric-value v-dim" id="fetch-time">—</span>
     </div>
 
+    <div class="metric">
+      <span class="metric-label" data-i18n="map.metric_updated">Updated</span>
+      <span class="metric-value v-dim" id="updated-time">—</span>
+    </div>
+
     <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
+    <!-- Detection age is INFORMATION, not an alarm — plain, uncoloured. Old
+         detections on a calm day are good news. -->
+    <div class="metric-subnote" id="detection-age-note"></div>
 
     <details class="accordion-card" aria-label="Snapshot Context">
       <summary class="accordion-summary">
@@ -2678,6 +2711,9 @@
     // capture clicks (queryTopFeature filters on layout visibility).
     let fireDangerVisible = true;
     let fireDangerMeta = null; // last envelope's non-cell fields (freshness, disclaimer, …)
+    // True only while a USER-initiated fire refresh is running. Background polls
+    // must not paint the count as a spinner (D3).
+    let fireUserRefreshInFlight = false;
     let alertsVisible = true;
     let tsunamiVisible = true;
     let hurricaneVisible = true;
@@ -2869,13 +2905,25 @@
       const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     }
-    function applyFreshness(date) {
+    // D2 — the badge answers "is this system working?", NOT "how old is the
+    // newest fire?". It previously read fire.sourceTime (detection age), so on a
+    // calm day a perfectly healthy pipeline permanently showed OUTDATED — good
+    // news displayed as a warning. Measured 2026-08-03: the Worker answered in
+    // 0.119s with HTTP 200 while the newest FIRMS acquisition was 18.3h old.
+    // A badge that cries wolf gets ignored exactly when it matters, which is the
+    // same failure we removed from fire-danger's permanent STALE_OK.
+    //
+    // Now driven by PIPELINE health: when we last polled successfully, plus the
+    // module status. Detection age moved to its own uncoloured line.
+    // applyFreshness is fire-only (2 call sites) — no other module's badge uses it.
+    function applyFreshness(fetchedAt, status) {
       ["freshness-badge-desktop", "freshness-badge-mobile"].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
-        if (!date) { el.className = "freshness f-unknown"; el.textContent = _t("map.fresh.unknown") || "● UNKNOWN"; return; }
-        const ageMin = (Date.now() - date.getTime()) / 60000;
-        if (ageMin <= 10) { el.className = "freshness f-fresh"; el.textContent = _t("map.fresh.fresh") || "✓ FRESH"; }
+        if (status === "unavailable") { el.className = "freshness f-old"; el.textContent = _t("map.fresh.source_down") || "✗ SOURCE DOWN"; return; }
+        if (!fetchedAt) { el.className = "freshness f-unknown"; el.textContent = _t("map.fresh.unknown") || "● UNKNOWN"; return; }
+        const ageMin = (Date.now() - fetchedAt.getTime()) / 60000;
+        if (ageMin <= 15) { el.className = "freshness f-fresh"; el.textContent = _t("map.fresh.live") || "✓ LIVE"; }
         else if (ageMin <= 60) { el.className = "freshness f-stale"; el.textContent = _t("map.fresh.stale") || "⚠ MAY BE STALE"; }
         else { el.className = "freshness f-old"; el.textContent = _t("map.fresh.outdated") || "✗ OUTDATED"; }
       });
@@ -3633,7 +3681,11 @@
       const model = HAZARD_REGISTRY[key];
       const state = getState(key);
       if (!model || !model.enabled) return;
-      if (key === "fire" && !silent) setRefreshingUI(true);
+      // Only a USER-initiated refresh shows the spinner. Background polls run
+      // every POLL_MS and also set status="loading", so before this the count
+      // flickered to a spinner on every poll cycle — 25 renderUnifiedPanels()
+      // call sites made that window easy to land in.
+      if (key === "fire" && !silent) { fireUserRefreshInFlight = true; setRefreshingUI(true); }
       state.status = "loading"; state.error = null;
       try {
         const json = await fetchJson(model.endpoint);
@@ -3653,7 +3705,7 @@
         model.applyData([]);
         if (model.affectsGlobalHealth !== false) { appState.diagnostics.isOffline = true; markError(err && err.isParse ? "parse" : "network"); }
       } finally {
-        if (key === "fire") setRefreshingUI(false);
+        if (key === "fire") { fireUserRefreshInFlight = false; setRefreshingUI(false); }
         model.onFetchComplete?.();
       }
     }
@@ -4546,8 +4598,23 @@
       ["desktop", "mobile"].forEach((suffix) => {
         const fireCountEl = document.getElementById(`fire-count-${suffix}`);
         if (fireCountEl) {
-          if (fire.status === "loading") { fireCountEl.className = "metric-value v-fire"; fireCountEl.innerHTML = '<span class="spinner"></span>'; }
+          // Spinner ONLY for a user-initiated refresh. Background polls also set
+          // status="loading", and painting a spinner for those made the count
+          // flicker — or stick — with no user action behind it (D3).
+          if (fire.status === "loading" && fireUserRefreshInFlight) { fireCountEl.className = "metric-value v-fire"; fireCountEl.innerHTML = '<span class="spinner"></span>'; }
           else { fireCountEl.textContent = String(fireFeatures.length); fireCountEl.className = "metric-value " + (fireFeatures.length > 0 ? "v-fire" : "v-good"); }
+        }
+        // D4 — this panel counts ALL thermal detections; the fire-danger card
+        // counts wildland only. Naming the volcanic share explains the gap
+        // instead of leaving a resident to notice 10 here and 1 there. Layer A
+        // already tags every feature, so this costs no extra request.
+        const volcanicEl = document.getElementById(`fire-volcanic-note-${suffix}`);
+        if (volcanicEl) {
+          const volc = fireFeatures.filter((f) => f?.properties?.volcanic_zone === true).length;
+          volcanicEl.textContent = volc > 0
+            ? (_tmpl("map.metric_detections_volcanic", { n: volc }) ||
+              `${volc} of these are volcanic (Kīlauea / Mauna Loa), not wildfire.`)
+            : "";
         }
         const nearestEl = document.getElementById(`nearest-fire-${suffix}`);
         if (nearestEl) {
@@ -4556,8 +4623,25 @@
         }
         const criticalEl = document.getElementById(`critical-count-${suffix}`);
         if (criticalEl) { criticalEl.textContent = criticalCount > 0 ? String(criticalCount) : (_t("map.s_none") || "None"); criticalEl.className = "metric-value " + (criticalCount > 0 ? "v-crit" : "v-good"); }
+        // D1 — two separate clocks. "Latest detection" is when a satellite last
+        // saw something (fire.sourceTime); "Updated" is when we last polled
+        // successfully (fire.fetchAt, set on every fetch and previously unused).
+        // Showing only the former under a "Fetched" caption made a system that
+        // had polled 0.1s ago look like it had not polled since yesterday.
         const fetchedEl = document.getElementById(`fetch-time-${suffix}`);
         if (fetchedEl) fetchedEl.textContent = fire.sourceTime ? hstTime(fire.sourceTime) : "—";
+        const updatedEl = document.getElementById(`updated-time-${suffix}`);
+        if (updatedEl) updatedEl.textContent = fire.fetchAt ? hstTime(fire.fetchAt) : "—";
+        // Detection age as plain context, never an alarm — an old newest-detection
+        // on a calm day is good news, not a warning.
+        const ageEl = document.getElementById(`detection-age-note-${suffix}`);
+        if (ageEl) {
+          const mins = fire.sourceTime ? Math.max(0, Math.round((Date.now() - fire.sourceTime.getTime()) / 60000)) : null;
+          ageEl.textContent = mins === null ? ""
+            : mins < 60
+              ? (_tmpl("map.detection_age_min", { n: mins }) || `Newest detection is ${mins} min old.`)
+              : (_tmpl("map.detection_age_hr", { n: Math.round(mins / 60) }) || `Newest detection is about ${Math.round(mins / 60)} h old. No newer satellite detection means no new fire was seen.`);
+        }
         const sourceEl = document.getElementById(`data-source-${suffix}`);
         if (sourceEl) sourceEl.textContent = [fire.sourceLabel, smoke.status !== "unavailable" ? smoke.sourceLabel : null, perimeter.status !== "unavailable" ? perimeter.sourceLabel : null, flashFlood.status !== "unavailable" ? flashFlood.sourceLabel : null, mrms.status !== "unavailable" ? mrms.sourceLabel : null, "NOAA Radar Tiles"].filter(Boolean).join(" · ");
         const summaryText = document.getElementById(`summary-text-${suffix}`);
@@ -4579,8 +4663,12 @@
         const summaryPrivacy = document.getElementById(`summary-privacy-${suffix}`);
         if (summaryPrivacy) summaryPrivacy.textContent = _t("map.summary_privacy") || "Kahu Ola aggregates public hazard signals and does not issue emergency orders.";
       });
+      // Cache what the badge now reads (pipeline: last successful poll + status)
+      // so the language-change handler can re-render it without a refetch.
       window._lastFireSourceTime = fire.sourceTime || null;
-      applyFreshness(fire.sourceTime);
+      window._lastFireFetchAt = fire.fetchAt || null;
+      window._lastFireStatus = fire.status || null;
+      applyFreshness(fire.fetchAt, fire.status);
       updateRainRadarStatusUI();
       updateAccordionPreviews();
     }
@@ -4785,7 +4873,41 @@
       setLocationButtonState(true);
       navigator.geolocation.getCurrentPosition((pos) => { const coord = [pos.coords.longitude, pos.coords.latitude]; lastKnownUserCoord = coord; currentViewMode = "My Location"; updateUserMarker(coord); map.flyTo({ center: coord, zoom: Math.max(map.getZoom(), 9), speed: 0.8, essential: true }); document.getElementById("b-loc-text").textContent = (_t("map.banner_location") || "Location used only on this device"); show("b-loc", true); setText("view-mode", _t("map.view_my_location") || "My Location"); renderUnifiedPanels(); setLocationButtonState(false); setTimeout(safeMapResize, 250); }, () => { setLocationButtonState(false); document.getElementById("b-loc-text").textContent = (_t("map.banner_loc_denied") || "Location permission not granted"); show("b-loc", true); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
     }
-    function setRefreshingUI(isRefreshing) { ["desktop", "mobile"].forEach((suffix) => { const refresh = document.getElementById(`refresh-btn-${suffix}`); const fireCount = document.getElementById(`fire-count-${suffix}`); if (refresh) { refresh.disabled = isRefreshing; refresh.innerHTML = isRefreshing ? `<span class="spinner"></span>${_t("map.refreshing") || "REFRESHING"}` : `\u21bb <span data-i18n="map.refresh">${_t("map.refresh") || "REFRESH"}</span>`; } if (isRefreshing && fireCount) { fireCount.className = "metric-value v-fire"; fireCount.innerHTML = '<span class="spinner"></span>'; } }); }
+    // D3 \u2014 the spinner used to be written from three places (the static template,
+    // renderUnifiedPanels' loading branch, and here) but restored from exactly
+    // one (renderUnifiedPanels' else branch). Any refresh whose completion did
+    // not land on that one restore left a bare <span class="spinner"> behind,
+    // which renders as a BLANK count \u2014 observed live: the panel read 10, then
+    // went empty. A fetch failure would have shown 0, so blank was never a
+    // failure signal, just a stuck spinner.
+    //
+    // Fix is symmetric and defensive: whoever starts the spinner also clears it.
+    // This holds regardless of which path leaked, which matters because the
+    // console was clean and no single leaking path could be proven.
+    function setRefreshingUI(isRefreshing) {
+      ["desktop", "mobile"].forEach((suffix) => {
+        const refresh = document.getElementById(`refresh-btn-${suffix}`);
+        const fireCount = document.getElementById(`fire-count-${suffix}`);
+        if (refresh) {
+          refresh.disabled = isRefreshing;
+          refresh.innerHTML = isRefreshing
+            ? `<span class="spinner"></span>${_t("map.refreshing") || "REFRESHING"}`
+            : `\u21bb <span data-i18n="map.refresh">${_t("map.refresh") || "REFRESH"}</span>`;
+        }
+        if (!fireCount) return;
+        if (isRefreshing) {
+          fireCount.className = "metric-value v-fire";
+          fireCount.innerHTML = '<span class="spinner"></span>';
+        } else {
+          // Restore from state rather than leaving the spinner for someone else
+          // to clear. Falls back to a dash only if the module has never fetched.
+          const st = getState("fire");
+          const n = Array.isArray(st?.features) ? st.features.length : null;
+          fireCount.className = "metric-value " + (n === null ? "v-dim" : n > 0 ? "v-fire" : "v-good");
+          fireCount.textContent = n === null ? "\u2014" : String(n);
+        }
+      });
+    }
 
     function queryTopFeature(point, layers) {
       const activeLayers = (layers || []).filter((id) => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
@@ -5296,7 +5418,7 @@
       const _mft = document.getElementById("map-footer-text");
       if (_mft && !IS_LOCAL) _mft.textContent = _t("map.footer") || "Kahu Ola civic technology";
       // Re-apply freshness chips — applyFreshness() reads _t() on each call
-      applyFreshness((window._lastFireSourceTime instanceof Date) ? window._lastFireSourceTime : null);
+      applyFreshness((window._lastFireFetchAt instanceof Date) ? window._lastFireFetchAt : null, window._lastFireStatus);
       // Re-render panel accordion content (JS-driven strings)
       renderUnifiedPanels();
     });

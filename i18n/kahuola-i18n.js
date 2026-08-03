@@ -187,6 +187,14 @@
 
       // Metric labels (panel template)
       "map.metric_detections": "Detections",
+      "map.metric_detections_all": "All thermal detections",
+      "map.metric_detections_volcanic": "{n} of these are volcanic (Kīlauea / Mauna Loa), not wildfire.",
+      "map.metric_latest_detection": "Latest detection",
+      "map.metric_updated": "Updated",
+      "map.detection_age_min": "Newest detection is {n} min old.",
+      "map.detection_age_hr": "Newest detection is about {n} h old. No newer satellite detection means no new fire was seen.",
+      "map.fresh.live": "✓ LIVE",
+      "map.fresh.source_down": "✗ SOURCE DOWN",
       "map.metric_nearest": "Nearest",
       "map.metric_critical": "Critical",
       "map.metric_fetched": "Fetched",
@@ -991,6 +999,14 @@
 
       // Metric labels
       "map.metric_detections": "Ph\xe1t hi\u1ec7n",
+      "map.metric_detections_all": "T\u1ea5t c\u1ea3 \u0111i\u1ec3m nhi\u1ec7t ph\xe1t hi\u1ec7n",
+      "map.metric_detections_volcanic": "{n} trong s\u1ed1 n\xe0y l\xe0 n\xfai l\u1eeda (K\u012blauea / Mauna Loa), kh\xf4ng ph\u1ea3i ch\xe1y r\u1eebng.",
+      "map.metric_latest_detection": "Ph\xe1t hi\u1ec7n g\u1ea7n nh\u1ea5t",
+      "map.metric_updated": "C\u1eadp nh\u1eadt l\xfac",
+      "map.detection_age_min": "Ph\xe1t hi\u1ec7n m\u1edbi nh\u1ea5t c\xe1ch \u0111\xe2y {n} ph\xfat.",
+      "map.detection_age_hr": "Ph\xe1t hi\u1ec7n m\u1edbi nh\u1ea5t c\xe1ch \u0111\xe2y kho\u1ea3ng {n} gi\u1edd. Kh\xf4ng c\xf3 ph\xe1t hi\u1ec7n m\u1edbi t\u1eeb v\u1ec7 tinh ngh\u0129a l\xe0 kh\xf4ng th\u1ea5y \u0111\xe1m ch\xe1y m\u1edbi.",
+      "map.fresh.live": "\u2713 TR\u1ef0C TI\u1ebeP",
+      "map.fresh.source_down": "\u2717 M\u1ea4T NGU\u1ed2N",
       "map.metric_nearest": "G\u1ea7n nh\u1ea5t",
       "map.metric_critical": "Nghi\xeam tr\u1ecdng",
       "map.metric_fetched": "\u0110\xe3 t\u1ea3i",
