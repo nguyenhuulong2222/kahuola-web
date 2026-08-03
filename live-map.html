@@ -2393,6 +2393,7 @@
           <div class="priority-note" id="fire-danger-note" data-i18n="map.fire_danger_note_init">Where a fire could
             spread next, based on wind and dryness. Tap to show or hide the map layer.</div>
           <div class="priority-subnote" id="fire-danger-legend" hidden></div>
+          <div class="priority-subnote" id="fire-danger-coverage"></div>
           <div class="priority-subnote" id="fire-danger-stations"></div>
           <div class="priority-subnote" id="fire-danger-latency"></div>
           <div class="priority-subnote" id="fire-danger-disclaimer"></div>
@@ -3297,7 +3298,9 @@
         // fire cells that do not exist — so there is deliberately no fixture here.
         // Consequence: from a LAN origin the Worker's CORS allowlist returns 403 and this
         // module renders its fail-closed state. That is correct, wanted behaviour.
-        endpoint: "https://kahuola.org/api/hazards/fire-danger?region=maui",
+        // Statewide in ONE request — no per-pan fetching, no viewport logic.
+        // NONE cells are omitted server-side, so a calm statewide payload is tiny.
+        endpoint: "https://kahuola.org/api/hazards/fire-danger?region=statewide",
         parsePayload(json) {
           const errText = payloadError(json);
           if (errText) throw new Error(errText); // routes into the fail-closed path
@@ -3882,9 +3885,22 @@
     // NONE is dropped so a calm day renders an empty, uncluttered map, and
     // insufficient_data is surfaced through the CARD, never as a scary map colour.
     // Any cell failing validation is skipped — never coerced (fail-closed).
+    // Handles BOTH envelope shapes:
+    //   · statewide → { islands: [ { grid:{step_deg}, cells:[…] } ] }
+    //   · single island → { grid:{step_deg}, cells:[…] }   (P04/P05a shape)
+    // Each island carries its OWN step_deg — Hawaiʻi Island runs at 0.04°, so a
+    // single global half-step would draw its squares at the wrong size.
     function normalizeFireDangerCells(json) {
-      const cells = Array.isArray(json?.cells) ? json.cells : [];
-      const step = Number(json?.grid?.step_deg);
+      if (Array.isArray(json?.islands)) {
+        const out = [];
+        for (const isl of json.islands) out.push(...fireDangerCellsFor(isl, isl?.island));
+        return out;
+      }
+      return fireDangerCellsFor(json, json?.region);
+    }
+    function fireDangerCellsFor(src, islandKey) {
+      const cells = Array.isArray(src?.cells) ? src.cells : [];
+      const step = Number(src?.grid?.step_deg);
       if (!isFinite(step) || step <= 0) return [];
       const half = step / 2;
       const out = [];
@@ -3907,6 +3923,7 @@
           // Flattened: queryRenderedFeatures does not preserve nested objects.
           properties: {
             cell_id: c.cell_id ?? "",
+            island: islandKey ?? "",
             danger_level: c.danger_level,
             score: c.score ?? null,
             nearest_hotspot_km: r.nearest_hotspot_km ?? null,
@@ -3958,6 +3975,7 @@
           _t("map.fire_danger_unavailable") ||
           "Fire spread estimate is temporarily unavailable. The map layer is not shown. For official fire information, follow HIEMA, County Emergency Management, and NWS.");
         setFireDangerHidden("fire-danger-legend", true);
+        setFireDangerText("fire-danger-coverage", "");
         setFireDangerText("fire-danger-stations", "");
         setFireDangerText("fire-danger-latency", "");
         setFireDangerText("fire-danger-disclaimer", "");
@@ -3977,7 +3995,7 @@
         updateModuleBadge("fire-danger", _t("map.s_clear") || "Clear", "status-none");
         setFireDangerText("fire-danger-note",
           (_t("map.fire_danger_clear") ||
-            "No elevated fire spread concern on Maui right now. The map layer stays clear until there is something to show.") + offSuffix);
+            "No elevated fire spread concern across the Hawaiian Islands right now. The map layer stays clear until there is something to show.") + offSuffix);
         setFireDangerHidden("fire-danger-legend", true);
       } else {
         let top = "LOW";
@@ -4002,8 +4020,40 @@
         });
       }
 
+      // Coverage: which islands are actually estimated, and which are running
+      // without wind/humidity. Named plainly rather than implying uniform cover.
+      const islands = Array.isArray(meta.islands) ? meta.islands : [];
+      if (islands.length) {
+        const labels = islands.map((i) => i.label || i.island);
+        let cov = (_tmpl("map.fire_danger_coverage", { islands: labels.join(", ") }) ||
+          `Covering: ${labels.join(", ")}.`);
+        // Two DIFFERENT gaps, deliberately worded apart. Calling a permanent
+        // absence "no live reading" would read as a temporary outage and imply
+        // stale data, which is exactly the confusion we removed from freshness.
+        const noStationKeys = Array.isArray(meta.uninstrumented_islands) ? meta.uninstrumented_islands : [];
+        const noStation = islands.filter((i) => noStationKeys.includes(i.island))
+          .map((i) => i.label || i.island);
+        const noReading = islands
+          .filter((i) => (i.degraded_inputs || []).length > 0 && !noStationKeys.includes(i.island))
+          .map((i) => i.label || i.island);
+        if (noStation.length) {
+          cov += " " + (_tmpl("map.fire_danger_no_station", { islands: noStation.join(", ") }) ||
+            `No weather station exists on ${noStation.join(", ")}, so those estimates use fire distance only.`);
+        }
+        if (noReading.length) {
+          cov += " " + (_tmpl("map.fire_danger_coverage_gap", { islands: noReading.join(", ") }) ||
+            `No live wind or humidity reading right now: ${noReading.join(", ")}.`);
+        }
+        setFireDangerText("fire-danger-coverage", cov);
+      } else {
+        setFireDangerText("fire-danger-coverage", meta.coverage_note || "");
+      }
+
       // Honest provenance: these are point observations, not per-cell measurements.
-      const stations = Array.isArray(meta.stations_used) ? meta.stations_used : [];
+      // Statewide reports stations per island, so aggregate and de-duplicate.
+      const stations = islands.length
+        ? [...new Map(islands.flatMap((i) => i.stations_used || []).map((s) => [s.id, s])).values()]
+        : Array.isArray(meta.stations_used) ? meta.stations_used : [];
       setFireDangerText("fire-danger-stations", stations.length
         ? (_t("map.fire_danger_stations") || "Wind and humidity from nearest weather station: ") +
         stations.map((s) => s.name || s.id).join(", ")
