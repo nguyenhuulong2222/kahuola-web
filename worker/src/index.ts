@@ -1779,10 +1779,31 @@ type FirmsHotspot = {
   satellite: string;
   version: string;
   sensor: string;
+  // Layer A geometry test — see the volcanic exclusion note on FirmsIngest.
+  volcanic: boolean;
 };
 
 type FirmsIngest = {
+  // WILDLAND hotspots only. Volcanic thermal anomalies are excluded from the
+  // spread model entirely:
+  //   The score is effective_km = km / (wind × humidity) — a downwind
+  //   ADVECTION model for vegetation fire. Lava and vent heat do not advect on
+  //   the trades, so pushing a volcanic detection through it would invent a
+  //   hazard model we never designed and cannot defend. Measured 2026-08-03:
+  //   9 of 10 Hawaiʻi detections were Kīlauea summit/ERZ, and they were
+  //   producing all 75 of Hawaiʻi Island's shaded cells — 9 of them EXTREME —
+  //   i.e. lava rendered as wind-driven wildfire spread.
+  //
+  // TRADE-OFF, INHERITED FROM LAYER A AND DELIBERATE: VOLCANIC_ZONES bboxes are
+  // deliberately generous, so a genuine VEGETATION fire ignited by lava inside
+  // the ERZ bbox is excluded from spread scoring too. That is the safer
+  // failure: residents near Kīlauea already watch USGS HVO, whereas a permanent
+  // 24/7 wildfire advisory ringing an active volcano would discredit the whole
+  // layer. Layer A made this same call; this path inherits it on purpose.
   hotspots: FirmsHotspot[];
+  // Counted and REPORTED, never silently dropped — a detection that simply
+  // vanishes from the envelope is its own kind of dishonesty.
+  volcanic_count: number;
   health: 'ok' | 'degraded' | 'unconfigured';
   sensors_used: string[];
 };
@@ -1844,6 +1865,10 @@ function parseFirmsCsv(csv: string, sensor: string): FirmsHotspot[] {
       satellite: iSat >= 0 ? v[iSat] ?? '' : '',
       version: iVer >= 0 ? v[iVer] ?? '' : '',            // carries the RT/URT/NRT tag
       sensor,
+      // Reuses Layer A's VOLCANIC_ZONES / inVolcanicZone — no new geometry.
+      // A pure point-in-bbox test on already-validated coordinates, so this is
+      // Invariant-III safe: it classifies, it never infers a missing value.
+      volcanic: inVolcanicZone(lon, lat),
     });
   }
   return out;
@@ -1877,7 +1902,7 @@ async function fetchFirmsMultiSensor(
 ): Promise<FirmsIngest> {
   if (!env.NASA_FIRMS_MAP_KEY) {
     // Missing secret degrades the layer; it does not fail the request.
-    return { hotspots: [], health: 'unconfigured', sensors_used: [] };
+    return { hotspots: [], volcanic_count: 0, health: 'unconfigured', sensors_used: [] };
   }
 
   const [west, south, east, north] = bbox;
@@ -1929,9 +1954,18 @@ async function fetchFirmsMultiSensor(
 
   // Every sensor failed → degraded. This is NOT the same as "zero hotspots".
   if (sensorsUsed.length === 0) {
-    return { hotspots: [], health: 'degraded', sensors_used: [] };
+    return { hotspots: [], volcanic_count: 0, health: 'degraded', sensors_used: [] };
   }
-  return { hotspots: dedupeHotspots(merged), health: 'ok', sensors_used: sensorsUsed };
+  // Split AFTER dedupe so a fire seen by three satellites is counted once on
+  // whichever side it belongs to.
+  const deduped = dedupeHotspots(merged);
+  const wildland = deduped.filter((h) => !h.volcanic);
+  return {
+    hotspots: wildland,
+    volcanic_count: deduped.length - wildland.length,
+    health: 'ok',
+    sensors_used: sensorsUsed,
+  };
 }
 
 // ── NWS surface conditions (wind vector + relative humidity) ────────────────
@@ -2519,7 +2553,7 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
   const firms: FirmsIngest =
     firmsSettled.status === 'fulfilled'
       ? firmsSettled.value
-      : { hotspots: [], health: 'degraded', sensors_used: [] };
+      : { hotspots: [], volcanic_count: 0, health: 'degraded', sensors_used: [] };
   const nwsAll: NwsConditions =
     nwsSettled.status === 'fulfilled' ? nwsSettled.value : { readings: [], health: 'degraded' };
 
@@ -2579,7 +2613,13 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
     freshness,
     region,
     sensors_used: firms.sensors_used,
+    // WILDLAND detections only — this is the number that drives the scoring.
     hotspot_count: firms.hotspots.length,
+    // Volcanic thermal anomalies inside Layer A's VOLCANIC_ZONES. Excluded from
+    // the spread model (lava does not advect downwind) but REPORTED so the
+    // client can name them and route users to USGS HVO instead of silently
+    // dropping detections that genuinely exist.
+    volcanic_hotspot_count: firms.volcanic_count,
     source_health: { firms: firms.health, nws: nwsAll.health },
     // Structural coverage gap, NOT a data-quality problem: no weather station
     // exists on these islands, so their cells are scored on fire distance alone.
