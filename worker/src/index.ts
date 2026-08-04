@@ -2558,6 +2558,10 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
 
   const requested = (url.searchParams.get('region') || 'maui').toLowerCase();
   const statewide = requested === 'statewide' || requested === 'hawaii-statewide';
+  // CONUS is a structurally different model (hotspot-anchored patches, not a
+  // fixed grid) with its own envelope, so it branches out entirely rather than
+  // threading a flag through the island code.
+  if (requested === 'conus') return handleFireDangerConus(env, cors);
   const single = FIRE_DANGER_ISLANDS.find((i) => i.key === requested);
   // Unknown region falls back to Maui, matching P04.
   const targets: readonly IslandSpec[] = statewide
@@ -2686,6 +2690,436 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
     200,
     headers,
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// P24 · CONUS FIRE-SPREAD DANGER — hotspot-anchored patches
+//
+// Architecturally INVERTED from the Hawaiʻi layer. A pre-computed CONUS grid at
+// any useful resolution is millions of cells; instead we cluster detections and
+// generate a small local patch around each cluster. Calm day → zero patches.
+//
+// Everything here lives BESIDE the Hawaiʻi paths and shares only pure helpers
+// (haversineKm, bearingDeg, proximityTerm, windTerm, humidityTerm, bandFor).
+// region=maui and region=statewide are untouched.
+//
+// ── MEASURED 2026-08-04, and the numbers drove the design ──────────────────
+// days=1 over the western US returned ZERO detections — the FIRMS UTC-day
+// window can be hours empty — while WFIGS listed 475 active CONUS incidents
+// including multiple >300k-acre fires. days=1 CONUS surfaced 610 detections of
+// which exactly ONE was west of -100°; the other 609 were persistent industrial
+// heat (Gary/E. Chicago steel, Pittsburgh, Cleveland, Sarnia refineries, Port
+// Arthur flares, a Gulf oil platform), FRP ceiling 38 MW.
+// days=2 surfaces the real fire signal: FRP up to 1580 MW in the west.
+// Hence FIRE_DANGER_CONUS_DAYS = 2. This is NOT a copy of Hawaiʻi's days=1.
+const FIRE_DANGER_CONUS_DAYS = 2;
+
+// CONUS is split into quadrants because a single bbox query blows past the
+// FIRMS 5000-record cap: at days=2 both NOAA-20 and NOAA-21 returned exactly
+// 5000 (truncated, silently). Four sub-bboxes keep each query under the cap.
+//
+// RATE-LIMIT MATH (budget is 5000 transactions / 10 min):
+//   3 sensors × 4 sub-bboxes = 12 transactions per COLD refresh.
+//   With FIRE_DANGER_FIRMS_TTL = 600 s that is at most 6 cold refreshes/hour
+//   = 72 transactions/hour ≈ 2% of the ceiling. Comfortably clear.
+const CONUS_SUB_BBOXES: ReadonlyArray<[number, number, number, number]> = [
+  [-125.0, 24.0, -95.75, 36.75],   // SW
+  [-95.75, 24.0, -66.5, 36.75],    // SE
+  [-125.0, 36.75, -95.75, 49.5],   // NW
+  [-95.75, 36.75, -66.5, 49.5],    // NE
+];
+
+// Single-linkage distance for grouping detections into one "fire".
+const CONUS_CLUSTER_RADIUS_KM = 10;
+// Worker budget cap. At ~65-80 cells per patch this is ~2600-3200 cells worst
+// case, comparable to the statewide Hawaiʻi envelope once NONE cells are
+// omitted.
+const CONUS_MAX_CLUSTERS = 40;
+// FLOOR RULE: a cluster this large is ALWAYS assessed regardless of FRP rank.
+// FRP is an instantaneous radiative-power snapshot at overpass; a Gila-scale
+// megacluster can read low if the overpass caught it between flare-ups, and it
+// must never drop out of the assessed set for that reason.
+const CONUS_ALWAYS_ASSESS_MIN_HOTSPOTS = 20;
+// ~4.4 km cells — coarser than Hawaiʻi's 0.02° because a CONUS patch covers a
+// 20 km radius and the model's own resolution does not justify finer.
+const CONUS_PATCH_STEP_DEG = 0.04;
+
+// v1 RANKING HEURISTIC — deliberately simple and deliberately documented.
+// Rank by max FRP (intensity), tie-break by hotspot count (extent), with the
+// floor rule above. POPULATION WEIGHTING IS FUTURE WORK: a 5 MW fire upwind of
+// a town matters more than a 500 MW fire in wilderness, and this v1 cannot see
+// that. Stated here so the limitation is a known choice, not an oversight.
+type ConusCluster = {
+  hotspots: FirmsHotspot[];
+  lon: number;
+  lat: number;
+  maxFrp: number;
+};
+
+// O(n) spatial-bucket clustering. Pairwise would be O(n²) — at the ~10k
+// detections CONUS returns at days=2 that is 100M distance computations and
+// would blow the Worker CPU budget.
+function clusterHotspots(hotspots: FirmsHotspot[], radiusKm: number): ConusCluster[] {
+  const cell = radiusKm / 111; // degrees, approximate — only used for bucketing
+  const buckets = new Map<string, number[]>();
+  const key = (lon: number, lat: number) => `${Math.floor(lon / cell)},${Math.floor(lat / cell)}`;
+  hotspots.forEach((h, i) => {
+    const k = key(h.lon, h.lat);
+    const b = buckets.get(k);
+    if (b) b.push(i); else buckets.set(k, [i]);
+  });
+
+  const seen = new Array(hotspots.length).fill(false);
+  const out: ConusCluster[] = [];
+  for (let i = 0; i < hotspots.length; i++) {
+    if (seen[i]) continue;
+    seen[i] = true;
+    const stack = [i];
+    const members: FirmsHotspot[] = [];
+    while (stack.length) {
+      const j = stack.pop() as number;
+      const hj = hotspots[j];
+      members.push(hj);
+      // Only the 3×3 neighbourhood can contain a point within radiusKm.
+      const bx = Math.floor(hj.lon / cell);
+      const by = Math.floor(hj.lat / cell);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const nb = buckets.get(`${bx + dx},${by + dy}`);
+          if (!nb) continue;
+          for (const k of nb) {
+            if (seen[k]) continue;
+            if (haversineKm(hj.lon, hj.lat, hotspots[k].lon, hotspots[k].lat) <= radiusKm) {
+              seen[k] = true;
+              stack.push(k);
+            }
+          }
+        }
+      }
+    }
+    let lon = 0, lat = 0, maxFrp = 0;
+    for (const m of members) { lon += m.lon; lat += m.lat; if (m.frp > maxFrp) maxFrp = m.frp; }
+    out.push({ hotspots: members, lon: lon / members.length, lat: lat / members.length, maxFrp });
+  }
+  return out;
+}
+
+// Fetch CONUS detections across all sub-bboxes × sensors. Same fail-closed
+// contract as fetchFirmsMultiSensor: never throws, returns a health flag.
+// Volcanic tagging still applies (Layer A geometry is Hawaiʻi-only, so it is a
+// no-op here, but the field is populated consistently).
+async function fetchFirmsConus(env: Env): Promise<FirmsIngest> {
+  if (!env.NASA_FIRMS_MAP_KEY) {
+    return { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'unconfigured', sensors_used: [] };
+  }
+  const cache = caches.default;
+  const jobs: Array<{ sensor: string; bbox: readonly number[] }> = [];
+  for (const sensor of FIRE_DANGER_SENSORS) for (const bbox of CONUS_SUB_BBOXES) jobs.push({ sensor, bbox });
+
+  const settled = await Promise.allSettled(jobs.map(async ({ sensor, bbox }) => {
+    const cacheReq = new Request(fireDangerFirmsCacheKey(sensor, bbox, FIRE_DANGER_CONUS_DAYS));
+    const cached = await cache.match(cacheReq);
+    if (cached) return { sensor, csv: await cached.text() };
+    const upstream =
+      `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}` +
+      `/${sensor}/${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}/${FIRE_DANGER_CONUS_DAYS}`;
+    const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
+    if (!res.ok) throw new Error(`upstream ${res.status}`);
+    const csv = await res.text();
+    await cache.put(cacheReq, new Response(csv, {
+      headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=${FIRE_DANGER_FIRMS_TTL}` },
+    }));
+    return { sensor, csv };
+  }));
+
+  const merged: FirmsHotspot[] = [];
+  const sensorsUsed = new Set<string>();
+  settled.forEach((r, i) => {
+    if (r.status !== 'fulfilled') {
+      console.warn(JSON.stringify({ layer: 'fire-danger-conus', stage: 'firms', sensor: jobs[i].sensor, dropped: true }));
+      return;
+    }
+    sensorsUsed.add(jobs[i].sensor);
+    merged.push(...parseFirmsCsv(r.value.csv, jobs[i].sensor));
+  });
+
+  if (sensorsUsed.size === 0) {
+    return { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'degraded', sensors_used: [] };
+  }
+  const deduped = dedupeHotspots(merged);
+  const wildland = deduped.filter((h) => !h.volcanic);
+  const volcanic = deduped.filter((h) => h.volcanic);
+  return {
+    hotspots: wildland,
+    volcanic_count: volcanic.length,
+    volcanic_hotspots: volcanic,
+    health: 'ok',
+    sensors_used: [...sensorsUsed],
+  };
+}
+
+// ── CONUS weather: NWS GRIDPOINT FORECAST ──────────────────────────────────
+// Hawaiʻi uses station OBSERVATIONS; CONUS uses gridded FORECAST. That
+// asymmetry is deliberate — there is no station within useful distance of most
+// wildfires — and it is LABELLED, never blurred: the envelope carries
+// weather_source and the client says so in the popup.
+//
+// Uses the RAW gridpoint (`forecastGridData`), not `/forecast/hourly`. Measured:
+// hourly is only 26% smaller (162 KB vs 219 KB) but degrades windDirection to a
+// 16-point compass STRING ("E"), losing the exact degrees the downwind test
+// needs. Raw gives degree_(angle), km_h-1 and percent directly.
+//
+// Two-tier cache keeps the 219 KB payload off the hot path: the extracted
+// three numbers are cached per rounded centroid, so a warm request never
+// refetches the grid.
+const CONUS_WX_TTL = 600;
+
+type ConusWeather = {
+  wind_mph: number | null;
+  wind_dir_deg: number | null;
+  rh_pct: number | null;
+  grid_id: string | null;
+};
+
+// Pick the forecast period covering NOW, not blindly periods[0] — the series
+// starts at 00:00 UTC and blindly taking the first entry would report hours-old
+// conditions as current.
+function pickGridValue(series: unknown, nowMs: number): number | null {
+  const values = (series as { values?: Array<{ validTime?: string; value?: unknown }> })?.values;
+  if (!Array.isArray(values)) return null;
+  for (const v of values) {
+    if (typeof v?.value !== 'number' || !isFinite(v.value)) continue;
+    const vt = typeof v.validTime === 'string' ? v.validTime : '';
+    const [startStr, dur] = vt.split('/');
+    const start = Date.parse(startStr || '');
+    if (!isFinite(start)) continue;
+    // ISO-8601 duration, e.g. PT1H / PT6H / P1DT2H — hours are enough here.
+    const h = /PT(\d+)H/.exec(dur || '');
+    const d = /P(\d+)D/.exec(dur || '');
+    const spanMs = ((d ? parseInt(d[1], 10) * 24 : 0) + (h ? parseInt(h[1], 10) : 1)) * 3600_000;
+    if (nowMs >= start && nowMs < start + spanMs) return v.value;
+  }
+  return null;
+}
+
+async function fetchConusWeather(lat: number, lon: number, nowMs: number): Promise<ConusWeather> {
+  const empty: ConusWeather = { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null };
+  // Round the centroid so nearby clusters in one fire complex share a cache entry.
+  const rLat = Math.round(lat * 10) / 10;
+  const rLon = Math.round(lon * 10) / 10;
+  const cache = caches.default;
+  const cacheReq = new Request(`https://api.weather.gov/_kahuola/fire-danger/conus-wx/${rLat},${rLon}`);
+  try {
+    const cached = await cache.match(cacheReq);
+    if (cached) return (await cached.json()) as ConusWeather;
+
+    const headers = { 'User-Agent': 'KahuOla/1.0 kahuola.org', Accept: 'application/geo+json' };
+    const ptRes = await fetch(`https://api.weather.gov/points/${rLat},${rLon}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT), headers,
+    });
+    if (!ptRes.ok) throw new Error(`points ${ptRes.status}`);
+    const pt = (await ptRes.json()) as { properties?: { forecastGridData?: string; gridId?: string; gridX?: number; gridY?: number } };
+    const gridUrl = pt?.properties?.forecastGridData;
+    if (!gridUrl) throw new Error('no gridpoint');
+
+    const gRes = await fetch(gridUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT), headers });
+    if (!gRes.ok) throw new Error(`grid ${gRes.status}`);
+    const g = (await gRes.json()) as { properties?: Record<string, unknown> };
+    const p = g?.properties ?? {};
+
+    const wsKmh = pickGridValue(p.windSpeed, nowMs);
+    const wdDeg = pickGridValue(p.windDirection, nowMs);
+    const rh = pickGridValue(p.relativeHumidity, nowMs);
+
+    const out: ConusWeather = {
+      // Gridpoint windSpeed is wmoUnit:km_h-1 (verified against the live API).
+      wind_mph: wsKmh !== null && wdDeg !== null ? wsKmh * 0.621371 : null,
+      wind_dir_deg: wsKmh !== null && wdDeg !== null && wdDeg >= 0 && wdDeg <= 360
+        ? Number((((wdDeg % 360) + 360) % 360).toFixed(1)) : null,
+      rh_pct: rh !== null && rh >= 0 && rh <= 100 ? rh : null,
+      grid_id: pt?.properties?.gridId
+        ? `${pt.properties.gridId}/${pt.properties.gridX},${pt.properties.gridY}` : null,
+    };
+    // Cache the EXTRACTED values, not the 219 KB payload.
+    await cache.put(cacheReq, new Response(JSON.stringify(out), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CONUS_WX_TTL}` },
+    }));
+    return out;
+  } catch {
+    console.warn(JSON.stringify({ layer: 'fire-danger-conus', stage: 'nws', grid: `${rLat},${rLon}`, dropped: true }));
+    return empty;
+  }
+}
+
+// CONUS latency is NOT Hawaiʻi's. FIRMS Ultra Real-Time covers the mainland via
+// Madison WI / Hampton VA direct-broadcast, so many detections land within
+// minutes — but RT/NRT elsewhere can take far longer. Never promise universal
+// near-instant detection; Hawaiʻi keeps its own ~20-30 min note.
+const FIRE_DANGER_CONUS_LATENCY_NOTE =
+  'Many mainland fire detections arrive within minutes of the satellite pass; others can take ' +
+  '20 minutes to a few hours. Detection timing is not uniform across the country.';
+
+// We cannot build a nationwide static-heat-source registry in v1, and the VIIRS
+// NRT feed we fetch carries no static-source type column, so persistent
+// industrial heat CAN be clustered and scored. Measured 2026-08-04: with a
+// days=1 window the entire CONUS top-12 by size was steel mills and refinery
+// flares. Saying so plainly is the only honest option available in v1.
+const FIRE_DANGER_CONUS_INDUSTRIAL_NOTE =
+  'Some detections may be industrial heat sources — steel mills, refinery flares, gas wells — ' +
+  'rather than wildfire. Satellite heat detection alone cannot always tell them apart. ' +
+  'Filtering persistent industrial sources is planned future work.';
+
+const FIRE_DANGER_CONUS_DISCLAIMER =
+  'Estimated fire-spread concern — model output for situational awareness only, not an official ' +
+  'fire-behavior forecast. Follow your state and local fire authorities and the National Weather ' +
+  'Service for official guidance.';
+
+async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Response> {
+  const nowMs = Date.now();
+  const generatedAt = new Date(nowMs).toISOString();
+
+  const firms = await fetchFirmsConus(env).catch(
+    () => ({ hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'degraded', sensors_used: [] } as FirmsIngest),
+  );
+  const firmsOk = firms.health === 'ok';
+
+  // FAIL-CLOSED, identical to Hawaiʻi: the band derives from HEALTH, never from
+  // the hotspot count. A failed ingest yields no clusters and DEGRADED — it must
+  // never be presentable as "no fires".
+  const allClusters = firmsOk ? clusterHotspots(firms.hotspots, CONUS_CLUSTER_RADIUS_KM) : [];
+
+  // Rank: max FRP desc, tie-break hotspot count desc. Then the floor rule
+  // promotes any cluster with >= CONUS_ALWAYS_ASSESS_MIN_HOTSPOTS regardless of
+  // where FRP put it.
+  const ranked = allClusters.slice().sort((a, b) =>
+    b.maxFrp - a.maxFrp || b.hotspots.length - a.hotspots.length);
+  const chosen: ConusCluster[] = [];
+  const taken = new Set<ConusCluster>();
+  for (const c of ranked) {
+    if (c.hotspots.length >= CONUS_ALWAYS_ASSESS_MIN_HOTSPOTS) { chosen.push(c); taken.add(c); }
+  }
+  for (const c of ranked) {
+    if (chosen.length >= CONUS_MAX_CLUSTERS) break;
+    if (!taken.has(c)) { chosen.push(c); taken.add(c); }
+  }
+  const assessed = chosen.slice(0, Math.max(CONUS_MAX_CLUSTERS, chosen.length));
+  const unassessedClusterCount = Math.max(0, allClusters.length - assessed.length);
+
+  // Weather per assessed cluster, isolated: one cluster's weather failing
+  // degrades that cluster only (Invariant II).
+  const wx = await Promise.allSettled(assessed.map((c) => fetchConusWeather(c.lat, c.lon, nowMs)));
+
+  // Overlapping patches MERGE with per-cell MAX score. Two clusters producing a
+  // score for the same ground is two valid model outputs; taking the higher is
+  // SELECTION, not inflation — nothing is summed or amplified.
+  type MergedCell = { clusterIdx: number; score: number; cell: Record<string, unknown> };
+  const cellMap = new Map<string, MergedCell>();
+
+  assessed.forEach((cluster, ci) => {
+    const w: ConusWeather = wx[ci].status === 'fulfilled'
+      ? wx[ci].value as ConusWeather
+      : { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null };
+    const half = CONUS_PATCH_STEP_DEG / 2;
+    const spanDeg = PROX_ZERO_KM / 111;
+    const steps = Math.ceil(spanDeg / CONUS_PATCH_STEP_DEG);
+    for (let iy = -steps; iy <= steps; iy++) {
+      for (let ix = -steps; ix <= steps; ix++) {
+        const lat = cluster.lat + iy * CONUS_PATCH_STEP_DEG;
+        const lon = cluster.lon + ix * CONUS_PATCH_STEP_DEG;
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
+
+        let nearestKm: number | null = null;
+        let nearestBearing = 0;
+        for (const h of cluster.hotspots) {
+          const km = haversineKm(lon, lat, h.lon, h.lat);
+          if (nearestKm === null || km < nearestKm) { nearestKm = km; nearestBearing = bearingDeg(h.lon, h.lat, lon, lat); }
+        }
+        if (nearestKm === null || nearestKm > PROX_ZERO_KM) continue; // outside the patch
+
+        const { term: wTerm, downwind } = windTerm(nearestBearing, w.wind_dir_deg, w.wind_mph);
+        const hTerm = humidityTerm(w.rh_pct);
+        const effectiveKm = nearestKm / (wTerm * hTerm);
+        const score = clamp01(proximityTerm(effectiveKm));
+        const band = bandFor(score);
+        if (band === 'NONE') continue; // omit NONE — learned from statewide payload size
+
+        const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+        const prev = cellMap.get(key);
+        if (prev && prev.score >= score) continue;
+        cellMap.set(key, {
+          clusterIdx: ci,
+          score,
+          cell: {
+            cell_id: `c${ci}r${iy}c${ix}`,
+            centroid: [Number(lon.toFixed(5)), Number(lat.toFixed(5))],
+            danger_level: band,
+            score: Number(score.toFixed(3)),
+            // PER-CELL values only. wind/RH/grid are CLUSTER-CONSTANT and live
+            // on the parent cluster's `weather` — repeating them on every cell
+            // roughly doubled the payload for zero extra information.
+            reason: {
+              nearest_hotspot_km: Number(nearestKm.toFixed(2)),
+              effective_km: Number(effectiveKm.toFixed(2)),
+              downwind,
+            },
+          },
+        });
+      }
+    }
+  });
+
+  const cellsByCluster: Array<Array<Record<string, unknown>>> = assessed.map(() => []);
+  for (const m of cellMap.values()) cellsByCluster[m.clusterIdx].push(m.cell);
+
+  const degradedInputs = new Set<string>();
+  const clusters = assessed.map((c, ci) => {
+    const w: ConusWeather = wx[ci].status === 'fulfilled'
+      ? wx[ci].value as ConusWeather
+      : { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null };
+    const di: string[] = [];
+    if (w.wind_mph === null || w.wind_dir_deg === null) { di.push('wind'); degradedInputs.add('wind'); }
+    if (w.rh_pct === null) { di.push('humidity'); degradedInputs.add('humidity'); }
+    return {
+      cluster_id: `conus-${ci}`,
+      centroid: [Number(c.lon.toFixed(5)), Number(c.lat.toFixed(5))],
+      hotspot_count: c.hotspots.length,
+      max_frp: Number(c.maxFrp.toFixed(1)),
+      grid: { step_deg: CONUS_PATCH_STEP_DEG, radius_km: PROX_ZERO_KM, cell_count: cellsByCluster[ci].length },
+      weather: { wind_mph: w.wind_mph === null ? null : Number(w.wind_mph.toFixed(1)), wind_dir_deg: w.wind_dir_deg, rh_pct: w.rh_pct === null ? null : Number(w.rh_pct.toFixed(1)), grid_id: w.grid_id },
+      degraded_inputs: di,
+      cells: cellsByCluster[ci],
+    };
+  });
+
+  const freshness = !firmsOk ? 'DEGRADED' : degradedInputs.size > 0 ? 'STALE_OK' : 'FRESH';
+
+  const body = {
+    generated_at: generatedAt,
+    stale_after_seconds: FIRE_DANGER_STALE_AFTER_SECONDS,
+    freshness,
+    region: 'conus',
+    sensors_used: firms.sensors_used,
+    day_range: FIRE_DANGER_CONUS_DAYS,
+    hotspot_count: firms.hotspots.length,
+    cluster_count: allClusters.length,
+    assessed_cluster_count: assessed.length,
+    // Never silently truncate. The client states these numbers plainly.
+    unassessed_cluster_count: unassessedClusterCount,
+    source_health: { firms: firms.health, nws: degradedInputs.size > 0 ? 'degraded' : 'ok' },
+    degraded_inputs: [...degradedInputs],
+    // Hawaiʻi uses station OBSERVATIONS; CONUS uses gridded FORECAST. Labelled,
+    // never blurred.
+    weather_source: 'nws_gridpoint_forecast',
+    coverage_note:
+      'Spread estimates exist only around detected fire clusters, not everywhere. ' +
+      'An area with no shading has not been assessed — it is not a statement that there is no risk.',
+    industrial_note: FIRE_DANGER_CONUS_INDUSTRIAL_NOTE,
+    latency_note: FIRE_DANGER_CONUS_LATENCY_NOTE,
+    disclaimer: FIRE_DANGER_CONUS_DISCLAIMER,
+    clusters,
+  };
+
+  return jsonResp(body, 200, { ...cors, 'Cache-Control': firmsOk ? 'public, max-age=300' : 'no-store' });
 }
 
 const WMS_UPSTREAMS: Record<string, { url: string; ttl: number; keySecret?: keyof Env; keyParam?: string }> = {
