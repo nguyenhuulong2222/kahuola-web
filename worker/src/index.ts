@@ -3036,11 +3036,31 @@ async function fetchFirmsConus(env: Env): Promise<FirmsIngest> {
 // refetches the grid.
 const CONUS_WX_TTL = 600;
 
+// Locality is suppressed beyond this. /points always returns SOME city, but at
+// 133 km (measured: a Gulf of Mexico oil platform resolving to "Venice, LA") the
+// answer is technically true and practically useless. Rendering nothing beats
+// rendering something misleading.
+const CONUS_NEAR_MAX_KM = 80;
+
+// Vicinity of the FIRE, derived from the fire's own coordinates — never a user's,
+// and never a street address. bearing_deg is FROM THE CITY TO THE FIRE (verified
+// against a computed great-circle bearing on two real clusters, matching within
+// 1 degree), so the honest phrasing is "19 km ESE of Spring City, UT" — the fire
+// is ESE of the town. Attaching the direction to the wrong end would invert the
+// meaning, the same failure class as the wind-direction sign in the spread model.
+type ConusNear = {
+  city: string;
+  state: string;
+  distance_km: number;
+  bearing_deg: number;
+} | null;
+
 type ConusWeather = {
   wind_mph: number | null;
   wind_dir_deg: number | null;
   rh_pct: number | null;
   grid_id: string | null;
+  near: ConusNear;
 };
 
 // Pick the forecast period covering NOW, not blindly periods[0] — the series
@@ -3065,7 +3085,7 @@ function pickGridValue(series: unknown, nowMs: number): number | null {
 }
 
 async function fetchConusWeather(lat: number, lon: number, nowMs: number): Promise<ConusWeather> {
-  const empty: ConusWeather = { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null };
+  const empty: ConusWeather = { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null, near: null };
   // Round the centroid so nearby clusters in one fire complex share a cache entry.
   const rLat = Math.round(lat * 10) / 10;
   const rLon = Math.round(lon * 10) / 10;
@@ -3084,6 +3104,31 @@ async function fetchConusWeather(lat: number, lon: number, nowMs: number): Promi
     const gridUrl = pt?.properties?.forecastGridData;
     if (!gridUrl) throw new Error('no gridpoint');
 
+    // Already in the response we just fetched — previously discarded. No extra
+    // upstream call. Every field must validate or the whole locality is dropped:
+    // a half-parsed vicinity is worse than none.
+    let near: ConusNear = null;
+    const rl = (pt?.properties as { relativeLocation?: { properties?: Record<string, unknown> } })
+      ?.relativeLocation?.properties;
+    if (rl) {
+      const city = typeof rl.city === 'string' ? rl.city.trim() : '';
+      const state = typeof rl.state === 'string' ? rl.state.trim() : '';
+      const dist = rl.distance as { value?: unknown; unitCode?: unknown } | undefined;
+      const brg = rl.bearing as { value?: unknown; unitCode?: unknown } | undefined;
+      const metres = typeof dist?.value === 'number' && dist.unitCode === 'wmoUnit:m' ? dist.value : NaN;
+      const bearing = typeof brg?.value === 'number' ? brg.value : NaN;
+      const km = metres / 1000;
+      if (city && state && isFinite(km) && km >= 0 && km <= CONUS_NEAR_MAX_KM &&
+        isFinite(bearing) && bearing >= 0 && bearing <= 360) {
+        near = {
+          city,
+          state,
+          distance_km: Number(km.toFixed(1)),
+          bearing_deg: Number((((bearing % 360) + 360) % 360).toFixed(0)),
+        };
+      }
+    }
+
     const gRes = await fetch(gridUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT), headers });
     if (!gRes.ok) throw new Error(`grid ${gRes.status}`);
     const g = (await gRes.json()) as { properties?: Record<string, unknown> };
@@ -3101,6 +3146,7 @@ async function fetchConusWeather(lat: number, lon: number, nowMs: number): Promi
       rh_pct: rh !== null && rh >= 0 && rh <= 100 ? rh : null,
       grid_id: pt?.properties?.gridId
         ? `${pt.properties.gridId}/${pt.properties.gridX},${pt.properties.gridY}` : null,
+      near,
     };
     // Cache the EXTRACTED values, not the 219 KB payload.
     await cache.put(cacheReq, new Response(JSON.stringify(out), {
@@ -3190,7 +3236,7 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
   assessed.forEach((cluster, ci) => {
     const w: ConusWeather = wx[ci].status === 'fulfilled'
       ? wx[ci].value as ConusWeather
-      : { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null };
+      : { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null, near: null };
     const half = CONUS_PATCH_STEP_DEG / 2;
     const spanDeg = PROX_ZERO_KM / 111;
     const steps = Math.ceil(spanDeg / CONUS_PATCH_STEP_DEG);
@@ -3247,7 +3293,7 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
   const clusters = assessed.map((c, ci) => {
     const w: ConusWeather = wx[ci].status === 'fulfilled'
       ? wx[ci].value as ConusWeather
-      : { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null };
+      : { wind_mph: null, wind_dir_deg: null, rh_pct: null, grid_id: null, near: null };
     const di: string[] = [];
     if (w.wind_mph === null || w.wind_dir_deg === null) { di.push('wind'); degradedInputs.add('wind'); }
     if (w.rh_pct === null) { di.push('humidity'); degradedInputs.add('humidity'); }
@@ -3261,6 +3307,9 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
       max_frp: Number(c.maxFrp.toFixed(1)),
       grid: { step_deg: CONUS_PATCH_STEP_DEG, radius_km: PROX_ZERO_KM, cell_count: cellsByCluster[ci].length },
       weather: { wind_mph: w.wind_mph === null ? null : Number(w.wind_mph.toFixed(1)), wind_dir_deg: w.wind_dir_deg, rh_pct: w.rh_pct === null ? null : Number(w.rh_pct.toFixed(1)), grid_id: w.grid_id },
+      // Vicinity of the fire. null when unavailable, too far, or malformed — the
+      // client renders nothing rather than a placeholder.
+      near: w.near,
       degraded_inputs: di,
       cells: cellsByCluster[ci],
     };
