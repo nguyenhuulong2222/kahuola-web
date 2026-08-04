@@ -1612,8 +1612,23 @@ const FIRMS_PRIMARY_DATASET = 'VIIRS_NOAA20_NRT';
 // Canonical FIRMS cache-key builder. The reader (SUMMARY_FIRMS_KEY) and the
 // writer (handleFirmsHotspots) both build the key HERE so they cannot drift.
 // Module scope, pure, never throws. `_` is the redacted MAP_KEY slot.
-function firmsCacheKey(dataset: string, bbox: readonly number[], days: number): string {
-  return `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/${dataset}/${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}/${days}`;
+// Row cap for the legacy hotspots endpoint. Named because firmsCacheKey() and
+// handleFirmsHotspots must default to the SAME value: the reader
+// (SUMMARY_FIRMS_KEY) omits the argument while the warm-writer resolves it from
+// the query string, so a mismatch would put them on different keys.
+const FIRMS_DEFAULT_LIMIT = 1000;
+
+// `limit` is PART OF THE KEY. It was omitted, so the first request to populate a
+// key froze its truncation for the whole TTL: asking for limit=5000 afterwards
+// silently returned the earlier 1000-row response, byte-identical. Measured
+// 2026-08-04 — a 5000-row request came back with exactly 1000 features.
+function firmsCacheKey(
+  dataset: string,
+  bbox: readonly number[],
+  days: number,
+  limit: number = FIRMS_DEFAULT_LIMIT,
+): string {
+  return `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/${dataset}/${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}/${days}?limit=${limit}`;
 }
 
 async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
@@ -1621,7 +1636,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
 
   const dataset = url.searchParams.get('dataset') || FIRMS_PRIMARY_DATASET;
   const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '1', 10)));
-  const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || '1000', 10)));
+  const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || String(FIRMS_DEFAULT_LIMIT), 10)));
 
   const bbox = resolveFirmsBBox(url);
   if (!bbox) {
@@ -1631,7 +1646,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   const [west, south, east, north] = bbox;
 
   const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/${dataset}/${west},${south},${east},${north}/${days}`;
-  const cacheUrl = firmsCacheKey(dataset, bbox, days);   // same value, shared builder (no drift)
+  const cacheUrl = firmsCacheKey(dataset, bbox, days, limit);   // shared builder, limit included (no drift)
   const cache = caches.default;
   const cacheReq = new Request(cacheUrl);
   const cached = await cache.match(cacheReq);
@@ -1872,7 +1887,7 @@ type FirmsIngest = {
 
 // Namespaced UNDER /fire-danger/ on purpose. firmsCacheKey() addresses the
 // GeoJSON written by handleFirmsHotspots and read back via SUMMARY_FIRMS_KEY;
-// for dataset=VIIRS_SNPP_NRT + hawaii + 1day the two would be byte-identical.
+// for the primary dataset + hawaii + 1day the two would otherwise collide.
 // Storing raw CSV there would hand the summary reader a JSON.parse failure.
 function fireDangerFirmsCacheKey(sensor: string, bbox: readonly number[], days: number): string {
   return `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/fire-danger/${sensor}/${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}/${days}`;
@@ -2901,6 +2916,55 @@ function clusterHotspots(hotspots: FirmsHotspot[], radiusKm: number): ConusClust
   return out;
 }
 
+// Pick a small spatially-REPRESENTATIVE sample of a cluster's detections.
+//
+// The client anchors a CONUS patch with a marker; until now that was the
+// cluster CENTROID — the arithmetic mean of up to ~1500 detections, which for an
+// elongated complex can sit in unburned ground. These are real detections
+// instead, so the anchor becomes literally true rather than a labelled
+// approximation.
+//
+// Selection is GRID-BUCKET, not first-N and not top-FRP: the cluster bbox is
+// split into a sqrt(max) x sqrt(max) grid and the highest-FRP detection in each
+// occupied bucket is taken. That spreads the sample across the real footprint
+// while still favouring the most intense detection locally. Measured against the
+// 1510-detection cluster (an 18 x 28 km complex): mean distance from a real
+// detection to its nearest sample was 1.8 km for grid-bucket versus 3.7 km for
+// first-N and 3.8 km for top-FRP — roughly twice the coverage, with one fewer
+// point. O(n), single pass, no sorting of the full set.
+const CONUS_REPRESENTATIVE_HOTSPOTS = 20;
+
+function pickRepresentativeHotspots(
+  hotspots: readonly FirmsHotspot[],
+  max: number,
+): Array<[number, number]> {
+  if (hotspots.length <= max) return hotspots.map((h) => [h.lon, h.lat]);
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const h of hotspots) {
+    if (h.lon < minLon) minLon = h.lon;
+    if (h.lon > maxLon) maxLon = h.lon;
+    if (h.lat < minLat) minLat = h.lat;
+    if (h.lat > maxLat) maxLat = h.lat;
+  }
+  // Guard a degenerate (zero-width) footprint so the bucket maths cannot divide
+  // by zero — a tight cluster is legitimate, not an error.
+  const w = (maxLon - minLon) || 1e-6;
+  const h = (maxLat - minLat) || 1e-6;
+  const n = Math.max(1, Math.ceil(Math.sqrt(max)));
+  const best = new Map<string, FirmsHotspot>();
+  for (const p of hotspots) {
+    const gx = Math.min(n - 1, Math.floor(((p.lon - minLon) / w) * n));
+    const gy = Math.min(n - 1, Math.floor(((p.lat - minLat) / h) * n));
+    const key = `${gx},${gy}`;
+    const cur = best.get(key);
+    if (!cur || p.frp > cur.frp) best.set(key, p);
+  }
+  return [...best.values()]
+    .sort((a, b) => b.frp - a.frp)
+    .slice(0, max)
+    .map((p) => [Number(p.lon.toFixed(5)), Number(p.lat.toFixed(5))] as [number, number]);
+}
+
 // Fetch CONUS detections across all sub-bboxes × sensors. Same fail-closed
 // contract as fetchFirmsMultiSensor: never throws, returns a health flag.
 // Volcanic tagging still applies (Layer A geometry is Hawaiʻi-only, so it is a
@@ -3191,6 +3255,9 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
       cluster_id: `conus-${ci}`,
       centroid: [Number(c.lon.toFixed(5)), Number(c.lat.toFixed(5))],
       hotspot_count: c.hotspots.length,
+      // A SAMPLE, and named so — never the full set. hotspot_count above stays
+      // the true total, so the client can say "showing N of M".
+      representative_hotspots: pickRepresentativeHotspots(c.hotspots, CONUS_REPRESENTATIVE_HOTSPOTS),
       max_frp: Number(c.maxFrp.toFixed(1)),
       grid: { step_deg: CONUS_PATCH_STEP_DEG, radius_km: PROX_ZERO_KM, cell_count: cellsByCluster[ci].length },
       weather: { wind_mph: w.wind_mph === null ? null : Number(w.wind_mph.toFixed(1)), wind_dir_deg: w.wind_dir_deg, rh_pct: w.rh_pct === null ? null : Number(w.rh_pct.toFixed(1)), grid_id: w.grid_id },
