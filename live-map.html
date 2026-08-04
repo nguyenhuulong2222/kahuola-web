@@ -3466,6 +3466,9 @@
           const st = getState("fireDanger");
           // Never let a previous good envelope decorate a failed fetch.
           fireDangerMeta = st.status === "ready" ? (st.meta || null) : null;
+          // Markers follow the same fail-closed rule as the fill: a failed fetch
+          // clears them rather than leaving stale attention-markers on screen.
+          updateFireDangerMarkerSource(st.status === "ready" ? buildFireDangerMarkers(st.meta || {}) : []);
           updateFireDangerStatusUI(st);
           renderUnifiedPanels();
         },
@@ -3938,17 +3941,93 @@
           // queryRenderedFeatures ignores paint opacity, so an invisible-but-
           // clickable cell would reintroduce the hidden-layer-captures-clicks
           // bug. Hiding still goes through setLayerVisibility only.
+          // P25 extends this curve DOWNWARD for continental zoom. Perceived
+          // intensity ~= opacity x on-screen area, and a CONUS patch is tiny at
+          // low zoom: measured at 40°N, a whole 20km-radius patch spans 10.7 px
+          // (89 px²) at zoom 4 versus 583 px for the Maui grid at zoom 9. At the
+          // old floor of 0.20 that gave a perceived weight of ~18, against a
+          // full-viewport radar raster at raster-opacity 0.80. Fire lost the eye
+          // by arithmetic, not taste.
+          //
+          // So below the island regime the values INVERT: more opaque as zoom
+          // decreases, compensating for vanishing area. The curve is deliberately
+          // non-monotonic across the whole range — it descends 4 -> 9, then rises
+          // 9 -> 14 — because it tracks PERCEIVED intensity, not raw opacity.
+          // Descent through the 7.5 knee is monotonic so the handoff into the
+          // island regime cannot pop.
+          //
+          // The 9 and 14 rows are BYTE-IDENTICAL to P05e. Hawaiʻi sits entirely
+          // inside 9-14 and is unchanged by this pass. If production needs a
+          // retune, the lever is the 7.5 -> 9 segment only.
           "fill-opacity": ["interpolate", ["linear"], ["zoom"],
+            4, ["match", ["get", "danger_level"],
+              "EXTREME", 0.70, "HIGH", 0.55, "MODERATE", 0.35, "LOW", 0.22, 0.22],
+            7.5, ["match", ["get", "danger_level"],
+              "EXTREME", 0.38, "HIGH", 0.29, "MODERATE", 0.18, "LOW", 0.11, 0.11],
             9, ["match", ["get", "danger_level"],
               "EXTREME", 0.20, "HIGH", 0.14, "MODERATE", 0.07, "LOW", 0.04, 0.04],
             14, ["match", ["get", "danger_level"],
               "EXTREME", 0.36, "HIGH", 0.28, "MODERATE", 0.20, "LOW", 0.14, 0.14]],
         },
       });
+      // ── P25 M2: cluster severity markers ───────────────────────────────
+      // Opacity alone cannot rescue a 10-pixel patch at continental zoom, so
+      // assessed clusters also get a marker. Severity is carried by SIZE and
+      // STROKE WEIGHT as well as colour (WCAG 1.4.1 — colour is never the only
+      // channel), plus a band letter. Marker intensity maps ONLY to the computed
+      // band: nothing draws attention that the model did not score.
+      //
+      // Sits above fire-danger-fill and BELOW the FIRMS "clusters" bubbles, so
+      // the orange detection bubbles stay on top and keep their popups. The two
+      // are different concepts and must not be confusable: orange solid bubble +
+      // white count = "detections here"; magenta ring + band letter = "assessed
+      // spread concern here".
+      ensureSource("fire-danger-markers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // Outer ring — the halo that carries most of the visual weight. Its radius
+      // is also what the EXTREME pulse animates.
+      ensureLayer({
+        id: "fire-danger-marker-glow", type: "circle", source: "fire-danger-markers",
+        paint: {
+          "circle-radius": ["match", ["get", "band"], "EXTREME", 22, "HIGH", 17, "MODERATE", 12, 8],
+          "circle-color": ["match", ["get", "band"], "EXTREME", "#b0003a", "HIGH", "#e91e63", "MODERATE", "#f06292", "#f48fb1"],
+          "circle-opacity": 0.14,
+          "circle-stroke-width": ["match", ["get", "band"], "EXTREME", 4, "HIGH", 3, "MODERATE", 2, 1.2],
+          "circle-stroke-color": ["match", ["get", "band"], "EXTREME", "#b0003a", "HIGH", "#e91e63", "MODERATE", "#f06292", "#f48fb1"],
+          "circle-stroke-opacity": 0.95,
+        },
+      });
+      // Inner disc — gives the band letter a legible backing at small sizes.
+      ensureLayer({
+        id: "fire-danger-marker-core", type: "circle", source: "fire-danger-markers",
+        paint: {
+          "circle-radius": ["match", ["get", "band"], "EXTREME", 11, "HIGH", 9, "MODERATE", 7, 5],
+          "circle-color": "rgba(12,12,12,0.88)",
+          "circle-stroke-width": 1,
+          "circle-stroke-color": ["match", ["get", "band"], "EXTREME", "#b0003a", "HIGH", "#e91e63", "MODERATE", "#f06292", "#f48fb1"],
+        },
+      });
+      // Band letter — LOCALE-AWARE, supplied per feature. Never hardcoded English
+      // initials: Vietnamese "Thấp" and "Trung bình" both begin with T, so naive
+      // first-letters collide (verified). i18n provides T / TB / C / RC.
+      ensureLayer({
+        id: "fire-danger-marker-label", type: "symbol", source: "fire-danger-markers",
+        layout: { "text-field": ["get", "letter"], "text-font": ["Open Sans Bold"], "text-size": 11, "text-allow-overlap": true },
+        paint: { "text-color": "#ffffff" },
+      });
       if (!map.__fireDangerHoverBound) {
         map.__fireDangerHoverBound = true;
         map.on("mouseenter", "fire-danger-fill", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "fire-danger-fill", () => { map.getCanvas().style.cursor = ""; });
+        map.on("mouseenter", "fire-danger-marker-glow", () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "fire-danger-marker-glow", () => { map.getCanvas().style.cursor = ""; });
+      }
+      if (!map.__fireDangerZoomBound) {
+        map.__fireDangerZoomBound = true;
+        // Markers are hidden by LAYOUT VISIBILITY, never by fading opacity to 0.
+        // queryRenderedFeatures ignores paint opacity, so an invisible marker
+        // faded out with circle-opacity would still swallow clicks — the exact
+        // hidden-layer-captures-clicks bug P05f proved bites silently.
+        map.on("zoom", syncFireDangerMarkerVisibility);
       }
       syncFireDangerLayerVisibility();
     }
@@ -4138,7 +4217,109 @@
       return out;
     }
     function updateFireDangerSource(features) { const s = map.getSource("fire-danger"); if (s) s.setData({ type: "FeatureCollection", features }); }
-    function syncFireDangerLayerVisibility() { setLayerVisibility("fire-danger-fill", fireDangerVisible); }
+
+    // ── P25 M2 marker data / visibility / pulse ────────────────────────────
+    const FIRE_DANGER_MARKER_MAX_ZOOM = 8;   // markers hidden at/above this
+    const FIRE_DANGER_MARKER_HYSTERESIS = 0.4; // avoids thrash at the boundary
+    let fireDangerMarkerFeatures = [];
+    let fireDangerMarkersShown = null;
+
+    // Max band per cluster, computed client-side from the CONUS envelope — the
+    // Worker sends no per-cluster band and does not need to.
+    function buildFireDangerMarkers(json) {
+      if (!Array.isArray(json?.clusters)) return [];
+      const out = [];
+      for (const cl of json.clusters) {
+        const cells = Array.isArray(cl?.cells) ? cl.cells : [];
+        if (!cells.length) continue;
+        let top = "LOW";
+        for (const c of cells) {
+          if (FIRE_DANGER_BANDS.indexOf(c.danger_level) > FIRE_DANGER_BANDS.indexOf(top)) top = c.danger_level;
+        }
+        const lon = Number(cl?.centroid?.[0]);
+        const lat = Number(cl?.centroid?.[1]);
+        if (!isFinite(lon) || !isFinite(lat)) continue;
+        out.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lon, lat] },
+          properties: {
+            band: top,
+            // Locale-aware; falls back to the English initial only if the key is
+            // missing entirely.
+            letter: _t(`map.fire_danger_letter_${top.toLowerCase()}`) || top.charAt(0),
+            hotspot_count: cl.hotspot_count ?? null,
+          },
+        });
+      }
+      return out;
+    }
+    function updateFireDangerMarkerSource(features) {
+      fireDangerMarkerFeatures = Array.isArray(features) ? features : [];
+      const s = map.getSource("fire-danger-markers");
+      if (s) s.setData({ type: "FeatureCollection", features: fireDangerMarkerFeatures });
+      syncFireDangerMarkerVisibility();
+    }
+    function syncFireDangerMarkerVisibility() {
+      if (!map.getLayer("fire-danger-marker-glow")) return;
+      const z = map.getZoom();
+      const on = fireDangerVisible && fireDangerMarkerFeatures.length > 0 &&
+        z < (fireDangerMarkersShown ? FIRE_DANGER_MARKER_MAX_ZOOM + FIRE_DANGER_MARKER_HYSTERESIS : FIRE_DANGER_MARKER_MAX_ZOOM);
+      if (on === fireDangerMarkersShown) return;
+      fireDangerMarkersShown = on;
+      ["fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label"]
+        .forEach((id) => setLayerVisibility(id, on));
+      syncFireDangerPulse();
+    }
+
+    // EXTREME pulse — attention-direction for the highest computed band only.
+    // THREE GUARDS, all required:
+    //   1. ONE shared timer. Never one per marker.
+    //   2. Auto-stop when there is nothing to pulse, the layer is off, or the
+    //      tab is hidden (a background tab must not burn a repaint loop).
+    //   3. prefers-reduced-motion → no animation at all; EXTREME instead gets a
+    //      permanently larger static ring, so the severity signal survives.
+    let fireDangerPulseTimer = null;
+    let fireDangerPulsePhase = 0;
+    const fireDangerReducedMotion = (() => {
+      try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+      catch (e) { return false; }
+    })();
+    function fireDangerPulseShouldRun() {
+      return !fireDangerReducedMotion &&
+        fireDangerMarkersShown === true &&
+        fireDangerVisible &&
+        document.visibilityState === "visible" &&
+        fireDangerMarkerFeatures.some((f) => f.properties.band === "EXTREME");
+    }
+    function syncFireDangerPulse() {
+      if (!map.getLayer("fire-danger-marker-glow")) return;
+      if (!fireDangerPulseShouldRun()) {
+        if (fireDangerPulseTimer) { clearInterval(fireDangerPulseTimer); fireDangerPulseTimer = null; }
+        // Reduced motion still gets the severity signal — a bigger static ring.
+        const extremeR = fireDangerReducedMotion ? 26 : 22;
+        try {
+          map.setPaintProperty("fire-danger-marker-glow", "circle-radius",
+            ["match", ["get", "band"], "EXTREME", extremeR, "HIGH", 17, "MODERATE", 12, 8]);
+        } catch (e) { /* layer torn down mid-update */ }
+        return;
+      }
+      if (fireDangerPulseTimer) return;
+      fireDangerPulseTimer = setInterval(() => {
+        if (!fireDangerPulseShouldRun()) { syncFireDangerPulse(); return; }
+        fireDangerPulsePhase = (fireDangerPulsePhase + 1) % 20;
+        const r = 22 + Math.sin((fireDangerPulsePhase / 20) * Math.PI * 2) * 4;
+        try {
+          map.setPaintProperty("fire-danger-marker-glow", "circle-radius",
+            ["match", ["get", "band"], "EXTREME", Number(r.toFixed(2)), "HIGH", 17, "MODERATE", 12, 8]);
+        } catch (e) { clearInterval(fireDangerPulseTimer); fireDangerPulseTimer = null; }
+      }, 90);
+    }
+    document.addEventListener("visibilitychange", syncFireDangerPulse);
+
+    function syncFireDangerLayerVisibility() {
+      setLayerVisibility("fire-danger-fill", fireDangerVisible);
+      syncFireDangerMarkerVisibility();
+    }
     // The on-map legend must never outlive the shading it explains — a legend
     // over an empty map is its own kind of false signal. Not inside
     // panel-template, so the id is not suffixed.
@@ -5071,7 +5252,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -5097,7 +5278,14 @@
         // Scoped to this layer ONLY. Sits low in the chain so an official signal
         // always wins a contested click; queryTopFeature skips visibility:none, so a
         // hidden danger grid can never intercept another module's popup.
-        if (fireDangerVisible) { const fd = queryTopFeature(e.point, ["fire-danger-fill"]); if (fd) { openFireDangerPopup(fd, e.lngLat); return; } }
+        if (fireDangerVisible) {
+          // Markers first (they sit above the fill and are only present at low
+          // zoom). Plain easeTo on stored coords — no library callback, so the
+          // P05f dual-API hazard does not apply here.
+          const fdm = queryTopFeature(e.point, ["fire-danger-marker-glow"]);
+          if (fdm) { map.easeTo({ center: fdm.geometry.coordinates, zoom: Math.max(map.getZoom() + 3, 9), duration: 600 }); return; }
+          const fd = queryTopFeature(e.point, ["fire-danger-fill"]); if (fd) { openFireDangerPopup(fd, e.lngLat); return; }
+        }
         if (localHazardsVisible) {
           const localHazard = queryTopFeature(e.point, ["local-hazards-point", "local-hazards-fill", "local-hazards-line"]);
           if (localHazard) { openLocalHazardPopup(localHazard, e.lngLat); return; }
