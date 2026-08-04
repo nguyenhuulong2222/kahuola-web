@@ -1556,6 +1556,40 @@ function resolveFirmsBBox(url: URL): [number, number, number, number] | null {
   return REGION_BBOXES[region] || REGION_BBOXES.hawaii;
 }
 
+// Cloudflare Workers allow ~6 simultaneous outbound connections per request.
+// Anything beyond that QUEUES, and AbortSignal.timeout() counts queue time — so a
+// wide fan-out does not just run slower, it makes later fetches die waiting even
+// when the upstream is perfectly healthy. Any fan-out that can exceed 6 must go
+// through here.
+//
+// Returns PromiseSettledResult-shaped entries in input order, so it is a drop-in
+// for Promise.allSettled(items.map(fn)) and callers keep their existing
+// status/value/reason handling.
+const OUTBOUND_CONCURRENCY_LIMIT = 6;
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<Array<{ status: 'fulfilled'; value: R } | { status: 'rejected'; reason: unknown }>> {
+  const out = new Array(items.length) as Array<
+    { status: 'fulfilled'; value: R } | { status: 'rejected'; reason: unknown }
+  >;
+  let next = 0;
+  const worker = async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      try { out[i] = { status: 'fulfilled', value: await fn(items[i], i) }; }
+      catch (reason) { out[i] = { status: 'rejected', reason }; }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker),
+  );
+  return out;
+}
+
 // Canonical FIRMS cache-key builder. The reader (SUMMARY_FIRMS_KEY) and the
 // writer (handleFirmsHotspots) both build the key HERE so they cannot drift.
 // Module scope, pure, never throws. `_` is the redacted MAP_KEY slot.
@@ -2144,8 +2178,9 @@ async function fetchNwsConditions(
   if (stations.length === 0) return { readings: [], health: 'degraded' };
   const cache = caches.default;
 
-  const settled = await Promise.allSettled(
-    stations.map(async (st) => {
+  // Bounded: statewide resolves 20 stations, far past the 6-connection cap.
+  const settled = await mapWithConcurrency(stations, OUTBOUND_CONCURRENCY_LIMIT,
+    async (st) => {
       const cacheReq = new Request(fireDangerNwsCacheKey(st.id));
       let p: Record<string, unknown>;
       const cached = await cache.match(cacheReq);
@@ -2208,7 +2243,7 @@ async function fetchNwsConditions(
       // A station with neither usable wind nor usable RH carries no signal.
       if (reading.wind_mph === null && reading.rh_pct === null) throw new Error('no usable fields');
       return reading;
-    }),
+    },
   );
 
   const readings: StationReading[] = [];
@@ -2593,10 +2628,28 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
   // see FIRE_DANGER_STATEWIDE_BBOX for why this is a correctness requirement.
   // Neither helper rejects by design; allSettled is belt-and-braces so a
   // surprise throw in one upstream can never take out the other.
-  const [firmsSettled, nwsSettled] = await Promise.allSettled([
+  // SEQUENTIAL ON PURPOSE — do not "optimise" this back into one allSettled.
+  //
+  // Cloudflare Workers cap simultaneous outbound connections at 6 per request;
+  // excess fetches QUEUE, and AbortSignal.timeout() counts queue time, not just
+  // transfer time. Running FIRMS alongside the station fan-out meant statewide
+  // issued 3 + 20 = 23 concurrent fetches, so the three FIRMS calls could sit
+  // behind slow NWS requests and die queued at 8s.
+  //
+  // Measured 2026-08-04, cold cache: single islands (3 + 1-5 fetches) were all
+  // FRESH while statewide returned sensors_used: [] at the same moment — same
+  // fetchFirmsMultiSensor call, same arguments, only the station count differed.
+  // handleFireDangerConus never showed this because it already awaits FIRMS
+  // before fetching weather; this path now matches it by construction.
+  //
+  // FIRMS first: it is the fail-closed input (health drives the band), so it must
+  // never lose a race to weather, which only ever adjusts an existing score.
+  const firmsSettled = (await Promise.allSettled([
     fetchFirmsMultiSensor(env, FIRE_DANGER_STATEWIDE_BBOX, 1),
+  ]))[0];
+  const nwsSettled = (await Promise.allSettled([
     fetchNwsConditions(stations, nowMs),
-  ]);
+  ]))[0];
 
   const firms: FirmsIngest =
     firmsSettled.status === 'fulfilled'
@@ -2838,7 +2891,8 @@ async function fetchFirmsConus(env: Env): Promise<FirmsIngest> {
   const jobs: Array<{ sensor: string; bbox: readonly number[] }> = [];
   for (const sensor of FIRE_DANGER_SENSORS) for (const bbox of CONUS_SUB_BBOXES) jobs.push({ sensor, bbox });
 
-  const settled = await Promise.allSettled(jobs.map(async ({ sensor, bbox }) => {
+  // 12 jobs (3 sensors x 4 sub-bboxes) — also past the cap.
+  const settled = await mapWithConcurrency(jobs, OUTBOUND_CONCURRENCY_LIMIT, async ({ sensor, bbox }) => {
     const cacheReq = new Request(fireDangerFirmsCacheKey(sensor, bbox, FIRE_DANGER_CONUS_DAYS));
     const cached = await cache.match(cacheReq);
     if (cached) return { sensor, csv: await cached.text() };
@@ -2852,7 +2906,7 @@ async function fetchFirmsConus(env: Env): Promise<FirmsIngest> {
       headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=${FIRE_DANGER_FIRMS_TTL}` },
     }));
     return { sensor, csv };
-  }));
+  });
 
   const merged: FirmsHotspot[] = [];
   const sensorsUsed = new Set<string>();
@@ -3037,7 +3091,9 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
 
   // Weather per assessed cluster, isolated: one cluster's weather failing
   // degrades that cluster only (Invariant II).
-  const wx = await Promise.allSettled(assessed.map((c) => fetchConusWeather(c.lat, c.lon, nowMs)));
+  // Same 6-connection cap: up to 49 clusters, each a points->gridpoint chain.
+  const wx = await mapWithConcurrency(assessed, OUTBOUND_CONCURRENCY_LIMIT,
+    (c) => fetchConusWeather(c.lat, c.lon, nowMs));
 
   // Overlapping patches MERGE with per-cell MAX score. Two clusters producing a
   // score for the same ground is two valid model outputs; taking the higher is
