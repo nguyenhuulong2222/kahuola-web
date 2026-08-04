@@ -2515,6 +2515,10 @@
             spread next, based on wind and dryness. Tap to show or hide the map layer.</div>
           <div class="priority-subnote" id="fire-danger-meaning"></div>
           <div class="priority-subnote" id="fire-danger-volcanic"></div>
+          <!-- CONUS only: FIRMS cannot distinguish steel mills and refinery
+               flares from wildfire, and the NRT feed carries no static-source
+               column. Empty (and collapsed) for Hawaiʻi. -->
+          <div class="priority-subnote" id="fire-danger-industrial"></div>
           <div class="priority-subnote" id="fire-danger-legend" hidden></div>
           <div class="priority-subnote" id="fire-danger-coverage"></div>
           <div class="priority-subnote" id="fire-danger-stations"></div>
@@ -3438,7 +3442,15 @@
         // module renders its fail-closed state. That is correct, wanted behaviour.
         // Statewide in ONE request — no per-pan fetching, no viewport logic.
         // NONE cells are omitted server-side, so a calm statewide payload is tiny.
-        endpoint: "https://kahuola.org/api/hazards/fire-danger?region=statewide",
+        // Follows FIRE SCOPE. USA scope gets the CONUS hotspot-anchored model
+        // (P24); Hawaiʻi scope keeps the full-island statewide grid. Getter, not
+        // a constant, so toggling scope re-reads it — same pattern the `fire`
+        // module already uses.
+        get endpoint() {
+          return fireScope === "usa"
+            ? "https://kahuola.org/api/hazards/fire-danger?region=conus"
+            : "https://kahuola.org/api/hazards/fire-danger?region=statewide";
+        },
         parsePayload(json) {
           const errText = payloadError(json);
           if (errText) throw new Error(errText); // routes into the fail-closed path
@@ -4059,6 +4071,29 @@
         for (const isl of json.islands) out.push(...fireDangerCellsFor(isl, isl?.island));
         return out;
       }
+      // CONUS (P24) is a structurally different envelope: clusters[] of local
+      // patches rather than islands[] of fixed grids. Weather lives on the
+      // CLUSTER (it is constant across a patch), so fold it into each cell's
+      // properties here — the popup reads per-cell fields and must not have to
+      // know which model produced them.
+      if (Array.isArray(json?.clusters)) {
+        const out = [];
+        for (const cl of json.clusters) {
+          const w = cl?.weather || {};
+          for (const feat of fireDangerCellsFor(cl, cl?.cluster_id)) {
+            feat.properties.wind_mph = w.wind_mph ?? null;
+            feat.properties.wind_dir_deg = w.wind_dir_deg ?? null;
+            feat.properties.rh_pct = w.rh_pct ?? null;
+            // Labelled honestly: CONUS is gridded FORECAST, Hawaiʻi is station
+            // OBSERVATIONS. The popup says which.
+            feat.properties.weather_source = json.weather_source || null;
+            feat.properties.wind_station = w.grid_id ?? null;
+            feat.properties.rh_station = w.grid_id ?? null;
+            out.push(feat);
+          }
+        }
+        return out;
+      }
       return fireDangerCellsFor(json, json?.region);
     }
     function fireDangerCellsFor(src, islandKey) {
@@ -4153,6 +4188,7 @@
         setFireDangerHidden("fire-danger-legend", true);
         setFireDangerText("fire-danger-meaning", "");
         setFireDangerText("fire-danger-volcanic", "");
+        setFireDangerText("fire-danger-industrial", "");
         setFireDangerText("fire-danger-coverage", "");
         setFireDangerText("fire-danger-stations", "");
         setFireDangerText("fire-danger-latency", "");
@@ -4204,7 +4240,18 @@
           .filter((i) => (i.cells || []).length > 0 && Number(i.hotspot_count) > 0);
         const hs = Number(meta.hotspot_count);
         let lead;
-        if (drivingIslands.length === 1) {
+        if (Array.isArray(meta.clusters)) {
+          // CONUS: lead with how many fire clusters were ASSESSED out of how
+          // many were found. Real numbers, never "some" — a capped model that
+          // says "some fires were not assessed" is telling a resident nothing
+          // they can act on.
+          const asd = Number(meta.assessed_cluster_count);
+          const tot = Number(meta.cluster_count);
+          lead = (isFinite(asd) && isFinite(tot)
+            ? (_tmpl("map.fire_danger_conus_active", { assessed: asd, total: tot, band: topLabel }) ||
+              `${asd} of ${tot} fire clusters assessed. Shaded zones show where fire could spread from them — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`)
+            : (_t("map.fire_danger_note_init") || "Where a fire could spread next, based on wind and dryness."));
+        } else if (drivingIslands.length === 1) {
           const only = drivingIslands[0];
           lead = _tmpl("map.fire_danger_active_island", { n: only.hotspot_count, island: only.label || only.island, band: topLabel }) ||
             `${only.hotspot_count} satellite fire detection(s) affecting ${only.label || only.island}. Shaded zones show where fire could spread — based on distance, wind and dryness — not areas that are burning. Highest concern: ${topLabel}.`;
@@ -4262,6 +4309,31 @@
 
       // Coverage: which islands are actually estimated, and which are running
       // without wind/humidity. Named plainly rather than implying uniform cover.
+      // CONUS coverage is fundamentally different from Hawaiʻi's and must be
+      // said out loud: spread estimates exist ONLY around detected fires, so an
+      // unshaded area has not been assessed — it is not a statement that there
+      // is no risk. This closes the "absence of shading reads as absence of
+      // risk" gap that a patch-based model creates and a full-island grid does
+      // not. The industrial caveat rides alongside it.
+      const isConus = Array.isArray(meta.clusters);
+      setFireDangerText("fire-danger-industrial", isConus ? (meta.industrial_note || "") : "");
+      if (isConus) {
+        const unassessed = Number(meta.unassessed_cluster_count);
+        let cov = _t("map.fire_danger_conus_coverage") ||
+          "Spread estimates are shown only around detected fires, not everywhere. An area with no shading has not been assessed — it does not mean there is no risk. Hawaiʻi has full island-wide coverage.";
+        if (isFinite(unassessed) && unassessed > 0) {
+          cov += " " + (_tmpl("map.fire_danger_conus_unassessed", { n: unassessed }) ||
+            `${unassessed} more fire clusters were detected but not assessed.`);
+        }
+        setFireDangerText("fire-danger-coverage", cov);
+        setFireDangerText("fire-danger-stations", meta.weather_source === "nws_gridpoint_forecast"
+          ? (_t("map.fire_danger_conus_weather") ||
+            "Wind and humidity come from National Weather Service gridded forecasts, not live station readings.")
+          : "");
+        setFireDangerText("fire-danger-latency", meta.latency_note || "");
+        setFireDangerText("fire-danger-disclaimer", meta.disclaimer || "");
+        return;
+      }
       const islands = Array.isArray(meta.islands) ? meta.islands : [];
       if (islands.length) {
         const labels = islands.map((i) => i.label || i.island);
@@ -4310,7 +4382,7 @@
       const isDownwind = p.downwind === true || p.downwind === "true";
       const num = (v, unit) => (v === null || v === undefined || v === "" || v === "null") ? "—" : `${escapeHtml(v)}${unit}`;
       const station = [p.wind_station, p.rh_station].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" / ");
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${_L("map.popup_title_fire_danger", "Fire Spread Concern")}</div><div class="popup-coords">${_L("map.popup_fire_danger_src", "Estimate \xb7 Kahu Ola model")}</div></div><div class="popup-severity ${band === "EXTREME" || band === "HIGH" ? "crit" : "normal"}">${escapeHtml(bandLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_nearest_fire", "Nearest fire")}</div><div class="popup-metric-value">${num(p.nearest_hotspot_km, " km")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind_adjusted", "Wind-adjusted")}</div><div class="popup-metric-value">${num(p.effective_km, " km")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind", "Wind")}</div><div class="popup-metric-value">${num(p.wind_mph, " mph")}${p.wind_dir_deg !== null && p.wind_dir_deg !== undefined && p.wind_dir_deg !== "" ? ` @ ${escapeHtml(p.wind_dir_deg)}\xb0` : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_humidity", "Humidity")}</div><div class="popup-metric-value">${num(p.rh_pct, "%")}</div></div></div><div class="popup-note">${isDownwind ? _L("map.popup_downwind_yes", "This area is downwind of the nearest fire.") : _L("map.popup_downwind_no", "This area is not downwind of the nearest fire.")}${station ? ` ${_L("map.popup_station_from", "Conditions from station")} ${escapeHtml(station)}.` : ""} ${_L("map.popup_fire_danger_note", "Estimate for situational awareness only — not an official fire-behavior forecast.")}</div></div>`;
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${_L("map.popup_title_fire_danger", "Fire Spread Concern")}</div><div class="popup-coords">${_L("map.popup_fire_danger_src", "Estimate \xb7 Kahu Ola model")}</div></div><div class="popup-severity ${band === "EXTREME" || band === "HIGH" ? "crit" : "normal"}">${escapeHtml(bandLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_nearest_fire", "Nearest fire")}</div><div class="popup-metric-value">${num(p.nearest_hotspot_km, " km")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind_adjusted", "Wind-adjusted")}</div><div class="popup-metric-value">${num(p.effective_km, " km")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_wind", "Wind")}</div><div class="popup-metric-value">${num(p.wind_mph, " mph")}${p.wind_dir_deg !== null && p.wind_dir_deg !== undefined && p.wind_dir_deg !== "" ? ` @ ${escapeHtml(p.wind_dir_deg)}\xb0` : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_humidity", "Humidity")}</div><div class="popup-metric-value">${num(p.rh_pct, "%")}</div></div></div><div class="popup-note">${isDownwind ? _L("map.popup_downwind_yes", "This area is downwind of the nearest fire.") : _L("map.popup_downwind_no", "This area is not downwind of the nearest fire.")}${station ? ` ${p.weather_source === "nws_gridpoint_forecast" ? _L("map.popup_wx_forecast", "Wind and humidity are NWS forecast values for grid") : _L("map.popup_station_from", "Conditions from station")} ${escapeHtml(station)}.` : ""} ${_L("map.popup_fire_danger_note", "Estimate for situational awareness only — not an official fire-behavior forecast.")}</div></div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function updateAlertsSource(features) { const s = map.getSource("alerts"); if (s) s.setData({ type: "FeatureCollection", features }); }
