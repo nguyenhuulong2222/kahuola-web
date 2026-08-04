@@ -4311,6 +4311,7 @@
           type: "Feature",
           geometry: { type: "Point", coordinates: [lon, lat] },
           properties: {
+            ...nearProps(cl.near),
             band: top,
             // Locale-aware; falls back to the English initial only if the key is
             // missing entirely.
@@ -4321,6 +4322,45 @@
       }
       return out;
     }
+    // ── P26 locality ───────────────────────────────────────────────────
+    // Stored as PRIMITIVES, formatted at render time: MapLibre flattens feature
+    // properties, and the language can change without a refetch, so the string
+    // must be built when it is shown rather than when it is fetched.
+    function nearProps(near) {
+      const city = typeof near?.city === "string" ? near.city : "";
+      const state = typeof near?.state === "string" ? near.state : "";
+      const km = Number(near?.distance_km);
+      const brg = Number(near?.bearing_deg);
+      if (!city || !state || !isFinite(km) || !isFinite(brg)) return {};
+      return { near_city: city, near_state: state, near_km: km, near_bearing: brg };
+    }
+
+    // Compass resolution is LOCALE-DRIVEN: the sector count comes from the length
+    // of the locale's own list, so English gets 16 points and Vietnamese 8
+    // (ĐB/ĐN/TN/TB read naturally; a 16-point Vietnamese abbreviation does not).
+    // An English abbreviation must never appear inside a Vietnamese sentence.
+    function compassPoint(bearingDeg) {
+      const raw = _t("map.compass_points") ||
+        "N,NNE,NE,ENE,E,ESE,SE,SSE,S,SSW,SW,WSW,W,WNW,NW,NNW";
+      const pts = raw.split(",").map((x) => x.trim()).filter(Boolean);
+      if (!pts.length || !isFinite(bearingDeg)) return "";
+      const n = pts.length;
+      return pts[Math.round((((bearingDeg % 360) + 360) % 360) / (360 / n)) % n];
+    }
+
+    // "19 km ESE of Spring City, UT" — the direction belongs to the FIRE relative
+    // to the town (NWS bearing is city -> point, verified). Returns "" when the
+    // Worker sent no locality, so callers render nothing rather than a placeholder.
+    function fireDangerNearText(p) {
+      const city = p?.near_city, state = p?.near_state;
+      const km = Number(p?.near_km), brg = Number(p?.near_bearing);
+      if (!city || !state || !isFinite(km) || !isFinite(brg)) return "";
+      const dir = compassPoint(brg);
+      const dist = km < 10 ? km.toFixed(1) : String(Math.round(km));
+      return _tmpl("map.near_vicinity", { dist, dir, city, state }) ||
+        `${dist} km ${dir} of ${city}, ${state}`;
+    }
+
     // Real sampled detections from the Worker. Falls back to the cluster centroid
     // when representative_hotspots is absent, so a client deployed ahead of the
     // Worker still anchors its patches instead of showing nothing.
@@ -4342,6 +4382,7 @@
                 hotspot_count: isFinite(total) ? total : null,
                 sample_count: pts.length,
                 exact: true,
+                ...nearProps(cl.near),
               },
             });
           }
@@ -4356,6 +4397,7 @@
               hotspot_count: isFinite(total) ? total : null,
               sample_count: 0,
               exact: false,   // centroid fallback — the popup says so
+              ...nearProps(cl.near),
             },
           });
         }
@@ -4573,7 +4615,14 @@
         } else {
           lead = _t("map.fire_danger_note_init") || "Where a fire could spread next, based on wind and dryness.";
         }
-        setFireDangerText("fire-danger-note", lead + offSuffix);
+        // Name WHERE the highest concern is, not just how severe.
+        const topCluster = (Array.isArray(meta.clusters) ? meta.clusters : [])
+          .filter((c) => (c.cells || []).some((x) => x.danger_level === top) && c.near)
+          .sort((a, b) => (b.hotspot_count || 0) - (a.hotspot_count || 0))[0];
+        const topNear = topCluster ? fireDangerNearText(nearProps(topCluster.near)) : "";
+        setFireDangerText("fire-danger-note",
+          lead + (topNear ? " " + (_tmpl("map.fire_danger_top_near", { band: topLabel, where: topNear }) ||
+            `Highest concern is ${topNear}.`) : "") + offSuffix);
         // What the shading IS and IS NOT — stated on first read, not buried.
         // A wide magenta wash from one detection is by design (the estimate
         // reaches ~20 km), and that has to be said before someone reads it as
@@ -4691,6 +4740,18 @@
     // rather than describing a computed centre. The fallback path (no
     // representative_hotspots from the Worker) keeps the old centroid wording,
     // because in that case the point genuinely is a computed mean.
+    // Shown when flying in from a band marker: names the concern and, when the
+    // Worker supplied it, WHERE — the question the counts never answered.
+    function openFireDangerClusterPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const band = String(p.band || "");
+      const bandLabel = _t(`map.fire_danger_band_${band.toLowerCase()}`) || band;
+      const nearTxt = fireDangerNearText(p);
+      const total = Number(p.hotspot_count);
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${_L("map.popup_title_fire_cluster", "Fire cluster")}</div><div class="popup-coords">${nearTxt ? escapeHtml(nearTxt) : _L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div><div class="popup-severity ${band === "EXTREME" || band === "HIGH" ? "crit" : "normal"}">${escapeHtml(bandLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Detections in this cluster")}</div><div class="popup-metric-value">${isFinite(total) ? escapeHtml(total) : "\u2014"}</div></div></div><div class="popup-note">${_L("map.popup_fire_cluster_note", "Highest spread concern in this cluster. Shaded areas are estimates, not areas that are burning.")}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
+    }
     function openFireDangerAnchorPopup(feature, lngLat) {
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
@@ -4704,7 +4765,8 @@
             `A satellite fire detection. Showing ${shown} of ${total} detections in this fire cluster, spread across it.`)
           : (_L("map.popup_fire_anchor_exact", "A satellite fire detection in this fire cluster.")))
         : (_L("map.popup_fire_anchor_note", "This marks the centre of a group of satellite fire detections \u2014 not a precise fire location or perimeter."));
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${isExact ? _L("map.popup_title_fire_detection", "Satellite fire detection") : _L("map.popup_title_fire_anchor", "Fire detection cluster")}</div><div class="popup-coords">${_L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Detections in this cluster")}</div><div class="popup-metric-value">${totalTxt}</div></div></div><div class="popup-note">${note}</div></div>`;
+      const nearTxt = fireDangerNearText(p);
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${isExact ? _L("map.popup_title_fire_detection", "Satellite fire detection") : _L("map.popup_title_fire_anchor", "Fire detection cluster")}</div><div class="popup-coords">${nearTxt ? escapeHtml(nearTxt) : _L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Detections in this cluster")}</div><div class="popup-metric-value">${totalTxt}</div></div></div><div class="popup-note">${note}</div></div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openFireDangerPopup(feature, lngLat) {
@@ -5436,7 +5498,15 @@
           // zoom). Plain easeTo on stored coords — no library callback, so the
           // P05f dual-API hazard does not apply here.
           const fdm = queryTopFeature(e.point, ["fire-danger-marker-glow"]);
-          if (fdm) { map.easeTo({ center: fdm.geometry.coordinates, zoom: Math.max(map.getZoom() + 3, 9), duration: 600 }); return; }
+          if (fdm) {
+            // Fly-to is the confirmed-good behaviour, so it stays; the popup opens
+            // AT the destination rather than replacing it. Answering "where am I
+            // being taken" is the whole point of the locality.
+            const dest = fdm.geometry.coordinates;
+            map.easeTo({ center: dest, zoom: Math.max(map.getZoom() + 3, 9), duration: 600 });
+            openFireDangerClusterPopup(fdm, dest);
+            return;
+          }
           const fda = queryTopFeature(e.point, ["fire-danger-anchor-halo"]);
           if (fda) { openFireDangerAnchorPopup(fda, e.lngLat); return; }
           const fd = queryTopFeature(e.point, ["fire-danger-fill"]); if (fd) { openFireDangerPopup(fd, e.lngLat); return; }
