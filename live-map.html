@@ -3987,6 +3987,13 @@
       // is also what the EXTREME pulse animates.
       ensureLayer({
         id: "fire-danger-marker-glow", type: "circle", source: "fire-danger-markers",
+        // Created HIDDEN. MapLibre defaults a layer with no layout.visibility to
+        // "visible"; after map.setStyle() (basemap toggle) these layers are
+        // recreated from scratch, and a stale "already hidden" flag then skipped
+        // the sync — leaving invisible-intent markers visible AND clickable at
+        // deep zoom. That is the hidden-layer-captures-clicks class this project
+        // bans. The safe default belongs at creation, not in a later sync.
+        layout: { visibility: "none" },
         paint: {
           "circle-radius": ["match", ["get", "band"], "EXTREME", 22, "HIGH", 17, "MODERATE", 12, 8],
           "circle-color": ["match", ["get", "band"], "EXTREME", "#b0003a", "HIGH", "#e91e63", "MODERATE", "#f06292", "#f48fb1"],
@@ -3999,6 +4006,7 @@
       // Inner disc — gives the band letter a legible backing at small sizes.
       ensureLayer({
         id: "fire-danger-marker-core", type: "circle", source: "fire-danger-markers",
+        layout: { visibility: "none" },
         paint: {
           "circle-radius": ["match", ["get", "band"], "EXTREME", 11, "HIGH", 9, "MODERATE", 7, 5],
           "circle-color": "rgba(12,12,12,0.88)",
@@ -4011,7 +4019,7 @@
       // first-letters collide (verified). i18n provides T / TB / C / RC.
       ensureLayer({
         id: "fire-danger-marker-label", type: "symbol", source: "fire-danger-markers",
-        layout: { "text-field": ["get", "letter"], "text-font": ["Open Sans Bold"], "text-size": 11, "text-allow-overlap": true },
+        layout: { visibility: "none", "text-field": ["get", "letter"], "text-font": ["Open Sans Bold"], "text-size": 11, "text-allow-overlap": true },
         paint: { "text-color": "#ffffff" },
       });
       if (!map.__fireDangerHoverBound) {
@@ -4264,11 +4272,15 @@
       const z = map.getZoom();
       const on = fireDangerVisible && fireDangerMarkerFeatures.length > 0 &&
         z < (fireDangerMarkersShown ? FIRE_DANGER_MARKER_MAX_ZOOM + FIRE_DANGER_MARKER_HYSTERESIS : FIRE_DANGER_MARKER_MAX_ZOOM);
-      if (on === fireDangerMarkersShown) return;
+      // No early-return on an unchanged flag: the flag can be stale relative to
+      // freshly recreated layers (see the creation note above), and skipping the
+      // apply is exactly how markers survived a setStyle still visible.
+      // setLayoutProperty is cheap and MapLibre no-ops when the value is unchanged.
+      const changed = on !== fireDangerMarkersShown;
       fireDangerMarkersShown = on;
       ["fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label"]
         .forEach((id) => setLayerVisibility(id, on));
-      syncFireDangerPulse();
+      if (changed) syncFireDangerPulse();
     }
 
     // EXTREME pulse — attention-direction for the highest computed band only.
