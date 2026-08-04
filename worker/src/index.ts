@@ -2309,6 +2309,20 @@ const RH_NEUTRAL_PCT = 60;
 const RH_CRITICAL_PCT = 20;
 const HUMIDITY_BOOST_MAX = 1.3;
 
+// MAGNITUDE VALIDATION — measured 2026-08-04 against six real western megafire
+// clusters via live NWS gridpoint forecasts (Utah 1510 hotspots/708 MW,
+// Washington 1403/224 and 1086/346, Oregon-Idaho 779/222, Oregon 261/834 and
+// 595/114):
+//     observed wind 3.5-11.5 mph, RH 23-44%
+//     humidityMult reached 1.278 (Utah, RH 23%) vs a FLAT 1.000 in Hawaiʻi,
+//     where RH 71-95% never crosses RH_NEUTRAL_PCT and the term never engages.
+//     Effective-distance reduction up to 30.1%, vs 12.7% in Hawaiʻi.
+// So the HUMIDITY limb is now exercised under genuinely dry conditions for the
+// first time. The WIND limb is NOT: at 3.5-11.5 mph against the 35 mph
+// saturation, directional separation was only +0.025 to +0.077 at 10 km —
+// comparable to Hawaiʻi's +0.071. High-wind behaviour and a Hawaiʻi-terrain Red
+// Flag day both remain unvalidated.
+
 // COMPOSITION — why the boosts act on DISTANCE, not on the score (Stage 1.1).
 // The obvious form, score = clamp01(proximity × wind × humidity), multiplies a
 // [0,1] proximity base by two >1 boosts, so the product clamps whenever
@@ -2740,6 +2754,14 @@ const CONUS_MAX_CLUSTERS = 40;
 // megacluster can read low if the overpass caught it between flare-ups, and it
 // must never drop out of the assessed set for that reason.
 const CONUS_ALWAYS_ASSESS_MIN_HOTSPOTS = 20;
+// ABSOLUTE ceiling. The floor rule above is uncapped by design, so in peak fire
+// season the assessed set would otherwise grow without bound — every cluster of
+// >=20 hotspots qualifying, at ~95 cells each. This caps total work at ~80
+// patches (~7600 cells) no matter how many clusters qualify. If the floor set
+// ALONE exceeds this, floor clusters are ranked by hotspot count and cut there,
+// so the largest fires survive; unassessed_cluster_count absorbs the remainder
+// and the card states the real numbers.
+const CONUS_ABSOLUTE_MAX_CLUSTERS = 80;
 // ~4.4 km cells — coarser than Hawaiʻi's 0.02° because a CONUS patch covers a
 // 20 km radius and the model's own resolution does not justify finer.
 const CONUS_PATCH_STEP_DEG = 0.04;
@@ -2995,14 +3017,22 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
     b.maxFrp - a.maxFrp || b.hotspots.length - a.hotspots.length);
   const chosen: ConusCluster[] = [];
   const taken = new Set<ConusCluster>();
-  for (const c of ranked) {
-    if (c.hotspots.length >= CONUS_ALWAYS_ASSESS_MIN_HOTSPOTS) { chosen.push(c); taken.add(c); }
+  // Floor-qualified first, ranked by HOTSPOT COUNT so that if the floor set
+  // alone overflows the absolute ceiling, the largest fires are the survivors.
+  const floorSet = ranked
+    .filter((c) => c.hotspots.length >= CONUS_ALWAYS_ASSESS_MIN_HOTSPOTS)
+    .sort((a, b) => b.hotspots.length - a.hotspots.length);
+  for (const c of floorSet) {
+    if (chosen.length >= CONUS_ABSOLUTE_MAX_CLUSTERS) break;
+    chosen.push(c);
+    taken.add(c);
   }
+  // Then fill remaining slots up to the soft cap by FRP rank.
   for (const c of ranked) {
     if (chosen.length >= CONUS_MAX_CLUSTERS) break;
     if (!taken.has(c)) { chosen.push(c); taken.add(c); }
   }
-  const assessed = chosen.slice(0, Math.max(CONUS_MAX_CLUSTERS, chosen.length));
+  const assessed = chosen;
   const unassessedClusterCount = Math.max(0, allClusters.length - assessed.length);
 
   // Weather per assessed cluster, isolated: one cluster's weather failing
