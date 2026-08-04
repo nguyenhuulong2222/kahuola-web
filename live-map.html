@@ -3469,6 +3469,7 @@
           // Markers follow the same fail-closed rule as the fill: a failed fetch
           // clears them rather than leaving stale attention-markers on screen.
           updateFireDangerMarkerSource(st.status === "ready" ? buildFireDangerMarkers(st.meta || {}) : []);
+          updateFireDangerAnchorSource(st.status === "ready" ? buildFireDangerAnchors(st.meta || {}) : []);
           updateFireDangerStatusUI(st);
           renderUnifiedPanels();
         },
@@ -3983,6 +3984,10 @@
       // white count = "detections here"; magenta ring + band letter = "assessed
       // spread concern here".
       ensureSource("fire-danger-markers", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // Anchors now ride REAL detections (Worker: representative_hotspots), not
+      // the computed centroid, so they get their own source: one point per
+      // sampled detection rather than one per cluster.
+      ensureSource("fire-danger-anchors", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       // Outer ring — the halo that carries most of the visual weight. Its radius
       // is also what the EXTREME pulse animates.
       ensureLayer({
@@ -4049,11 +4054,14 @@
       // with a small core ("cluster location, this wide"). Shared orange hue is
       // deliberate — both mean fire — while the form carries the difference.
       ensureLayer({
-        id: "fire-danger-anchor-halo", type: "circle", source: "fire-danger-markers",
+        id: "fire-danger-anchor-halo", type: "circle", source: "fire-danger-anchors",
         layout: { visibility: "none" },
         paint: {
-          "circle-radius": ["interpolate", ["linear"], ["get", "hotspot_count"],
-            1, 7, 25, 11, 100, 16, 400, 22, 1500, 30],
+          // Constant size: each point is ONE real detection now, so scaling by
+          // cluster size would overstate a single pixel of fire. Extent is
+          // carried by the SPREAD of the sampled points — which is the honest
+          // signal, and the reason this replaced the centroid ring.
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 4, 11, 6.5, 14, 9],
           "circle-color": "#ff6a00",
           "circle-opacity": 0.10,
           "circle-stroke-width": 2.2,
@@ -4062,7 +4070,7 @@
         },
       });
       ensureLayer({
-        id: "fire-danger-anchor-core", type: "circle", source: "fire-danger-markers",
+        id: "fire-danger-anchor-core", type: "circle", source: "fire-danger-anchors",
         layout: { visibility: "none" },
         paint: {
           "circle-radius": 3.4,
@@ -4281,6 +4289,7 @@
     const FIRE_DANGER_MARKER_MAX_ZOOM = 8;   // markers hidden at/above this
     const FIRE_DANGER_MARKER_HYSTERESIS = 0.4; // avoids thrash at the boundary
     let fireDangerMarkerFeatures = [];
+    let fireDangerAnchorFeatures = [];
     let fireDangerMarkersShown = null;
 
     // Max band per cluster, computed client-side from the CONUS envelope — the
@@ -4312,6 +4321,53 @@
       }
       return out;
     }
+    // Real sampled detections from the Worker. Falls back to the cluster centroid
+    // when representative_hotspots is absent, so a client deployed ahead of the
+    // Worker still anchors its patches instead of showing nothing.
+    function buildFireDangerAnchors(json) {
+      if (!Array.isArray(json?.clusters)) return [];
+      const out = [];
+      for (const cl of json.clusters) {
+        const total = Number(cl?.hotspot_count);
+        const pts = Array.isArray(cl?.representative_hotspots) ? cl.representative_hotspots : null;
+        if (pts && pts.length) {
+          for (const pt of pts) {
+            const lon = Number(pt?.[0]); const lat = Number(pt?.[1]);
+            if (!isFinite(lon) || !isFinite(lat)) continue;   // drop, never coerce
+            out.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [lon, lat] },
+              properties: {
+                cluster_id: cl.cluster_id ?? "",
+                hotspot_count: isFinite(total) ? total : null,
+                sample_count: pts.length,
+                exact: true,
+              },
+            });
+          }
+        } else {
+          const lon = Number(cl?.centroid?.[0]); const lat = Number(cl?.centroid?.[1]);
+          if (!isFinite(lon) || !isFinite(lat)) continue;
+          out.push({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [lon, lat] },
+            properties: {
+              cluster_id: cl.cluster_id ?? "",
+              hotspot_count: isFinite(total) ? total : null,
+              sample_count: 0,
+              exact: false,   // centroid fallback — the popup says so
+            },
+          });
+        }
+      }
+      return out;
+    }
+    function updateFireDangerAnchorSource(features) {
+      fireDangerAnchorFeatures = Array.isArray(features) ? features : [];
+      const s = map.getSource("fire-danger-anchors");
+      if (s) s.setData({ type: "FeatureCollection", features: fireDangerAnchorFeatures });
+      syncFireDangerMarkerVisibility();
+    }
     function updateFireDangerMarkerSource(features) {
       fireDangerMarkerFeatures = Array.isArray(features) ? features : [];
       const s = map.getSource("fire-danger-markers");
@@ -4335,7 +4391,7 @@
       // fades, so a patch is never left with nothing marking its fire. Only for
       // cluster-shaped envelopes (CONUS) — Hawaiʻi islands have no clusters[] and
       // produce no marker features, so both sets stay hidden there.
-      const anchorsOn = fireDangerVisible && fireDangerMarkerFeatures.length > 0 && !on;
+      const anchorsOn = fireDangerVisible && fireDangerAnchorFeatures.length > 0 && !on;
       ["fire-danger-anchor-halo", "fire-danger-anchor-core"]
         .forEach((id) => setLayerVisibility(id, anchorsOn));
       if (changed) syncFireDangerPulse();
@@ -4631,12 +4687,24 @@
     // The point marks a CLUSTER CENTRE, not a fire perimeter — said plainly,
     // because a precise-looking dot otherwise asserts a location the data does
     // not support. Count is the detections that formed the cluster.
+    // Each anchor is now ONE REAL satellite detection, so the copy says that
+    // rather than describing a computed centre. The fallback path (no
+    // representative_hotspots from the Worker) keeps the old centroid wording,
+    // because in that case the point genuinely is a computed mean.
     function openFireDangerAnchorPopup(feature, lngLat) {
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
-      const n = Number(p.hotspot_count);
-      const count = isFinite(n) ? n : null;
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${_L("map.popup_title_fire_anchor", "Fire detection cluster")}</div><div class="popup-coords">${_L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Satellite detections")}</div><div class="popup-metric-value">${count === null ? "\u2014" : escapeHtml(count)}</div></div></div><div class="popup-note">${_L("map.popup_fire_anchor_note", "This marks the centre of a group of satellite fire detections \u2014 not a precise fire location or perimeter. The circle grows with the number of detections.")}</div></div>`;
+      const total = Number(p.hotspot_count);
+      const shown = Number(p.sample_count);
+      const isExact = p.exact === true || p.exact === "true";
+      const totalTxt = isFinite(total) ? escapeHtml(total) : "\u2014";
+      const note = isExact
+        ? (isFinite(shown) && isFinite(total) && total > shown
+          ? (_tmpl("map.popup_fire_anchor_sampled", { shown, total }) ||
+            `A satellite fire detection. Showing ${shown} of ${total} detections in this fire cluster, spread across it.`)
+          : (_L("map.popup_fire_anchor_exact", "A satellite fire detection in this fire cluster.")))
+        : (_L("map.popup_fire_anchor_note", "This marks the centre of a group of satellite fire detections \u2014 not a precise fire location or perimeter."));
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${isExact ? _L("map.popup_title_fire_detection", "Satellite fire detection") : _L("map.popup_title_fire_anchor", "Fire detection cluster")}</div><div class="popup-coords">${_L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Detections in this cluster")}</div><div class="popup-metric-value">${totalTxt}</div></div></div><div class="popup-note">${note}</div></div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openFireDangerPopup(feature, lngLat) {
