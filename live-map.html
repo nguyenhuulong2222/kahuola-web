@@ -4022,8 +4022,59 @@
         layout: { visibility: "none", "text-field": ["get", "letter"], "text-font": ["Open Sans Bold"], "text-size": 11, "text-allow-overlap": true },
         paint: { "text-color": "#ffffff" },
       });
+      // ── A′: fire-detection anchors ─────────────────────────────────────
+      // At deep zoom the band marker has faded by design, so a CONUS spread
+      // patch could render with nothing marking where the fire actually is.
+      // The orange FIRMS dots cannot be relied on to fill that role: they come
+      // from a different path (single sensor, days=1, first-1000-rows cap) and a
+      // fire present in the merged 3-sensor set can be entirely absent there —
+      // measured 2026-08-04, the 129-hotspot / 181 MW Manti-area cluster had
+      // ZERO dots within 25 km.
+      //
+      // These anchors are drawn from the SAME envelope as the patches, so they
+      // cannot desync from the shading they explain. Reuses the existing
+      // fire-danger-markers source: its features already carry the centroid and
+      // hotspot_count, so no new data plumbing.
+      //
+      // HONESTY: a centroid is the arithmetic mean of up to ~1500 detections
+      // produced by 10km single-linkage clustering — it is the cluster's centre,
+      // NOT a precise fire location, and for an elongated complex it can sit in
+      // unburned ground. Radius therefore scales with detection count so a large
+      // complex reads as EXTENDED rather than as a pinpoint, and the popup says
+      // plainly what the point represents. Follow-up (logged) replaces this
+      // computed centroid with real representative hotspot coordinates.
+      //
+      // Shape distinguishes it from the FIRMS bubbles: those are a SOLID disc
+      // with a white count ("individual detections here"); this is a hollow ring
+      // with a small core ("cluster location, this wide"). Shared orange hue is
+      // deliberate — both mean fire — while the form carries the difference.
+      ensureLayer({
+        id: "fire-danger-anchor-halo", type: "circle", source: "fire-danger-markers",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["get", "hotspot_count"],
+            1, 7, 25, 11, 100, 16, 400, 22, 1500, 30],
+          "circle-color": "#ff6a00",
+          "circle-opacity": 0.10,
+          "circle-stroke-width": 2.2,
+          "circle-stroke-color": "#ff8a00",
+          "circle-stroke-opacity": 0.92,
+        },
+      });
+      ensureLayer({
+        id: "fire-danger-anchor-core", type: "circle", source: "fire-danger-markers",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 3.4,
+          "circle-color": "#ff8a00",
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "rgba(255,255,255,0.85)",
+        },
+      });
       if (!map.__fireDangerHoverBound) {
         map.__fireDangerHoverBound = true;
+        map.on("mouseenter", "fire-danger-anchor-halo", () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "fire-danger-anchor-halo", () => { map.getCanvas().style.cursor = ""; });
         map.on("mouseenter", "fire-danger-fill", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "fire-danger-fill", () => { map.getCanvas().style.cursor = ""; });
         map.on("mouseenter", "fire-danger-marker-glow", () => { map.getCanvas().style.cursor = "pointer"; });
@@ -4280,6 +4331,13 @@
       fireDangerMarkersShown = on;
       ["fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label"]
         .forEach((id) => setLayerVisibility(id, on));
+      // Anchors are the INVERSE: they take over exactly where the band marker
+      // fades, so a patch is never left with nothing marking its fire. Only for
+      // cluster-shaped envelopes (CONUS) — Hawaiʻi islands have no clusters[] and
+      // produce no marker features, so both sets stay hidden there.
+      const anchorsOn = fireDangerVisible && fireDangerMarkerFeatures.length > 0 && !on;
+      ["fire-danger-anchor-halo", "fire-danger-anchor-core"]
+        .forEach((id) => setLayerVisibility(id, anchorsOn));
       if (changed) syncFireDangerPulse();
     }
 
@@ -4518,6 +4576,10 @@
           cov += " " + (_tmpl("map.fire_danger_conus_unassessed", { n: unassessed }) ||
             `${unassessed} more fire clusters were detected but not assessed.`);
         }
+        // Anchors ride on the assessed set, so say so rather than letting an
+        // unmarked area imply no fire was detected there.
+        cov += " " + (_t("map.fire_danger_conus_anchors") ||
+          "Fire markers on the map show assessed clusters only.");
         setFireDangerText("fire-danger-coverage", cov);
         setFireDangerText("fire-danger-stations", meta.weather_source === "nws_gridpoint_forecast"
           ? (_t("map.fire_danger_conus_weather") ||
@@ -4565,6 +4627,17 @@
         : "");
       setFireDangerText("fire-danger-latency", meta.latency_note || "");
       setFireDangerText("fire-danger-disclaimer", meta.disclaimer || "");
+    }
+    // The point marks a CLUSTER CENTRE, not a fire perimeter — said plainly,
+    // because a precise-looking dot otherwise asserts a location the data does
+    // not support. Count is the detections that formed the cluster.
+    function openFireDangerAnchorPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const n = Number(p.hotspot_count);
+      const count = isFinite(n) ? n : null;
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${_L("map.popup_title_fire_anchor", "Fire detection cluster")}</div><div class="popup-coords">${_L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Satellite detections")}</div><div class="popup-metric-value">${count === null ? "\u2014" : escapeHtml(count)}</div></div></div><div class="popup-note">${_L("map.popup_fire_anchor_note", "This marks the centre of a group of satellite fire detections \u2014 not a precise fire location or perimeter. The circle grows with the number of detections.")}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openFireDangerPopup(feature, lngLat) {
       const p = feature.properties || {};
@@ -5264,7 +5337,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -5296,6 +5369,8 @@
           // P05f dual-API hazard does not apply here.
           const fdm = queryTopFeature(e.point, ["fire-danger-marker-glow"]);
           if (fdm) { map.easeTo({ center: fdm.geometry.coordinates, zoom: Math.max(map.getZoom() + 3, 9), duration: 600 }); return; }
+          const fda = queryTopFeature(e.point, ["fire-danger-anchor-halo"]);
+          if (fda) { openFireDangerAnchorPopup(fda, e.lngLat); return; }
           const fd = queryTopFeature(e.point, ["fire-danger-fill"]); if (fd) { openFireDangerPopup(fd, e.lngLat); return; }
         }
         if (localHazardsVisible) {
