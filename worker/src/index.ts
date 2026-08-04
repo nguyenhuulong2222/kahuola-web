@@ -1590,6 +1590,25 @@ async function mapWithConcurrency<T, R>(
   return out;
 }
 
+// ── PRIMARY FIRMS DATASET — ONE SOURCE OF TRUTH ────────────────────────────
+// The cache WRITER default (handleFirmsHotspots), the summary READER key
+// (SUMMARY_FIRMS_KEY) and the MODIS cross-reference gate all read this. They
+// MUST agree: writer and reader build the same cache key via firmsCacheKey(), so
+// if they ever drifted the summary would read a key nobody writes — a permanent
+// cache miss reporting count 0 forever. Keeping one literal makes that
+// impossible, and makes the next migration (NOAA-20 -> NOAA-21) a one-line
+// change that cannot re-orphan the xref gate.
+//
+// SNPP RETIRED HERE 2026-08-04. Suomi NPP's end of life was anticipated on or
+// before Oct 2026 and it has arrived: measured the same day, VIIRS_SNPP_NRT
+// returned 2 detections across the ENTIRE continental US and 0 over Hawaiʻi,
+// while NOAA-20 saw 18 and NOAA-21 saw 25 over Hawaiʻi in the same window.
+// Because summary.fire was pinned to SNPP it reported count 0 / status "none"
+// with Kīlauea plainly visible to the other two satellites — silently disarming
+// the standing deploy abort trigger. SNPP remains in FIRE_DANGER_SENSORS as the
+// demoted last-resort fallback; it is only removed from PRIMARY duty here.
+const FIRMS_PRIMARY_DATASET = 'VIIRS_NOAA20_NRT';
+
 // Canonical FIRMS cache-key builder. The reader (SUMMARY_FIRMS_KEY) and the
 // writer (handleFirmsHotspots) both build the key HERE so they cannot drift.
 // Module scope, pure, never throws. `_` is the redacted MAP_KEY slot.
@@ -1600,7 +1619,7 @@ function firmsCacheKey(dataset: string, bbox: readonly number[], days: number): 
 async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
   if (!env.NASA_FIRMS_MAP_KEY) return err(503, 'NASA_FIRMS_MAP_KEY not configured', cors);
 
-  const dataset = url.searchParams.get('dataset') || 'VIIRS_SNPP_NRT';
+  const dataset = url.searchParams.get('dataset') || FIRMS_PRIMARY_DATASET;
   const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '1', 10)));
   const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || '1000', 10)));
 
@@ -1623,8 +1642,11 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
-  // MODIS cross-reference for multi-satellite confirmation (VIIRS primary only)
-  const modisXrefUrl = dataset === 'VIIRS_SNPP_NRT'
+  // MODIS cross-reference for multi-satellite confirmation (VIIRS primary only).
+  // Gated on the CONSTANT, never a literal: when the primary moved off SNPP a
+  // hardcoded check would have silently stopped firing and detection_confidence
+  // would never be set to 'high' again — with no error anywhere.
+  const modisXrefUrl = dataset === FIRMS_PRIMARY_DATASET
     ? `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/MODIS_NRT/${west},${south},${east},${north}/${days}`
     : null;
 
@@ -3297,7 +3319,7 @@ const SUMMARY_SMOKE_STATUS_KEY = 'https://kahuola.org/cache/smoke-hawaii-status-
 const SUMMARY_PERIM_STATUS_KEY = 'https://kahuola.org/cache/perimeters-hawaii-status-v1';
 // Default hawaii FIRMS cache key — built by the SAME helper the writer
 // (handleFirmsHotspots) uses, so the read key and the written key cannot drift.
-const SUMMARY_FIRMS_KEY = firmsCacheKey('VIIRS_SNPP_NRT', REGION_BBOXES.hawaii, 1);
+const SUMMARY_FIRMS_KEY = firmsCacheKey(FIRMS_PRIMARY_DATASET, REGION_BBOXES.hawaii, 1);
 
 // ── NOAA HMS smoke — KML upstream (GeoJSON dir retired ~2026-01) ─────────────
 // New layout: .../Smoke_Polygons/KML/{YYYY}/{MM}/hms_smoke{YYYYMMDD}.kml (UTC).

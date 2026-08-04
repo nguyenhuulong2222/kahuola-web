@@ -16,7 +16,9 @@ PROJECT_VERSION = "4.8"
 ENVIRONMENT = "production"
 REGION = "hawaii"
 
-NASA_FIRMS_DATASET = "VIIRS_SNPP_NRT"
+# Documentation only — no code reads this var; src/index.ts owns the real value
+# in FIRMS_PRIMARY_DATASET. Kept in sync so it stops misreporting the primary.
+NASA_FIRMS_DATASET = "VIIRS_NOAA20_NRT"
 NASA_FIRMS_BBOX = "-161,18,-154,23"
 NASA_FIRMS_DAY_RANGE = "1"
 
