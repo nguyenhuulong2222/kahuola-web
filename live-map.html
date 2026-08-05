@@ -2534,6 +2534,10 @@
           </div>
           <div class="priority-note" id="fire-danger-note" data-i18n="map.fire_danger_note_init">Where a fire could
             spread next, based on wind and dryness. Tap to show or hide the map layer.</div>
+          <!-- P05b: the personal answer sits WITH the headline, not below eight
+               subnotes. Empty until the user taps Use My Location — no permanent
+               hint line, the card is long enough already. -->
+          <div class="priority-subnote" id="fire-danger-location"></div>
           <div class="priority-subnote" id="fire-danger-meaning"></div>
           <div class="priority-subnote" id="fire-danger-volcanic"></div>
           <!-- CONUS only: FIRMS cannot distinguish steel mills and refinery
@@ -3491,6 +3495,7 @@
           // Markers follow the same fail-closed rule as the fill: a failed fetch
           // clears them rather than leaving stale attention-markers on screen.
           updateFireDangerMarkerSource(st.status === "ready" ? buildFireDangerMarkers(st.meta || {}) : []);
+          updateFireDangerLocationLine();
           updateFireDangerAnchorSource(st.status === "ready" ? buildFireDangerAnchors(st.meta || {}) : []);
           updateFireDangerStatusUI(st);
           renderUnifiedPanels();
@@ -4178,6 +4183,15 @@
           "circle-stroke-color": "rgba(255,255,255,0.85)",
         },
       });
+      // P05b: "this cell is yours" — a STROKE only. The fill is the model's
+      // statement about danger and must not be altered to mark ownership.
+      // Contains the CELL's polygon, never the user's coordinate.
+      ensureSource("fire-danger-mine", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureLayer({
+        id: "fire-danger-mine-outline", type: "line", source: "fire-danger-mine",
+        layout: { visibility: "none" },
+        paint: { "line-color": "#ffffff", "line-width": 2.2, "line-opacity": 0.95 },
+      });
       if (!map.__fireDangerHoverBound) {
         map.__fireDangerHoverBound = true;
         map.on("mouseenter", "fire-danger-anchor-halo", () => { map.getCanvas().style.cursor = "pointer"; });
@@ -4305,6 +4319,30 @@
     // NONE is dropped so a calm day renders an empty, uncluttered map, and
     // insufficient_data is surfaced through the CARD, never as a scary map colour.
     // Any cell failing validation is skipped — never coerced (fail-closed).
+    // ── P05b geometry helpers ──────────────────────────────────────────
+    // Static geography, not data: lets us tell "inside CONUS but not near any
+    // assessed fire" apart from "outside coverage entirely". Those carry
+    // different truths — Kansas needs "not assessed does not mean no risk",
+    // mid-Pacific needs "no estimate for your location" — so collapsing them
+    // would miseducate one of the two.
+    const P05B_CONUS_BBOX = [-125.0, 24.0, -66.5, 49.5];
+
+    function pointInBbox(bbox, lon, lat) {
+      if (!Array.isArray(bbox) || bbox.length !== 4) return false;
+      return lon >= bbox[0] && lon <= bbox[2] && lat >= bbox[1] && lat <= bbox[3];
+    }
+
+    // Cells are axis-aligned squares built as [[w,s],[e,s],[e,n],[w,n],[w,s]], so
+    // this is a bbox test on the ring — no step arithmetic, no polygon library.
+    // Cells tile exactly and share edges, so a point on a shared edge matches two
+    // cells; bounds are inclusive and the FIRST match wins, which is
+    // deterministic and ambiguous only on a measure-zero line.
+    function cellContains(feature, lon, lat) {
+      const r = feature?.geometry?.coordinates?.[0];
+      if (!Array.isArray(r) || r.length < 4) return false;
+      return lon >= r[0][0] && lon <= r[1][0] && lat >= r[0][1] && lat <= r[2][1];
+    }
+
     // Handles BOTH envelope shapes:
     //   · statewide → { islands: [ { grid:{step_deg}, cells:[…] } ] }
     //   · single island → { grid:{step_deg}, cells:[…] }   (P04/P05a shape)
@@ -4709,6 +4747,9 @@
 
     function syncFireDangerLayerVisibility() {
       setLayerVisibility("fire-danger-fill", fireDangerVisible);
+      // Layout visibility only, so a hidden highlight cannot capture clicks —
+      // and it is a passive outline with no handler regardless.
+      setLayerVisibility("fire-danger-mine-outline", fireDangerVisible && fireDangerMineActive);
       syncFireDangerMarkerVisibility();
     }
     // The on-map legend must never outlive the shading it explains — a legend
@@ -4992,6 +5033,102 @@
       const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F525} ${isExact ? _L("map.popup_title_fire_detection", "Satellite fire detection") : _L("map.popup_title_fire_anchor", "Fire detection cluster")}</div><div class="popup-coords">${nearTxt ? escapeHtml(nearTxt) : _L("map.popup_fire_anchor_src", "NASA FIRMS \xb7 satellite detections")}</div></div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_fire_anchor_count", "Detections in this cluster")}</div><div class="popup-metric-value">${totalTxt}</div></div></div><div class="popup-note">${note}</div></div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
+    // ── P05b: "at MY spot, what is the concern?" ───────────────────────
+    // Runs ENTIRELY on-device against grid data already in memory. It issues no
+    // request, writes no storage, and logs nothing — the user's coordinate is
+    // read into two local numbers, compared against geometry, and discarded.
+    // The highlight source receives the CELL's polygon, never the coordinate.
+    let fireDangerMineActive = false;
+
+    function setFireDangerMine(feature) {
+      fireDangerMineActive = !!feature;
+      const src = map.getSource("fire-danger-mine");
+      // The CELL polygon goes in — not the user's point.
+      if (src) src.setData({ type: "FeatureCollection", features: feature ? [feature] : [] });
+      setLayerVisibility("fire-danger-mine-outline", fireDangerVisible && fireDangerMineActive);
+    }
+
+    function updateFireDangerLocationLine() {
+      const set = (txt) => ["desktop", "mobile"].forEach((sfx) => {
+        const el = document.getElementById(`fire-danger-location-${sfx}`);
+        if (el) el.textContent = txt;
+      });
+      if (!lastKnownUserCoord) { set(""); setFireDangerMine(null); return; }
+      const lon = Number(lastKnownUserCoord[0]);
+      const lat = Number(lastKnownUserCoord[1]);
+      if (!isFinite(lon) || !isFinite(lat)) { set(""); setFireDangerMine(null); return; }
+
+      const st = getState("fireDanger");
+      const meta = fireDangerMeta;
+
+      // THE GATE. The client holds only LOW..EXTREME cells — NONE and
+      // insufficient_data are both dropped at normalize time. So "inside the grid
+      // but no shaded cell" can only be read as NONE when the ingest is HEALTHY.
+      // On a degraded fetch the client holds zero cells, and that same rule would
+      // manufacture good news out of an outage. This is the one place the feature
+      // deliberately says less than it could.
+      if (!meta || st?.status !== "ready" || meta.source_health?.firms !== "ok") {
+        set(_t("map.loc_unavailable") || "Location check unavailable right now.");
+        setFireDangerMine(null);
+        return;
+      }
+
+      const uninstrumented = Array.isArray(meta.uninstrumented_islands) ? meta.uninstrumented_islands : [];
+      const caveat = (islandKey) => uninstrumented.includes(islandKey)
+        ? " " + (_t("map.loc_no_station") ||
+          "This island has no weather station, so this is based on distance from fire only.")
+        : "";
+
+      // 1. Inside a scored cell → report exactly what the model computed there.
+      const hit = (st.features || []).find((f) => cellContains(f, lon, lat));
+      if (hit) {
+        const p = hit.properties || {};
+        const band = String(p.danger_level || "");
+        // Band vocabulary comes from the EXISTING keys, so this line reads the
+        // same words as the legend and the marker letters.
+        const bandLabel = _t(`map.fire_danger_band_${band.toLowerCase()}`) || band;
+        const km = Number(p.nearest_hotspot_km);
+        const reason = isFinite(km)
+          ? (p.downwind === true || p.downwind === "true"
+            ? (_tmpl("map.loc_reason_downwind", { km: km.toFixed(1) }) ||
+              `Nearest fire about ${km.toFixed(1)} km away, and you are downwind of it.`)
+            : (_tmpl("map.loc_reason", { km: km.toFixed(1) }) ||
+              `Nearest fire about ${km.toFixed(1)} km away.`))
+          : "";
+        set((_tmpl("map.loc_band", { band: bandLabel }) ||
+          `At your location: ${bandLabel} fire-spread concern.`) +
+          (reason ? " " + reason : "") + caveat(p.island));
+        setFireDangerMine(hit);
+        return;
+      }
+
+      setFireDangerMine(null);
+
+      // 2. Hawaiʻi envelope: inside an island grid but unshaded ⇒ genuinely NONE.
+      if (Array.isArray(meta.islands)) {
+        const isl = meta.islands.find((i) => pointInBbox(i?.grid?.bbox, lon, lat));
+        if (isl) {
+          set((_t("map.loc_none") ||
+            "No elevated fire-spread concern at your location right now.") + caveat(isl.island));
+          return;
+        }
+        set(_t("map.loc_no_coverage") || "No fire-spread estimate is available for your location.");
+        return;
+      }
+
+      // 3. CONUS envelope: patches exist only around detected fires, so being
+      // outside one is NOT a statement that there is no risk.
+      if (Array.isArray(meta.clusters)) {
+        set(pointInBbox(P05B_CONUS_BBOX, lon, lat)
+          ? (_t("map.loc_not_assessed") ||
+            "Your area has not been assessed. Estimates exist only around detected fires — no shading does not mean no risk.")
+          : (_t("map.loc_no_coverage") || "No fire-spread estimate is available for your location."));
+        return;
+      }
+
+      set(_t("map.loc_no_coverage") || "No fire-spread estimate is available for your location.");
+    }
+
     function openFireDangerPopup(feature, lngLat) {
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
@@ -5613,7 +5750,7 @@
     function useMyLocation() {
       if (!("geolocation" in navigator)) { alert("Location is not available on this device."); return; }
       setLocationButtonState(true);
-      navigator.geolocation.getCurrentPosition((pos) => { const coord = [pos.coords.longitude, pos.coords.latitude]; lastKnownUserCoord = coord; currentViewMode = "My Location"; updateUserMarker(coord); map.flyTo({ center: coord, zoom: Math.max(map.getZoom(), 9), speed: 0.8, essential: true }); document.getElementById("b-loc-text").textContent = (_t("map.banner_location") || "Location used only on this device"); show("b-loc", true); setText("view-mode", _t("map.view_my_location") || "My Location"); renderUnifiedPanels(); setLocationButtonState(false); setTimeout(safeMapResize, 250); }, () => { setLocationButtonState(false); document.getElementById("b-loc-text").textContent = (_t("map.banner_loc_denied") || "Location permission not granted"); show("b-loc", true); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+      navigator.geolocation.getCurrentPosition((pos) => { const coord = [pos.coords.longitude, pos.coords.latitude]; lastKnownUserCoord = coord; currentViewMode = "My Location"; updateUserMarker(coord); map.flyTo({ center: coord, zoom: Math.max(map.getZoom(), 9), speed: 0.8, essential: true }); document.getElementById("b-loc-text").textContent = (_t("map.banner_location") || "Location used only on this device"); show("b-loc", true); setText("view-mode", _t("map.view_my_location") || "My Location"); renderUnifiedPanels(); updateFireDangerLocationLine(); setLocationButtonState(false); setTimeout(safeMapResize, 250); }, () => { setLocationButtonState(false); document.getElementById("b-loc-text").textContent = (_t("map.banner_loc_denied") || "Location permission not granted"); show("b-loc", true); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
     }
     // D3 \u2014 the spinner used to be written from three places (the static template,
     // renderUnifiedPanels' loading branch, and here) but restored from exactly
@@ -5699,7 +5836,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
