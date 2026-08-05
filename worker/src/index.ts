@@ -1100,6 +1100,7 @@ export default {
       // Reuses caches populated by smoke/perimeters/firms handlers; no new
       // upstream, no write to primary snapshot keys. Invariant II/III: always
       // 200 + valid JSON, degrades deterministically on cache miss / parse fail.
+      if (path === '/api/hazards/air' || path === '/hazards/air') return handleAirQuality(url, env, cors);
       if (path === '/api/hazards/summary' || path === '/hazards/summary') return handleHazardsSummary(url, env, cors);
       if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
       if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
@@ -1192,6 +1193,10 @@ function handleHealth(env: Env, cors: CorsHeaders): Response {
       perimeters: true,
       goes: true,
       pacioos: true,
+      // Now meaningful: AIRNOW_API_KEY is actually used, by /api/hazards/air.
+      // It was dead config until that endpoint shipped — the flag reported an
+      // AirNow dependency that did not exist. The AQI TILE route is separate
+      // and needs no key; see handleAirnowXyz.
       airnow: !!env.AIRNOW_API_KEY,
       wfigs: true,
       nws: true,
@@ -3346,6 +3351,285 @@ async function handleFireDangerConus(env: Env, cors: CorsHeaders): Promise<Respo
   return jsonResp(body, 200, { ...cors, 'Cache-Control': firmsOk ? 'public, max-age=300' : 'no-store' });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// AIR QUALITY — measured AQI per monitoring site (EPA AirNow)
+//
+// Built on /aq/data/ (Observations by Monitoring Site, bounding box). That
+// surface SURVIVES EPA's 2026-09-30 retirement; the reporting-area zip/latLong
+// endpoints do not, and they return an area value with no geometry anyway —
+// useless for a per-site overlay.
+//
+// INVARIANT V IS INVERTED HERE, deliberately. Everywhere else in this Worker we
+// publish model ESTIMATES and must never dress them as official. These are
+// official measurements from the Hawaiʻi State Department of Health, reported
+// through EPA AirNow. So this endpoint passes values through VERBATIM with
+// attribution and adds no scale of its own — the six AQI categories, breakpoints
+// and colours below are EPA's published table, copied exactly.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const AIR_BBOX_HAWAII = '-161.2,18.5,-154.5,22.5';
+
+// Request every pollutant; sites return only what they actually measure.
+// SO2 IS THE VOG SIGNAL and is not optional here: measured 2026-08-05, 10 of 15
+// Hawaiʻi sites report SO2, and they are exactly the Kīlauea downwind corridor —
+// Pahala, Ocean View, Nāʻālehu, Mountain View, Leilani, Kona, Hilo, Waikoloa.
+// During an eruption episode SO2 is the field that matters most on Hawaiʻi
+// Island, and PM2.5 alone would show "Good" while vog was the actual hazard.
+const AIR_PARAMETERS = 'OZONE,PM25,PM10,SO2,NO2,CO';
+
+// Observations publish hourly, "between 10 and 30 minutes past the hour"
+// (AirNow FAQ). A 2-hour window guarantees a non-empty result early in the hour,
+// when the current hour has not been published yet.
+const AIR_WINDOW_HOURS = 2;
+
+// Hourly data: 15 min bounds how long we lag a fresh publish while capping us at
+// 4 upstream requests/hour. The cache is load-bearing — AirNow's rate limit does
+// not throttle, it STOPS returning data for the remainder of the hour.
+const AIR_CACHE_TTL = 900;
+
+// FRESHNESS IS HOURLY, NOT MINUTELY — and this is the third time this project
+// has had to get a freshness label right, so it is grounded rather than guessed.
+// AirNow publishes hour H between H+1:10 and H+1:30, so in NORMAL healthy
+// operation the newest observation's age oscillates ~1h10m to ~2h30m. A 90-minute
+// "fresh" threshold would therefore report stale on perfectly good data for a
+// large part of every hour — the same crying-wolf failure as the permanent
+// STALE_OK and the panel OUTDATED badge. 3h covers the full normal swing.
+// The precise age is always exposed separately so the client can state it
+// plainly without an alarm colour.
+const AIR_FRESH_MAX_MINUTES = 180;
+const AIR_STALE_MAX_MINUTES = 360;
+
+// EPA's published AQI table, verbatim (docs.airnowapi.org/aq101). We do not
+// invent a scale for official measurements.
+const AIR_CATEGORIES: ReadonlyArray<{ max: number; number: number; name: string; color: string }> = [
+  { max: 50,  number: 1, name: 'Good',                           color: '#00e400' },
+  { max: 100, number: 2, name: 'Moderate',                       color: '#ffff00' },
+  { max: 150, number: 3, name: 'Unhealthy for Sensitive Groups', color: '#ff7e00' },
+  { max: 200, number: 4, name: 'Unhealthy',                      color: '#ff0000' },
+  { max: 300, number: 5, name: 'Very Unhealthy',                 color: '#8f3f97' },
+  { max: Infinity, number: 6, name: 'Hazardous',                 color: '#7e0023' },
+];
+
+function epaCategory(aqi: number) {
+  for (const c of AIR_CATEGORIES) if (aqi <= c.max) return c;
+  return AIR_CATEGORIES[AIR_CATEGORIES.length - 1];
+}
+
+type AirReading = {
+  parameter: string;
+  unit: string;
+  value: number | null;
+  aqi: number | null;
+  category: string | null;
+  category_number: number | null;
+  observed_utc: string;
+};
+
+type AirMonitor = {
+  site: string;
+  agency: string;
+  lat: number;
+  lon: number;
+  aqi: number | null;
+  category: string | null;
+  category_number: number | null;
+  category_color: string | null;
+  dominant_parameter: string | null;
+  observed_utc: string | null;
+  parameters: AirReading[];
+};
+
+type AirIngest = { monitors: AirMonitor[]; health: 'ok' | 'degraded' | 'unconfigured'; newest_utc: string | null };
+
+// AirNow wants YYYY-MM-DDTHH in UTC.
+function airHourStamp(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 13);
+}
+
+// Parse + dedupe. Records arrive one row per (site, parameter, hour); we keep the
+// NEWEST row per parameter per site, then the site's headline AQI is the WORST
+// across its parameters — so an SO2 spike stays visible even when PM2.5 is clean.
+// Sites are keyed by rounded GEOMETRY, not name: AirNow returns inconsistent
+// casing for the same site ("KAHULUI" vs "Kahului"), and coordinates are stable.
+// Invariant III: any row failing validation is dropped, never coerced.
+function parseAirNowRecords(raw: unknown): { monitors: AirMonitor[]; newest_utc: string | null } {
+  if (!Array.isArray(raw)) return { monitors: [], newest_utc: null };
+  const bySite = new Map<string, { site: string; agency: string; lat: number; lon: number; params: Map<string, AirReading> }>();
+  let newest: string | null = null;
+
+  for (const r of raw as Array<Record<string, unknown>>) {
+    if (!r || typeof r !== 'object') continue;
+    const lat = Number(r.Latitude);
+    const lon = Number(r.Longitude);
+    if (!isFinite(lat) || !isFinite(lon)) continue;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
+    const parameter = typeof r.Parameter === 'string' ? r.Parameter.trim() : '';
+    const observed = typeof r.UTC === 'string' ? r.UTC.trim() : '';
+    if (!parameter || !observed) continue;
+
+    // AQI is -1 / missing when a concentration exists but no AQI was computed.
+    //
+    // numOrNull, NOT Number(): Number(null) and Number('') are both 0, so a
+    // MISSING AQI would silently become 0 — which renders as "Good" on an air
+    // quality endpoint. That is the worst possible direction for this failure to
+    // go, so absence is preserved as null and never coerced to a reading.
+    const numOrNull = (v: unknown): number | null => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(v);
+      return isFinite(n) ? n : null;
+    };
+    const rawAqi = numOrNull(r.AQI);
+    const aqi = rawAqi !== null && rawAqi >= 0 ? Math.round(rawAqi) : null;
+    const value = numOrNull(r.Value);
+    if (aqi === null && value === null) continue;   // nothing usable — drop
+
+    const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+    let entry = bySite.get(key);
+    if (!entry) {
+      entry = {
+        site: typeof r.SiteName === 'string' && r.SiteName.trim() ? r.SiteName.trim() : key,
+        agency: typeof r.AgencyName === 'string' ? r.AgencyName.trim() : '',
+        lat, lon, params: new Map(),
+      };
+      bySite.set(key, entry);
+    }
+    const cat = aqi === null ? null : epaCategory(aqi);
+    const reading: AirReading = {
+      parameter,
+      unit: typeof r.Unit === 'string' ? r.Unit.trim() : '',
+      value,
+      aqi,
+      category: cat ? cat.name : null,
+      category_number: cat ? cat.number : null,
+      observed_utc: observed,
+    };
+    const prev = entry.params.get(parameter);
+    if (!prev || reading.observed_utc > prev.observed_utc) entry.params.set(parameter, reading);
+    if (!newest || observed > newest) newest = observed;
+  }
+
+  const monitors: AirMonitor[] = [];
+  for (const e of bySite.values()) {
+    const params = [...e.params.values()].sort((a, b) => (b.aqi ?? -1) - (a.aqi ?? -1));
+    const worst = params.find((p) => p.aqi !== null) ?? null;
+    const cat = worst && worst.aqi !== null ? epaCategory(worst.aqi) : null;
+    monitors.push({
+      site: e.site,
+      agency: e.agency,
+      lat: Number(e.lat.toFixed(5)),
+      lon: Number(e.lon.toFixed(5)),
+      aqi: worst ? worst.aqi : null,
+      category: cat ? cat.name : null,
+      category_number: cat ? cat.number : null,
+      category_color: cat ? cat.color : null,
+      dominant_parameter: worst ? worst.parameter : null,
+      observed_utc: params.reduce<string | null>((m, p) => (!m || p.observed_utc > m ? p.observed_utc : m), null),
+      parameters: params,
+    });
+  }
+  monitors.sort((a, b) => (b.aqi ?? -1) - (a.aqi ?? -1));
+  return { monitors, newest_utc: newest };
+}
+
+// Never throws, never returns a Response — mirrors fetchFirmsMultiSensor, so the
+// handler stays Invariant-II safe.
+async function fetchAirNowObservations(env: Env, nowMs: number): Promise<AirIngest> {
+  if (!env.AIRNOW_API_KEY) return { monitors: [], health: 'unconfigured', newest_utc: null };
+  const cache = caches.default;
+  const start = airHourStamp(nowMs - AIR_WINDOW_HOURS * 3600_000);
+  const end = airHourStamp(nowMs);
+  // API_KEY appears ONLY in the upstream URL — never in the cache key, never in a
+  // log line, never in the envelope.
+  const cacheReq = new Request(
+    `https://www.airnowapi.org/_kahuola/air/${AIR_BBOX_HAWAII}/${start}/${end}`,
+  );
+  try {
+    const cached = await cache.match(cacheReq);
+    if (cached) {
+      const parsed = parseAirNowRecords(await cached.json());
+      return { ...parsed, health: 'ok' };
+    }
+    const upstream =
+      `https://www.airnowapi.org/aq/data/?startDate=${start}&endDate=${end}` +
+      `&parameters=${AIR_PARAMETERS}&BBOX=${AIR_BBOX_HAWAII}` +
+      `&dataType=B&format=application/json&verbose=1&API_KEY=${env.AIRNOW_API_KEY}`;
+    const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
+    if (!res.ok) throw new Error(`upstream ${res.status}`);
+    const text = await res.text();
+    let raw: unknown;
+    try { raw = JSON.parse(text); }
+    catch { throw new Error('parse'); }
+    await cache.put(cacheReq, new Response(text, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${AIR_CACHE_TTL}` },
+    }));
+    const parsed = parseAirNowRecords(raw);
+    return { ...parsed, health: 'ok' };
+  } catch {
+    console.warn(JSON.stringify({ layer: 'air', stage: 'airnow', dropped: true }));
+    return { monitors: [], health: 'degraded', newest_utc: null };
+  }
+}
+
+const AIR_ATTRIBUTION = 'Hawaiʻi State Department of Health, via EPA AirNow';
+
+const AIR_NOTE =
+  'Measured air quality from official monitoring stations — not a Kahu Ola estimate. ' +
+  'Readings are hourly and typically publish 10–30 minutes after the hour, so the newest ' +
+  'reading is normally 1–2 hours old. Follow the Hawaiʻi State Department of Health and ' +
+  'EPA AirNow for health guidance.';
+
+const AIR_VOG_NOTE =
+  'On Hawaiʻi Island, sulfur dioxide (SO₂) readings reflect volcanic smog (vog) from ' +
+  'Kīlauea. Vog can be hazardous while fine-particle (PM2.5) readings still look good, so ' +
+  'check the SO₂ value for a station, not only its headline number.';
+
+async function handleAirQuality(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
+  const nowMs = Date.now();
+  // region=hawaii only. CONUS air is a different problem — far greater monitor
+  // density and a bbox that would blow the record limit — and is not in scope.
+  const region = (url.searchParams.get('region') || 'hawaii').toLowerCase() === 'hawaii' ? 'hawaii' : 'hawaii';
+
+  const air = await fetchAirNowObservations(env, nowMs).catch(
+    () => ({ monitors: [], health: 'degraded', newest_utc: null } as AirIngest),
+  );
+
+  // FAIL-CLOSED: health drives the label, never the monitor count. "We could not
+  // reach AirNow" and "we reached it and the air is clean" are different answers.
+  const ok = air.health === 'ok' && air.monitors.length > 0;
+  const newestMs = air.newest_utc ? Date.parse(`${air.newest_utc}Z`.replace(/Z+$/, 'Z')) : NaN;
+  const ageMinutes = ok && isFinite(newestMs) ? Math.max(0, Math.round((nowMs - newestMs) / 60000)) : null;
+
+  const freshness = !ok
+    ? 'DEGRADED'
+    : ageMinutes === null || ageMinutes <= AIR_FRESH_MAX_MINUTES
+      ? 'FRESH'
+      : ageMinutes <= AIR_STALE_MAX_MINUTES
+        ? 'STALE_OK'
+        : 'DEGRADED';
+
+  const so2Count = air.monitors.filter((m) => m.parameters.some((p) => /^SO2$/i.test(p.parameter))).length;
+
+  const body = {
+    generated_at: new Date(nowMs).toISOString(),
+    stale_after_seconds: 3600,
+    freshness,
+    region,
+    source_health: { airnow: air.health },
+    newest_observation_utc: air.newest_utc,
+    // Exposed ALWAYS, so the client can state the real age plainly rather than
+    // inferring it from a label.
+    observation_age_minutes: ageMinutes,
+    monitor_count: air.monitors.length,
+    so2_monitor_count: so2Count,
+    monitors: air.monitors,
+    attribution: AIR_ATTRIBUTION,
+    note: AIR_NOTE,
+    vog_note: AIR_VOG_NOTE,
+  };
+
+  return jsonResp(body, 200, { ...cors, 'Cache-Control': ok ? 'public, max-age=300' : 'no-store' });
+}
+
 const WMS_UPSTREAMS: Record<string, { url: string; ttl: number; keySecret?: keyof Env; keyParam?: string }> = {
   firms: { url: 'https://firms.modaps.eosdis.nasa.gov/mapserver/wms/South_America/', ttl: 300, keySecret: 'NASA_FIRMS_MAP_KEY', keyParam: 'MAP_KEY' },
   hms: { url: 'https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/', ttl: 900 },
@@ -3395,7 +3679,11 @@ async function handleAirnowXyz(z: string, x: string, y: string, env: Env, cors: 
   if (isNaN(zi) || isNaN(xi) || isNaN(yi)) return err(400, 'z/x/y must be integers', cors);
   if (zi < 0 || zi > 18) return err(400, 'z must be 0–18', cors);
 
-  // tiles.airnowtech.org is defunct; AQICN distributes EPA AirNow data as public XYZ tiles
+  // NOT AirNow. This route is named "airnow" for historical reasons but serves
+  // AQICN (aqicn.org), a third-party REDISTRIBUTOR of EPA AirNow data, because
+  // tiles.airnowtech.org is defunct. It needs no API key and is unaffected by
+  // EPA's 2026-09-30 JSON API retirement. Measured AQI from AirNow proper is a
+  // different surface entirely — see handleAirQuality / /api/hazards/air.
   const tileUrl = `https://tiles.aqicn.org/tiles/usepa-aqi/${zi}/${xi}/${yi}.png`;
   return proxyFetch(tileUrl, tileUrl, 600, cors);
 }
