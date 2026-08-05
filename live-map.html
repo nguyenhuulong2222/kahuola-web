@@ -2403,6 +2403,27 @@
           </div>
         </div>
 
+        <!-- Air Quality — OFFICIAL measured data (Hawaiʻi DOH via EPA AirNow).
+             Tier 1 alongside the other Official cards: unlike the fire-danger
+             ESTIMATE card, these are measurements, so the Official kicker is
+             earned. Always present with a calm badge (the flood-card pattern) —
+             an always-visible card is how a resident finds AQI BEFORE an
+             episode, not only during one. -->
+        <div class="priority-module priority-module--secondary" id="air-quality-card" tabindex="0" role="button"
+          aria-label="Air quality status">
+          <div class="priority-module-head">
+            <div>
+              <div class="priority-kicker" data-i18n="map.kicker_aqi">Official · Hawaiʻi DOH via EPA AirNow</div>
+              <div class="priority-title" data-i18n="map.hazard_aqi">Air Quality</div>
+            </div>
+            <div class="status-badge status-none" id="air-quality-badge" data-i18n="map.loading">Loading</div>
+          </div>
+          <div class="priority-note" id="air-quality-note" data-i18n="map.aqi_note_init">Measured air quality from
+            official monitoring stations.</div>
+          <div class="priority-subnote" id="air-quality-age"></div>
+          <div class="priority-subnote" id="air-quality-note2"></div>
+        </div>
+
         <!-- Tsunami — Primary signal, lazy -->
         <div class="priority-module priority-module--secondary" id="tsunami-card" tabindex="0" role="button"
           aria-label="Tsunami alert status">
@@ -2743,6 +2764,7 @@
         localHazards: createHazardState("localHazards"),
         rainRadar: createHazardState("rainRadar"),
         windRisk: createHazardState("windRisk"),
+        airQuality: createHazardState("airQuality"),
         fireDanger: createHazardState("fireDanger"),
         alerts: createHazardState("alerts"),
         tsunami: createHazardState("tsunami"),
@@ -3475,6 +3497,33 @@
         },
         visible() { return fireDangerVisible; }
       },
+      airQuality: {
+        key: "airQuality", enabled: true,
+        // Official measurement feed; losing it must not flip the whole app to
+        // "offline" the way a core hazard source would.
+        affectsGlobalHealth: false,
+        // Always fetched, even when the map overlay is toggled OFF: the card
+        // reports air quality regardless of whether dots are drawn.
+        endpoint: "https://kahuola.org/api/hazards/air?region=hawaii",
+        parsePayload(json) {
+          const errText = payloadError(json);
+          if (errText) throw new Error(errText);
+          return {
+            features: normalizeAirMonitors(json),
+            sourceTime: parseDateMaybe(json.generated_at) || new Date(),
+            sourceLabel: "Hawaiʻi DOH via EPA AirNow",
+            meta: json,
+          };
+        },
+        ensureLayers, applyData(features) { updateAirQualitySource(features); },
+        onFetchComplete() {
+          const st = getState("airQuality");
+          airQualityMeta = st.status === "ready" ? (st.meta || null) : null;
+          updateAirQualityStatusUI(st);
+          renderUnifiedPanels();
+        },
+        visible() { return airnowVisible; }
+      },
       alerts: {
         key: "alerts", enabled: true, affectsGlobalHealth: false,
         endpoint: IS_LOCAL ? "./alerts-test.json" : "https://kahuola.org/api/hazards/alerts?region=hawaii",
@@ -3758,7 +3807,8 @@
 
     function ensureLayers() {
       ensureWmsPlaceholderLayers(); // PacIOOS / GOES — raster base, visibility:none
-      ensureAirnowLayers();         // EPA AirNow AQI tiles, below smoke
+      ensureAirnowLayers();         // AQICN AQI raster tiles, below smoke
+      ensureAirQualityLayers();     // official DOH monitor points, above the tiles
       ensureSmokeLayers();
       ensurePerimeterLayers();
       ensureFloodContextLayers();  // lowest — terrain context base
@@ -3861,7 +3911,7 @@
           tileSize: 256,
           minzoom: 0,
           maxzoom: 9,
-          attribution: "EPA AirNow · Via Kahu Ola Worker"
+          attribution: "EPA AirNow · tiles via AQICN · Kahu Ola Worker"
         });
         ensureLayer({
           id: "airnow-tile-layer", type: "raster", source: "airnow-tiles",
@@ -3871,6 +3921,55 @@
       }
       setLayerVisibility("airnow-tile-layer", airnowVisible);
     }
+    // ── P07: official AQI monitors ─────────────────────────────────────
+    // MEASURED values from Hawaiʻi DOH via EPA AirNow — not a Kahu Ola estimate.
+    // Colour comes straight from the envelope's category_color, which is EPA's
+    // own published palette; we never re-derive a scale for official data.
+    //
+    // Paired with the AQI NUMBER, never colour alone (WCAG 1.4.1): the numeral is
+    // the universal language of air quality and survives colour-blindness.
+    //
+    // Deliberately reads as a MEASUREMENT POINT, not a hazard zone: small fixed
+    // radius, white ring, no glow — visually separate from FIRMS orange and the
+    // fire-danger magenta wash.
+    function ensureAirQualityLayers() {
+      ensureSource("air-quality", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureLayer({
+        id: "air-quality-dot", type: "circle", source: "air-quality",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 9, 9, 12, 13, 15],
+          "circle-color": ["get", "category_color"],
+          "circle-opacity": 0.92,
+          "circle-stroke-width": 1.6,
+          "circle-stroke-color": "rgba(255,255,255,0.9)",
+        },
+      });
+      ensureLayer({
+        id: "air-quality-label", type: "symbol", source: "air-quality",
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "aqi_text"],
+          "text-font": ["Open Sans Bold"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 9, 11, 13, 13],
+          "text-allow-overlap": true,
+        },
+        // Dark text on a light halo stays legible on Good-green and on
+        // Hazardous-maroon alike, without inventing a colour per category.
+        paint: {
+          "text-color": "#0c0c0c",
+          "text-halo-color": "rgba(255,255,255,0.85)",
+          "text-halo-width": 1.1,
+        },
+      });
+      if (!map.__airQualityHoverBound) {
+        map.__airQualityHoverBound = true;
+        map.on("mouseenter", "air-quality-dot", () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "air-quality-dot", () => { map.getCanvas().style.cursor = ""; });
+      }
+      syncAirQualityVisibility();
+    }
+
     // ── WMS placeholder infrastructure — visibility:none until product teams enable ──
     // PacIOOS: Coral Reef Watch Degree Heating Weeks (CRW_DHW)
     // GOES/NCEP: CONUS base radar reflectivity (conus_bref_qcd)
@@ -4283,6 +4382,130 @@
       }
       return out;
     }
+    // ── P07 air-quality data ───────────────────────────────────────────
+    let airQualityMeta = null;
+
+    // Envelope monitors -> point features. The per-parameter breakdown is carried
+    // as a JSON STRING because MapLibre flattens properties to primitives, and the
+    // breakdown is the whole reason the backend keeps it: a vog site must be able
+    // to show its SO₂ row even when PM2.5 reads clean.
+    // Invariant III: any monitor failing validation is dropped, never coerced.
+    function normalizeAirMonitors(json) {
+      const mons = Array.isArray(json?.monitors) ? json.monitors : [];
+      const out = [];
+      for (const m of mons) {
+        const lat = Number(m?.lat), lon = Number(m?.lon);
+        if (!isFinite(lat) || !isFinite(lon)) continue;
+        // NOT Number(): Number(null) and Number("") are both 0, which would
+        // render a MISSING reading as a dot labelled "0" — i.e. pristine air.
+        // Same coercion trap fixed server-side in the P06 parser; absence must
+        // stay absence. A monitor with no computed AQI gets no dot at all.
+        const rawAqi = (m?.aqi === null || m?.aqi === undefined || m?.aqi === "") ? null : Number(m.aqi);
+        const aqi = rawAqi !== null && isFinite(rawAqi) ? rawAqi : null;
+        if (aqi === null) continue;
+        let params = "[]";
+        try { params = JSON.stringify(Array.isArray(m.parameters) ? m.parameters : []); } catch (e) { params = "[]"; }
+        out.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lon, lat] },
+          properties: {
+            site: typeof m.site === "string" ? m.site : "",
+            agency: typeof m.agency === "string" ? m.agency : "",
+            aqi,
+            // Pre-rendered label: AQI values arrive as integers from the
+            // envelope, so there is no float noise to guard against.
+            aqi_text: String(aqi),
+            category: typeof m.category === "string" ? m.category : "",
+            category_number: Number(m.category_number) || null,
+            // EPA's own colour, straight through. Fallback only if absent.
+            category_color: typeof m.category_color === "string" && m.category_color ? m.category_color : "#7a7a7a",
+            dominant_parameter: typeof m.dominant_parameter === "string" ? m.dominant_parameter : "",
+            observed_utc: typeof m.observed_utc === "string" ? m.observed_utc : "",
+            parameters_json: params,
+          },
+        });
+      }
+      return out;
+    }
+    function updateAirQualitySource(features) {
+      const s = map.getSource("air-quality");
+      if (s) s.setData({ type: "FeatureCollection", features: Array.isArray(features) ? features : [] });
+    }
+    // Dots follow the same toggle as the tiles (S2a). Layout visibility only —
+    // never opacity — so a hidden dot cannot capture a click.
+    function syncAirQualityVisibility() {
+      ["air-quality-dot", "air-quality-label"].forEach((id) => setLayerVisibility(id, airnowVisible));
+    }
+
+    // EPA category names are descriptors, so they translate; the AQI numeral and
+    // the parameter symbols (PM2.5, SO2, OZONE) are international and do not.
+    function airCategoryLabel(cat) {
+      const key = String(cat || "").toLowerCase().replace(/[^a-z]+/g, "_").replace(/^_|_$/g, "");
+      return _t(`map.aqi_cat_${key}`) || cat || "";
+    }
+    function airAgeText(minutes) {
+      const n = Number(minutes);
+      if (!isFinite(n)) return "";
+      return n < 90
+        ? (_tmpl("map.aqi_age_min", { n }) || `Measured ${n} min ago.`)
+        : (_tmpl("map.aqi_age_hr", { n: (n / 60).toFixed(1) }) || `Measured about ${(n / 60).toFixed(1)} h ago.`);
+    }
+
+    function updateAirQualityStatusUI(state) {
+      const meta = airQualityMeta;
+      const mons = state?.features || [];
+      const setTxt = (base, txt) => ["desktop", "mobile"].forEach((sfx) => {
+        const el = document.getElementById(`${base}-${sfx}`); if (el) el.textContent = txt;
+      });
+
+      // FAIL-CLOSED (Invariant II): unreachable / non-200 / parse fail → an honest
+      // unavailable state. Never a blank card, never a fabricated reading.
+      if (!state || state.status === "unavailable" || !meta || !mons.length) {
+        updateModuleBadge("air-quality", _t("map.s_unavailable") || "Unavailable", "status-unavailable");
+        setTxt("air-quality-note", _t("map.aqi_unavailable") ||
+          "Air quality readings are temporarily unavailable. For health guidance follow the Hawaiʻi Department of Health and EPA AirNow.");
+        setTxt("air-quality-age", "");
+        setTxt("air-quality-note2", "");
+        return;
+      }
+
+      // Monitors arrive worst-first from the Worker.
+      const worst = mons[0].properties;
+      const cat = airCategoryLabel(worst.category);
+      const num = Number(worst.category_number) || 1;
+      updateModuleBadge("air-quality", `${worst.aqi} \u00b7 ${cat}`,
+        num >= 3 ? "status-detected" : "status-none");
+      setTxt("air-quality-note",
+        _tmpl("map.aqi_headline", {
+          aqi: worst.aqi, cat, site: worst.site,
+          param: worst.dominant_parameter || "", n: mons.length,
+        }) ||
+        `Highest: ${worst.aqi} ${cat} — ${worst.site}${worst.dominant_parameter ? ` (${worst.dominant_parameter})` : ""}. ${mons.length} monitoring stations reporting.`);
+      // Age is INFORMATION, not an alarm — hourly cadence means 1–2.5 h is
+      // completely normal, so this line is plain and uncoloured (the P05d/P06
+      // lesson: a label that cries wolf gets ignored).
+      setTxt("air-quality-age", airAgeText(meta.observation_age_minutes));
+      setTxt("air-quality-note2", meta.note || "");
+    }
+
+    function openAirQualityPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      let rows = [];
+      try { rows = JSON.parse(p.parameters_json || "[]"); } catch (e) { rows = []; }
+      const catLabel = airCategoryLabel(p.category);
+      // EVERY parameter is listed, not just the dominant one — an SO₂ spike must
+      // stay visible behind a clean PM2.5 headline.
+      const rowHtml = rows.map((r) => {
+        const a = (r && r.aqi !== null && r.aqi !== undefined) ? escapeHtml(r.aqi) : "\u2014";
+        const v = (r && r.value !== null && r.value !== undefined) ? ` (${escapeHtml(r.value)}${r.unit ? " " + escapeHtml(r.unit) : ""})` : "";
+        return `<div class="popup-metric"><div class="popup-metric-label">${escapeHtml(r?.parameter || "")}</div><div class="popup-metric-value">${a}${v}</div></div>`;
+      }).join("");
+      const age = airAgeText(airQualityMeta?.observation_age_minutes);
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u{1F4A8} ${escapeHtml(p.site || "")}</div><div class="popup-coords">${escapeHtml(p.agency || _L("map.aqi_agency", "Hawaiʻi Dept. of Health"))}</div></div><div class="popup-severity ${Number(p.category_number) >= 3 ? "crit" : "normal"}">${escapeHtml(p.aqi)} ${escapeHtml(catLabel)}</div></div><div class="popup-grid">${rowHtml}</div><div class="popup-note">${p.dominant_parameter ? `${_L("map.aqi_dominant", "Highest reading")}: ${escapeHtml(p.dominant_parameter)}. ` : ""}${escapeHtml(age)} ${_L("map.aqi_popup_note", "Official measured air quality. Follow Hawaiʻi DOH and EPA AirNow for health guidance.")}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
+    }
+
     function updateFireDangerSource(features) { const s = map.getSource("fire-danger"); if (s) s.setData({ type: "FeatureCollection", features }); }
 
     // ── P25 M2 marker data / visibility / pulse ────────────────────────────
@@ -4916,7 +5139,16 @@
     function toggleFlashFloodLayer() { flashFloodVisible = !flashFloodVisible; floodContextVisible = flashFloodVisible; mrmsVisible = flashFloodVisible; getState("flashFlood").visible = flashFloodVisible; getState("floodContext").visible = floodContextVisible; getState("mrmsRain").visible = mrmsVisible; syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); updateFlashFloodStatusUI(getState("flashFlood").sourceStatus, getState("flashFlood").features.length); updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }
     function toggleWindRiskLayer() { windRiskVisible = !windRiskVisible; getState("windRisk").visible = windRiskVisible; syncWindRiskLayerVisibility(); updateWindRiskStatusUI(getState("windRisk")); renderUnifiedPanels(); }
     function syncAirnowButtons() { ["airnow-btn-panel-desktop","airnow-btn-panel-mobile","airnow-btn-mobile"].forEach((id) => { const el = document.getElementById(id); if (!el) return; el.textContent = airnowVisible ? "AQI Layer: On" : "AQI Layer: Off"; el.classList.toggle("active", airnowVisible); }); }
-    function toggleAirnowLayer() { airnowVisible = !airnowVisible; ensureAirnowLayers(); syncAirnowButtons(); }
+    // S2(a): ONE toggle, both layers. They are complementary across zoom rather
+    // than competing — the AQICN raster source is capped at maxzoom 9, exactly
+    // where a user is looking at one island or town, which is where the 15
+    // official monitor points matter most.
+    function toggleAirnowLayer() {
+      airnowVisible = !airnowVisible;
+      ensureAirnowLayers();
+      syncAirQualityVisibility();
+      syncAirnowButtons();
+    }
 
     function updateSmokeStatusUI(state, count = 0) {
       ["desktop", "mobile"].forEach((suffix) => {
@@ -5467,7 +5699,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -5490,6 +5722,9 @@
         if (hurricaneVisible) { const hur = queryTopFeature(e.point, ["hurricane-point"]); if (hur) { openHurricanePopup(hur, e.lngLat); return; } }
         if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
         if (alertsVisible) { const al = queryTopFeature(e.point, ["alerts-fill", "alerts-point"]); if (al) { openAlertsPopup(al, e.lngLat); return; } }
+        // Official point measurements beat the fire-danger ESTIMATE fill below,
+        // but never beat FIRMS detections or NWS alerts above.
+        if (airnowVisible) { const aq = queryTopFeature(e.point, ["air-quality-dot"]); if (aq) { openAirQualityPopup(aq, e.lngLat); return; } }
         // Scoped to this layer ONLY. Sits low in the chain so an official signal
         // always wins a contested click; queryTopFeature skips visibility:none, so a
         // hidden danger grid can never intercept another module's popup.
@@ -5722,6 +5957,7 @@
       // fires after the specific listener and would overwrite translated text.
       ["desktop", "mobile"].forEach((sfx) => {
         document.getElementById(`fire-danger-card-${sfx}`)?.addEventListener("click", toggleFireDangerLayer);
+        document.getElementById(`air-quality-card-${sfx}`)?.addEventListener("click", toggleAirnowLayer);
       });
 
       // ── Lazy-load: Tsunami / Hurricane / Landslide ──────────────
