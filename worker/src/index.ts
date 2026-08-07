@@ -82,7 +82,9 @@ function corsHeaders(origin: string | null): CorsHeaders {
   };
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     base['Access-Control-Allow-Origin'] = origin;
-    base['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS';
+    // POST is listed for the browser preflight path; /api/brief,
+    // /api/push/subscribe and (P19) the zone brief all accept it.
+    base['Access-Control-Allow-Methods'] = 'GET, HEAD, POST, OPTIONS';
     base['Access-Control-Allow-Headers'] = 'Content-Type';
   }
   return base;
@@ -1081,6 +1083,20 @@ export default {
 
       if (request.method === 'POST' && path === '/api/push/subscribe') {
         return handlePushSubscribe(request, env, cors);
+      }
+
+      // P19: zone brief over POST so the household flags — which include a
+      // `medical` bit — travel in the body instead of the query string.
+      // Same handler, same envelope; GET is unchanged for fielded iOS 1.0.
+      if (request.method === 'POST') {
+        const zonePostMatch = path.match(/^\/api\/hazards\/zone\/([a-z0-9_]+)$/);
+        if (zonePostMatch) {
+          if (origin && !ALLOWED_ORIGINS.includes(origin)) return err(403, 'Forbidden', cors);
+          // Invariant III: unparseable body is dropped, not guessed — the
+          // handler then reads the URL and applies documented defaults.
+          const body = await request.json().catch(() => null);
+          return handleZoneBrief(zonePostMatch[1], url, env, cors, body);
+        }
       }
 
       if (!['GET', 'HEAD'].includes(request.method)) return err(405, 'Method not allowed', cors);
@@ -4670,6 +4686,47 @@ function parseLangFromUrl(url: URL): string {
   return ["en", "vi", "tl", "ilo", "haw", "ja"].includes(lang) ? lang : "en";
 }
 
+// P19: household flags carry a `medical` bit. As query params they land in
+// request logs and any Referer, which violates the sensitive-data-in-query-
+// strings rule. POST moves them into the body, where they do not.
+//
+// GET stays supported because fielded iOS 1.0 uses it and cannot be recalled.
+// RESIDUAL LEAK — owner: Long. Remove the GET household path once the next
+// iOS release (>= 1.0.1) has rolled out and GET traffic for these params
+// has drained. The zone id itself stays in the path either way.
+function parseHouseholdFromBody(body: unknown): HouseholdProfile | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  // Invariant III: a malformed body is dropped, never inferred. The caller
+  // falls back to the URL, which yields documented defaults.
+  const flag = (name: string): boolean => {
+    const v = b[name];
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return v === 1;
+    if (typeof v === "string") {
+      const s = v.toLowerCase();
+      return s === "1" || s === "true" || s === "yes";
+    }
+    return false;
+  };
+  return {
+    kupuna: flag("kupuna"),
+    keiki: flag("keiki"),
+    pets: flag("pets"),
+    medical: flag("medical"),
+    // Matches parseHouseholdFromUrl: car defaults TRUE unless explicitly sent.
+    car: b.car !== undefined && b.car !== null ? flag("car") : true,
+  };
+}
+
+function parseLangFromBody(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const raw = (body as Record<string, unknown>).lang;
+  if (typeof raw !== "string") return null;
+  const lang = raw.toLowerCase();
+  return ["en", "vi", "tl", "ilo", "haw", "ja"].includes(lang) ? lang : null;
+}
+
 function textMentionsZone(text: string, zoneName: string): boolean {
   if (!text) return false;
   const haystack = text.toLowerCase();
@@ -4814,9 +4871,12 @@ async function handleZoneBrief(
   url: URL,
   env: Env,
   cors: CorsHeaders,
+  // P19: present only on POST. Body values win; anything missing or
+  // malformed falls back to the URL so GET behaviour is byte-identical.
+  bodyOverride?: unknown,
 ): Promise<Response> {
-  const lang = parseLangFromUrl(url);
-  const household = parseHouseholdFromUrl(url);
+  const lang = parseLangFromBody(bodyOverride) ?? parseLangFromUrl(url);
+  const household = parseHouseholdFromBody(bodyOverride) ?? parseHouseholdFromUrl(url);
 
   const zone = getZoneById(zoneId);
   if (!zone) {
