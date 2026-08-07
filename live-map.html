@@ -488,7 +488,21 @@
       border-top: none;
       border-radius: 0 0 22px 22px;
       background: var(--panel-strong);
-      max-height: 52dvh;
+      /* P27: was 52dvh — never reached, because the wrapped quick-action grid
+         claimed the card's height first and .panel-body (the only flex item
+         with min-height:0) absorbed the whole deficit. With the grid behind a
+         disclosure the cap finally binds, so it is set to the real budget. */
+      max-height: 62dvh;
+    }
+
+    /* P27: the scope hint sat between an opaque .panel-head and an opaque
+       .panel-body with no background and no side borders — a transparent slit
+       through the card. The map showed through it, which is how the "100 mi"
+       scale chip appeared over the subtitle on iOS. Seals the card edge. */
+    .sheet.open .fire-scope-hint {
+      border-left: 1px solid var(--border-hi);
+      border-right: 1px solid var(--border-hi);
+      background: var(--panel-strong);
     }
 
     .sheet-handle-btn {
@@ -550,10 +564,60 @@
       background: rgba(255, 255, 255, .22);
     }
 
+    /* P27: "Layers & Tools" disclosure. The 12-button grid wrapped to 6 rows on
+       a phone (314px of a 655px card), starving the hazard panel to 271px of
+       1623px — 43px on an iPhone SE. Collapsed by default so hazard content is
+       what a kupuna sees first; one labeled tap restores the tools.
+       Display toggle only — never animate height (see .sheet-handle-caret). */
+    .sheet-tools-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      min-height: 42px;
+      margin-top: 2px;
+      padding: 0 12px;
+      border: 1px solid var(--border-hi);
+      border-radius: 14px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sheet-tools-caret {
+      transition: transform .2s ease;   /* transform only — never animate height */
+    }
+
+    .sheet-tools-toggle[aria-expanded="true"] .sheet-tools-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Collapsed sheet shows the handle alone — the disclosure would re-grow the
+       peek. Matches the existing quick-actions/scope-hint hiding above. */
+    body:not(.mobile-app) .sheet:not(.open) .sheet-tools-toggle {
+      display: none;
+    }
+
+    /* WebView (?mobile=1) keeps its current behaviour: :199 shows the grid with
+       !important at higher specificity than [hidden], so the disclosure would be
+       an inert control there. Hide it — the app branch stays pixel-identical. */
+    .mobile-app .sheet-tools-toggle {
+      display: none !important;
+    }
+
     .sheet-quick-actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      margin-top: 8px;
     }
 
     .sheet-quick-actions .action-btn {
@@ -1810,8 +1874,10 @@
         height: 38px !important;
       }
 
+      /* P27: --safe-bottom was counted twice — .maplibregl-ctrl-bottom-left
+         already applies it below, so notched devices got ~34px of excess lift. */
       .maplibregl-ctrl-scale {
-        margin: 0 0 calc(112px + var(--safe-bottom)) 10px !important;
+        margin: 0 0 112px 10px !important;
       }
 
       .maplibregl-ctrl-bottom-right,
@@ -2168,7 +2234,12 @@
                 <span class="sheet-handle-label" data-i18n="map.map_details">Map Details</span>
               </span>
             </button>
-            <div class="sheet-quick-actions">
+            <button class="sheet-tools-toggle" id="sheet-tools-toggle" type="button" aria-expanded="false"
+              aria-controls="sheet-quick-actions">
+              <span data-i18n="map.layers_tools">Layers &amp; Tools</span>
+              <svg class="sheet-tools-caret" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="sheet-quick-actions" id="sheet-quick-actions" hidden>
               <button class="action-btn" id="sheet-toggle-btn" type="button" data-i18n="map.map_details">Map
                 Details</button>
               <button class="action-btn locate-btn" id="locate-btn-mobile" type="button"
@@ -6205,6 +6276,18 @@
     document.getElementById("diag-close")?.addEventListener("click", () => { diag.classList.remove("open"); diagBtn.setAttribute("aria-expanded", "false"); diagBtn.style.display = ""; });
     sheetToggleBtn?.addEventListener("click", toggleSheet);
     sheetHandleWrap?.addEventListener("click", toggleSheet);
+    // P27: "Layers & Tools" disclosure. No safeMapResize — the card is capped at
+    // 78dvh in both states, so the sheet's outer footprint never changes; only
+    // the split between the grid and .panel-body does. Choice persists while the
+    // sheet is reopened; it does not reset on toggleSheet.
+    const sheetToolsToggle = document.getElementById("sheet-tools-toggle");
+    const sheetQuickActions = document.getElementById("sheet-quick-actions");
+    sheetToolsToggle?.addEventListener("click", () => {
+      if (!sheetQuickActions) return;
+      const show = sheetQuickActions.hidden;
+      sheetQuickActions.hidden = !show;
+      sheetToolsToggle.setAttribute("aria-expanded", show ? "true" : "false");
+    });
 
     // Lazy module config for event delegation
     // Fix 3 — Conditional landslide visibility

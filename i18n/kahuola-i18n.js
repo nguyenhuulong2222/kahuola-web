@@ -181,6 +181,7 @@
       "map.weather_off": "Fire Weather: Off",
       "map.map_details": "Map Details",
       "map.hide_details": "Hide Details",
+      "map.layers_tools": "Layers & Tools",
       "map.footer": "Kahu Ola civic technology",
 
       // ── Live map panel strings ────────────────────────────────
@@ -1041,6 +1042,7 @@
       "map.weather_off": "Th\u1eddi ti\u1ebft ch\u00e1y: T\u1eaft",
       "map.map_details": "Chi ti\u1ebft b\u1ea3n \u0111\u1ed3",
       "map.hide_details": "\u1ea8n chi ti\u1ebft",
+      "map.layers_tools": "L\u1edbp & C\xf4ng c\u1ee5",
       "map.footer": "C\xf4ng ngh\u1ec7 d\u00e2n s\u1ef1 Kahu Ola",
 
       // ── Live map panel strings ────────────────────────────────
