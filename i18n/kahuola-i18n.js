@@ -53,6 +53,8 @@
       "nav.mission": "Mission",
       "nav.privacy": "Privacy",
       "nav.support": "Support",
+      "nav.guide": "Guide",
+      "nav.guide_url": "/guide",
       "nav.home": "Home",
       "nav.about": "About",
       "nav.data_sources": "Data Sources",
@@ -901,6 +903,8 @@
       "nav.mission": "S\u1ee9 m\u1ec7nh",
       "nav.privacy": "Quy\u1ec1n ri\u00eang t\u01b0",
       "nav.support": "H\u1ed7 tr\u1ee3",
+      "nav.guide": "H\u01b0\u1edbng d\u1eabn",
+      "nav.guide_url": "/guide-vi",
       "nav.home": "Trang ch\u1ee7",
       "nav.data_sources": "Ngu\u1ed3n d\u1eef li\u1ec7u",
 
@@ -3838,6 +3842,19 @@
         var ariaKey = ariaEl.getAttribute("data-i18n-aria");
         var ariaVal = t(ariaKey);
         if (ariaVal && ariaVal !== ariaKey) ariaEl.setAttribute("aria-label", ariaVal);
+      }
+      // P28: locale-aware destinations. The user guide ships as two sibling
+      // static pages (/guide, /guide-vi) rather than one JS-toggled page, so
+      // the LINK ITSELF has to carry the locale — a Vietnamese reader tapping
+      // "Hướng dẫn" must not land on the English guide. Mirrors the aria loop
+      // above exactly. Locales with no guide of their own fall back to Layer A
+      // English via t(), which is the correct destination for them today.
+      var hrefElems = document.querySelectorAll("[data-i18n-href]");
+      for (var k = 0; k < hrefElems.length; k++) {
+        var hrefEl = hrefElems[k];
+        var hrefKey = hrefEl.getAttribute("data-i18n-href");
+        var hrefVal = t(hrefKey);
+        if (hrefVal && hrefVal !== hrefKey) hrefEl.setAttribute("href", hrefVal);
       }
       // Sync the selector widget value if present
       var sel = document.getElementById("kahuola-lang-select");
