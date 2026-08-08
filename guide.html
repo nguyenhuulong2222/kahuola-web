@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta http-equiv="content-language" content="en-US" />
+  <title>User Guide — Kahu Ola | How to Read the Hawaiʻi Hazard Map</title>
+  <meta name="description" content="A plain-language guide to the Kahu Ola hazard map: what every color and symbol means, where NASA and National Weather Service data comes from, and what Kahu Ola does not do." />
+
+  <link rel="canonical" href="https://kahuola.org/guide" />
+  <link rel="alternate" hreflang="en-US" href="https://kahuola.org/guide" />
+  <link rel="alternate" hreflang="vi-VN" href="https://kahuola.org/guide-vi" />
+  <link rel="alternate" hreflang="x-default" href="https://kahuola.org/guide" />
+
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="theme-color" content="#0c6fbf" />
+
+  <meta name="geo.region" content="US-HI" />
+  <meta name="geo.placename" content="Hawaiʻi" />
+  <meta name="geo.position" content="20.7984;-156.3319" />
+  <meta name="ICBM" content="20.7984, -156.3319" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Kahu Ola" />
+  <meta property="og:title" content="User Guide — Kahu Ola | How to Read the Hawaiʻi Hazard Map" />
+  <meta property="og:description" content="A plain-language guide to the Kahu Ola hazard map: what every color and symbol means, where the data comes from, and what Kahu Ola does not do." />
+  <meta property="og:url" content="https://kahuola.org/guide" />
+  <meta property="og:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Kahu Ola — Hawaiʻi civic hazard awareness platform" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="vi_VN" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="User Guide — Kahu Ola" />
+  <meta name="twitter:description" content="What every color and symbol on the Hawaiʻi hazard map means, in plain language." />
+  <meta name="twitter:image" content="https://kahuola.org/assets/brand/exports/social/social-preview-1200x630.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "HowTo",
+        "@id": "https://kahuola.org/guide#howto",
+        "name": "How to check whether your area is safe on Kahu Ola",
+        "description": "Check current wildfire spread concern for your own location on the Kahu Ola hazard map.",
+        "totalTime": "PT2M",
+        "step": [
+          { "@type": "HowToStep", "position": 1, "name": "Open the map", "text": "Go to kahuola.org and open the Live Map." },
+          { "@type": "HowToStep", "position": 2, "name": "Open the details sheet", "text": "On a phone, tap the handle at the bottom of the screen to open Map Details." },
+          { "@type": "HowToStep", "position": 3, "name": "Open the tools", "text": "Tap LAYERS & TOOLS to show the buttons." },
+          { "@type": "HowToStep", "position": 4, "name": "Share your location", "text": "Tap Use My Location and allow the location permission." },
+          { "@type": "HowToStep", "position": 5, "name": "Read the result", "text": "Read the location line on the Fire Spread Concern card." }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://kahuola.org/guide#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "The map looks empty. Is it broken?",
+            "acceptedAnswer": { "@type": "Answer", "text": "An empty map is good news. It means no satellite has detected unusual heat in the area and no official alert is active. Most days look like this." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Kahu Ola replace official emergency alerts?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Kahu Ola is an independent civic project for situational awareness. It does not replace the Hawaiʻi Emergency Management Agency, County Emergency Management, or the National Weather Service. In an emergency, call 911." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Kahu Ola track my location?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. When you tap Use My Location, your coordinates are compared with the map on your own device. They are never sent to our servers, never stored, and never logged." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the pink shading only appear near detected fires in the USA view?",
+            "acceptedAnswer": { "@type": "Answer", "text": "At continental scale the spread estimate is calculated only around places where satellites actually detected heat. Shading the whole country would imply knowledge we do not have." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is the pink shaded area on fire?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Pink and magenta shading is an estimate of where fire could spread based on nearby heat detections, wind, and humidity. It is not a burning area and it is not an official fire forecast." }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://kahuola.org/guide#breadcrumbs",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://kahuola.org/" },
+          { "@type": "ListItem", "position": 2, "name": "User Guide", "item": "https://kahuola.org/guide" }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#101b27;
+      --surface-2:#142232;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.14);
+      --text:#eef4fb;
+      --text-dim:#c4d2df;
+      --muted:#8ea3b7;
+      --ok:#67c27e;
+      --ok-soft:rgba(103,194,126,.10);
+      --warn:#ffcc66;
+      --warn-soft:rgba(255,204,102,.10);
+      --accent:#4da8ff;
+      --accent-soft:rgba(77,168,255,.12);
+      --radius-xl:28px;
+      --radius-lg:22px;
+      --radius-md:18px;
+      --radius-sm:14px;
+      --shadow:0 18px 46px rgba(0,0,0,.28);
+      --max:900px;
+      --font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%) fixed;
+      color:var(--text);
+      font-family:var(--font);
+      min-height:100vh;
+    }
+    a{text-decoration:none;color:inherit}
+
+    .app{width:min(100%,1280px);margin:0 auto;padding:16px 16px 60px}
+
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:6px 0 18px}
+    .brand{display:flex;gap:12px;min-width:0}
+    .brand-mark{
+      width:42px;height:42px;flex:0 0 42px;border-radius:14px;
+      display:grid;place-items:center;font-size:20px;
+      background:linear-gradient(180deg,rgba(255,122,0,.18),rgba(255,122,0,.08));
+      border:1px solid rgba(255,122,0,.22);
+      box-shadow:0 10px 26px rgba(0,0,0,.24);
+    }
+    .brand-kicker{color:var(--text-dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:4px}
+    .brand-title{margin:0;font-size:28px;line-height:1.02;letter-spacing:-.03em;font-weight:900}
+    .brand-sub{margin-top:4px;color:var(--muted);font-size:12px}
+    .top-actions{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    .pill{
+      min-height:38px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;
+      border-radius:999px;border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);color:var(--text);font-size:12px;font-weight:800;white-space:nowrap;
+    }
+    .pill.link{color:var(--text-dim);background:rgba(255,255,255,.03)}
+    .pill.active{color:var(--accent);border-color:rgba(77,168,255,.28);background:var(--accent-soft)}
+    .pill.lang{color:#ffe9b5;border-color:rgba(255,204,102,.28);background:var(--warn-soft)}
+
+    .page-grid{display:grid;grid-template-columns:1fr 280px;gap:18px;align-items:start;max-width:var(--max);margin:0 auto}
+    @media(max-width:900px){.page-grid{grid-template-columns:1fr}}
+
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+      border:1px solid var(--line);border-radius:var(--radius-xl);
+      box-shadow:var(--shadow);overflow:hidden;
+    }
+    .hero-card{padding:28px 28px 24px}
+    .page-kicker{color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:10px}
+    .page-title{margin:0 0 14px;font-size:clamp(26px,4vw,36px);line-height:1.08;letter-spacing:-.03em;font-weight:900}
+    .page-lead{margin:0 0 18px;color:var(--text-dim);font-size:17px;line-height:1.7}
+
+    .callout-box{
+      padding:14px 16px;border-radius:var(--radius-sm);
+      border:1px solid rgba(77,168,255,.22);
+      background:var(--accent-soft);
+      color:#dbeeff;font-size:15px;line-height:1.65;margin-bottom:18px;
+    }
+    .meta-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .chip{
+      min-height:28px;padding:0 10px;display:inline-flex;align-items:center;
+      border-radius:999px;border:1px solid var(--line-strong);
+      background:rgba(255,255,255,.04);color:#dce8f4;font:700 11px var(--mono);white-space:nowrap;
+    }
+    .btn-row{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{
+      min-height:48px;padding:0 18px;border-radius:14px;
+      display:inline-flex;align-items:center;justify-content:center;
+      border:1px solid var(--line-strong);background:var(--surface-2);
+      color:var(--text);font-weight:800;font-size:15px;cursor:pointer;
+      transition:background .2s,transform .1s;font-family:inherit;
+    }
+    .btn:active{transform:scale(.98)}
+    .btn.primary{background:linear-gradient(180deg,rgba(255,122,0,.18),rgba(255,122,0,.11));border-color:rgba(255,122,0,.28);color:#fff1e4}
+    .btn.ghost{background:rgba(255,255,255,.04);border-color:var(--line)}
+
+    /* ── Guide content — larger type than the policy pages on purpose.
+       The primary reader is a kupuna, often on a phone, often reading a
+       second language. 17px/1.75 is the floor, not a preference. ── */
+    .policy-stack{display:flex;flex-direction:column;gap:14px}
+    .policy-block{
+      padding:22px 24px;
+      background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+      border:1px solid var(--line);border-radius:var(--radius-lg);
+    }
+    .policy-block h2{margin:0 0 12px;font-size:21px;font-weight:900;letter-spacing:-.02em;color:var(--text);line-height:1.2}
+    .policy-block h3{margin:22px 0 8px;font-size:17px;font-weight:800;color:var(--text);line-height:1.3}
+    .policy-block h3:first-of-type{margin-top:6px}
+    .policy-block p{margin:0 0 12px;color:var(--text-dim);font-size:17px;line-height:1.75}
+    .policy-block p:last-child{margin-bottom:0}
+    .policy-block ul,.policy-block ol{margin:10px 0 12px;padding-left:24px;color:var(--text-dim);font-size:17px;line-height:1.75}
+    .policy-block li{margin-bottom:8px}
+    .policy-block a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+    .policy-block.disclaimer{border-color:rgba(255,204,102,.18);background:var(--warn-soft)}
+    .policy-block.disclaimer h2{color:#ffe9b5}
+    .policy-block.disclaimer p{color:#ffe9b5;opacity:.9}
+    .policy-block.emergency{border-color:rgba(255,122,0,.34);background:rgba(255,122,0,.10)}
+    .policy-block.emergency h2,.policy-block.emergency h3{color:#ffd9b8}
+    .policy-block.emergency p{color:#ffe3cc}
+
+    .part-head{
+      padding:18px 24px;border-radius:var(--radius-lg);
+      border:1px solid rgba(77,168,255,.22);background:var(--accent-soft);
+      margin-top:10px;
+    }
+    .part-head .page-kicker{margin-bottom:6px;color:var(--accent)}
+    .part-head h2{margin:0;font-size:23px;font-weight:900;letter-spacing:-.02em}
+    .part-head p{margin:8px 0 0;color:#dbeeff;font-size:15px;line-height:1.65}
+
+    /* Numbered task steps — never more than five */
+    .steps{counter-reset:s;list-style:none;padding-left:0;margin:12px 0 0}
+    .steps li{
+      counter-increment:s;position:relative;padding-left:44px;margin-bottom:12px;
+      font-size:17px;line-height:1.7;color:var(--text-dim);
+    }
+    .steps li::before{
+      content:counter(s);position:absolute;left:0;top:1px;
+      width:30px;height:30px;border-radius:999px;display:grid;place-items:center;
+      background:var(--accent-soft);border:1px solid rgba(77,168,255,.28);
+      color:var(--accent);font-weight:900;font-size:14px;
+    }
+    .ui-label{
+      display:inline-block;padding:1px 8px;border-radius:8px;
+      background:rgba(255,255,255,.07);border:1px solid var(--line-strong);
+      font:800 15px var(--mono);color:#fff;white-space:nowrap;
+    }
+
+    /* Decoder table */
+    .decoder{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+    .dec-row{
+      display:flex;gap:14px;align-items:flex-start;
+      padding:12px 14px;border-radius:var(--radius-sm);
+      border:1px solid var(--line);background:rgba(255,255,255,.025);
+    }
+    .dec-swatch{flex:0 0 46px;height:46px;border-radius:12px;border:1px solid var(--line-strong);display:grid;place-items:center;font-weight:900;font-size:15px}
+    .dec-text{min-width:0}
+    .dec-name{font-size:16px;font-weight:800;color:var(--text);margin-bottom:3px}
+    .dec-desc{font-size:15px;line-height:1.6;color:var(--text-dim)}
+
+    /* Module reference */
+    .mod{padding:20px 22px;border:1px solid var(--line);border-radius:var(--radius-lg);background:rgba(255,255,255,.022);margin-bottom:12px}
+    .mod h3{margin:0 0 12px;font-size:19px;font-weight:900;color:var(--text);display:flex;flex-wrap:wrap;gap:10px;align-items:center;line-height:1.25}
+    .tag{
+      font:800 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;
+      padding:3px 9px;border-radius:999px;white-space:nowrap;
+    }
+    .tag-official{background:rgba(103,194,126,.14);border:1px solid rgba(103,194,126,.34);color:#a6e6bb}
+    .tag-estimate{background:rgba(255,204,102,.13);border:1px solid rgba(255,204,102,.32);color:#ffe0a3}
+    .tag-tool{background:rgba(77,168,255,.13);border:1px solid rgba(77,168,255,.30);color:#a9d6ff}
+    .mod dl{margin:0;display:grid;grid-template-columns:170px 1fr;gap:8px 16px}
+    @media(max-width:640px){.mod dl{grid-template-columns:1fr;gap:2px 0}.mod dd{margin-bottom:12px}}
+    .mod dt{font:800 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+    .mod dd{margin:0;font-size:16px;line-height:1.7;color:var(--text-dim)}
+    .mod dd.limits{color:#ffe0a3;opacity:.92}
+
+    /* Screenshot slots — the page must read complete with zero images */
+    .shot{margin:16px 0;padding:0}
+    .shot-slot{
+      border:1px dashed rgba(255,255,255,.20);border-radius:var(--radius-md);
+      background:repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 12px,rgba(255,255,255,.04) 12px 24px);
+      min-height:150px;padding:20px;display:flex;flex-direction:column;justify-content:center;gap:8px;text-align:center;
+    }
+    .shot-num{font:800 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+    .shot-desc{font-size:15px;color:var(--text-dim);line-height:1.6}
+    .shot figcaption{margin-top:8px;font-size:14px;color:var(--muted);line-height:1.6}
+
+    .source-block{padding:22px 24px;border-radius:var(--radius-lg);border:1px solid var(--line);background:rgba(255,255,255,.022);margin-bottom:12px}
+    .source-block h3{margin:0 0 10px;font-size:19px;font-weight:900;line-height:1.25}
+    .source-block p{margin:0 0 12px;font-size:17px;line-height:1.75;color:var(--text-dim)}
+    .learn-more{display:inline-flex;align-items:center;gap:7px;margin-top:4px;font-size:15px;font-weight:700;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+
+    .sidebar{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px}
+    .sidebar-card{padding:18px 20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));border:1px solid var(--line);border-radius:var(--radius-lg)}
+    .sidebar-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+    .sidebar-nav{display:flex;flex-direction:column;gap:4px}
+    .sidebar-link{padding:8px 10px;border-radius:10px;font-size:14px;color:var(--text-dim);transition:background .15s}
+    .sidebar-link:hover{background:rgba(255,255,255,.05);color:var(--text)}
+    .sidebar-link.sub{padding-left:20px;font-size:13px;color:var(--muted)}
+    .zero-pii{padding:14px 16px;border-radius:var(--radius-sm);border:1px solid rgba(103,194,126,.22);background:var(--ok-soft)}
+    .zero-pii-title{font-size:14px;font-weight:800;color:#dbf3e1;margin-bottom:8px}
+    .zero-pii-items{display:flex;flex-direction:column;gap:6px}
+    .zero-pii-item{font-size:13px;color:#9fe0b5;display:flex;align-items:flex-start;gap:7px;line-height:1.5}
+    .zero-pii-item::before{content:"✓";color:var(--ok);font-weight:800;flex-shrink:0}
+
+    .footer{margin-top:40px;padding:20px 0 0;border-top:1px solid var(--line);max-width:var(--max);margin-left:auto;margin-right:auto}
+    .footer-inner{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .footer-brand{font-size:13px;color:var(--text-dim);display:flex;gap:10px;align-items:center}
+    .footer-brand strong{color:var(--text);font-weight:800}
+    .footer-links{display:flex;flex-wrap:wrap;gap:14px}
+    .footer-links a{font-size:12px;color:var(--muted);transition:color .15s}
+    .footer-links a:hover{color:var(--text)}
+    .footer-legal{font-size:11px;color:var(--muted);line-height:1.6;opacity:.65;margin-top:10px}
+
+    @media(max-width:720px){
+      .app{padding:14px 12px 40px}
+      .topbar{flex-direction:column;align-items:flex-start}
+      .hero-card{padding:20px}
+      .brand-title{font-size:22px}
+      .policy-block{padding:18px 16px}
+      .mod{padding:16px 15px}
+      .source-block{padding:18px 16px}
+    }
+
+    /* ── PRINT: Part 1 only. Paper is a real kupuna channel, and a
+       handout that runs to nine pages does not get handed out. ── */
+    @media print{
+      @page{margin:14mm}
+      html,body{background:#fff !important;color:#000 !important}
+      .topbar,.sidebar,.footer,.no-print,.btn-row,.meta-chips,.shot{display:none !important}
+      .app{width:100%;padding:0}
+      .page-grid{display:block;max-width:none}
+      .card,.policy-block,.part-head{
+        background:#fff !important;border:1px solid #999 !important;
+        box-shadow:none !important;border-radius:6px !important;
+        padding:10px 12px !important;margin-bottom:8px !important;
+        break-inside:avoid;page-break-inside:avoid;
+      }
+      .hero-card{padding:0 0 8px !important;border:0 !important;border-bottom:2px solid #000 !important;border-radius:0 !important}
+      .page-title{font-size:20pt !important;margin-bottom:4px !important}
+      .page-lead{font-size:10pt !important;color:#333 !important;margin-bottom:6px !important}
+      .page-kicker{color:#555 !important}
+      .policy-block h2{font-size:13pt !important;color:#000 !important;margin-bottom:5px !important}
+      .policy-block h3{font-size:11pt !important;color:#000 !important;margin:8px 0 3px !important}
+      .policy-block p,.policy-block li,.steps li{font-size:10pt !important;line-height:1.45 !important;color:#000 !important;margin-bottom:4px !important}
+      .callout-box{background:#f4f4f4 !important;border:1px solid #666 !important;color:#000 !important;font-size:10pt !important}
+      .policy-block.disclaimer,.policy-block.emergency{background:#f7f7f7 !important;border:2px solid #000 !important}
+      .policy-block.disclaimer p,.policy-block.emergency p,.policy-block.emergency h2,.policy-block.disclaimer h2{color:#000 !important;opacity:1 !important}
+      .dec-row{border:1px solid #999 !important;background:#fff !important;padding:5px 7px !important;break-inside:avoid;page-break-inside:avoid}
+      .dec-swatch{border:1px solid #000 !important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+      .dec-name{font-size:10pt !important;color:#000 !important}
+      .dec-desc{font-size:9pt !important;color:#222 !important}
+      .ui-label{background:#eee !important;border:1px solid #666 !important;color:#000 !important;font-size:9.5pt !important}
+      .steps li::before{background:#fff !important;border:1px solid #000 !important;color:#000 !important}
+      /* Parts 2 and 3 are reference material, not handout material. */
+      #part2,#part3,#part2-head,#part3-head{display:none !important}
+      /* The handout carries exactly what someone needs in hand: the decoder,
+         how to check their own area, what we do NOT do, and where to find the
+         rest. Measured at 3 pages with everything; these three cuts bring it
+         to 2. The 911 instruction survives twice — hero callout and footer. */
+      #q-smoke,#q-fresh,#q-faq{display:none !important}
+      .print-only{display:block !important}
+    }
+    .print-only{display:none}
+    .print-footer{margin-top:10px;padding-top:8px;border-top:1px solid #000;font-size:9pt;line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Topbar ── -->
+    <header class="topbar">
+      <a class="brand" href="./index">
+        <div class="brand-mark">🌋</div>
+        <div>
+          <div class="brand-kicker">Kahu Ola · Guardian of Life</div>
+          <h1 class="brand-title">Hawaiʻi Hazard Signals</h1>
+          <div class="brand-sub">User Guide</div>
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="pill link" href="./index">← Home</a>
+        <a class="pill link" href="./live-map">Live Map</a>
+        <a class="pill active" href="./guide" aria-current="page">Guide</a>
+        <a class="pill lang" href="./guide-vi" hreflang="vi" lang="vi">Tiếng Việt</a>
+        <a class="pill link" href="./about">About</a>
+        <a class="pill link" href="./support">Support</a>
+      </div>
+    </header>
+
+    <div class="page-grid">
+      <div>
+
+        <!-- ── Hero ── -->
+        <section class="card hero-card">
+          <div class="page-kicker">User Guide · Hướng dẫn sử dụng</div>
+          <h2 class="page-title">How to read the Kahu Ola map</h2>
+          <p class="page-lead">
+            This page explains everything on the hazard map in plain words: what each color and
+            symbol means, where the information comes from, and — just as important — what Kahu Ola
+            does not do. You do not need any technical background. Every term is explained the first
+            time it is used.
+          </p>
+          <div class="callout-box">
+            <strong>In an emergency, call 911 first.</strong> Kahu Ola helps you understand what is
+            happening around you. It is not an emergency service and it does not replace official
+            warnings.
+          </div>
+          <div class="meta-chips">
+            <span class="chip">PART 1 · 5-MINUTE START</span>
+            <span class="chip">PART 2 · WHERE DATA COMES FROM</span>
+            <span class="chip">PART 3 · EVERY FEATURE</span>
+          </div>
+          <div class="btn-row no-print">
+            <a class="btn primary" href="./live-map">Open the Live Map</a>
+            <button class="btn ghost" type="button" onclick="window.print()">Print this guide</button>
+            <a class="btn ghost" href="./guide-vi" hreflang="vi" lang="vi">Đọc bằng tiếng Việt</a>
+          </div>
+        </section>
+
+        <!-- ══════════ PART 1 ══════════ -->
+        <div class="part-head" id="part1-head">
+          <div class="page-kicker">Part 1</div>
+          <h2>Quick start — five minutes</h2>
+          <p>Organized by the questions people actually ask, not by feature names.</p>
+        </div>
+
+        <div class="policy-stack">
+
+          <section class="policy-block" id="q-safe">
+            <h2>1. “Is my area safe right now?”</h2>
+            <p>This takes about one minute. On a phone:</p>
+            <ol class="steps">
+              <li>Open the <a href="./live-map">Live Map</a>.</li>
+              <li>At the bottom of the screen, tap the small handle to open <span class="ui-label">Map Details</span>.</li>
+              <li>Tap <span class="ui-label">Layers &amp; Tools</span> to show the buttons.</li>
+              <li>Tap <span class="ui-label">Use My Location</span> and allow location when your phone asks.</li>
+              <li>Read the location line on the <span class="ui-label">Fire Spread Concern</span> card.</li>
+            </ol>
+            <p>
+              On a computer the panel is already open on the right side of the screen, so you can skip
+              steps 2 and 3.
+            </p>
+
+            <h3>What a calm day looks like</h3>
+            <p>
+              Most days, the answer is reassuring — and it is worth learning what that looks like now,
+              while nothing is happening, so you recognise it later. On a calm day the card shows a low
+              concern level and the map has few or no orange dots. That is the normal state. An empty
+              map is not a broken map; it is good news.
+            </p>
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: the Fire Spread Concern card on a calm day, showing a low concern level and no active fire detections nearby.">
+                <span class="shot-num">Screenshot 4</span>
+                <span class="shot-desc">iPhone — Fire Spread Concern card on a calm day, showing the good-news line</span>
+              </div>
+              <figcaption>A calm day. Learn this view first so the difference is obvious when it matters.</figcaption>
+            </figure>
+          </section>
+
+          <section class="policy-block emergency" id="q-smoke">
+            <h2>2. “I see smoke or fire — what do I do?”</h2>
+            <p><strong>Call 911 first.</strong> Do this before anything else, and before opening any app.</p>
+            <p>
+              Satellites can take a while to notice a new fire, and they cannot see everything. A person
+              who can see smoke knows more, right now, than any satellite does. Reporting it to 911 is
+              the fastest way to get help moving.
+            </p>
+            <p>
+              After you have called, the map can help you understand the wider picture — whether other
+              heat has been detected nearby, which way the wind is blowing, and whether the National
+              Weather Service has issued any official warning for your area.
+            </p>
+            <p>
+              Kahu Ola does not currently accept fire reports from the public. If you see a way to
+              report something in another app, that is not us.
+            </p>
+          </section>
+
+          <section class="policy-block" id="q-symbols">
+            <h2>3. “What do the colors and symbols mean?”</h2>
+            <p>
+              This is the decoder. Five things account for almost everything you will see on the map.
+            </p>
+
+            <div class="decoder">
+              <div class="dec-row">
+                <div class="dec-swatch" style="background:#ff7a00"></div>
+                <div class="dec-text">
+                  <div class="dec-name">Orange dots and bubbles</div>
+                  <div class="dec-desc">
+                    Places where a satellite detected unusual heat. A bubble with a number means several
+                    detections are grouped together at that zoom level — tap it to zoom in and separate them.
+                    A dot means heat was seen there; it does not confirm a fire on its own.
+                  </div>
+                </div>
+              </div>
+
+              <div class="dec-row">
+                <div class="dec-swatch" style="background:linear-gradient(135deg,#f48fb1,#b0003a)"></div>
+                <div class="dec-text">
+                  <div class="dec-name">Pink and magenta shading</div>
+                  <div class="dec-desc">
+                    A <strong>spread estimate</strong>, not a burning area. It shows where fire could
+                    travel based on nearby heat detections, wind direction and humidity. Paler pink means
+                    lower concern, deep red means the highest. The map legend says it plainly:
+                    “Estimate. Shaded areas are not burning.”
+                  </div>
+                </div>
+              </div>
+
+              <div class="dec-row">
+                <div class="dec-swatch" style="background:transparent;border:3px solid #ff7a00;color:#ff7a00">E</div>
+                <div class="dec-text">
+                  <div class="dec-name">Orange rings with a letter</div>
+                  <div class="dec-desc">
+                    Seen when you zoom out to the whole United States. Each ring marks a fire area that
+                    has been assessed, and the letter is the concern level: <strong>L</strong> low,
+                    <strong>M</strong> moderate, <strong>H</strong> high, <strong>E</strong> extreme.
+                    Tap a ring to fly to that area.
+                  </div>
+                </div>
+              </div>
+
+              <div class="dec-row">
+                <div class="dec-swatch" style="background:#00e400;color:#04310a">42</div>
+                <div class="dec-text">
+                  <div class="dec-name">Colored numbers</div>
+                  <div class="dec-desc">
+                    Air quality readings from official monitoring stations. The number is the Air Quality
+                    Index and the color is its category — green is Good, yellow is Moderate, orange is
+                    Unhealthy for Sensitive Groups, and it continues through red, purple and maroon as
+                    air gets worse.
+                  </div>
+                </div>
+              </div>
+
+              <div class="dec-row">
+                <div class="dec-swatch" style="background:transparent;border:3px dashed #4da8ff"></div>
+                <div class="dec-text">
+                  <div class="dec-name">One outlined cell</div>
+                  <div class="dec-desc">
+                    After you tap <span class="ui-label">Use My Location</span>, the single square
+                    covering your position is outlined. That one is yours — it is the area the location
+                    line on the card is describing.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: island-level map view showing pink and magenta spread shading with the legend visible in the corner.">
+                <span class="shot-num">Screenshot 7</span>
+                <span class="shot-desc">Desktop — pink/magenta spread shading at island zoom, legend visible</span>
+              </div>
+              <figcaption>The shading is an estimate of where fire could spread. It is not a burning area.</figcaption>
+            </figure>
+          </section>
+
+          <section class="policy-block" id="q-fresh">
+            <h2>4. “How fresh is what I’m seeing?”</h2>
+            <p>
+              Nothing on the map is live video. Every number has an age, and the map tells you what it is.
+            </p>
+            <ul>
+              <li>
+                <strong>Satellite heat detections</strong> arrive when a satellite passes overhead. That
+                happens roughly every few hours, and the information reaches us about 20 to 30 minutes
+                after the pass. Between passes, a new fire is invisible to the satellite.
+              </li>
+              <li>
+                <strong>Air quality readings</strong> are updated about once an hour.
+              </li>
+              <li>
+                <strong>Official weather alerts</strong> appear as soon as the National Weather Service
+                issues them.
+              </li>
+            </ul>
+            <h3>“Updated” and “Latest detection” are different</h3>
+            <p>
+              <span class="ui-label">Updated</span> means the last time Kahu Ola successfully fetched
+              information — it tells you the connection is healthy.
+              <span class="ui-label">Latest detection</span> means the time of the most recent heat
+              the satellite actually saw. A recent “Updated” with an old “Latest detection” is normal
+              and good: it means we checked just now, and there was nothing new to find.
+            </p>
+          </section>
+
+          <section class="policy-block disclaimer" id="q-not">
+            <h2>5. What Kahu Ola does <em>not</em> do</h2>
+            <p>
+              This section matters as much as the rest of the guide. Being clear about our limits is
+              how you know when to trust us and when to look elsewhere.
+            </p>
+            <ul>
+              <li>
+                <strong>We do not issue alerts.</strong> Kahu Ola is an independent civic project, not a
+                government agency. We have no authority to order an evacuation or issue a warning.
+              </li>
+              <li>
+                <strong>We do not replace official sources.</strong> The Hawaiʻi Emergency Management
+                Agency, your County Emergency Management office, and the National Weather Service come
+                first, always. When their guidance differs from anything here, follow theirs.
+              </li>
+              <li>
+                <strong>We do not know your identity.</strong> There is no account, no sign-up, no
+                password, no email address, and no advertising or tracking software anywhere on this site.
+              </li>
+              <li>
+                <strong>Your location never leaves your phone.</strong> When you tap
+                <span class="ui-label">Use My Location</span>, your coordinates are compared against the
+                map on your own device. They are never sent to our servers, never saved, and never
+                written into any log.
+              </li>
+              <li>
+                <strong>We do not confirm fires.</strong> A satellite detection means an instrument
+                measured unusual heat. Only people on the ground confirm what is actually burning.
+              </li>
+            </ul>
+          </section>
+
+          <section class="policy-block" id="q-faq">
+            <h2>6. Short answers to common questions</h2>
+
+            <h3>The map looks empty — is it broken?</h3>
+            <p>
+              No. An empty map means no unusual heat has been detected and no official alert is active.
+              That is what most days look like, and it is the answer you want.
+            </p>
+
+            <h3>Why does the pink shading only appear near fires in the USA view?</h3>
+            <p>
+              At the scale of the whole country, the spread estimate is calculated only around places
+              where satellites actually detected heat. Shading everywhere would suggest we know
+              something about everywhere, and we do not.
+            </p>
+
+            <h3>Can I read this in Vietnamese?</h3>
+            <p>
+              Yes. This guide is available at
+              <a href="./guide-vi" hreflang="vi" lang="vi">kahuola.org/guide-vi</a>, and the map itself
+              has a language selector in the top corner.
+            </p>
+
+            <h3>Why does the volcano show up as heat?</h3>
+            <p>
+              Because heat is heat — a satellite instrument cannot tell lava from a wildfire. Kahu Ola
+              identifies detections inside the Kīlauea and Mauna Loa volcanic zones and labels them
+              separately, so lava is never presented to you as a wildfire and never feeds the
+              fire-spread estimate.
+            </p>
+
+          </section>
+
+          <!-- Lives outside the FAQ block so the print handout can drop that
+               section and still carry the URL and the legal line. -->
+          <div class="print-only print-footer">
+            Full guide, every feature explained: <strong>kahuola.org/guide</strong> ·
+            Tiếng Việt: <strong>kahuola.org/guide-vi</strong><br />
+            Kahu Ola is an independent civic project for situational awareness. It is not an official
+            emergency service. In an emergency, call 911 and follow HIEMA, County Emergency
+            Management, and National Weather Service instructions.
+          </div>
+        </div>
+
+        <!-- ══════════ PART 2 ══════════ -->
+        <div class="part-head" id="part2-head">
+          <div class="page-kicker">Part 2</div>
+          <h2>Where the information comes from</h2>
+          <p>Three organisations supply almost everything on this map. Learning them once makes the rest of the guide easy.</p>
+        </div>
+
+        <div class="policy-stack" id="part2">
+
+          <section class="source-block" id="src-firms">
+            <h3>NASA FIRMS — the satellites that see heat</h3>
+            <p>
+              NASA satellites carry instruments that measure heat coming off the ground. Several times a
+              day, one of them passes over Hawaiʻi. When it sees a patch of ground that is much hotter
+              than its surroundings, that becomes an orange dot on our map — usually within about half
+              an hour of the satellite passing overhead.
+            </p>
+            <p>
+              <strong>What a detection really is.</strong> It is heat that an instrument measured from
+              space. It is not a confirmed fire. It could be a wildfire, but it could also be a lava
+              flow, a large industrial site, or agricultural burning. This is why we say “detection”
+              and never “fire” — the honest word is the one that matches what the instrument did.
+            </p>
+            <p>
+              <strong>Why there are gaps.</strong> Satellites orbit; they are not parked above Hawaiʻi.
+              Between one pass and the next, a fire can start and grow completely unseen. This is the
+              single most important limitation of satellite fire detection, and no amount of clever
+              software fixes it. It is also why calling 911 when you see smoke matters so much: you are
+              filling a gap the satellite physically cannot.
+            </p>
+            <p>
+              <strong>Why the volcano appears.</strong> A lava lake is extremely hot, so the instrument
+              sees it exactly as it sees a fire. Rather than pretend otherwise, Kahu Ola marks
+              detections inside the Kīlauea and Mauna Loa volcanic zones as volcanic and keeps them out
+              of the wildfire spread estimate entirely.
+            </p>
+            <p>
+              The instruments are called VIIRS, and they fly on the NOAA-20 and NOAA-21 satellites. You
+              do not need to remember that — but if you ever want to check our work, that is what to
+              search for.
+            </p>
+            <a class="learn-more" href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener noreferrer">Learn more at NASA FIRMS →</a>
+          </section>
+
+          <section class="source-block" id="src-nws">
+            <h3>National Weather Service — the official warnings</h3>
+            <p>
+              The National Weather Service, part of NOAA, runs the weather stations across Hawaiʻi and
+              issues the official watches and warnings you see here. When our map shows a Flash Flood
+              warning or a Hurricane advisory, <strong>those are the Weather Service’s own words, not
+              ours.</strong> We pass them through; we do not write them and we do not edit them.
+            </p>
+            <p>
+              <strong>Where our wind and humidity come from.</strong> The fire-spread estimate needs to
+              know which way the wind is blowing and how dry the air is. Those readings come from real
+              Weather Service stations near the area being assessed, and the card names the station it
+              used so you can judge for yourself how close it is.
+            </p>
+            <p>
+              <strong>Observation and forecast are not the same thing.</strong> In Hawaiʻi we use
+              measurements from actual nearby stations — what the weather is doing right now. On the
+              United States mainland, station coverage works differently, so we use the Weather
+              Service’s hourly forecast for that grid square instead. A forecast is a prediction, not a
+              measurement, and that is a genuine difference in confidence between the two views.
+            </p>
+            <a class="learn-more" href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">Learn more at weather.gov →</a>
+          </section>
+
+          <section class="source-block" id="src-air">
+            <h3>EPA AirNow and Hawaiʻi Department of Health — the air you breathe</h3>
+            <p>
+              The air-quality numbers are official measurements taken by Hawaiʻi Department of Health
+              monitoring stations and delivered through the EPA’s AirNow system. They update about once
+              an hour.
+            </p>
+            <p>
+              These are real instruments at real places, not estimates. That also means they only tell
+              you about the air at those specific locations. If the nearest station is on the other side
+              of a ridge from you, conditions where you are standing may genuinely differ — vog in
+              particular can be very local.
+            </p>
+            <a class="learn-more" href="https://www.airnow.gov/" target="_blank" rel="noopener noreferrer">Learn more at airnow.gov →</a>
+          </section>
+
+          <section class="source-block" id="src-official">
+            <h3>The one distinction that matters: OFFICIAL or ESTIMATE</h3>
+            <p>
+              Everything on this map is one of two things, and every card tells you which by the small
+              line of text above its title.
+            </p>
+            <p>
+              <strong>“Official · [agency name]”</strong> means the information was issued by that
+              agency. We are showing you their words. If it says Official · National Weather Service,
+              a meteorologist decided that, not us.
+            </p>
+            <p>
+              <strong>“Estimate · Kahu Ola model”</strong> means we calculated it. Our fire-spread
+              estimate takes satellite heat detections, adds wind direction and humidity, and works out
+              where fire could plausibly travel. It is a reasoned guess built from real inputs — useful
+              for awareness, and not a substitute for anything official.
+            </p>
+            <p>
+              If you remember one thing from this guide, remember to glance at that line before acting
+              on what a card says.
+            </p>
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: two hazard cards side by side, one showing the Official kicker and one showing the Estimate kicker.">
+                <span class="shot-num">Screenshot 11</span>
+                <span class="shot-desc">Desktop — an Official card and the Estimate card side by side, kickers visible</span>
+              </div>
+              <figcaption>The small line above each title is the one to check: Official, or Estimate.</figcaption>
+            </figure>
+          </section>
+
+          <section class="source-block" id="src-others">
+            <h3>Other sources you will see named</h3>
+            <p>
+              <strong>USGS Hawaiian Volcano Observatory</strong> is the authority on Kīlauea and Mauna
+              Loa activity. When detections fall inside a volcanic zone, they are where you should go.
+              <strong>PacIOOS</strong> supplies Pacific coastal and ocean information.
+              <strong>NIFC</strong> and county agencies supply official fire perimeters, and
+              <strong>NOAA HMS</strong> supplies smoke plume analysis.
+            </p>
+            <a class="learn-more" href="https://www.usgs.gov/observatories/hvo" target="_blank" rel="noopener noreferrer">USGS Hawaiian Volcano Observatory →</a><br />
+            <a class="learn-more" href="https://www.pacioos.hawaii.edu/" target="_blank" rel="noopener noreferrer">PacIOOS →</a>
+          </section>
+        </div>
+
+        <!-- ══════════ PART 3 ══════════ -->
+        <div class="part-head" id="part3-head">
+          <div class="page-kicker">Part 3</div>
+          <h2>Complete reference — every feature</h2>
+          <p>Every layer, card and control on the map, in the same five-line format. Use the list on the right to jump straight to one.</p>
+        </div>
+
+        <div id="part3">
+
+          <article class="mod" id="m-fire">
+            <h3>1 · Fire Signals <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Places where a NASA satellite detected unusual heat in roughly the last day.</dd>
+              <dt>Source</dt>
+              <dd>NASA FIRMS, delivered through the Kahu Ola server. The panel header reads <span class="ui-label">Fire Signals · Hawaiʻi</span> or <span class="ui-label">Fire Signals · USA</span> depending on your scope.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Orange dots are individual detections. Orange bubbles with a number are several detections grouped together — tap to zoom in and separate them. Tapping a dot opens details including how confident the instrument was.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Detections near you are a reason to pay attention and check for official warnings — not a confirmation that anything is burning. If you can see smoke, call 911.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Satellites pass every few hours, and information arrives 20–30 minutes after a pass. New fires between passes are invisible. Detections are heat, not confirmed fire, and can come from lava or industrial sources.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-firedanger">
+            <h3>2 · Fire Spread Concern <span class="tag tag-estimate">Estimate</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Our estimate of where fire could spread from detected heat, shown as shaded squares.</dd>
+              <dt>Source</dt>
+              <dd>Kahu Ola model, built from NASA FIRMS detections plus National Weather Service wind and humidity. The card kicker reads <span class="ui-label">Estimate · Kahu Ola model</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Pale pink through deep red, from Low to Extreme concern. At United States scale it appears instead as orange rings lettered L, M, H or E. After using <span class="ui-label">Use My Location</span>, the square containing you is outlined.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Treat it as awareness, not instruction. It can tell you that conditions near detected heat favour spread in your direction. It cannot tell you to evacuate — only officials can.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">This is a model, not a fire-behaviour forecast. Shaded areas are not burning. Some islands have no nearby weather station, so their squares are scored on distance alone — the card says so when that applies.</dd>
+            </dl>
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: the Fire Spread Concern card after using Use My Location, showing the personal location line.">
+                <span class="shot-num">Screenshot 5</span>
+                <span class="shot-desc">iPhone — Fire Spread Concern card showing the per-location line after Use My Location</span>
+              </div>
+              <figcaption>After sharing your location, the card adds a line describing your square specifically.</figcaption>
+            </figure>
+          </article>
+
+          <article class="mod" id="m-firewx">
+            <h3>3 · Fire Weather <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Areas where weather conditions make fire spread more dangerous — dry air, strong wind, or both.</dd>
+              <dt>Source</dt>
+              <dd>National Weather Service and RAWS remote weather stations.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Shaded zones on the map, with a status of Normal, Watch, High or Red Flag. Toggle it with the <span class="ui-label">Fire Weather</span> button.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>A Red Flag condition means officials consider fire danger critical. Avoid anything that could cause a spark, and follow National Weather Service guidance.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Conditions are measured at stations and applied to the surrounding area. Hawaiʻi terrain changes quickly, so wind in your valley may differ from the nearest station’s reading.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-smoke">
+            <h3>4 · Smoke <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Smoke plumes identified from satellite imagery by human analysts.</dd>
+              <dt>Source</dt>
+              <dd>NOAA Hazard Mapping System (HMS).</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Translucent grey areas over the map. Toggle with the <span class="ui-label">Smoke Layer</span> button.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Smoke overhead can affect air quality even when a fire is far away. If you have asthma or a heart condition, check the Air Quality card and consider staying indoors.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Analysis is produced periodically, not continuously, and shows smoke seen from above. High-altitude smoke may not affect the air at ground level at all.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-perimeter">
+            <h3>5 · Fire Perimeters <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>The mapped outline of a fire’s edge, as recorded by fire agencies.</dd>
+              <dt>Source</dt>
+              <dd>NIFC and county fire agencies.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Outlined shapes around affected land. Toggle with the <span class="ui-label">Perimeters</span> button.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>A perimeter is the most authoritative fire information on the map — it was drawn by people working the incident. Follow instructions from the responding agency.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Perimeters are updated when agencies publish them, which can lag an active fire by hours. An out-of-date perimeter may be smaller than the current fire.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-flashflood">
+            <h3>6 · Flash Flood <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Active flash flood watches and warnings for Hawaiʻi.</dd>
+              <dt>Source</dt>
+              <dd>National Weather Service. The card kicker reads <span class="ui-label">Official · National Weather Service</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>A prominent card at the top of the panel, plus affected areas marked on the map. Rain radar switches on automatically when a warning is active.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Follow the National Weather Service’s instructions exactly. Never drive through moving water — it is the most common cause of flood deaths.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">We show alerts as issued. Flooding can begin before a warning is published, especially in steep terrain where water arrives within minutes.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-floodcontext">
+            <h3>7 · Flood Context <span class="tag tag-estimate">Estimate</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Terrain that tends to channel or collect water, shown only while an official flood alert is active.</dd>
+              <dt>Source</dt>
+              <dd>A hybrid: the National Weather Service alert decides whether it appears, and the terrain shapes are Kahu Ola’s own. Because the shapes are ours, it is tagged Estimate.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Blue-toned terrain polygons beneath the alert areas.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Use it to understand where water is likely to run during an alert that is already in force. Act on the official alert, not on this layer.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Terrain context is general, not a flood map. It does not predict depth, timing, or whether a specific property will flood.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-radar">
+            <h3>8 · Rain Radar <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Where rain is falling right now, from weather radar.</dd>
+              <dt>Source</dt>
+              <dd>NOAA radar tiles.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Green through red overlay, where stronger colors mean heavier rain. Off by default in Hawaiʻi; switches on automatically during a flood warning and in the USA view.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Use it to see whether heavy rain is heading toward you during a flood alert.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Radar sees precipitation aloft, which is not always what reaches the ground. Mountains block radar beams, so some valleys are poorly covered.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-mrms">
+            <h3>9 · Rain Totals <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>How much rain has accumulated over recent hours.</dd>
+              <dt>Source</dt>
+              <dd>NEXRAD radar-derived precipitation estimates (QPE).</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Shaded accumulation areas. The panel labels the source as live or unavailable.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>High totals on already-saturated ground raise the risk of flash flooding and landslides, particularly on burn scars.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">When the upstream feed is down the panel reads <span class="ui-label">NEXRAD QPE · Unavailable</span> — that is an honest statement that no data arrived, not a reading of zero rain. Radar-derived totals are estimates and can differ from a rain gauge.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-alerts">
+            <h3>10 · Wind, Heat &amp; Other Alerts <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Official National Weather Service alerts that are not flood, tsunami or hurricane — high wind, heat, and similar.</dd>
+              <dt>Source</dt>
+              <dd>National Weather Service. Card kicker: <span class="ui-label">Official · National Weather Service</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>A card listing active alerts, with affected zones marked on the map.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Read the alert and follow the National Weather Service’s instructions. These are their words.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Alerts cover official zones, which are larger than a neighbourhood. An alert for your zone does not mean every part of it is equally affected.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-hurricane">
+            <h3>11 · Hurricane <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Active tropical cyclone advisories affecting the region.</dd>
+              <dt>Source</dt>
+              <dd>National Hurricane Center. Card kicker: <span class="ui-label">Official · National Hurricane Center</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>A card showing the current advisory. Appears when an advisory is active or in the USA view.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Follow the National Hurricane Center and your county’s emergency management instructions. Do not wait for a Kahu Ola update to act.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">We show advisories as published. Forecast tracks change; always check the Hurricane Center directly for the latest position.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-tsunami">
+            <h3>12 · Tsunami <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Tsunami watches, advisories and warnings for Hawaiʻi.</dd>
+              <dt>Source</dt>
+              <dd>NWS Tsunami Warning Center. Card kicker: <span class="ui-label">Official · NWS Tsunami Warning Center</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>A card showing the current status. Appears when an alert is active or in the USA view.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Move inland and to higher ground immediately, following your county’s evacuation routes. Do not use this map to decide whether to evacuate — use the sirens and official instructions.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">For a locally generated tsunami, natural warnings — strong shaking, or the ocean suddenly withdrawing — arrive before any official message. Do not wait for a screen.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-coastal">
+            <h3>13 · Coastal &amp; Surf <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>High surf, coastal flood and beach hazard statements.</dd>
+              <dt>Source</dt>
+              <dd>National Weather Service, with Pacific ocean context from PacIOOS.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>A card titled Coastal &amp; Surf listing active statements.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Stay off exposed rocks and beaches during high surf, and follow lifeguard and county guidance.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Statements are issued by shoreline region. Conditions vary sharply between individual beaches within the same region.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-landslide">
+            <h3>14 · Landslide <span class="tag tag-estimate">Estimate</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Terrain where heavy rain raises the chance of slope failure, shown while flood conditions are active.</dd>
+              <dt>Source</dt>
+              <dd>Kahu Ola terrain context. There is no official agency issuing landslide warnings for these areas, which is exactly why this is tagged Estimate.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>A card describing terrain risk, with a low-risk state when nothing is elevated.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>On steep ground during heavy rain, be alert for debris on roads and for changes in the sound of running water. Report blocked roads to local authorities.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">This is general terrain reasoning, not a geological assessment. It cannot tell you whether a particular slope will fail.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-local">
+            <h3>15 · Local Hazards <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Locally issued statements and bulletins that do not fit the other categories.</dd>
+              <dt>Source</dt>
+              <dd>NWS Honolulu, via the Iowa Environmental Mesonet archive.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Listed within the panel’s secondary sections.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Read the statement — it is written by the local forecast office for local conditions.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Coverage depends on what the local office publishes and on the archive being reachable.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-air">
+            <h3>16 · Air Quality &amp; Vog <span class="tag tag-official">Official</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Measured air quality at official monitoring stations, including sulphur dioxide from volcanic vog.</dd>
+              <dt>Source</dt>
+              <dd>Hawaiʻi Department of Health monitors delivered through EPA AirNow. Card kicker: <span class="ui-label">Official · Hawaiʻi DOH via EPA AirNow</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Colored dots with the Air Quality Index number inside: green Good, yellow Moderate, orange Unhealthy for Sensitive Groups, then red, purple and maroon as it worsens. Toggle with the <span class="ui-label">AQI Layer</span> button.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>At orange and above, people with asthma, heart or lung conditions, kūpuna and young children should limit time outdoors. During vog episodes, close windows on the upwind side.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Readings update hourly and describe the air at the monitor, not at your door. Vog is highly local — a ridge between you and the station can mean very different air.</dd>
+            </dl>
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: air quality monitor dots on the map with AQI numbers visible inside the colored circles.">
+                <span class="shot-num">Screenshot 9</span>
+                <span class="shot-desc">Desktop — air quality monitor dots showing AQI numbers</span>
+              </div>
+              <figcaption>Each dot is a real monitoring station. The number is its current Air Quality Index.</figcaption>
+            </figure>
+          </article>
+
+          <article class="mod" id="m-scope">
+            <h3>17 · Fire Scope — Hawaiʻi or USA <span class="tag tag-tool">Control</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Switches the whole map between Hawaiʻi and the continental United States.</dd>
+              <dt>Source</dt>
+              <dd>Kahu Ola control. Labelled <span class="ui-label">Hawaiʻi</span> and <span class="ui-label">USA</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>The panel header changes to match, and in the USA view the spread estimate appears as lettered orange rings rather than shaded squares.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Use Hawaiʻi for daily awareness. Use USA to follow mainland fire seasons or check on family elsewhere.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">In the USA view, wind and humidity come from hourly forecasts rather than nearby station measurements, and the spread estimate is calculated only around detected heat.</dd>
+            </dl>
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: continental United States view showing orange lettered rings marking assessed fire clusters.">
+                <span class="shot-num">Screenshot 8</span>
+                <span class="shot-desc">Desktop — USA scope at continental zoom, orange lettered rings visible</span>
+              </div>
+              <figcaption>At country scale the estimate becomes rings. The letter is the concern level.</figcaption>
+            </figure>
+          </article>
+
+          <article class="mod" id="m-satellite">
+            <h3>18 · Satellite Basemap <span class="tag tag-tool">Control</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Swaps the plain map background for satellite photography.</dd>
+              <dt>Source</dt>
+              <dd>Kahu Ola control, using map imagery. Button labelled <span class="ui-label">Satellite</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>The background becomes aerial imagery; all hazard layers stay exactly where they were.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>Useful for recognising real landmarks — a gulch, a subdivision, a stretch of highway — when deciding how close something is to you.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Satellite imagery is archive photography, often months or years old. It shows the landscape as it was, not as it is today.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-location">
+            <h3>19 · Use My Location <span class="tag tag-tool">Control</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>Centres the map on you and adds a line to the Fire Spread Concern card about your specific square.</dd>
+              <dt>Source</dt>
+              <dd>Your device’s own location service. Button labelled <span class="ui-label">Use My Location</span>.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>The map centres on your position and the square containing you is outlined.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>This is the fastest way to answer “what about right here?” Your phone will ask permission the first time; you can decline and still use every other part of the map.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">Your coordinates are compared with the map on your own device and never sent to our servers, never stored and never logged. Because the comparison is local, we could not identify you even if we wanted to. If the spread data is unavailable, the card says so rather than guessing.</dd>
+            </dl>
+          </article>
+
+          <article class="mod" id="m-sheet">
+            <h3>20 · The Phone Sheet and Layers &amp; Tools <span class="tag tag-tool">Control</span></h3>
+            <dl>
+              <dt>What it shows</dt>
+              <dd>On a phone, the panel slides up from the bottom of the screen so the map stays the main view.</dd>
+              <dt>Source</dt>
+              <dd>Kahu Ola interface. The handle reads <span class="ui-label">Map Details</span>; inside it, <span class="ui-label">Layers &amp; Tools</span> holds the buttons.</dd>
+              <dt>Symbols &amp; colors</dt>
+              <dd>Tap the handle to open the panel. The hazard information appears first; tap <span class="ui-label">Layers &amp; Tools</span> to reveal the buttons, and tap it again to hide them.</dd>
+              <dt>When it’s active, what to do</dt>
+              <dd>The buttons start hidden on purpose, so what is happening around you is what you see first. Open them when you want to change layers.</dd>
+              <dt class="limits">Honest limits</dt>
+              <dd class="limits">On a computer this panel is always visible on the right, so there is nothing to open.</dd>
+            </dl>
+            <figure class="shot">
+              <div class="shot-slot" role="img" aria-label="Screenshot placeholder: iPhone showing the sheet open with the Layers and Tools row collapsed, hazard content visible first.">
+                <span class="shot-num">Screenshot 2</span>
+                <span class="shot-desc">iPhone — sheet open, LAYERS &amp; TOOLS collapsed, hazard content first</span>
+              </div>
+              <figcaption>Hazard information comes first. The tools are one tap away.</figcaption>
+            </figure>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ── Sidebar TOC ── -->
+      <aside class="sidebar no-print">
+        <div class="sidebar-card">
+          <div class="sidebar-label">On this page</div>
+          <nav class="sidebar-nav" aria-label="Guide sections">
+            <a class="sidebar-link" href="#part1-head">Part 1 · Quick start</a>
+            <a class="sidebar-link sub" href="#q-safe">Is my area safe?</a>
+            <a class="sidebar-link sub" href="#q-smoke">I see smoke or fire</a>
+            <a class="sidebar-link sub" href="#q-symbols">Colors &amp; symbols</a>
+            <a class="sidebar-link sub" href="#q-fresh">How fresh is this?</a>
+            <a class="sidebar-link sub" href="#q-not">What we don’t do</a>
+            <a class="sidebar-link sub" href="#q-faq">Common questions</a>
+            <a class="sidebar-link" href="#part2-head">Part 2 · Data sources</a>
+            <a class="sidebar-link sub" href="#src-firms">NASA FIRMS</a>
+            <a class="sidebar-link sub" href="#src-nws">National Weather Service</a>
+            <a class="sidebar-link sub" href="#src-air">EPA AirNow &amp; DOH</a>
+            <a class="sidebar-link sub" href="#src-official">Official vs Estimate</a>
+            <a class="sidebar-link" href="#part3-head">Part 3 · Every feature</a>
+            <a class="sidebar-link sub" href="#m-fire">1 · Fire Signals</a>
+            <a class="sidebar-link sub" href="#m-firedanger">2 · Fire Spread Concern</a>
+            <a class="sidebar-link sub" href="#m-firewx">3 · Fire Weather</a>
+            <a class="sidebar-link sub" href="#m-smoke">4 · Smoke</a>
+            <a class="sidebar-link sub" href="#m-perimeter">5 · Fire Perimeters</a>
+            <a class="sidebar-link sub" href="#m-flashflood">6 · Flash Flood</a>
+            <a class="sidebar-link sub" href="#m-floodcontext">7 · Flood Context</a>
+            <a class="sidebar-link sub" href="#m-radar">8 · Rain Radar</a>
+            <a class="sidebar-link sub" href="#m-mrms">9 · Rain Totals</a>
+            <a class="sidebar-link sub" href="#m-alerts">10 · Wind, Heat &amp; Other</a>
+            <a class="sidebar-link sub" href="#m-hurricane">11 · Hurricane</a>
+            <a class="sidebar-link sub" href="#m-tsunami">12 · Tsunami</a>
+            <a class="sidebar-link sub" href="#m-coastal">13 · Coastal &amp; Surf</a>
+            <a class="sidebar-link sub" href="#m-landslide">14 · Landslide</a>
+            <a class="sidebar-link sub" href="#m-local">15 · Local Hazards</a>
+            <a class="sidebar-link sub" href="#m-air">16 · Air Quality &amp; Vog</a>
+            <a class="sidebar-link sub" href="#m-scope">17 · Fire Scope</a>
+            <a class="sidebar-link sub" href="#m-satellite">18 · Satellite Basemap</a>
+            <a class="sidebar-link sub" href="#m-location">19 · Use My Location</a>
+            <a class="sidebar-link sub" href="#m-sheet">20 · Phone Sheet</a>
+          </nav>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="zero-pii">
+            <div class="zero-pii-title">What we never collect</div>
+            <div class="zero-pii-items">
+              <div class="zero-pii-item">Your coordinates never leave your device</div>
+              <div class="zero-pii-item">No account, no password, no email</div>
+              <div class="zero-pii-item">No advertising or tracking software</div>
+              <div class="zero-pii-item">Nothing about you is stored or logged</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ── Footer ── -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <strong>Kahu Ola</strong>
+          <span>Guardian of Life</span>
+        </div>
+        <div class="footer-links">
+          <a href="./index">Home</a>
+          <a href="./live-map">Live Map</a>
+          <a href="./guide" aria-current="page">Guide</a>
+          <a href="./guide-vi" hreflang="vi" lang="vi">Tiếng Việt</a>
+          <a href="./about">About</a>
+          <a href="./privacy">Privacy</a>
+          <a href="./support">Support</a>
+        </div>
+      </div>
+      <div class="footer-legal">
+        Kahu Ola is an independent civic technology project providing situational awareness from
+        publicly available government data. It is not affiliated with any government agency and does
+        not issue official emergency directives. In an emergency, call 911 and follow the Hawaiʻi
+        Emergency Management Agency, County Emergency Management, and National Weather Service.
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
