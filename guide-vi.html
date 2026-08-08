@@ -240,6 +240,21 @@
       font:800 15px var(--mono);color:#fff;white-space:nowrap;
     }
 
+
+    /* ── P28b · map symbols ─────────────────────────────────────────────
+       Inline SVG reproductions of the live map's own layer styles. Sized
+       generously because the whole point is recognising them at a glance. */
+    .sym{display:block;width:52px;height:52px;flex:0 0 52px}
+    .sym-sm{width:40px;height:40px;flex:0 0 40px}
+    .dec-row .sym{margin-top:1px}
+    .ramp{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 2px}
+    .ramp-item{display:flex;flex-direction:column;align-items:center;gap:5px;max-width:104px}
+    .ramp-label{font-size:12.5px;line-height:1.35;color:var(--text-dim);text-align:center}
+    .ramp-title{font-size:14px;font-weight:700;color:var(--text);margin-top:12px}
+    /* Symbol chips beside a module heading — same drawings, small. */
+    .mod-syms{display:inline-flex;gap:6px;align-items:center;margin-right:2px}
+    .mod-syms .sym{width:30px;height:30px;flex:0 0 30px}
+    .bw-note{margin-top:10px;font-size:13.5px;color:var(--muted);line-height:1.6}
     .decoder{display:flex;flex-direction:column;gap:10px;margin-top:14px}
     .dec-row{
       display:flex;gap:14px;align-items:flex-start;
@@ -344,6 +359,28 @@
          kiểm tra khu vực, những gì chúng tôi KHÔNG làm, và nơi xem phần còn
          lại. Đo được 3 trang nếu giữ hết; ba mục cắt bớt này đưa về 2 trang.
          Chỉ dẫn gọi 911 vẫn xuất hiện hai lần — ở đầu trang và ở chân trang. */
+      /* P28b: the decoder SVGs are the reason the handout exists — they
+         print. Colour alone must never carry meaning on paper, so every
+         swatch also carries a text label, and two strokes flip to black
+         because white-on-white and yellow-on-white are invisible. */
+      .sym{print-color-adjust:exact;-webkit-print-color-adjust:exact;
+           width:31px !important;height:31px !important;flex:0 0 31px !important}
+      .sym-sm{width:27px !important;height:27px !important;flex:0 0 27px !important}
+      .sym-mine-rect{stroke:#000000 !important;stroke-opacity:1 !important}
+      .sym-aqi-circle{stroke:#000000 !important;stroke-opacity:1 !important}
+      .ramp{gap:6px !important;margin:4px 0 1px !important;break-inside:avoid;page-break-inside:avoid}
+      .ramp-item{gap:2px !important;max-width:88px !important}
+      /* The anchor dot only ever appears at continental zoom. On a printed
+         Hawaii handout it is the one decoder row that earns no space, so it
+         is dropped from paper and kept on screen. Content cut, not a
+         legibility cut — the symbols stay large enough to recognise. */
+      #dec-anchor-row{display:none !important}
+      .dec-row{padding:4px 6px !important;gap:9px !important}
+      .decoder{gap:5px !important}
+      .ramp-label{font-size:8.5pt !important;color:#000 !important}
+      .ramp-title{font-size:9.5pt !important;color:#000 !important;margin-top:6px !important}
+      .bw-note{font-size:8.5pt !important;color:#222 !important}
+      .mod-syms{display:none !important}
       #q-smoke,#q-fresh,#q-faq{display:none !important}
       .print-only{display:block !important}
     }
@@ -353,6 +390,60 @@
 </head>
 <body>
   <div class="app">
+
+    <!-- ══ P28b · SYMBOL SPRITE ══
+         Reproduced from the live map's own MapLibre paint definitions, not
+         redrawn by eye. Colours, radii, stroke widths and opacities all trace
+         to a named layer in live-map.html — see p28b_build.py for the mapping.
+         If a layer's paint changes, these must change with it. ══ -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="s-detect" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="18" fill="#ff8a00" fill-opacity="0.16"/>
+          <circle cx="24" cy="24" r="8" fill="#ff8a00" fill-opacity="0.96"
+                  stroke="#ffffff" stroke-opacity="0.30" stroke-width="2"/>
+        </symbol>
+        <symbol id="s-cluster" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="20" fill="#ff6a00" fill-opacity="0.95"
+                  stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/>
+        </symbol>
+        <symbol id="s-anchor" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="13" fill="#ff6a00" fill-opacity="0.10"
+                  stroke="#ff8a00" stroke-opacity="0.92" stroke-width="2.2"/>
+          <circle cx="24" cy="24" r="6" fill="#ff8a00"
+                  stroke="#ffffff" stroke-opacity="0.85" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-mine" viewBox="0 0 48 48">
+          <rect x="8" y="8" width="32" height="32" rx="2" fill="#e91e63" fill-opacity="0.22"/>
+          <rect class="sym-mine-rect" x="8" y="8" width="32" height="32" rx="2"
+                fill="none" stroke="#ffffff" stroke-opacity="0.95" stroke-width="2.2"/>
+        </symbol>
+        <symbol id="s-ring-low" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="8" fill="#f48fb1" fill-opacity="0.14"
+                  stroke="#f48fb1" stroke-width="1.2"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#f48fb1" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-ring-mod" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="12" fill="#f06292" fill-opacity="0.14"
+                  stroke="#f06292" stroke-width="2"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#f06292" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-ring-high" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="17" fill="#e91e63" fill-opacity="0.14"
+                  stroke="#e91e63" stroke-width="3"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#e91e63" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-ring-ext" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="21" fill="#b0003a" fill-opacity="0.14"
+                  stroke="#b0003a" stroke-width="4"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#b0003a" stroke-width="1"/>
+        </symbol>
+      </defs>
+    </svg>
 
     <header class="topbar">
       <a class="brand" href="./index">
@@ -464,7 +555,7 @@
 
             <div class="decoder">
               <div class="dec-row">
-                <div class="dec-swatch" style="background:#ff7a00"></div>
+                <svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-detect-46155"><title>Phát hiện nhiệt từ vệ tinh</title><desc>Một chấm cam đặc với quầng sáng cam mờ quanh nó.</desc><use href="#s-detect"/></svg>
                 <div class="dec-text">
                   <div class="dec-name">Chấm và bong bóng màu cam</div>
                   <div class="dec-desc">
@@ -476,7 +567,7 @@
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:linear-gradient(135deg,#f48fb1,#b0003a)"></div>
+                <svg class="sym" viewBox="0 0 48 48" role="img"><title>Rất cao</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#b0003a"/></svg>
                 <div class="dec-text">
                   <div class="dec-name">Vùng tô màu hồng và đỏ tía</div>
                   <div class="dec-desc">
@@ -484,12 +575,12 @@
                     có thể lan tới đâu dựa trên các điểm nhiệt gần đó, hướng gió và độ ẩm. Hồng nhạt là
                     nguy cơ thấp, đỏ đậm là cao nhất. Chú giải trên bản đồ nói rõ:
                     “Ước tính. Vùng tô màu không phải nơi đang cháy.”
-                  </div>
+                  </div><div class="ramp-title">Các mức nguy cơ, từ nhạt nhất tới đậm nhất:</div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Thấp</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#f48fb1"/></svg><span class="ramp-label">Thấp</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Trung bình</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#f06292"/></svg><span class="ramp-label">Trung bình</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Cao</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#e91e63"/></svg><span class="ramp-label">Cao</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Rất cao</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#b0003a"/></svg><span class="ramp-label">Rất cao</span></div></div>
                 </div>
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:transparent;border:3px solid #ff7a00;color:#ff7a00;font-size:13px">RC</div>
+                <svg class="sym" viewBox="0 0 48 48" role="img"><title>Khu vực cháy đã đánh giá, nguy cơ Rất cao</title><desc>Vòng tròn cam mang chữ RC nghĩa là Rất cao.</desc><use href="#s-ring-ext"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">RC</text></svg>
                 <div class="dec-text">
                   <div class="dec-name">Vòng tròn cam có chữ</div>
                   <div class="dec-desc">
@@ -497,24 +588,24 @@
                     đánh giá, và chữ cái là mức nguy cơ: <strong>T</strong> thấp, <strong>TB</strong> trung
                     bình, <strong>C</strong> cao, <strong>RC</strong> rất cao. Chạm vào một vòng để bay tới
                     khu vực đó.
-                  </div>
+                  </div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Khu vực cháy đã đánh giá, nguy cơ Thấp</title><desc>Vòng tròn cam mang chữ T nghĩa là Thấp.</desc><use href="#s-ring-low"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">T</text></svg><span class="ramp-label">T · Thấp</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Khu vực cháy đã đánh giá, nguy cơ Trung bình</title><desc>Vòng tròn cam mang chữ TB nghĩa là Trung bình.</desc><use href="#s-ring-mod"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">TB</text></svg><span class="ramp-label">TB · Trung bình</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Khu vực cháy đã đánh giá, nguy cơ Cao</title><desc>Vòng tròn cam mang chữ C nghĩa là Cao.</desc><use href="#s-ring-high"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">C</text></svg><span class="ramp-label">C · Cao</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Khu vực cháy đã đánh giá, nguy cơ Rất cao</title><desc>Vòng tròn cam mang chữ RC nghĩa là Rất cao.</desc><use href="#s-ring-ext"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">RC</text></svg><span class="ramp-label">RC · Rất cao</span></div></div>
                 </div>
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:#00e400;color:#04310a">42</div>
+                <svg class="sym" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Tốt, chỉ số 42</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#00e400" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">42</text></svg>
                 <div class="dec-text">
                   <div class="dec-name">Những con số có màu</div>
                   <div class="dec-desc">
                     Chỉ số chất lượng không khí đo tại các trạm quan trắc chính thức. Con số là Chỉ số Chất
                     lượng Không khí (AQI) và màu là mức của nó — xanh lá là Tốt, vàng là Trung bình, cam là
                     Có hại cho nhóm nhạy cảm, rồi đến đỏ, tím và nâu đỏ khi không khí xấu hơn.
-                  </div>
+                  </div><div class="ramp-title">Chất lượng không khí, từ tốt nhất tới xấu nhất:</div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Tốt, chỉ số 42</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#00e400" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">42</text></svg><span class="ramp-label">Tốt</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Trung bình, chỉ số 78</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#ffff00" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">78</text></svg><span class="ramp-label">Trung bình</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Có hại cho nhóm nhạy cảm, chỉ số 120</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#ff7e00" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">120</text></svg><span class="ramp-label">Có hại cho nhóm nhạy cảm</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Có hại, chỉ số 165</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#ff0000" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">165</text></svg><span class="ramp-label">Có hại</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Rất có hại, chỉ số 240</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#8f3f97" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">240</text></svg><span class="ramp-label">Rất có hại</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Nguy hiểm, chỉ số 310</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#7e0023" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">310</text></svg><span class="ramp-label">Nguy hiểm</span></div></div>
                 </div>
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:transparent;border:3px dashed #4da8ff"></div>
+                <svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-mine-10791"><title>Ô vuông tại vị trí của bạn</title><desc>Một ô vuông tô màu được viền trắng liền nét.</desc><use href="#s-mine"/></svg>
                 <div class="dec-text">
                   <div class="dec-name">Một ô được viền sáng</div>
                   <div class="dec-desc">
@@ -524,7 +615,16 @@
                   </div>
                 </div>
               </div>
+
+              <div class="dec-row" id="dec-anchor-row">
+                <svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-anchor-46155"><title>Phát hiện nhiệt từ vệ tinh</title><desc>Một chấm cam nhỏ nằm trong vòng cam mảnh.</desc><use href="#s-anchor"/></svg>
+                <div class="dec-text">
+                  <div class="dec-name">Điểm neo phát hiện cháy</div>
+                  <div class="dec-desc">Ở quy mô toàn nước Mỹ, ký hiệu này đánh dấu chính điểm phát hiện từ vệ tinh mà một vòng tròn được dựng quanh nó. Vòng tròn là đánh giá của chúng tôi; chấm này là dữ liệu gốc bên dưới.</div>
+                </div>
+              </div>
             </div>
+              <p class="bw-note">Khi in đen trắng, hãy phân biệt các mức nguy cơ bằng nhãn chữ và bằng độ đậm nhạt — nhạt nhất là Thấp, đậm nhất là Rất cao.</p>
 
             <figure class="shot">
               <div class="shot-slot" role="img" aria-label="Chỗ dành cho ảnh chụp màn hình: bản đồ mức đảo hiển thị vùng tô hồng và đỏ tía cùng chú giải ở góc.">
@@ -768,7 +868,7 @@
         <div id="part3">
 
           <article class="mod" id="m-fire">
-            <h3>1 · Tín hiệu cháy <span class="tag tag-official">Chính thức</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-detect-46155"><title>Phát hiện nhiệt từ vệ tinh</title><desc>Một chấm cam đặc với quầng sáng cam mờ quanh nó.</desc><use href="#s-detect"/></svg><svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-cluster-46892"><title>Nhóm nhiều phát hiện</title><desc>Một vòng tròn cam lớn có con số bên trong.</desc><use href="#s-cluster"/></svg></span>1 · Tín hiệu cháy <span class="tag tag-official">Chính thức</span></h3>
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Những nơi vệ tinh NASA phát hiện nhiệt bất thường trong khoảng một ngày gần đây.</dd>
@@ -784,7 +884,7 @@
           </article>
 
           <article class="mod" id="m-firedanger">
-            <h3>2 · Nguy cơ cháy lan <span class="tag tag-estimate">Ước tính</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img"><title>Rất cao</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#b0003a"/></svg><svg class="sym" viewBox="0 0 48 48" role="img"><title>Khu vực cháy đã đánh giá, nguy cơ Rất cao</title><desc>Vòng tròn cam mang chữ RC nghĩa là Rất cao.</desc><use href="#s-ring-ext"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">RC</text></svg></span>2 · Nguy cơ cháy lan <span class="tag tag-estimate">Ước tính</span></h3>
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Ước tính của chúng tôi về nơi lửa có thể lan tới từ các điểm nhiệt đã phát hiện, thể hiện bằng các ô vuông tô màu.</dd>
@@ -1015,7 +1115,7 @@
           </article>
 
           <article class="mod" id="m-air">
-            <h3>16 · Chất lượng không khí &amp; vog <span class="tag tag-official">Chính thức</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img"><title>Chất lượng không khí Tốt, chỉ số 42</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#00e400" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">42</text></svg></span>16 · Chất lượng không khí &amp; vog <span class="tag tag-official">Chính thức</span></h3>
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Chất lượng không khí đo được tại các trạm quan trắc chính thức, gồm cả khí lưu huỳnh điôxít từ vog núi lửa.</dd>
@@ -1077,7 +1177,7 @@
           </article>
 
           <article class="mod" id="m-location">
-            <h3>19 · Dùng vị trí của tôi <span class="tag tag-tool">Điều khiển</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-mine-10791"><title>Ô vuông tại vị trí của bạn</title><desc>Một ô vuông tô màu được viền trắng liền nét.</desc><use href="#s-mine"/></svg></span>19 · Dùng vị trí của tôi <span class="tag tag-tool">Điều khiển</span></h3>
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Đưa bản đồ về vị trí của bạn và thêm một dòng vào thẻ Nguy cơ cháy lan nói riêng về ô vuông của bạn.</dd>

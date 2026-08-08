@@ -247,6 +247,21 @@
     }
 
     /* Decoder table */
+
+    /* ── P28b · map symbols ─────────────────────────────────────────────
+       Inline SVG reproductions of the live map's own layer styles. Sized
+       generously because the whole point is recognising them at a glance. */
+    .sym{display:block;width:52px;height:52px;flex:0 0 52px}
+    .sym-sm{width:40px;height:40px;flex:0 0 40px}
+    .dec-row .sym{margin-top:1px}
+    .ramp{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 2px}
+    .ramp-item{display:flex;flex-direction:column;align-items:center;gap:5px;max-width:104px}
+    .ramp-label{font-size:12.5px;line-height:1.35;color:var(--text-dim);text-align:center}
+    .ramp-title{font-size:14px;font-weight:700;color:var(--text);margin-top:12px}
+    /* Symbol chips beside a module heading — same drawings, small. */
+    .mod-syms{display:inline-flex;gap:6px;align-items:center;margin-right:2px}
+    .mod-syms .sym{width:30px;height:30px;flex:0 0 30px}
+    .bw-note{margin-top:10px;font-size:13.5px;color:var(--muted);line-height:1.6}
     .decoder{display:flex;flex-direction:column;gap:10px;margin-top:14px}
     .dec-row{
       display:flex;gap:14px;align-items:flex-start;
@@ -358,6 +373,28 @@
          how to check their own area, what we do NOT do, and where to find the
          rest. Measured at 3 pages with everything; these three cuts bring it
          to 2. The 911 instruction survives twice — hero callout and footer. */
+      /* P28b: the decoder SVGs are the reason the handout exists — they
+         print. Colour alone must never carry meaning on paper, so every
+         swatch also carries a text label, and two strokes flip to black
+         because white-on-white and yellow-on-white are invisible. */
+      .sym{print-color-adjust:exact;-webkit-print-color-adjust:exact;
+           width:31px !important;height:31px !important;flex:0 0 31px !important}
+      .sym-sm{width:27px !important;height:27px !important;flex:0 0 27px !important}
+      .sym-mine-rect{stroke:#000000 !important;stroke-opacity:1 !important}
+      .sym-aqi-circle{stroke:#000000 !important;stroke-opacity:1 !important}
+      .ramp{gap:6px !important;margin:4px 0 1px !important;break-inside:avoid;page-break-inside:avoid}
+      .ramp-item{gap:2px !important;max-width:88px !important}
+      /* The anchor dot only ever appears at continental zoom. On a printed
+         Hawaii handout it is the one decoder row that earns no space, so it
+         is dropped from paper and kept on screen. Content cut, not a
+         legibility cut — the symbols stay large enough to recognise. */
+      #dec-anchor-row{display:none !important}
+      .dec-row{padding:4px 6px !important;gap:9px !important}
+      .decoder{gap:5px !important}
+      .ramp-label{font-size:8.5pt !important;color:#000 !important}
+      .ramp-title{font-size:9.5pt !important;color:#000 !important;margin-top:6px !important}
+      .bw-note{font-size:8.5pt !important;color:#222 !important}
+      .mod-syms{display:none !important}
       #q-smoke,#q-fresh,#q-faq{display:none !important}
       .print-only{display:block !important}
     }
@@ -367,6 +404,60 @@
 </head>
 <body>
   <div class="app">
+
+    <!-- ══ P28b · SYMBOL SPRITE ══
+         Reproduced from the live map's own MapLibre paint definitions, not
+         redrawn by eye. Colours, radii, stroke widths and opacities all trace
+         to a named layer in live-map.html — see p28b_build.py for the mapping.
+         If a layer's paint changes, these must change with it. ══ -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="s-detect" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="18" fill="#ff8a00" fill-opacity="0.16"/>
+          <circle cx="24" cy="24" r="8" fill="#ff8a00" fill-opacity="0.96"
+                  stroke="#ffffff" stroke-opacity="0.30" stroke-width="2"/>
+        </symbol>
+        <symbol id="s-cluster" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="20" fill="#ff6a00" fill-opacity="0.95"
+                  stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/>
+        </symbol>
+        <symbol id="s-anchor" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="13" fill="#ff6a00" fill-opacity="0.10"
+                  stroke="#ff8a00" stroke-opacity="0.92" stroke-width="2.2"/>
+          <circle cx="24" cy="24" r="6" fill="#ff8a00"
+                  stroke="#ffffff" stroke-opacity="0.85" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-mine" viewBox="0 0 48 48">
+          <rect x="8" y="8" width="32" height="32" rx="2" fill="#e91e63" fill-opacity="0.22"/>
+          <rect class="sym-mine-rect" x="8" y="8" width="32" height="32" rx="2"
+                fill="none" stroke="#ffffff" stroke-opacity="0.95" stroke-width="2.2"/>
+        </symbol>
+        <symbol id="s-ring-low" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="8" fill="#f48fb1" fill-opacity="0.14"
+                  stroke="#f48fb1" stroke-width="1.2"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#f48fb1" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-ring-mod" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="12" fill="#f06292" fill-opacity="0.14"
+                  stroke="#f06292" stroke-width="2"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#f06292" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-ring-high" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="17" fill="#e91e63" fill-opacity="0.14"
+                  stroke="#e91e63" stroke-width="3"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#e91e63" stroke-width="1"/>
+        </symbol>
+        <symbol id="s-ring-ext" viewBox="0 0 48 48">
+          <circle cx="24" cy="24" r="21" fill="#b0003a" fill-opacity="0.14"
+                  stroke="#b0003a" stroke-width="4"/>
+          <circle cx="24" cy="24" r="11" fill="#0c0c0c" fill-opacity="0.88"
+                  stroke="#b0003a" stroke-width="1"/>
+        </symbol>
+      </defs>
+    </svg>
 
     <!-- ── Topbar ── -->
     <header class="topbar">
@@ -485,7 +576,7 @@
 
             <div class="decoder">
               <div class="dec-row">
-                <div class="dec-swatch" style="background:#ff7a00"></div>
+                <svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-detect-70105"><title>Satellite heat detection</title><desc>A solid orange dot with a soft orange halo.</desc><use href="#s-detect"/></svg>
                 <div class="dec-text">
                   <div class="dec-name">Orange dots and bubbles</div>
                   <div class="dec-desc">
@@ -497,7 +588,7 @@
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:linear-gradient(135deg,#f48fb1,#b0003a)"></div>
+                <svg class="sym" viewBox="0 0 48 48" role="img"><title>Extreme</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#b0003a"/></svg>
                 <div class="dec-text">
                   <div class="dec-name">Pink and magenta shading</div>
                   <div class="dec-desc">
@@ -505,12 +596,12 @@
                     travel based on nearby heat detections, wind direction and humidity. Paler pink means
                     lower concern, deep red means the highest. The map legend says it plainly:
                     “Estimate. Shaded areas are not burning.”
-                  </div>
+                  </div><div class="ramp-title">Concern levels, palest to deepest:</div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Low</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#f48fb1"/></svg><span class="ramp-label">Low</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Moderate</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#f06292"/></svg><span class="ramp-label">Moderate</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>High</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#e91e63"/></svg><span class="ramp-label">High</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Extreme</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#b0003a"/></svg><span class="ramp-label">Extreme</span></div></div>
                 </div>
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:transparent;border:3px solid #ff7a00;color:#ff7a00">E</div>
+                <svg class="sym" viewBox="0 0 48 48" role="img"><title>Assessed fire area, Extreme concern</title><desc>An orange ring lettered E for Extreme.</desc><use href="#s-ring-ext"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">E</text></svg>
                 <div class="dec-text">
                   <div class="dec-name">Orange rings with a letter</div>
                   <div class="dec-desc">
@@ -518,12 +609,12 @@
                     has been assessed, and the letter is the concern level: <strong>L</strong> low,
                     <strong>M</strong> moderate, <strong>H</strong> high, <strong>E</strong> extreme.
                     Tap a ring to fly to that area.
-                  </div>
+                  </div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Assessed fire area, Low concern</title><desc>An orange ring lettered L for Low.</desc><use href="#s-ring-low"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">L</text></svg><span class="ramp-label">L · Low</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Assessed fire area, Moderate concern</title><desc>An orange ring lettered M for Moderate.</desc><use href="#s-ring-mod"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">M</text></svg><span class="ramp-label">M · Moderate</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Assessed fire area, High concern</title><desc>An orange ring lettered H for High.</desc><use href="#s-ring-high"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">H</text></svg><span class="ramp-label">H · High</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Assessed fire area, Extreme concern</title><desc>An orange ring lettered E for Extreme.</desc><use href="#s-ring-ext"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">E</text></svg><span class="ramp-label">E · Extreme</span></div></div>
                 </div>
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:#00e400;color:#04310a">42</div>
+                <svg class="sym" viewBox="0 0 48 48" role="img"><title>Air quality Good, index 42</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#00e400" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">42</text></svg>
                 <div class="dec-text">
                   <div class="dec-name">Colored numbers</div>
                   <div class="dec-desc">
@@ -531,12 +622,12 @@
                     Index and the color is its category — green is Good, yellow is Moderate, orange is
                     Unhealthy for Sensitive Groups, and it continues through red, purple and maroon as
                     air gets worse.
-                  </div>
+                  </div><div class="ramp-title">Air quality, best to worst:</div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Air quality Good, index 42</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#00e400" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">42</text></svg><span class="ramp-label">Good</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Air quality Moderate, index 78</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#ffff00" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">78</text></svg><span class="ramp-label">Moderate</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Air quality Unhealthy for Sensitive Groups, index 120</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#ff7e00" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">120</text></svg><span class="ramp-label">Unhealthy for Sensitive Groups</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Air quality Unhealthy, index 165</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#ff0000" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">165</text></svg><span class="ramp-label">Unhealthy</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Air quality Very Unhealthy, index 240</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#8f3f97" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">240</text></svg><span class="ramp-label">Very Unhealthy</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Air quality Hazardous, index 310</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#7e0023" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">310</text></svg><span class="ramp-label">Hazardous</span></div></div>
                 </div>
               </div>
 
               <div class="dec-row">
-                <div class="dec-swatch" style="background:transparent;border:3px dashed #4da8ff"></div>
+                <svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-mine-89175"><title>Your location's cell</title><desc>A shaded square outlined in solid white.</desc><use href="#s-mine"/></svg>
                 <div class="dec-text">
                   <div class="dec-name">One outlined cell</div>
                   <div class="dec-desc">
@@ -546,7 +637,16 @@
                   </div>
                 </div>
               </div>
+
+              <div class="dec-row" id="dec-anchor-row">
+                <svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-anchor-70105"><title>Satellite heat detection</title><desc>A small orange dot inside a thin orange ring.</desc><use href="#s-anchor"/></svg>
+                <div class="dec-text">
+                  <div class="dec-name">Fire detection anchor</div>
+                  <div class="dec-desc">At United States scale, this marks the actual satellite detection a ring was built around. The ring is our assessment; this dot is the raw detection underneath it.</div>
+                </div>
+              </div>
             </div>
+              <p class="bw-note">Printed in black and white, tell the concern levels apart by their labels and by how dark they are — palest is Low, darkest is Extreme.</p>
 
             <figure class="shot">
               <div class="shot-slot" role="img" aria-label="Screenshot placeholder: island-level map view showing pink and magenta spread shading with the legend visible in the corner.">
@@ -801,7 +901,7 @@
         <div id="part3">
 
           <article class="mod" id="m-fire">
-            <h3>1 · Fire Signals <span class="tag tag-official">Official</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-detect-70105"><title>Satellite heat detection</title><desc>A solid orange dot with a soft orange halo.</desc><use href="#s-detect"/></svg><svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-cluster-62424"><title>Grouped detections</title><desc>A large orange circle with a count inside.</desc><use href="#s-cluster"/></svg></span>1 · Fire Signals <span class="tag tag-official">Official</span></h3>
             <dl>
               <dt>What it shows</dt>
               <dd>Places where a NASA satellite detected unusual heat in roughly the last day.</dd>
@@ -817,7 +917,7 @@
           </article>
 
           <article class="mod" id="m-firedanger">
-            <h3>2 · Fire Spread Concern <span class="tag tag-estimate">Estimate</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img"><title>Extreme</title><rect x="8" y="8" width="32" height="32" rx="2" fill="#b0003a"/></svg><svg class="sym" viewBox="0 0 48 48" role="img"><title>Assessed fire area, Extreme concern</title><desc>An orange ring lettered E for Extreme.</desc><use href="#s-ring-ext"/><text x="24" y="28.5" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">E</text></svg></span>2 · Fire Spread Concern <span class="tag tag-estimate">Estimate</span></h3>
             <dl>
               <dt>What it shows</dt>
               <dd>Our estimate of where fire could spread from detected heat, shown as shaded squares.</dd>
@@ -1048,7 +1148,7 @@
           </article>
 
           <article class="mod" id="m-air">
-            <h3>16 · Air Quality &amp; Vog <span class="tag tag-official">Official</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img"><title>Air quality Good, index 42</title><circle class="sym-aqi-circle" cx="24" cy="24" r="16" fill="#00e400" stroke="#ffffff" stroke-opacity="0.9" stroke-width="1.6"/><text x="24" y="29" text-anchor="middle" fill="#0c0c0c" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">42</text></svg></span>16 · Air Quality &amp; Vog <span class="tag tag-official">Official</span></h3>
             <dl>
               <dt>What it shows</dt>
               <dd>Measured air quality at official monitoring stations, including sulphur dioxide from volcanic vog.</dd>
@@ -1110,7 +1210,7 @@
           </article>
 
           <article class="mod" id="m-location">
-            <h3>19 · Use My Location <span class="tag tag-tool">Control</span></h3>
+            <h3><span class="mod-syms"><svg class="sym" viewBox="0 0 48 48" role="img" aria-labelledby="t-mine-89175"><title>Your location's cell</title><desc>A shaded square outlined in solid white.</desc><use href="#s-mine"/></svg></span>19 · Use My Location <span class="tag tag-tool">Control</span></h3>
             <dl>
               <dt>What it shows</dt>
               <dd>Centres the map on you and adds a line to the Fire Spread Concern card about your specific square.</dd>
