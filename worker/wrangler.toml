@@ -42,6 +42,25 @@ id = "76de514417fb4821bc1e51bac04b30a1"
 [ai]
 binding = "AI"
 
+# ── D1 database for citizen fire reports (P08) ──
+# Provision once, on the Mac Mini:
+#   npx wrangler d1 create kahuola-reports
+# then paste the printed database_id below (it is not a secret) and run:
+#   npx wrangler d1 migrations apply kahuola-reports --local    # dry run
+#   npx wrangler d1 migrations apply kahuola-reports --remote   # production
+#
+# The Worker treats this binding as OPTIONAL: if it is missing, GET
+# /api/reports returns an empty list with source_health.reports =
+# "unconfigured" and POST returns 503. Nothing else degrades.
+#
+# ZERO-PII: see migrations/0001_create_reports.sql — the table has no column
+# capable of holding an identity. That is a structural guarantee, not a policy.
+[[d1_databases]]
+binding = "REPORTS_DB"
+database_name = "kahuola-reports"
+database_id = "PASTE_DATABASE_ID_FROM_D1_CREATE"
+migrations_dir = "migrations"
+
 # ── R2 bucket for voice audio cache (Phase 2.2) ──
 # Bucket already exists: kahuola-media
 # Cache key: voice/{zone_id}/{lang}/{date_hst}.mp3

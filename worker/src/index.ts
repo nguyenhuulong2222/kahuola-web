@@ -50,6 +50,24 @@ export interface Env {
     get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
     put(key: string, value: ArrayBuffer, options?: { httpMetadata?: { contentType?: string } }): Promise<void>;
   };
+  // P08 — citizen reports. Both OPTIONAL on purpose: absent bindings degrade
+  // the reports feature only, never the rest of the platform (Invariant II).
+  REPORTS_DB?: D1Database;
+  // Static secret. The DAILY salt is derived in code as
+  // sha256(REPORTS_RL_SALT + YYYYMMDD-UTC) — see dailyRateLimitSalt(). One
+  // secret, automatic rotation, no archive, no manual chore.
+  REPORTS_RL_SALT?: string;
+}
+
+// Minimal D1 surface — declared locally for the same reason the AI/KV/R2
+// bindings above are: this file does not pull the full workers-types surface.
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  run(): Promise<unknown>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+}
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
 }
 
 type CorsHeaders = Record<string, string>;
@@ -1085,6 +1103,14 @@ export default {
         return handlePushSubscribe(request, env, cors);
       }
 
+      // P08 — citizen fire reports. Origin allowlist enforced explicitly here,
+      // same as the zone-brief POST: the report form lives on kahuola.org and
+      // this route is never open CORS.
+      if (request.method === 'POST' && path === '/api/reports') {
+        if (origin && !ALLOWED_ORIGINS.includes(origin)) return err(403, 'Forbidden', cors);
+        return handleReportCreate(request, env, cors);
+      }
+
       // P19: zone brief over POST so the household flags — which include a
       // `medical` bit — travel in the body instead of the query string.
       // Same handler, same envelope; GET is unchanged for fielded iOS 1.0.
@@ -1160,6 +1186,10 @@ export default {
       const zoneMatch = path.match(/^\/api\/hazards\/zone\/([a-z0-9_]+)$/);
       if (zoneMatch) return handleZoneBrief(zoneMatch[1], url, env, cors);
 
+      // P08 — active (unexpired) community reports, cross-checked against
+      // cached FIRMS at read time.
+      if (path === '/api/reports') return handleReportList(url, env, cors);
+
       // Voice brief — Gemma 4 script + OpenAI TTS, cached in R2
       if (path === '/api/voice') return handleVoiceRequest(url, env, cors);
 
@@ -1192,6 +1222,13 @@ export default {
     }
     try {
       await sendDailyBriefNotifications(env);
+    } catch (e) {
+      // Fail silently — cron never crashes Worker
+    }
+    try {
+      // P08 — physically remove reports past the 48 h delete threshold.
+      // Reads already filter at 24 h, so this only reclaims storage.
+      await deleteExpiredReports(env);
     } catch (e) {
       // Fail silently — cron never crashes Worker
     }
@@ -2329,6 +2366,144 @@ function haversineKm(lon1: number, lat1: number, lon2: number, lat2: number): nu
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+// ── P08 · CITIZEN FIRE REPORTS — constants + pure helpers ─────────────
+//
+// Why this exists: VIIRS has blind windows. Overpass gaps run ~6 h typical
+// and up to ~12 h, plus 20–30 min Honolulu direct-broadcast latency. People
+// see smoke first. The reverse also holds — satellites vet human reports.
+// The cross-check below is the feature; neither eye is trusted alone.
+
+const REPORT_CATEGORIES = ['smoke', 'flames', 'burned_area', 'other'] as const;
+type ReportCategory = (typeof REPORT_CATEGORIES)[number];
+
+const REPORT_DESC_MAX = 280;
+
+// Single TTL, deliberately NOT split by verification status. Confirmation is
+// recomputed on every read, so a status-dependent TTL makes reports blink out
+// and back in as hotspots age past the window — worse than either duration.
+const REPORT_TTL_SECONDS = 86_400;          // 24 h — read filter
+const REPORT_DELETE_AFTER_SECONDS = 172_800; // 48 h — cron delete, deliberately looser
+
+// Cross-check thresholds. Set EXPLICITLY here and never inherited from a fetch
+// window: CONUS caches days=2, so inheriting would let 48 h-old detections
+// confirm a fresh report.
+//
+// X = 5 km. Error budget: VIIRS pixel 0.375 km at nadir → ~0.8 km at swath
+// edge, geolocation ±0.4 km, and the dominant term is a human picking a point
+// for a fire seen from a distance (1–2 km is ordinary). Tighter rejects real
+// matches.
+//
+// Y = 12 h. Covers a full worst-case overpass gap, so a report made between
+// passes still matches the last detection — while refusing to confirm fresh
+// smoke against yesterday's fire, which may be out. That would be a false
+// confirmation, and Invariant V requires the label to mean something precise.
+const REPORT_XCHECK_RADIUS_KM = 5;
+const REPORT_XCHECK_MAX_HOTSPOT_AGE_MIN = 720;
+
+// Rate limiting. Per-source counter lives in KV under a SALTED digest with a
+// 10-minute TTL; the global breaker bounds a distributed flood.
+const REPORT_RL_WINDOW_SECONDS = 600;
+const REPORT_RL_MAX_PER_WINDOW = 5;
+const REPORT_RL_GLOBAL_MAX_PER_HOUR = 200;
+
+const REPORTS_DISCLAIMER: Record<'en' | 'vi', string> = {
+  en:
+    'Community reports submitted by members of the public. Not official information, ' +
+    'not verified identities, and not a substitute for HIEMA, County Emergency ' +
+    'Management, or NWS. "Satellite-confirmed" means only that a NASA FIRMS wildfire ' +
+    'detection exists nearby — it does not verify what the report describes.',
+  vi:
+    'Báo cáo do người dân gửi. Không phải thông tin chính thức, không xác minh danh ' +
+    'tính người gửi, và không thay thế HIEMA, Quản lý Khẩn cấp Quận, hay NWS. ' +
+    '"Vệ tinh xác nhận" chỉ có nghĩa là có điểm cháy NASA FIRMS ở gần — không xác ' +
+    'nhận nội dung mô tả.',
+};
+
+// FIRMS gives acq_date "YYYY-MM-DD" + acq_time "HHMM" in UTC. Nothing in this
+// file converted that to an instant before P08. Returns null rather than a
+// wrong number when either field is malformed (Invariant III).
+function firmsAcqEpochSeconds(acqDate: string, acqTime: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(acqDate)) return null;
+  const t = (acqTime || '').padStart(4, '0');
+  if (!/^\d{4}$/.test(t)) return null;
+  const hh = Number(t.slice(0, 2));
+  const mm = Number(t.slice(2, 4));
+  if (hh > 23 || mm > 59) return null;
+  const ms = Date.parse(`${acqDate}T${t.slice(0, 2)}:${t.slice(2, 4)}:00Z`);
+  return isFinite(ms) ? Math.floor(ms / 1000) : null;
+}
+
+// Which coverage area a point falls in, or null if we do not serve it.
+// Reports outside both are rejected at write time rather than stored and
+// silently never displayed.
+function reportRegionFor(lon: number, lat: number): 'hawaii' | 'conus' | null {
+  const inBox = (b: readonly [number, number, number, number]) =>
+    lon >= b[0] && lon <= b[2] && lat >= b[1] && lat <= b[3];
+  if (inBox(REGION_BBOXES.hawaii)) return 'hawaii';
+  if (inBox(REGION_BBOXES.usa)) return 'conus';
+  return null;
+}
+
+// Plain text only. The description is stored as text and MUST never be
+// re-emitted as HTML — P09 renders it as a text node. Stripping control
+// characters here keeps the stored value clean regardless.
+function sanitizeReportDescription(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  // eslint-disable-next-line no-control-regex
+  const cleaned = raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').trim();
+  if (!cleaned) return null;
+  return cleaned.slice(0, REPORT_DESC_MAX);
+}
+
+type ReportVerification = {
+  status: 'satellite_confirmed' | 'unverified';
+  nearest_hotspot_km: number | null;
+  hotspot_age_minutes: number | null;
+};
+
+// Cross-check ONE report against wildland hotspots.
+//
+// `hotspots` must be FirmsIngest.hotspots — the wildland set. FirmsIngest
+// already separates volcanic detections into `volcanic_hotspots` via
+// inVolcanicZone(), so a Kīlauea thermal anomaly is structurally incapable of
+// confirming a Kaʻū smoke report. That exclusion is inherited, not re-derived.
+function crossCheckReport(
+  lat: number,
+  lon: number,
+  hotspots: readonly FirmsHotspot[],
+  nowSeconds: number,
+): ReportVerification {
+  let bestKm: number | null = null;
+  let bestAgeMin: number | null = null;
+
+  for (const h of hotspots) {
+    const km = haversineKm(lon, lat, h.lon, h.lat);
+    if (km > REPORT_XCHECK_RADIUS_KM) continue;
+
+    const acq = firmsAcqEpochSeconds(h.acq_date, h.acq_time);
+    // Unparseable timestamp cannot be aged, so it cannot confirm. Dropped,
+    // never assumed fresh (Invariant III).
+    if (acq === null) continue;
+
+    const ageMin = Math.floor((nowSeconds - acq) / 60);
+    if (ageMin < 0 || ageMin > REPORT_XCHECK_MAX_HOTSPOT_AGE_MIN) continue;
+
+    if (bestKm === null || km < bestKm) {
+      bestKm = km;
+      bestAgeMin = ageMin;
+    }
+  }
+
+  if (bestKm === null) {
+    return { status: 'unverified', nearest_hotspot_km: null, hotspot_age_minutes: null };
+  }
+  return {
+    status: 'satellite_confirmed',
+    nearest_hotspot_km: Math.round(bestKm * 100) / 100,
+    hotspot_age_minutes: bestAgeMin,
+  };
 }
 
 // Initial great-circle bearing FROM point 1 TO point 2, degrees clockwise from
@@ -5007,6 +5182,346 @@ async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── P08 · RATE LIMITING WITHOUT PII ───────────────────────────────────
+//
+// A bare sha256(ip) is NOT anonymous. IPv4 is a 2^32 keyspace — the complete
+// rainbow table is computable in seconds, so an unsalted digest is a fully
+// reversible identifier wearing a hash costume. Storing that would be a
+// privacy regression, not a privacy measure.
+//
+// So the counter key is sha256(ip + dailySalt), where dailySalt itself is
+// sha256(REPORTS_RL_SALT + YYYYMMDD-UTC). One static secret; the effective
+// salt rotates every UTC midnight with no manual chore and no archive, so
+// yesterday's digests are permanently unlinkable — including by us. Combined
+// with a 10-minute KV TTL, nothing identifying survives anywhere.
+//
+// The raw IP is read from the request header, used to compute a digest, and
+// never stored, never logged, never placed in D1 or in any response.
+async function dailyRateLimitSalt(secret: string, nowSeconds: number): Promise<string> {
+  const day = new Date(nowSeconds * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+  return sha256Hex(`${secret}|${day}`);
+}
+
+type RateLimitVerdict = { allowed: boolean; reason?: 'per_source' | 'global' };
+
+// Counters are CHECKED before validation but RECORDED only after a report is
+// actually stored. Counting rejected submissions would mean a person who
+// mistypes five times is told "you are rate limited" instead of what is
+// actually wrong with their input — turning a helpful 400 into a misleading
+// 429 and locking a real reporter out during an emergency.
+//
+// A single-source flood of INVALID payloads is therefore bounded by the
+// Cloudflare WAF rate rule (layer a) and the global breaker, not by this
+// counter. That is the correct division: this layer limits how many reports
+// one source can PUBLISH; the edge limits how hard one source can knock.
+//
+// Fails OPEN on infrastructure trouble — a KV hiccup must not silence
+// community fire reports.
+function rateLimitKeys(nowSeconds: number): { hourKey: string } {
+  return { hourKey: `rl:reports:global:${new Date(nowSeconds * 1000).toISOString().slice(0, 13)}` };
+}
+
+async function reportSourceKey(
+  request: Request,
+  env: Env,
+  nowSeconds: number,
+): Promise<string | null> {
+  const secret = env.REPORTS_RL_SALT;
+  const ip = request.headers.get('CF-Connecting-IP');
+  // No salt means no per-source counter at all. An unsalted digest is a
+  // reversible identifier, which is worse than having no counter.
+  if (!secret || !ip) return null;
+  const salt = await dailyRateLimitSalt(secret, nowSeconds);
+  return `rl:reports:src:${await sha256Hex(`${ip}|${salt}`)}`;
+}
+
+async function checkReportRateLimit(
+  request: Request,
+  env: Env,
+  nowSeconds: number,
+): Promise<RateLimitVerdict> {
+  const kv = env.KAHUOLA_CACHE as KvNamespace | undefined;
+  if (!kv || typeof kv.get !== 'function') return { allowed: true };
+
+  try {
+    const { hourKey } = rateLimitKeys(nowSeconds);
+    const globalRaw = await kv.get(hourKey);
+    if ((globalRaw === null ? 0 : parseInt(globalRaw, 10) || 0) >= REPORT_RL_GLOBAL_MAX_PER_HOUR) {
+      return { allowed: false, reason: 'global' };
+    }
+
+    const sourceKey = await reportSourceKey(request, env, nowSeconds);
+    if (sourceKey) {
+      const raw = await kv.get(sourceKey);
+      if ((raw === null ? 0 : parseInt(raw, 10) || 0) >= REPORT_RL_MAX_PER_WINDOW) {
+        return { allowed: false, reason: 'per_source' };
+      }
+    }
+    return { allowed: true };
+  } catch {
+    return { allowed: true };
+  }
+}
+
+// Called ONLY after a report is successfully stored. Both counters expire on
+// their own — no cleanup job, no lingering record, nothing to reverse.
+async function recordReportRateLimit(
+  request: Request,
+  env: Env,
+  nowSeconds: number,
+): Promise<void> {
+  const kv = env.KAHUOLA_CACHE as KvNamespace | undefined;
+  if (!kv || typeof kv.put !== 'function') return;
+  try {
+    const { hourKey } = rateLimitKeys(nowSeconds);
+    const globalRaw = await kv.get(hourKey);
+    await kv.put(hourKey, String((globalRaw === null ? 0 : parseInt(globalRaw, 10) || 0) + 1), {
+      expirationTtl: 3600,
+    });
+
+    const sourceKey = await reportSourceKey(request, env, nowSeconds);
+    if (sourceKey) {
+      const raw = await kv.get(sourceKey);
+      await kv.put(sourceKey, String((raw === null ? 0 : parseInt(raw, 10) || 0) + 1), {
+        expirationTtl: REPORT_RL_WINDOW_SECONDS,
+      });
+    }
+  } catch {
+    // Never fail a stored report because the counter could not be written.
+  }
+}
+
+// ── P08 · POST /api/reports ───────────────────────────────────────────
+async function handleReportCreate(
+  request: Request,
+  env: Env,
+  cors: CorsHeaders,
+): Promise<Response> {
+  const db = env.REPORTS_DB;
+  if (!db || typeof db.prepare !== 'function') {
+    return jsonResp(
+      {
+        ok: false,
+        error: 'reports_unconfigured',
+        message: 'Community reports are not available right now. Every other hazard layer is unaffected.',
+      },
+      503,
+      cors,
+    );
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+
+  const rl = await checkReportRateLimit(request, env, nowSeconds);
+  if (!rl.allowed) {
+    return jsonResp(
+      {
+        ok: false,
+        error: rl.reason === 'global' ? 'reports_paused' : 'rate_limited',
+        message:
+          rl.reason === 'global'
+            ? 'Too many reports are arriving right now, so new submissions are paused briefly. Existing reports are still visible.'
+            : 'You have submitted several reports in a short time. Please wait a few minutes.',
+      },
+      429,
+      cors,
+    );
+  }
+
+  // Invariant III — every bad input is DROPPED with a 400 and a named error.
+  // Nothing is coerced, nothing is guessed, and nothing reaches a 500.
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return jsonResp({ ok: false, error: 'invalid_body', message: 'Expected a JSON object.' }, 400, cors);
+  }
+  const b = body as Record<string, unknown>;
+
+  // Number(null) is 0 and Number('') is 0 — both would silently place a report
+  // at null island. Reject anything that is not already a finite number.
+  const lat = typeof b.lat === 'number' && isFinite(b.lat) ? b.lat : null;
+  const lon = typeof b.lon === 'number' && isFinite(b.lon) ? b.lon : null;
+  if (lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return jsonResp(
+      { ok: false, error: 'invalid_coordinates', message: 'lat and lon must be finite numbers within valid ranges.' },
+      400,
+      cors,
+    );
+  }
+
+  const region = reportRegionFor(lon, lat);
+  if (!region) {
+    return jsonResp(
+      {
+        ok: false,
+        error: 'outside_coverage',
+        message: 'Point is outside the Hawaiʻi and continental US areas Kahu Ola covers.',
+      },
+      400,
+      cors,
+    );
+  }
+
+  const category = typeof b.category === 'string' ? b.category.toLowerCase() : '';
+  if (!(REPORT_CATEGORIES as readonly string[]).includes(category)) {
+    return jsonResp(
+      {
+        ok: false,
+        error: 'invalid_category',
+        message: `category must be one of: ${REPORT_CATEGORIES.join(', ')}.`,
+      },
+      400,
+      cors,
+    );
+  }
+
+  if (typeof b.description === 'string' && b.description.length > REPORT_DESC_MAX * 4) {
+    // Reject absurd payloads outright rather than truncating them silently.
+    return jsonResp(
+      { ok: false, error: 'description_too_long', message: `description must be ${REPORT_DESC_MAX} characters or fewer.` },
+      400,
+      cors,
+    );
+  }
+  const description = sanitizeReportDescription(b.description);
+
+  const lang = typeof b.lang === 'string' && b.lang.toLowerCase() === 'vi' ? 'vi' : 'en';
+  const id = crypto.randomUUID();
+
+  try {
+    await db
+      .prepare(
+        'INSERT INTO reports (id, created_at, lat, lon, category, description, lang, region) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      )
+      .bind(id, nowSeconds, lat, lon, category as ReportCategory, description, lang, region)
+      .run();
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown';
+    console.error('handleReportCreate insert failure:', msg);
+    return jsonResp({ ok: false, error: 'store_failed', message: 'Could not save the report. Please try again.' }, 503, cors);
+  }
+
+  // Counted only now that a report actually exists — see the note on
+  // checkReportRateLimit for why rejected submissions must not count.
+  await recordReportRateLimit(request, env, nowSeconds);
+
+  return jsonResp(
+    {
+      ok: true,
+      id,
+      created_at: new Date(nowSeconds * 1000).toISOString(),
+      expires_at: new Date((nowSeconds + REPORT_TTL_SECONDS) * 1000).toISOString(),
+      region,
+    },
+    201,
+    cors,
+  );
+}
+
+// ── P08 · GET /api/reports ────────────────────────────────────────────
+async function handleReportList(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
+  const region = (url.searchParams.get('region') || 'hawaii').toLowerCase() === 'conus' ? 'conus' : 'hawaii';
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const generatedAt = new Date(nowSeconds * 1000).toISOString();
+
+  const base = {
+    generated_at: generatedAt,
+    region,
+    stale_after_seconds: FIRE_DANGER_STALE_AFTER_SECONDS,
+    cross_check: {
+      radius_km: REPORT_XCHECK_RADIUS_KM,
+      max_hotspot_age_hours: REPORT_XCHECK_MAX_HOTSPOT_AGE_MIN / 60,
+    },
+    disclaimer: REPORTS_DISCLAIMER.en,
+    disclaimer_vi: REPORTS_DISCLAIMER.vi,
+  };
+
+  const db = env.REPORTS_DB;
+  if (!db || typeof db.prepare !== 'function') {
+    // Invariant II — renderable under failure. Empty list, honest health flag.
+    return jsonResp(
+      { ...base, freshness: 'DEGRADED', source_health: { reports: 'unconfigured', firms: 'unknown' }, count: 0, reports: [] },
+      200,
+      cors,
+    );
+  }
+
+  let rows: Array<Record<string, unknown>> = [];
+  try {
+    const cutoff = nowSeconds - REPORT_TTL_SECONDS;
+    const res = await db
+      .prepare(
+        'SELECT id, created_at, lat, lon, category, description, lang FROM reports WHERE region = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 500',
+      )
+      .bind(region, cutoff)
+      .all();
+    rows = res.results || [];
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown';
+    console.error('handleReportList query failure:', msg);
+    return jsonResp(
+      { ...base, freshness: 'DEGRADED', source_health: { reports: 'error', firms: 'unknown' }, count: 0, reports: [] },
+      200,
+      cors,
+    );
+  }
+
+  // Cache-first FIRMS read. This is NOT zero upstream load: on a cold cache it
+  // originates the same calls the fire-danger endpoint would, sharing the same
+  // FIRE_DANGER_FIRMS_TTL. Disclosed via source_health.firms so a degraded
+  // ingest never silently downgrades every report to "unverified".
+  let firms: FirmsIngest = { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'unconfigured', sensors_used: [] };
+  try {
+    firms =
+      region === 'conus'
+        ? await fetchFirmsConus(env)
+        : await fetchFirmsMultiSensor(env, REGION_BBOXES.hawaii, 1);
+  } catch {
+    // Leave the unconfigured default; reports still render as unverified.
+  }
+
+  const reports = rows.map((r) => {
+    const createdAt = Number(r.created_at);
+    const lat = Number(r.lat);
+    const lon = Number(r.lon);
+    return {
+      id: String(r.id),
+      created_at: new Date(createdAt * 1000).toISOString(),
+      age_minutes: Math.floor((nowSeconds - createdAt) / 60),
+      lat,
+      lon,
+      category: String(r.category),
+      description: r.description === null || r.description === undefined ? null : String(r.description),
+      lang: String(r.lang || 'en'),
+      // Recomputed on EVERY read — a report becomes satellite_confirmed the
+      // moment the next overpass lands. That transition is the feature.
+      verification: crossCheckReport(lat, lon, firms.hotspots, nowSeconds),
+      expires_at: new Date((createdAt + REPORT_TTL_SECONDS) * 1000).toISOString(),
+    };
+  });
+
+  return jsonResp(
+    {
+      ...base,
+      freshness: firms.health === 'ok' ? 'FRESH' : 'STALE_OK',
+      source_health: { reports: 'ok', firms: firms.health },
+      count: reports.length,
+      reports,
+    },
+    200,
+    { ...cors, 'Cache-Control': 'no-store' },
+  );
+}
+
+// Expired-row cleanup. Called from scheduled(); the 48 h threshold is
+// deliberately looser than the 24 h read filter so this can never delete a row
+// that is still visible.
+async function deleteExpiredReports(env: Env): Promise<void> {
+  const db = env.REPORTS_DB;
+  if (!db || typeof db.prepare !== 'function') return;
+  const cutoff = Math.floor(Date.now() / 1000) - REPORT_DELETE_AFTER_SECONDS;
+  await db.prepare('DELETE FROM reports WHERE created_at < ?').bind(cutoff).run();
 }
 
 async function handlePushSubscribe(
