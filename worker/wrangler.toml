@@ -58,7 +58,7 @@ binding = "AI"
 [[d1_databases]]
 binding = "REPORTS_DB"
 database_name = "kahuola-reports"
-database_id = "PASTE_DATABASE_ID_FROM_D1_CREATE"
+database_id = "e2d7cd50-3d97-486a-a680-5b252a058216"
 migrations_dir = "migrations"
 
 # ── R2 bucket for voice audio cache (Phase 2.2) ──
