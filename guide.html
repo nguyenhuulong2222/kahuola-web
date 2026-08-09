@@ -388,7 +388,9 @@
          Hawaii handout it is the one decoder row that earns no space, so it
          is dropped from paper and kept on screen. Content cut, not a
          legibility cut — the symbols stay large enough to recognise. */
-      #dec-anchor-row{display:none !important}
+      /* P28c: the cluster-tier ramp is real map semantics and belongs on
+         screen, but the paper handout has no room for a fourth ramp. */
+      #dec-anchor-row,#dec-cluster-ramp{display:none !important}
       .dec-row{padding:4px 6px !important;gap:9px !important}
       .decoder{gap:5px !important}
       .ramp-label{font-size:8.5pt !important;color:#000 !important}
@@ -583,7 +585,7 @@
                     Places where a satellite detected unusual heat. A bubble with a number means several
                     detections are grouped together at that zoom level — tap it to zoom in and separate them.
                     A dot means heat was seen there; it does not confirm a fire on its own.
-                  </div>
+                  </div><div id="dec-cluster-ramp"><div class="ramp-title">Bubble colour by number of detections:</div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Under 8</title><circle cx="24" cy="24" r="20" fill="#ff8a00" fill-opacity="0.95" stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">5</text></svg><span class="ramp-label">Under 8</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>8 to 19</title><circle cx="24" cy="24" r="20" fill="#ff6a00" fill-opacity="0.95" stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">12</text></svg><span class="ramp-label">8 to 19</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>20 or more</title><circle cx="24" cy="24" r="20" fill="#ff3d00" fill-opacity="0.95" stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">34</text></svg><span class="ramp-label">20 or more</span></div></div></div>
                 </div>
               </div>
 
@@ -895,7 +897,7 @@
         <div class="part-head" id="part3-head">
           <div class="page-kicker">Part 3</div>
           <h2>Complete reference — every feature</h2>
-          <p>Every layer, card and control on the map, in the same five-line format. Use the list on the right to jump straight to one.</p>
+          <p>Every layer, card and control on the map, in the same six-line format. Every entry below answers the same six questions in the same order: what it shows, why it exists, where the data comes from, how to read its symbols, what to do when it is active, and where its limits are. Once you have read one entry you know how to read all twenty. The limits line is never skipped — if a layer cannot tell you something, it says so there. Use the list on the right to jump straight to one.</p>
         </div>
 
         <div id="part3">
@@ -905,6 +907,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Places where a NASA satellite detected unusual heat in roughly the last day.</dd>
+              <dt>Why this exists</dt>
+              <dd>Hawaiʻi fires often start far from anyone who could see them, on ranch land or in dry grass between towns. A satellite looking down finds heat that no one on the ground has reported yet.</dd>
               <dt>Source</dt>
               <dd>NASA FIRMS, delivered through the Kahu Ola server. The panel header reads <span class="ui-label">Fire Signals · Hawaiʻi</span> or <span class="ui-label">Fire Signals · USA</span> depending on your scope.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -921,6 +925,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Our estimate of where fire could spread from detected heat, shown as shaded squares.</dd>
+              <dt>Why this exists</dt>
+              <dd>Knowing a fire exists is not the same as knowing which way it is going. In the wind-driven fires this place has learned to fear — Lahaina in 2023 among them — what mattered was the direction and speed of spread, not the location of the first spark.</dd>
               <dt>Source</dt>
               <dd>Kahu Ola model, built from NASA FIRMS detections plus National Weather Service wind and humidity. The card kicker reads <span class="ui-label">Estimate · Kahu Ola model</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -944,12 +950,14 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Areas where weather conditions make fire spread more dangerous — dry air, strong wind, or both.</dd>
+              <dt>Why this exists</dt>
+              <dd>The most dangerous days are the ones where dry air and strong wind arrive together. That combination can be seen coming before any fire starts, which makes it one of the few fire warnings that arrives early.</dd>
               <dt>Source</dt>
               <dd>National Weather Service and RAWS remote weather stations.</dd>
               <dt>Symbols &amp; colors</dt>
               <dd>Shaded zones on the map, with a status of Normal, Watch, High or Red Flag. Toggle it with the <span class="ui-label">Fire Weather</span> button.</dd>
               <dt>When it’s active, what to do</dt>
-              <dd>A Red Flag condition means officials consider fire danger critical. Avoid anything that could cause a spark, and follow National Weather Service guidance.</dd>
+              <dd>Worth checking through the dry season, when these conditions cluster. A Red Flag condition means officials consider fire danger critical. Avoid anything that could cause a spark, and follow National Weather Service guidance.</dd>
               <dt class="limits">Honest limits</dt>
               <dd class="limits">Conditions are measured at stations and applied to the surrounding area. Hawaiʻi terrain changes quickly, so wind in your valley may differ from the nearest station’s reading.</dd>
             </dl>
@@ -960,6 +968,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Smoke plumes identified from satellite imagery by human analysts.</dd>
+              <dt>Why this exists</dt>
+              <dd>Smoke travels far further than flame. People with asthma or heart conditions can be affected on an island where nothing is burning at all.</dd>
               <dt>Source</dt>
               <dd>NOAA Hazard Mapping System (HMS).</dd>
               <dt>Symbols &amp; colors</dt>
@@ -976,6 +986,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>The mapped outline of a fire’s edge, as recorded by fire agencies.</dd>
+              <dt>Why this exists</dt>
+              <dd>Everything else on this map is measured from a distance. A perimeter is drawn by the people actually working the fire, which makes it the most authoritative line we can show you.</dd>
               <dt>Source</dt>
               <dd>NIFC and county fire agencies.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -992,6 +1004,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Active flash flood watches and warnings for Hawaiʻi.</dd>
+              <dt>Why this exists</dt>
+              <dd>Hawaiʻi has short, steep streams instead of long slow rivers. Rain falling high on a mountain can arrive at the coast as fast-moving water within minutes, sometimes under a blue sky where you are standing.</dd>
               <dt>Source</dt>
               <dd>National Weather Service. The card kicker reads <span class="ui-label">Official · National Weather Service</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1008,6 +1022,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Terrain that tends to channel or collect water, shown only while an official flood alert is active.</dd>
+              <dt>Why this exists</dt>
+              <dd>An official alert names a region, which can be most of an island. Terrain narrows that down to the gulches and low ground the water will actually use.</dd>
               <dt>Source</dt>
               <dd>A hybrid: the National Weather Service alert decides whether it appears, and the terrain shapes are Kahu Ola’s own. Because the shapes are ours, it is tagged Estimate.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1024,6 +1040,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Where rain is falling right now, from weather radar.</dd>
+              <dt>Why this exists</dt>
+              <dd>The plain reason: rain matters, and seeing where it is falling right now tells you whether an alert is about to get worse or is already easing.</dd>
               <dt>Source</dt>
               <dd>NOAA radar tiles.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1040,6 +1058,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>How much rain has accumulated over recent hours.</dd>
+              <dt>Why this exists</dt>
+              <dd>Ground that is already saturated has nowhere left to put new rain. The same shower that was harmless yesterday can cause flooding or a slope failure today, and the difference is what has already fallen.</dd>
               <dt>Source</dt>
               <dd>NEXRAD radar-derived precipitation estimates (QPE).</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1056,6 +1076,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Official National Weather Service alerts that are not flood, tsunami or hurricane — high wind, heat, and similar.</dd>
+              <dt>Why this exists</dt>
+              <dd>Not every hazard fits a category. High wind, heat, and similar warnings still need somewhere to appear, in the words of the office that issued them.</dd>
               <dt>Source</dt>
               <dd>National Weather Service. Card kicker: <span class="ui-label">Official · National Weather Service</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1072,12 +1094,14 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Active tropical cyclone advisories affecting the region.</dd>
+              <dt>Why this exists</dt>
+              <dd>These islands are small targets in a very large ocean, so a direct hit is rare — but a storm passing well offshore still sends surf, rain and wind ashore. A near miss is not the same as nothing.</dd>
               <dt>Source</dt>
               <dd>National Hurricane Center. Card kicker: <span class="ui-label">Official · National Hurricane Center</span>.</dd>
               <dt>Symbols &amp; colors</dt>
               <dd>A card showing the current advisory. Appears when an advisory is active or in the USA view.</dd>
               <dt>When it’s active, what to do</dt>
-              <dd>Follow the National Hurricane Center and your county’s emergency management instructions. Do not wait for a Kahu Ola update to act.</dd>
+              <dd>Worth checking through the Central Pacific hurricane season, roughly June to November. Follow the National Hurricane Center and your county’s emergency management instructions. Do not wait for a Kahu Ola update to act.</dd>
               <dt class="limits">Honest limits</dt>
               <dd class="limits">We show advisories as published. Forecast tracks change; always check the Hurricane Center directly for the latest position.</dd>
             </dl>
@@ -1088,6 +1112,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Tsunami watches, advisories and warnings for Hawaiʻi.</dd>
+              <dt>Why this exists</dt>
+              <dd>Hawaiʻi sits in the middle of the Pacific, within reach of earthquakes on coastlines thousands of miles away. Waves from those distant quakes have reached these shores with deadly force, and Hilo in particular carries that memory.</dd>
               <dt>Source</dt>
               <dd>NWS Tsunami Warning Center. Card kicker: <span class="ui-label">Official · NWS Tsunami Warning Center</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1104,12 +1130,14 @@
             <dl>
               <dt>What it shows</dt>
               <dd>High surf, coastal flood and beach hazard statements.</dd>
+              <dt>Why this exists</dt>
+              <dd>Winter swells arriving on north- and west-facing shores can be many times the size of the same beach in summer. People who know a beach in one season can be caught out by it in another.</dd>
               <dt>Source</dt>
               <dd>National Weather Service, with Pacific ocean context from PacIOOS.</dd>
               <dt>Symbols &amp; colors</dt>
               <dd>A card titled Coastal &amp; Surf listing active statements.</dd>
               <dt>When it’s active, what to do</dt>
-              <dd>Stay off exposed rocks and beaches during high surf, and follow lifeguard and county guidance.</dd>
+              <dd>Worth checking in winter, when the big swells arrive. Stay off exposed rocks and beaches during high surf, and follow lifeguard and county guidance.</dd>
               <dt class="limits">Honest limits</dt>
               <dd class="limits">Statements are issued by shoreline region. Conditions vary sharply between individual beaches within the same region.</dd>
             </dl>
@@ -1120,12 +1148,14 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Terrain where heavy rain raises the chance of slope failure, shown while flood conditions are active.</dd>
+              <dt>Why this exists</dt>
+              <dd>Steep ground plus days of rain is how slopes fail here, and land that has recently burned loses the roots that used to hold it together. Fire and landslide risk are connected in Hawaiʻi in a way they are not everywhere.</dd>
               <dt>Source</dt>
               <dd>Kahu Ola terrain context. There is no official agency issuing landslide warnings for these areas, which is exactly why this is tagged Estimate.</dd>
               <dt>Symbols &amp; colors</dt>
               <dd>A card describing terrain risk, with a low-risk state when nothing is elevated.</dd>
               <dt>When it’s active, what to do</dt>
-              <dd>On steep ground during heavy rain, be alert for debris on roads and for changes in the sound of running water. Report blocked roads to local authorities.</dd>
+              <dd>Worth checking during and just after heavy rain, not before it. On steep ground during heavy rain, be alert for debris on roads and for changes in the sound of running water. Report blocked roads to local authorities.</dd>
               <dt class="limits">Honest limits</dt>
               <dd class="limits">This is general terrain reasoning, not a geological assessment. It cannot tell you whether a particular slope will fail.</dd>
             </dl>
@@ -1136,6 +1166,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Locally issued statements and bulletins that do not fit the other categories.</dd>
+              <dt>Why this exists</dt>
+              <dd>The local forecast office publishes things that do not fit any national category but matter a great deal if you live here.</dd>
               <dt>Source</dt>
               <dd>NWS Honolulu, via the Iowa Environmental Mesonet archive.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1152,6 +1184,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Measured air quality at official monitoring stations, including sulphur dioxide from volcanic vog.</dd>
+              <dt>Why this exists</dt>
+              <dd>Kīlauea releases sulphur dioxide, which becomes the haze people call vog. When the volcano is active and the wind is wrong, the air itself is the hazard — no fire, no storm, just the day’s breathing.</dd>
               <dt>Source</dt>
               <dd>Hawaiʻi Department of Health monitors delivered through EPA AirNow. Card kicker: <span class="ui-label">Official · Hawaiʻi DOH via EPA AirNow</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1175,6 +1209,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Switches the whole map between Hawaiʻi and the continental United States.</dd>
+              <dt>Why this exists</dt>
+              <dd>Many families here have people on the mainland, and mainland fire seasons reach across the ocean as worry. The same map answers both questions.</dd>
               <dt>Source</dt>
               <dd>Kahu Ola control. Labelled <span class="ui-label">Hawaiʻi</span> and <span class="ui-label">USA</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1198,6 +1234,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Swaps the plain map background for satellite photography.</dd>
+              <dt>Why this exists</dt>
+              <dd>A place name does not tell you what the land looks like. Seeing the actual gulch, ridge or subdivision helps you judge how close something really is to you.</dd>
               <dt>Source</dt>
               <dd>Kahu Ola control, using map imagery. Button labelled <span class="ui-label">Satellite</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1214,6 +1252,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>Centres the map on you and adds a line to the Fire Spread Concern card about your specific square.</dd>
+              <dt>Why this exists</dt>
+              <dd>The real question is never “where is the fire”, it is “is it near me”. Dragging a map around looking for your own house is the last thing anyone should be doing when they are worried.</dd>
               <dt>Source</dt>
               <dd>Your device’s own location service. Button labelled <span class="ui-label">Use My Location</span>.</dd>
               <dt>Symbols &amp; colors</dt>
@@ -1230,6 +1270,8 @@
             <dl>
               <dt>What it shows</dt>
               <dd>On a phone, the panel slides up from the bottom of the screen so the map stays the main view.</dd>
+              <dt>Why this exists</dt>
+              <dd>The plain reason: phone screens are small. If the buttons filled the screen, the map — which is the actual information — would not.</dd>
               <dt>Source</dt>
               <dd>Kahu Ola interface. The handle reads <span class="ui-label">Map Details</span>; inside it, <span class="ui-label">Layers &amp; Tools</span> holds the buttons.</dd>
               <dt>Symbols &amp; colors</dt>

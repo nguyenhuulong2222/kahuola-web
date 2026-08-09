@@ -374,7 +374,9 @@
          Hawaii handout it is the one decoder row that earns no space, so it
          is dropped from paper and kept on screen. Content cut, not a
          legibility cut — the symbols stay large enough to recognise. */
-      #dec-anchor-row{display:none !important}
+      /* P28c: the cluster-tier ramp is real map semantics and belongs on
+         screen, but the paper handout has no room for a fourth ramp. */
+      #dec-anchor-row,#dec-cluster-ramp{display:none !important}
       .dec-row{padding:4px 6px !important;gap:9px !important}
       .decoder{gap:5px !important}
       .ramp-label{font-size:8.5pt !important;color:#000 !important}
@@ -562,7 +564,7 @@
                     Nơi vệ tinh phát hiện nhiệt bất thường. Bong bóng có con số nghĩa là nhiều điểm phát
                     hiện được gom lại ở mức thu phóng đó — chạm vào để phóng to và tách chúng ra. Một chấm
                     nghĩa là đã thấy nhiệt ở đó; tự nó chưa xác nhận có cháy.
-                  </div>
+                  </div><div id="dec-cluster-ramp"><div class="ramp-title">Màu bong bóng theo số điểm phát hiện:</div><div class="ramp"><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>Dưới 8</title><circle cx="24" cy="24" r="20" fill="#ff8a00" fill-opacity="0.95" stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">5</text></svg><span class="ramp-label">Dưới 8</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>8 đến 19</title><circle cx="24" cy="24" r="20" fill="#ff6a00" fill-opacity="0.95" stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">12</text></svg><span class="ramp-label">8 đến 19</span></div><div class="ramp-item"><svg class="sym sym-sm" viewBox="0 0 48 48" role="img"><title>20 trở lên</title><circle cx="24" cy="24" r="20" fill="#ff3d00" fill-opacity="0.95" stroke="#ff8c00" stroke-opacity="0.60" stroke-width="2"/><text x="24" y="29" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700" font-family="ui-sans-serif,system-ui,sans-serif">34</text></svg><span class="ramp-label">20 trở lên</span></div></div></div>
                 </div>
               </div>
 
@@ -862,7 +864,7 @@
         <div class="part-head" id="part3-head">
           <div class="page-kicker">Phần 3</div>
           <h2>Tra cứu đầy đủ — mọi tính năng</h2>
-          <p>Mọi lớp, thẻ và nút điều khiển trên bản đồ, theo cùng một khuôn năm dòng. Dùng danh sách bên phải để nhảy thẳng tới mục bạn cần.</p>
+          <p>Mọi lớp, thẻ và nút điều khiển trên bản đồ, theo cùng một khuôn sáu dòng. Mỗi mục dưới đây trả lời cùng sáu câu hỏi theo cùng thứ tự: nó hiển thị gì, vì sao nó tồn tại, dữ liệu từ đâu, đọc ký hiệu ra sao, nên làm gì khi nó hoạt động, và giới hạn của nó ở đâu. Đọc xong một mục là bạn biết cách đọc cả hai mươi mục. Dòng giới hạn không bao giờ bị bỏ qua — nếu một lớp không thể cho bạn biết điều gì, nó nói rõ ở đó. Dùng danh sách bên phải để nhảy thẳng tới mục bạn cần.</p>
         </div>
 
         <div id="part3">
@@ -872,6 +874,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Những nơi vệ tinh NASA phát hiện nhiệt bất thường trong khoảng một ngày gần đây.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Nhiều đám cháy ở Hawaiʻi bắt đầu ở nơi không ai nhìn thấy — trên đất chăn nuôi hoặc trong cỏ khô giữa các thị trấn. Vệ tinh nhìn từ trên cao phát hiện được nhiệt mà chưa ai dưới đất kịp báo.</dd>
               <dt>Nguồn</dt>
               <dd>NASA FIRMS, chuyển qua máy chủ Kahu Ola. Tiêu đề bảng ghi <span class="ui-label">Tín hiệu cháy · Hawaiʿi</span> hoặc <span class="ui-label">Tín hiệu cháy · Toàn nước Mỹ</span> tùy phạm vi bạn chọn.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -888,6 +892,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Ước tính của chúng tôi về nơi lửa có thể lan tới từ các điểm nhiệt đã phát hiện, thể hiện bằng các ô vuông tô màu.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Biết có cháy không giống biết lửa đang đi hướng nào. Trong những đám cháy do gió đẩy mà vùng đất này đã học cách sợ — Lahaina năm 2023 là một — điều quan trọng là hướng và tốc độ lan, không phải nơi đốm lửa đầu tiên.</dd>
               <dt>Nguồn</dt>
               <dd>Mô hình Kahu Ola, dựng từ phát hiện NASA FIRMS cộng gió và độ ẩm của Cơ quan Thời tiết Quốc gia. Dòng chữ trên thẻ ghi <span class="ui-label">Ước tính · mô hình Kahu Ola</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -911,12 +917,14 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Những khu vực mà điều kiện thời tiết khiến lửa dễ lan hơn — không khí khô, gió mạnh, hoặc cả hai.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Những ngày nguy hiểm nhất là khi không khí khô và gió mạnh cùng đến một lúc. Có thể thấy trước sự kết hợp đó ngay cả khi chưa có đám cháy nào — một trong số rất ít cảnh báo cháy đến sớm.</dd>
               <dt>Nguồn</dt>
               <dd>Cơ quan Thời tiết Quốc gia và các trạm thời tiết từ xa RAWS.</dd>
               <dt>Ký hiệu &amp; màu</dt>
               <dd>Các vùng tô trên bản đồ, với trạng thái Bình thường, Theo dõi, Cao hoặc Cờ Đỏ. Bật/tắt bằng nút <span class="ui-label">Fire Weather</span>.</dd>
               <dt>Khi có tín hiệu, nên làm gì</dt>
-              <dd>Trạng thái Cờ Đỏ nghĩa là cơ quan chức năng coi nguy cơ cháy ở mức nghiêm trọng. Tránh mọi việc có thể phát tia lửa, và làm theo hướng dẫn của Cơ quan Thời tiết Quốc gia.</dd>
+              <dd>Nên xem trong suốt mùa khô, khi những điều kiện này dồn lại. Trạng thái Cờ Đỏ nghĩa là cơ quan chức năng coi nguy cơ cháy ở mức nghiêm trọng. Tránh mọi việc có thể phát tia lửa, và làm theo hướng dẫn của Cơ quan Thời tiết Quốc gia.</dd>
               <dt class="limits">Giới hạn trung thực</dt>
               <dd class="limits">Điều kiện được đo tại trạm rồi áp cho vùng xung quanh. Địa hình Hawaiʻi thay đổi rất nhanh, nên gió trong thung lũng của bạn có thể khác với số đo tại trạm gần nhất.</dd>
             </dl>
@@ -927,6 +935,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các luồng khói được chuyên viên phân tích nhận diện từ ảnh vệ tinh.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Khói bay xa hơn lửa rất nhiều. Người bị hen suyễn hay bệnh tim có thể bị ảnh hưởng ngay trên một hòn đảo hoàn toàn không có gì cháy.</dd>
               <dt>Nguồn</dt>
               <dd>Hệ thống Lập bản đồ Hiểm họa NOAA (HMS).</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -943,6 +953,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Đường viền mép đám cháy do các cơ quan phòng cháy ghi nhận.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Mọi thứ khác trên bản đồ này đều đo từ xa. Ranh giới đám cháy do chính những người đang chữa cháy vẽ ra, nên đó là đường đáng tin nhất chúng tôi có thể hiển thị.</dd>
               <dt>Nguồn</dt>
               <dd>NIFC và các cơ quan phòng cháy cấp quận.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -959,6 +971,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các cảnh báo và theo dõi lũ quét đang có hiệu lực tại Hawaiʻi.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Hawaiʻi có những dòng suối ngắn và dốc chứ không phải sông dài chảy chậm. Mưa trên cao có thể đổ xuống bờ biển thành dòng nước chảy xiết chỉ trong vài phút, đôi khi ngay dưới bầu trời quang đãng nơi bạn đứng.</dd>
               <dt>Nguồn</dt>
               <dd>Cơ quan Thời tiết Quốc gia. Dòng chữ trên thẻ ghi <span class="ui-label">Chính thức · National Weather Service</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -975,6 +989,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Địa hình thường dồn hoặc tụ nước, chỉ hiện khi đang có cảnh báo lũ chính thức.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Cảnh báo chính thức nêu tên một vùng, có khi rộng gần cả hòn đảo. Địa hình thu hẹp điều đó lại còn những khe núi và vùng trũng mà nước sẽ thực sự chảy qua.</dd>
               <dt>Nguồn</dt>
               <dd>Kết hợp hai nguồn: cảnh báo của Cơ quan Thời tiết Quốc gia quyết định lớp này có hiện hay không, còn các hình địa hình là của Kahu Ola. Vì phần hình là của chúng tôi nên lớp này được gắn nhãn Ước tính.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -991,6 +1007,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Nơi đang có mưa ngay lúc này, theo radar thời tiết.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Lý do giản dị: mưa là chuyện quan trọng, và thấy mưa đang rơi ở đâu ngay lúc này cho biết cảnh báo sắp xấu đi hay đang dịu lại.</dd>
               <dt>Nguồn</dt>
               <dd>Ảnh radar của NOAA.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1007,6 +1025,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Lượng mưa đã tích lại trong những giờ gần đây.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Đất đã bão hòa thì không còn chỗ chứa nước mới. Cơn mưa hôm qua vô hại có thể gây lũ hoặc sạt lở hôm nay, khác biệt nằm ở lượng mưa đã rơi trước đó.</dd>
               <dt>Nguồn</dt>
               <dd>Ước lượng mưa từ radar NEXRAD (QPE).</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1023,6 +1043,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các cảnh báo chính thức của Cơ quan Thời tiết Quốc gia không thuộc nhóm lũ, sóng thần hay bão — như gió mạnh, nắng nóng và tương tự.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Không phải hiểm họa nào cũng thuộc một nhóm riêng. Gió mạnh, nắng nóng và những cảnh báo tương tự vẫn cần chỗ để xuất hiện, bằng đúng lời của cơ quan ban hành.</dd>
               <dt>Nguồn</dt>
               <dd>Cơ quan Thời tiết Quốc gia. Dòng chữ trên thẻ: <span class="ui-label">Chính thức · Cơ quan Thời tiết Quốc gia</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1039,12 +1061,14 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các bản tin bão nhiệt đới đang ảnh hưởng tới khu vực.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Các đảo này là mục tiêu nhỏ giữa một đại dương rộng, nên bị đánh trực tiếp là hiếm — nhưng một cơn bão đi ngang ngoài khơi vẫn đẩy sóng, mưa và gió vào bờ. Suýt trúng không phải là không có gì.</dd>
               <dt>Nguồn</dt>
               <dd>Trung tâm Bão Quốc gia (NHC). Dòng chữ trên thẻ: <span class="ui-label">Chính thức · National Hurricane Center</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
               <dd>Một thẻ hiển thị bản tin hiện tại. Xuất hiện khi có bản tin đang hiệu lực hoặc ở chế độ toàn nước Mỹ.</dd>
               <dt>Khi có tín hiệu, nên làm gì</dt>
-              <dd>Làm theo Trung tâm Bão Quốc gia và hướng dẫn của cơ quan quản lý khẩn cấp quận bạn. Đừng chờ Kahu Ola cập nhật mới hành động.</dd>
+              <dd>Nên xem trong mùa bão Trung Thái Bình Dương, khoảng tháng 6 đến tháng 11. Làm theo Trung tâm Bão Quốc gia và hướng dẫn của cơ quan quản lý khẩn cấp quận bạn. Đừng chờ Kahu Ola cập nhật mới hành động.</dd>
               <dt class="limits">Giới hạn trung thực</dt>
               <dd class="limits">Chúng tôi hiển thị bản tin như đã công bố. Đường đi dự báo luôn thay đổi; hãy kiểm tra trực tiếp Trung tâm Bão để có vị trí mới nhất.</dd>
             </dl>
@@ -1055,6 +1079,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các mức theo dõi, khuyến cáo và cảnh báo sóng thần cho Hawaiʻi.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Hawaiʻi nằm giữa Thái Bình Dương, trong tầm của những trận động đất cách hàng nghìn dặm. Sóng từ những trận động đất xa đó đã từng ập vào bờ biển nơi đây với sức tàn phá chết người, và Hilo mang ký ức đó rõ hơn cả.</dd>
               <dt>Nguồn</dt>
               <dd>Trung tâm Cảnh báo Sóng thần NWS. Dòng chữ trên thẻ: <span class="ui-label">Chính thức · NWS Tsunami Warning Center</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1071,12 +1097,14 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các thông báo về sóng lớn, ngập ven biển và nguy hiểm bãi biển.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Sóng mùa đông ở bờ bắc và bờ tây có thể lớn gấp nhiều lần chính bãi biển đó vào mùa hè. Người quen một bãi biển trong một mùa có thể bị bất ngờ vào mùa khác.</dd>
               <dt>Nguồn</dt>
               <dd>Cơ quan Thời tiết Quốc gia, kèm bối cảnh đại dương Thái Bình Dương từ PacIOOS.</dd>
               <dt>Ký hiệu &amp; màu</dt>
               <dd>Một thẻ liệt kê các thông báo đang có hiệu lực. <em>Lưu ý trung thực: thẻ này hiện vẫn hiển thị tiêu đề tiếng Anh “Coastal &amp; Surf” ngay cả khi bạn chọn tiếng Việt — bản dịch cho thẻ này chưa có trong ứng dụng. Chúng tôi ghi đúng như bạn sẽ thấy trên màn hình, thay vì dịch ra một cái tên không tồn tại.</em></dd>
               <dt>Khi có tín hiệu, nên làm gì</dt>
-              <dd>Tránh xa các mỏm đá và bãi biển lộ thiên khi sóng lớn, và làm theo hướng dẫn của nhân viên cứu hộ và cơ quan quận.</dd>
+              <dd>Nên xem vào mùa đông, khi sóng lớn kéo về. Tránh xa các mỏm đá và bãi biển lộ thiên khi sóng lớn, và làm theo hướng dẫn của nhân viên cứu hộ và cơ quan quận.</dd>
               <dt class="limits">Giới hạn trung thực</dt>
               <dd class="limits">Thông báo được ban hành theo từng vùng bờ biển. Điều kiện thực tế khác nhau rất nhiều giữa các bãi biển trong cùng một vùng.</dd>
             </dl>
@@ -1087,12 +1115,14 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Địa hình mà mưa lớn làm tăng khả năng sạt trượt, hiện khi đang có điều kiện lũ.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Đất dốc cộng nhiều ngày mưa là cách sườn núi sạt ở đây, và vùng đất vừa cháy mất đi bộ rễ từng giữ nó lại. Ở Hawaiʻi, nguy cơ cháy và nguy cơ sạt lở gắn với nhau theo cách không phải nơi nào cũng có.</dd>
               <dt>Nguồn</dt>
               <dd>Bối cảnh địa hình của Kahu Ola. Không có cơ quan chính thức nào ban hành cảnh báo sạt lở cho các khu vực này — đó chính là lý do lớp này được gắn nhãn Ước tính.</dd>
               <dt>Ký hiệu &amp; màu</dt>
               <dd>Một thẻ mô tả rủi ro địa hình, với trạng thái rủi ro thấp khi không có gì bất thường.</dd>
               <dt>Khi có tín hiệu, nên làm gì</dt>
-              <dd>Ở vùng dốc trong mưa lớn, hãy để ý đất đá trên đường và những thay đổi trong tiếng nước chảy. Báo cho chính quyền địa phương khi đường bị chặn.</dd>
+              <dd>Nên xem trong và ngay sau mưa lớn, không phải trước đó. Ở vùng dốc trong mưa lớn, hãy để ý đất đá trên đường và những thay đổi trong tiếng nước chảy. Báo cho chính quyền địa phương khi đường bị chặn.</dd>
               <dt class="limits">Giới hạn trung thực</dt>
               <dd class="limits">Đây là suy luận địa hình tổng quát, không phải khảo sát địa chất. Nó không cho biết một sườn dốc cụ thể có sạt hay không.</dd>
             </dl>
@@ -1103,6 +1133,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Các thông báo và bản tin do địa phương ban hành mà không thuộc các nhóm khác.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Văn phòng dự báo địa phương công bố những thông tin không thuộc nhóm quốc gia nào nhưng rất quan trọng với người sống ở đây.</dd>
               <dt>Nguồn</dt>
               <dd>NWS Honolulu, qua kho lưu trữ Iowa Environmental Mesonet.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1119,6 +1151,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Chất lượng không khí đo được tại các trạm quan trắc chính thức, gồm cả khí lưu huỳnh điôxít từ vog núi lửa.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Kīlauea thải ra khí lưu huỳnh điôxít, tạo thành làn mù mà người ta gọi là vog. Khi núi lửa hoạt động và gió thổi sai hướng, chính không khí là hiểm họa — không cháy, không bão, chỉ là hơi thở của ngày hôm đó.</dd>
               <dt>Nguồn</dt>
               <dd>Trạm quan trắc của Sở Y tế Hawaiʻi chuyển qua EPA AirNow. Dòng chữ trên thẻ: <span class="ui-label">Chính thức · Sở Y tế Hawaiʻi qua EPA AirNow</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1142,6 +1176,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Chuyển toàn bộ bản đồ giữa Hawaiʻi và phần lục địa nước Mỹ.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Nhiều gia đình ở đây có người thân trên đất liền, và mùa cháy ở đó vượt đại dương thành nỗi lo. Cùng một bản đồ trả lời cả hai câu hỏi.</dd>
               <dt>Nguồn</dt>
               <dd>Nút điều khiển của Kahu Ola, ghi <span class="ui-label">Hawaiʿi</span> và <span class="ui-label">Toàn nước Mỹ</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1165,6 +1201,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Đổi nền bản đồ đơn giản sang ảnh chụp từ vệ tinh.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Tên một nơi không cho biết vùng đất đó trông ra sao. Nhìn thấy khe núi, sườn đồi hay khu dân cư thật giúp bạn đoán đúng một thứ thực sự cách bạn bao xa.</dd>
               <dt>Nguồn</dt>
               <dd>Nút điều khiển của Kahu Ola, ghi <span class="ui-label">Vệ tinh</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1181,6 +1219,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Đưa bản đồ về vị trí của bạn và thêm một dòng vào thẻ Nguy cơ cháy lan nói riêng về ô vuông của bạn.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Câu hỏi thật không bao giờ là “đám cháy ở đâu”, mà là “nó có gần tôi không”. Kéo bản đồ đi tìm nhà mình là việc cuối cùng ai đó nên làm khi đang lo lắng.</dd>
               <dt>Nguồn</dt>
               <dd>Dịch vụ định vị của chính máy bạn. Nút ghi <span class="ui-label">Dùng vị trí của tôi</span>.</dd>
               <dt>Ký hiệu &amp; màu</dt>
@@ -1197,6 +1237,8 @@
             <dl>
               <dt>Hiển thị gì</dt>
               <dd>Trên điện thoại, bảng thông tin trượt lên từ cuối màn hình để bản đồ vẫn là phần chính.</dd>
+              <dt>Vì sao có</dt>
+              <dd>Lý do giản dị: màn hình điện thoại thì nhỏ. Nếu các nút chiếm hết màn hình thì bản đồ — thứ mang thông tin thực sự — sẽ không còn chỗ.</dd>
               <dt>Nguồn</dt>
               <dd>Giao diện Kahu Ola. Thanh kéo ghi <span class="ui-label">Chi tiết bản đồ</span>; bên trong, <span class="ui-label">Lớp &amp; Công cụ</span> chứa các nút.</dd>
               <dt>Ký hiệu &amp; màu</dt>
