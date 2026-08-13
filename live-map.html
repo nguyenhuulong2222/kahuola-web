@@ -1769,6 +1769,58 @@
       }
     }
 
+    /* On-map legend for the fire PERIMETER outline. A perimeter is a BOUNDARY,
+       not a spread forecast — without a label the orange ring reads as an
+       official fire line. Estimated perimeters must always carry the
+       "not official" disclaimer (Invariant V). Positioned below the fd-legend
+       slot so both can show without overlap. */
+    .perim-legend {
+      position: absolute;
+      top: calc(252px + var(--safe-top));
+      left: 12px;
+      z-index: 20;
+      max-width: 190px;
+      padding: 7px 9px;
+      background: rgba(20, 20, 20, .90);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .26);
+      pointer-events: none;
+    }
+
+    .perim-legend[hidden] {
+      display: none;
+    }
+
+    .perim-legend-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9.5px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .perim-legend-line {
+      width: 20px;
+      height: 0;
+      border-top: 2px solid #ffb74d;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .perim-legend-line--off {
+      border-top-color: #ff5a4f;
+    }
+
+    @media (max-width:980px) {
+      .perim-legend {
+        top: calc(238px + var(--safe-top));
+        left: 10px;
+        max-width: 168px;
+      }
+    }
+
     .maplibregl-ctrl-attrib a {
       color: var(--text-dim) !important;
     }
@@ -2216,6 +2268,23 @@
         </div>
         <div class="fd-legend-note" data-i18n="map.fire_danger_maplegend_note">Estimate. Shaded areas are not
           burning.</div>
+      </div>
+
+      <!-- Fire-perimeter legend, on the map itself so the orange ring is never
+           read as an official fire line. Shown only when perimeter polygons are
+           present AND the layer is on. Not inside #panel-template, so its id is
+           NOT cloned — plain getElementById works. -->
+      <div id="perimeter-map-legend" class="perim-legend" hidden aria-hidden="true">
+        <div class="fd-legend-title" data-i18n="map.perim_legend_title">Fire perimeter</div>
+        <div class="perim-legend-row">
+          <span class="perim-legend-line" aria-hidden="true"></span>
+          <span data-i18n="map.perim_legend_estimated">Estimated — not official</span>
+        </div>
+        <div class="perim-legend-row">
+          <span class="perim-legend-line perim-legend-line--off" aria-hidden="true"></span>
+          <span data-i18n="map.perim_legend_official">Official boundary</span>
+        </div>
+        <div class="fd-legend-note" data-i18n="map.perim_legend_note">Boundary line — not where fire may spread.</div>
       </div>
 
       <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
@@ -3413,7 +3482,7 @@
         endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/api/hazards/perimeters?region=hawaii",
         enabled: true,
         parsePayload(json) { const raw = parseCanonicalSignals(json, "perimeter"); return { features: normalizePerimeterFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NIFC / County Perimeters" }; },
-        ensureLayers, applyData(features) { updatePerimeterSource(features); }, onFetchComplete() { const s = getState("perimeter"); updatePerimeterStatusUI(s.sourceStatus, s.features.length); renderUnifiedPanels(); }, visible() { return perimeterVisible; }
+        ensureLayers, applyData(features) { updatePerimeterSource(features); }, onFetchComplete() { const s = getState("perimeter"); updatePerimeterStatusUI(s.sourceStatus, s.features.length); syncPerimeterMapLegend(); renderUnifiedPanels(); }, visible() { return perimeterVisible; }
       },
       flashFlood: {
         key: "flashFlood",
@@ -5334,6 +5403,18 @@
       if (map.getLayer("perimeter-fill")) map.setPaintProperty("perimeter-fill", "fill-opacity", perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.08, 0.05] : 0);
       if (map.getLayer("perimeter-outline")) map.setPaintProperty("perimeter-outline", "line-opacity", perimeterVisible ? ["case", ["==", ["get", "official"], true], 0.92, 0.78] : 0);
       syncPerimeterButtons();
+      syncPerimeterMapLegend();
+    }
+    // The on-map perimeter legend must never outlive the polygons it explains —
+    // a "not official" label over an empty map is its own kind of false signal.
+    // Not inside panel-template, so the id is not suffixed.
+    function syncPerimeterMapLegend() {
+      const el = document.getElementById("perimeter-map-legend");
+      if (!el) return;
+      const count = (getState("perimeter").features || []).length;
+      const show = perimeterVisible && count > 0;
+      el.hidden = !show;
+      el.setAttribute("aria-hidden", show ? "false" : "true");
     }
     function syncSmokeLayerVisibility() {
       setLayerVisibility("smoke-fill", smokeVisible);
@@ -5763,7 +5844,7 @@
     function openPerimeterPopup(feature, lngLat) {
       const p = feature.properties || {}; const official = p.official === true; const acres = p.acres ? `${Number(p.acres).toLocaleString()} acres` : (_t("status.unavailable") || "Unavailable");
       if (activePopup) activePopup.remove();
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔺 ${_L("map.popup_title_perimeter", "Fire Perimeter")}</div><div class="popup-coords">${escapeHtml(p.incident_name || "Unnamed perimeter")}</div></div><div class="popup-severity ${official ? "critical" : "normal"}">${official ? (_t("map.popup_perimeter_official") || "Official") : (_t("map.popup_perimeter_estimated") || "Estimated")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area", "Area")}</div><div class="popup-metric-value">${escapeHtml(acres)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_status", "Status")}</div><div class="popup-metric-value">${escapeHtml(p.status || "Active perimeter feed")}</div></div></div><div class="popup-note">${_L("map.popup_perimeter_note", "Perimeter boundaries may lag fast-moving field conditions.")}</div></div>`;
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔺 ${_L("map.popup_title_perimeter", "Fire Perimeter")}</div><div class="popup-coords">${escapeHtml(p.incident_name || "Unnamed perimeter")}</div></div><div class="popup-severity ${official ? "critical" : "normal"}">${official ? (_t("map.popup_perimeter_official") || "Official") : (_t("map.popup_perimeter_estimated") || "Estimated")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area", "Area")}</div><div class="popup-metric-value">${escapeHtml(acres)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_status", "Status")}</div><div class="popup-metric-value">${escapeHtml(p.status || "Active perimeter feed")}</div></div></div>${official ? "" : `<div class="popup-note" style="color:#ffcc80;font-weight:600">⚠ ${_L("map.popup_perimeter_disclaimer", "Estimated perimeter — not official fire boundary.")}</div>`}<div class="popup-note">${_L("map.popup_perimeter_note", "Perimeter boundaries may lag fast-moving field conditions.")}</div></div>`;
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "340px" }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openFirePopup(feature, lngLat) {
