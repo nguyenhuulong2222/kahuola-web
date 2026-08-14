@@ -4307,10 +4307,14 @@ async function readSummaryFirms(key: string, nowMs: number): Promise<SummarySrc>
 // and fail-closed on any remaining miss (Invariant II/III).
 async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
   const nowMs = Date.now();
-  let [smoke, perim, fire] = await Promise.all([
+  // The alerts fetch joins the existing Promise.all rather than adding a round
+  // trip: the other three are KV/cache reads, so this is the summary path's
+  // ONLY outbound request and sits far under the 6-connection cap.
+  let [smoke, perim, fire, stormAlerts] = await Promise.all([
     readSummarySource(SUMMARY_SMOKE_KEY, SUMMARY_SMOKE_STATUS_KEY, nowMs),
     readSummarySource(SUMMARY_PERIM_KEY, SUMMARY_PERIM_STATUS_KEY, nowMs),
     readSummaryFirms(SUMMARY_FIRMS_KEY, nowMs),
+    fetchNwsAlerts(cors, ['HI']),
   ]);
 
   // Warm only genuinely-missing sources. Each warm task is isolated via
@@ -4342,6 +4346,43 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
 
   const degraded = summarySrcIsBad(smoke) || summarySrcIsBad(perim) || summarySrcIsBad(fire);
 
+  // ── Storm input (P29) ────────────────────────────────────────────────
+  // The summary previously read fire/smoke/perimeters only, so the "Active
+  // hazards" card said "No active primary hazards" while a Hurricane Warning
+  // covered Hawaiʻi County.
+  //
+  // TROPICAL-CYCLONE events ONLY. Generic High Wind / Flood alerts belong to
+  // their own layers; pulling them in here would make the top-level card cry
+  // wolf on ordinary weather. "Tropical Cyclone Local Statement" is
+  // deliberately excluded — a statement is narrative, not a watch or warning.
+  const STORM_WARNING_EVENTS = ['hurricane warning', 'tropical storm warning', 'storm surge warning'];
+  const STORM_WATCH_EVENTS = ['hurricane watch', 'tropical storm watch', 'storm surge watch'];
+
+  let stormWarningCount = 0;
+  let stormWatchCount = 0;
+  let stormStatus: string;
+  let stormAgeSeconds: number | null = null;
+
+  if (!stormAlerts?.ok) {
+    // Fail closed: an unreachable alerts feed is not a calm sky.
+    stormStatus = 'unavailable';
+  } else {
+    const feats = Array.isArray(stormAlerts.data?.features) ? stormAlerts.data.features : [];
+    let newestMs: number | null = null;
+    for (const f of feats) {
+      // Parse failure on an individual alert drops that alert, never the batch.
+      const event = String(f?.properties?.event || '').toLowerCase();
+      if (!event) continue;
+      if (STORM_WARNING_EVENTS.some((k) => event.includes(k))) stormWarningCount++;
+      else if (STORM_WATCH_EVENTS.some((k) => event.includes(k))) stormWatchCount++;
+      else continue;
+      const sent = Date.parse(String(f?.properties?.sent || f?.properties?.effective || ''));
+      if (isFinite(sent) && (newestMs === null || sent > newestMs)) newestMs = sent;
+    }
+    stormStatus = stormWarningCount > 0 ? 'warning' : stormWatchCount > 0 ? 'watch' : 'none';
+    if (newestMs !== null) stormAgeSeconds = Math.max(0, Math.round((nowMs - newestMs) / 1000));
+  }
+
   const body: Record<string, unknown> = {
     region: 'hawaii',
     generated_at: new Date(nowMs).toISOString(),
@@ -4349,6 +4390,15 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
     fire: { count: fire.count ?? 0, volcanic_zone_count: fire.volcanic_zone_count ?? 0, wildland_count: fire.wildland_count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS' },
     smoke: { present: (smoke.count ?? 0) > 0, count: smoke.count ?? 0, status: smoke.status, age_seconds: smoke.age_seconds, source: 'NOAA HMS' },
     perimeters: { count: perim.count ?? 0, status: perim.status, age_seconds: perim.age_seconds, source: 'NIFC WFIGS' },
+    // ADDITIVE — every key above is byte-shape identical to before P29.
+    storm: {
+      count: stormWarningCount + stormWatchCount,
+      warning_count: stormWarningCount,
+      watch_count: stormWatchCount,
+      status: stormStatus,
+      age_seconds: stormAgeSeconds,
+      source: 'NWS',
+    },
     note: 'Situational awareness only. Follow official sources.',
   };
   if (degraded) body.degraded = true;
