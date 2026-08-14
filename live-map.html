@@ -5893,6 +5893,34 @@
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "360px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
     }
 
+    // ── Popups ────────────────────────────────────────────────
+    function openTsunamiPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 ${_L("map.popup_title_tsunami", "Tsunami Alert")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NWS TWC")}</div></div><div class="popup-severity crit">${escapeHtml(p.severity || "Extreme")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_event", "Event")}</div><div class="popup-metric-value">${escapeHtml(p.event || "Tsunami Alert")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_onset", "Onset")}</div><div class="popup-metric-value">${escapeHtml(p.onset || "—")}</div></div></div><div class="popup-note">⚠ ${escapeHtml(p.instruction || (_t("map.popup_tsunami_evac") || "Follow official evacuation guidance immediately."))}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
+    }
+    function openAlertsPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const sevCls = p.severity === "CRITICAL" ? "crit" : p.severity === "WARNING" ? "warn" : "";
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}</div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
+    }
+    function openHurricanePopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌀 ${escapeHtml(p.name || "Tropical System")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NHC")}</div></div><div class="popup-severity normal">${escapeHtml(p.classification || "Storm")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_max_wind", "Max Wind")}</div><div class="popup-metric-value">${p.wind_mph != null ? p.wind_mph + " mph" : "—"}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_movement", "Movement")}</div><div class="popup-metric-value">${escapeHtml(p.movement || "—")}</div></div></div><div class="popup-note">${_L("map.popup_hurricane_note", "Monitor NHC for official track, cone, and watches/warnings.")}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
+    }
+    function openLandslidePopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⛰ ${_L("map.popup_title_landslide", "Landslide Context")}</div><div class="popup-coords">${escapeHtml(p.source_label || "Terrain Context")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Moderate")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone", "Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_drainage", "Drainage")}</div><div class="popup-metric-value">${escapeHtml(p.drainage || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_terrain", "Terrain")}</div><div class="popup-metric-value">${escapeHtml(p.terrain || "—")}</div></div></div><div class="popup-note">${p.heavy_rain_active ? (_t("map.popup_landslide_rain") || "⚠ Heavy rain active \u2014 elevated risk.") : (_t("map.popup_landslide_est") || "Estimated susceptibility. Not an official landslide forecast.")}</div></div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
+    }
+
+
     function updateUserMarker(coord) {
       if (!coord) return;
       if (userMarker) userMarker.remove();
@@ -6208,33 +6236,6 @@
       document.getElementById("fire-scope-opt-hawaii-mobile")?.addEventListener("click", () => { if (fireScope !== "hawaii") toggleFireScope(); });
       document.getElementById("fire-scope-opt-usa-desktop")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
       document.getElementById("fire-scope-opt-usa-mobile")?.addEventListener("click", () => { if (fireScope !== "usa") toggleFireScope(); });
-
-      // ── Popups ────────────────────────────────────────────────
-      function openTsunamiPopup(feature, lngLat) {
-        const p = feature.properties || {};
-        if (activePopup) activePopup.remove();
-        const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌊 ${_L("map.popup_title_tsunami", "Tsunami Alert")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NWS TWC")}</div></div><div class="popup-severity crit">${escapeHtml(p.severity || "Extreme")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_event", "Event")}</div><div class="popup-metric-value">${escapeHtml(p.event || "Tsunami Alert")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_onset", "Onset")}</div><div class="popup-metric-value">${escapeHtml(p.onset || "—")}</div></div></div><div class="popup-note">⚠ ${escapeHtml(p.instruction || (_t("map.popup_tsunami_evac") || "Follow official evacuation guidance immediately."))}</div></div>`;
-        activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
-      }
-      function openAlertsPopup(feature, lngLat) {
-        const p = feature.properties || {};
-        if (activePopup) activePopup.remove();
-        const sevCls = p.severity === "CRITICAL" ? "crit" : p.severity === "WARNING" ? "warn" : "";
-        const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}</div>`;
-        activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
-      }
-      function openHurricanePopup(feature, lngLat) {
-        const p = feature.properties || {};
-        if (activePopup) activePopup.remove();
-        const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌀 ${escapeHtml(p.name || "Tropical System")}</div><div class="popup-coords">${escapeHtml(p.source_label || "NHC")}</div></div><div class="popup-severity normal">${escapeHtml(p.classification || "Storm")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_max_wind", "Max Wind")}</div><div class="popup-metric-value">${p.wind_mph != null ? p.wind_mph + " mph" : "—"}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_movement", "Movement")}</div><div class="popup-metric-value">${escapeHtml(p.movement || "—")}</div></div></div><div class="popup-note">${_L("map.popup_hurricane_note", "Monitor NHC for official track, cone, and watches/warnings.")}</div></div>`;
-        activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
-      }
-      function openLandslidePopup(feature, lngLat) {
-        const p = feature.properties || {};
-        if (activePopup) activePopup.remove();
-        const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⛰ ${_L("map.popup_title_landslide", "Landslide Context")}</div><div class="popup-coords">${escapeHtml(p.source_label || "Terrain Context")}</div></div><div class="popup-severity normal">${escapeHtml(p.risk_index || "Moderate")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone", "Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_drainage", "Drainage")}</div><div class="popup-metric-value">${escapeHtml(p.drainage || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_terrain", "Terrain")}</div><div class="popup-metric-value">${escapeHtml(p.terrain || "—")}</div></div></div><div class="popup-note">${p.heavy_rain_active ? (_t("map.popup_landslide_rain") || "⚠ Heavy rain active \u2014 elevated risk.") : (_t("map.popup_landslide_est") || "Estimated susceptibility. Not an official landslide forecast.")}</div></div>`;
-        activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
-      }
 
       document.getElementById("wind-risk-card-desktop")?.addEventListener("click", () => openFloodModuleDetail("wind"));
       // tsunami / hurricane / landslide listeners → lazy-load section below
