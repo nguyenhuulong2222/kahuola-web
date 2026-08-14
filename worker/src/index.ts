@@ -4732,8 +4732,17 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
     return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
   } catch (e: unknown) {
+    // Upstream unreachable is NOT the same as a quiet Pacific. Reporting 'none'
+    // here meant an NHC outage during a hurricane warning read as reassuring
+    // calm — the same silent-failure family raw_count was added to prevent on
+    // the validation path. Fail closed and say so.
     return jsonResp(buildHazardEnvelope('hurricane', 'NHC', 'hawaii', [],
-      { status: 'none', count: 0, message: 'No active Pacific storms.' }, {}
+      {
+        status: 'unavailable',
+        count: 0,
+        raw_count: 0,
+        message: 'Pacific storm data is temporarily unavailable. Check the National Hurricane Center directly.',
+      }, {}
     ), 200, cors);
   }
 }
