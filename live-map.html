@@ -1027,6 +1027,18 @@
       border-left-color: var(--orange);
     }
 
+    /* P30: storm severity stripe. Colours deliberately match the alerts layer's
+       own sevColor ramp, so the card and the polygon on the map agree —
+       #b71c1c is what a Hurricane Warning paints, #ff6a00 a Tropical Storm
+       Watch. Same event, same colour, wherever the user looks. */
+    .tier-1.storm-warning[open] {
+      border-left-color: #b71c1c;
+    }
+
+    .tier-1.storm-watch[open] {
+      border-left-color: #ff6a00;
+    }
+
     .accordion-subline {
       color: var(--text-dim);
       font-size: 11px;
@@ -2885,7 +2897,12 @@
     // True only while a USER-initiated fire refresh is running. Background polls
     // must not paint the count as a spinner (D3).
     let fireUserRefreshInFlight = false;
+    const SUMMARY_ENDPOINT = "https://kahuola.org/api/hazards/summary";
     let alertsVisible = true;
+    // P30: /api/hazards/summary storm block. null means "not loaded, or the key
+    // is absent" — an older cached summary predating the storm field must leave
+    // the Active Hazards card behaving exactly as it did before (fail-closed).
+    let summaryStorm = null;
     let tsunamiVisible = true;
     let hurricaneVisible = true;
     let landslideVisible = true;
@@ -2987,11 +3004,18 @@
       const _lPerim = _t("map.prev_label_perimeters") || "Perimeters";
       const _lCtx = _t("map.prev_label_flood_ctx") || "Flood context";
 
-      // Tier 1: Active Hazards — use state, not badge text, for comparison
+      // P30: storm row from /api/hazards/summary. Returns null when there is
+      // nothing to say, so the existing chain falls through untouched.
+      const stormRow = stormTier1Row();
+
+      // Tier 1: Active Hazards — use state, not badge text, for comparison.
+      // Storm sits below flood per the Fire > Flood > Storm ordering, and below
+      // the existing tsunami/hurricane branches so nothing is demoted.
       const tier1Text = floodState === "detected" ? `${_lFlood}: ${floodBadge}` :
         (tsunamiState?.enabled && tsunamiState.features?.length > 0) ? `${_lTsunami}: ${tsunamiBadge}` :
           (hurricaneState?.enabled && hurricaneState.features?.length > 0) ? `${_lHurricane}: ${hurricaneBadge}` :
-            (_t("map.prev_no_hazards") || "No active primary hazards");
+            stormRow ? stormRow.text :
+              (_t("map.prev_no_hazards") || "No active primary hazards");
       setAccordionText("blueprint-preview-desktop", tier1Text);
       setAccordionText("blueprint-preview-mobile", tier1Text);
 
@@ -3017,9 +3041,48 @@
 
       // Tier 1 has-active: highlight border when any primary hazard is detected
       const hasActiveHazard = tier1Text !== "No active primary hazards";
+      const stormShown = !!stormRow && tier1Text === stormRow.text;
       document.querySelectorAll(".accordion-card.tier-1").forEach(el => {
         el.classList.toggle("has-active", hasActiveHazard);
+        el.classList.toggle("storm-warning", stormShown && stormRow.level === "warning");
+        el.classList.toggle("storm-watch", stormShown && stormRow.level === "watch");
       });
+    }
+
+    // P30: turn summary.storm into a card row, or null when there is nothing to
+    // report. Tropical-cyclone watches and warnings only — the Worker already
+    // filters generic wind/flood out, and this mirrors that restraint.
+    //
+    // 'unavailable' deliberately produces a row: an alerts feed we could not
+    // reach during a storm must never render as the same blank calm as a quiet
+    // sky. Silence is the one answer that would be dishonest here.
+    function stormTier1Row() {
+      const st = summaryStorm;
+      if (!st || typeof st !== "object") return null;   // absent key → pre-P30 behaviour
+      const status = String(st.status || "");
+      if (status === "unavailable") {
+        return {
+          level: "unavailable",
+          text: _t("map.storm_unavailable") || "Storm data temporarily unavailable — check NWS",
+        };
+      }
+      const warnings = Number(st.warning_count) || 0;
+      const watches = Number(st.watch_count) || 0;
+      if (status === "warning" && warnings > 0) {
+        return {
+          level: "warning",
+          text: (_tmpl("map.storm_warning_n", { n: warnings })
+            || `Tropical cyclone warning in effect · ${warnings} areas`) + " · NWS",
+        };
+      }
+      if (status === "watch" && watches > 0) {
+        return {
+          level: "watch",
+          text: (_tmpl("map.storm_watch_n", { n: watches })
+            || `Tropical cyclone watch in effect · ${watches} areas`) + " · NWS",
+        };
+      }
+      return null;
     }
 
     const activeSuffix = () => (window.innerWidth <= MOBILE_BREAKPOINT ? "mobile" : "desktop");
@@ -3889,6 +3952,20 @@
     function activeHazardKeys() {
       return Object.values(HAZARD_REGISTRY).filter((m) => m.enabled).map((m) => m.key);
     }
+    // P30: the Active Hazards card needs the storm aggregate. Kept deliberately
+    // quiet — any failure leaves summaryStorm null, which reproduces the card's
+    // pre-P30 behaviour rather than surfacing an error the user cannot act on.
+    async function refreshSummaryStorm() {
+      try {
+        const res = await fetch(SUMMARY_ENDPOINT, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP_" + res.status);
+        const json = await res.json();
+        summaryStorm = (json && typeof json.storm === "object" && json.storm) ? json.storm : null;
+      } catch (e) {
+        summaryStorm = null;
+      }
+    }
+
     async function refreshHazard(key, { silent = false } = {}) {
       const model = HAZARD_REGISTRY[key];
       const state = getState(key);
@@ -5904,7 +5981,15 @@
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
       const sevCls = p.severity === "CRITICAL" ? "crit" : p.severity === "WARNING" ? "warn" : "";
-      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}</div>`;
+      // P30: official sources. Two standing links only. The per-alert NWS
+      // identifier survives the Worker envelope as a machine URL, but it serves
+      // raw JSON rather than a page a person can read — offering it would put a
+      // wall of markup in front of someone checking a hurricane warning. These
+      // two are the human path, and they are the same two every time.
+      const linkRow = `<div class="popup-note"><strong>${_L("map.popup_official_sources", "Official sources")}</strong><br />`
+        + `<a href="https://www.weather.gov/hfo/" target="_blank" rel="noopener">${_L("map.popup_nws_honolulu", "National Weather Service Honolulu")}</a><br />`
+        + `<a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener">${_L("map.popup_hiema", "Hawai\u02bbi Emergency Management Agency")}</a></div>`;
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}${linkRow}</div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
     }
     function openHurricanePopup(feature, lngLat) {
@@ -6498,12 +6583,16 @@
       fitHawaii(false);
       if (window.innerWidth <= MOBILE_BREAKPOINT) setSheetOpen(false);
       await refreshEnabledHazards({ silent: false });
+      // P30: first storm read at boot, so the Active Hazards card is correct on
+      // the very first paint rather than only after the first poll interval.
+      await refreshSummaryStorm();
+      renderUnifiedPanels();
       raiseFireLayersAboveOverlays();
       safeMapResize();
       setTimeout(safeMapResize, 150);
       setTimeout(safeMapResize, 500);
       if (pollHandle) clearInterval(pollHandle);
-      pollHandle = setInterval(async () => { await refreshEnabledHazards({ silent: true }); raiseFireLayersAboveOverlays(); }, POLL_MS);
+      pollHandle = setInterval(async () => { await refreshEnabledHazards({ silent: true }); await refreshSummaryStorm(); renderUnifiedPanels(); raiseFireLayersAboveOverlays(); }, POLL_MS);
     });
 
     // On language change: re-apply static i18n labels, re-apply scope-driven text, re-sync button labels
