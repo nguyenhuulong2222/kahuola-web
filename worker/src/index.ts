@@ -4654,30 +4654,81 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       return basin.includes('CP') || basin.includes('EP') || basin.includes('CENTRAL') || basin.includes('EAST');
     });
 
+    // NHC CurrentStorms.json has NO `center` object — the previous filter read
+    // s.center.lat/.lon, which is undefined for every storm, so EVERY Pacific
+    // storm was dropped and the endpoint reported "No active Pacific storms"
+    // permanently. Position lives in latitudeNumeric / longitudeNumeric.
+    //
+    // The "16.2N" / "147.9W" strings are display text and are deliberately NOT
+    // parsed as a fallback: deriving a hemisphere from a trailing letter is the
+    // kind of inference Invariant III forbids. Numeric fields are authoritative;
+    // anything else is dropped.
+    //
+    // `intensity` is in KNOTS (NHC advisory convention, confirmed by internal
+    // consistency — a storm classified TS at intensity 35 must be 35 kt, since
+    // 35 mph would sit below the 34 kt / 39 mph tropical-storm threshold). The
+    // client renders wind_mph with a literal " mph" suffix, so it is converted
+    // here rather than shipped under a mislabelled unit.
+    const KT_TO_MPH = 1.15078;
+
     const signals: Feature[] = pacificStorms
-      .filter((s: any) => s?.center?.lat && s?.center?.lon)
-      .map((s: any, idx: number) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [parseFloat(s.center.lon), parseFloat(s.center.lat)] },
-        properties: {
-          id: s?.id || `hurricane-${idx}`,
-          source: 'National Hurricane Center',
-          source_label: 'NHC',
-          name: s?.name || 'Unnamed Storm',
-          classification: s?.classification || s?.type || 'Tropical System',
-          wind_mph: s?.wind || null,
-          movement: s?.movement || '',
-          risk_index: 'HIGH',
-          severity: 'HIGH',
-          event_time: now,
-          note: 'Active Pacific storm. Monitor NHC for official track and cone.',
-        },
-      }));
+      .map((s: any, idx: number): Feature | null => {
+        const lat = s?.latitudeNumeric;
+        const lon = s?.longitudeNumeric;
+        // Drop, never infer. A storm we cannot place is not a storm we can draw.
+        if (typeof lat !== 'number' || !isFinite(lat) || lat < -90 || lat > 90) return null;
+        if (typeof lon !== 'number' || !isFinite(lon) || lon < -180 || lon > 180) return null;
+
+        const kt = Number(s?.intensity);
+        const windMph = isFinite(kt) && kt > 0 ? Math.round(kt * KT_TO_MPH) : null;
+
+        // movementDir is degrees true, movementSpeed is knots. Both must be
+        // present or the string stays empty — a half-known heading is worse
+        // than none. Units are written out so the value cannot be misread.
+        const dir = Number(s?.movementDir);
+        const spd = Number(s?.movementSpeed);
+        const movement = isFinite(dir) && isFinite(spd)
+          ? `${Math.round(dir)}° at ${Math.round(spd * KT_TO_MPH)} mph`
+          : '';
+
+        return {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [lon, lat] },
+          properties: {
+            id: s?.id || `hurricane-${idx}`,
+            source: 'National Hurricane Center',
+            source_label: 'NHC',
+            name: s?.name || 'Unnamed Storm',
+            classification: s?.classification || s?.type || 'Tropical System',
+            wind_mph: windMph,
+            movement,
+            risk_index: 'HIGH',
+            severity: 'HIGH',
+            event_time: now,
+            note: 'Active Pacific storm. Monitor NHC for official track and cone.',
+          },
+        };
+      })
+      .filter((f: Feature | null): f is Feature => f !== null);
+
+    // Silent-failure guard, same family as the Number(null)===0 trap: "upstream
+    // had no storms" and "upstream had storms we could not validate" must never
+    // render as the same reassuring sentence. raw_count is the PACIFIC candidate
+    // count, not every storm NHC lists — using the unfiltered total would make a
+    // quiet Pacific read as "unavailable" whenever an Atlantic storm was active.
+    const rawCount = pacificStorms.length;
+    const allDropped = rawCount > 0 && signals.length === 0;
 
     const envelope = buildHazardEnvelope('hurricane', 'NHC', 'hawaii', signals,
       {
-        status: signals.length > 0 ? 'active' : 'none', count: signals.length,
-        message: signals.length > 0 ? `${signals.length} active Pacific storm(s) near Hawaiʻi.` : 'No active Pacific storms.',
+        status: signals.length > 0 ? 'active' : (allDropped ? 'unavailable' : 'none'),
+        count: signals.length,
+        raw_count: rawCount,
+        message: signals.length > 0
+          ? `${signals.length} active Pacific storm(s) near Hawaiʻi.`
+          : allDropped
+            ? 'Pacific storm data was received but could not be validated. Check the National Hurricane Center directly.'
+            : 'No active Pacific storms.',
       }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
     return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
   } catch (e: unknown) {
