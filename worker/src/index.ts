@@ -1648,24 +1648,34 @@ async function mapWithConcurrency<T, R>(
   return out;
 }
 
-// ── PRIMARY FIRMS DATASET — ONE SOURCE OF TRUTH ────────────────────────────
+// ── PRIMARY FIRMS DATASETS — ONE SOURCE OF TRUTH ───────────────────────────
 // The cache WRITER default (handleFirmsHotspots), the summary READER key
-// (SUMMARY_FIRMS_KEY) and the MODIS cross-reference gate all read this. They
-// MUST agree: writer and reader build the same cache key via firmsCacheKey(), so
-// if they ever drifted the summary would read a key nobody writes — a permanent
-// cache miss reporting count 0 forever. Keeping one literal makes that
-// impossible, and makes the next migration (NOAA-20 -> NOAA-21) a one-line
-// change that cannot re-orphan the xref gate.
+// (SUMMARY_FIRMS_KEY), the MODIS cross-reference gate and the fire-danger
+// sensor list all read this. They MUST agree: writer and reader build the same
+// cache key via firmsCacheKey(), so if they ever drifted the summary would read
+// a key nobody writes — a permanent cache miss reporting count 0 forever.
 //
-// SNPP RETIRED HERE 2026-08-04. Suomi NPP's end of life was anticipated on or
-// before Oct 2026 and it has arrived: measured the same day, VIIRS_SNPP_NRT
-// returned 2 detections across the ENTIRE continental US and 0 over Hawaiʻi,
-// while NOAA-20 saw 18 and NOAA-21 saw 25 over Hawaiʻi in the same window.
-// Because summary.fire was pinned to SNPP it reported count 0 / status "none"
-// with Kīlauea plainly visible to the other two satellites — silently disarming
-// the standing deploy abort trigger. SNPP remains in FIRE_DANGER_SENSORS as the
-// demoted last-resort fallback; it is only removed from PRIMARY duty here.
-const FIRMS_PRIMARY_DATASET = 'VIIRS_NOAA20_NRT';
+// TWO SATELLITES, NOT ONE. NOAA/NESDIS ends Suomi NPP delivery 2026-11-01
+// 13:00 UTC. A retired FIRMS dataset does not error: it answers HTTP 200 with a
+// header-only CSV, so a layer pinned to it goes quietly blank and reads as "no
+// fires". This file has already survived that once — pinned to SNPP,
+// summary.fire reported count 0 / status "none" with Kīlauea plainly visible to
+// the other satellites, silently disarming the standing deploy abort trigger.
+// The fix is not a better single satellite; it is more than one.
+//
+// Both are fetched on every miss and merged (Promise.allSettled). One dataset
+// dying costs coverage, never the layer. Order is fixed — it is part of the
+// cache key and decides the survivor when a duplicate row is collapsed.
+const FIRMS_PRIMARY_DATASETS = ['VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'] as const;
+
+// Cache-key token for the merged default set. Derived ONCE from the array above
+// so reader and writer cannot land on different keys, and so adding a third
+// satellite stays a one-line change that cannot re-orphan the xref gate.
+const FIRMS_PRIMARY_TOKEN = FIRMS_PRIMARY_DATASETS.join('+');
+
+// A dataset id is interpolated into the upstream URL as a path segment. Anything
+// outside this shape is rejected rather than forwarded.
+const FIRMS_DATASET_RE = /^[A-Za-z0-9_]{1,64}$/;
 
 // Canonical FIRMS cache-key builder. The reader (SUMMARY_FIRMS_KEY) and the
 // writer (handleFirmsHotspots) both build the key HERE so they cannot drift.
@@ -1692,7 +1702,17 @@ function firmsCacheKey(
 async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
   if (!env.NASA_FIRMS_MAP_KEY) return err(503, 'NASA_FIRMS_MAP_KEY not configured', cors);
 
-  const dataset = url.searchParams.get('dataset') || FIRMS_PRIMARY_DATASET;
+  // No ?dataset= → the merged NOAA-20 + NOAA-21 default that every caller in
+  // the product actually uses. An explicit ?dataset= still addresses exactly ONE
+  // dataset for diagnostics/comparison and keys its own cache entry, so a probe
+  // can never overwrite the merged snapshot /api/hazards/summary reads back.
+  const datasetParam = (url.searchParams.get('dataset') || '').trim();
+  if (datasetParam && !FIRMS_DATASET_RE.test(datasetParam)) {
+    return err(400, 'dataset must be a FIRMS dataset id', cors);
+  }
+  const datasets: readonly string[] = datasetParam ? [datasetParam] : FIRMS_PRIMARY_DATASETS;
+  const keyToken = datasetParam || FIRMS_PRIMARY_TOKEN;
+
   const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '1', 10)));
   const limit = Math.min(5000, Math.max(1, parseInt(url.searchParams.get('limit') || String(FIRMS_DEFAULT_LIMIT), 10)));
 
@@ -1703,8 +1723,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
 
   const [west, south, east, north] = bbox;
 
-  const firmsUrl = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/${dataset}/${west},${south},${east},${north}/${days}`;
-  const cacheUrl = firmsCacheKey(dataset, bbox, days, limit);   // shared builder, limit included (no drift)
+  const cacheUrl = firmsCacheKey(keyToken, bbox, days, limit);   // shared builder, limit included (no drift)
   const cache = caches.default;
   const cacheReq = new Request(cacheUrl);
   const cached = await cache.match(cacheReq);
@@ -1712,42 +1731,73 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   if (cachedJson) return cachedJson;
 
   const t0 = Date.now();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
-  // MODIS cross-reference for multi-satellite confirmation (VIIRS primary only).
-  // Gated on the CONSTANT, never a literal: when the primary moved off SNPP a
-  // hardcoded check would have silently stopped firing and detection_confidence
-  // would never be set to 'high' again — with no error anywhere.
-  const modisXrefUrl = dataset === FIRMS_PRIMARY_DATASET
-    ? `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/MODIS_NRT/${west},${south},${east},${north}/${days}`
-    : null;
+  // MODIS cross-reference for multi-satellite confirmation. Gated on "this is
+  // the DEFAULT merged request", never on a dataset literal: a hardcoded check
+  // stops firing the moment the primary set changes and detection_confidence
+  // would never read 'high' again — with no error anywhere.
+  const modisXrefUrl = datasetParam
+    ? null
+    : `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/MODIS_NRT/${west},${south},${east},${north}/${days}`;
 
-  let csvText = '';
-  let modisCsv = '';
-  try {
-    const [primaryRes, modisText] = await Promise.all([
-      fetch(firmsUrl, { signal: controller.signal }),
-      modisXrefUrl
-        ? fetch(modisXrefUrl, { signal: controller.signal }).then(r => r.ok ? r.text() : '').catch(() => '')
-        : Promise.resolve(''),
-    ]);
-    clearTimeout(timer);
-    if (!primaryRes.ok) return err(502, `FIRMS upstream error: ${primaryRes.status}`, cors);
-    csvText = await primaryRes.text();
-    modisCsv = modisText;
-  } catch (e: unknown) {
-    clearTimeout(timer);
-    const msg = e instanceof Error ? e.message : 'unknown';
-    return err(504, `FIRMS fetch failed: ${msg}`, cors);
-  }
+  // One AbortSignal.timeout PER fetch, not one shared AbortController. A shared
+  // controller lets the first dataset to time out abort its healthy sibling —
+  // precisely the single-point-of-failure this change exists to remove.
+  // 3 outbound connections, far under OUTBOUND_CONCURRENCY_LIMIT.
+  const [settled, modisCsv] = await Promise.all([
+    Promise.allSettled(
+      datasets.map(async (ds) => {
+        // MAP_KEY appears ONLY in this upstream URL — never in a cache key,
+        // never in a log line, never in the response envelope.
+        const upstream =
+          `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}` +
+          `/${ds}/${west},${south},${east},${north}/${days}`;
+        const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
+        if (!res.ok) throw new Error(`upstream ${res.status}`);
+        return res.text();
+      }),
+    ),
+    modisXrefUrl
+      ? fetch(modisXrefUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT) })
+          .then((r) => (r.ok ? r.text() : ''))
+          .catch(() => '')
+      : Promise.resolve(''),
+  ]);
 
-  const geojson = firmsCsvToGeojson(csvText, limit, modisCsv);
+  const merged: unknown[] = [];
+  const datasetsUsed: string[] = [];
+  settled.forEach((r, i) => {
+    const ds = datasets[i];
+    if (r.status !== 'fulfilled') {
+      // Structured, key-free drop log. One source failing is NOT the layer
+      // failing, so it is warn + carry on — but it is never silent.
+      console.warn(JSON.stringify({ layer: 'firms', stage: 'hotspots', dataset: ds, dropped: true }));
+      return;
+    }
+    datasetsUsed.push(ds);
+    // Each source is capped at `limit` before merging, so one pathological CSV
+    // cannot crowd out the other; the merged set is capped again below.
+    merged.push(...firmsCsvToGeojson(r.value, limit, modisCsv, ds).features);
+  });
+
+  const features = dedupeFirmsFeatures(merged).slice(0, limit);
+
   const body = {
-    ...geojson,
+    type: 'FeatureCollection',
+    features,
     properties: {
-      returnedRecords: geojson.features.length,
-      dataset,
+      returnedRecords: features.length,
+      // Unchanged shape (a string) for existing consumers; it is now the merged
+      // token rather than a single dataset id.
+      dataset: keyToken,
+      datasets_requested: [...datasets],
+      // What actually answered. A shrinking datasets_used is the ONLY way a
+      // reader can tell a real quiet day from a half-dead upstream.
+      datasets_used: datasetsUsed,
+      health:
+        datasetsUsed.length === datasets.length ? 'ok'
+        : datasetsUsed.length > 0 ? 'partial'
+        : 'degraded',
       days,
       bbox: { west, south, east, north },
       upstreamLatencyMs: Date.now() - t0,
@@ -1763,8 +1813,56 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
       ...cors,
     },
   });
+
+  // EVERY dataset failed. Still HTTP 200 with a valid, empty FeatureCollection so
+  // the map renders its normal empty state instead of a broken layer
+  // (Invariant II) — but this snapshot is deliberately NOT cached.
+  //
+  // That omission is load-bearing. /api/hazards/summary reads this exact key and
+  // turns a cached zero into fire.status "none". Leaving the key unwritten keeps
+  // the summary on 'miss' → degraded, so two dead upstreams can never be
+  // reported as "no fires in Hawaiʻi" (Invariant III). The next request
+  // retries upstream rather than serving the hole for 5 minutes.
+  if (datasetsUsed.length === 0) return response;
+
   await cache.put(cacheReq, response.clone());
   return response;
+}
+
+// Collapse rows that two datasets report identically. Key = latitude + longitude
+// at 4 dp (~11 m) + acq_date + acq_time, all four exact.
+//
+// Deliberately STRICT. NOAA-20 and NOAA-21 fly ~50 minutes apart, so the same
+// physical fire seen by both is normally two different overpasses carrying two
+// different acq_times — two real observations, and the newest of them is what
+// the map's freshness caption is computed from. A looser spatial key would erase
+// that timeline. This removes only a genuine duplicate row, never a distinct
+// detection. First occurrence wins, so FIRMS_PRIMARY_DATASETS order decides the
+// survivor.
+//
+// A feature missing coordinates or timestamps is PASSED THROUGH undeduped rather
+// than given a guessed key — Invariant III: drop or keep, never infer.
+function dedupeFirmsFeatures(features: readonly unknown[]): unknown[] {
+  const seen = new Set<string>();
+  const out: unknown[] = [];
+  for (const f of features) {
+    const props = (f as { properties?: Record<string, unknown> } | null)?.properties;
+    const coords = (f as { geometry?: { coordinates?: unknown } } | null)?.geometry?.coordinates;
+    const pair = Array.isArray(coords) ? coords : null;
+    const lng = pair ? Number(pair[0]) : NaN;
+    const lat = pair ? Number(pair[1]) : NaN;
+    const acqDate = typeof props?.acq_date === 'string' ? props.acq_date : '';
+    const acqTime = typeof props?.acq_time === 'string' ? props.acq_time : '';
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !acqDate || !acqTime) {
+      out.push(f);
+      continue;
+    }
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)},${acqDate},${acqTime}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(f);
+  }
+  return out;
 }
 
 
@@ -1812,7 +1910,7 @@ function inVolcanicZone(lng: number, lat: number): boolean {
   return false;
 }
 
-function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: string; features: unknown[] } {
+function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = ''): { type: string; features: unknown[] } {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return { type: 'FeatureCollection', features: [] };
 
@@ -1858,6 +1956,10 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: s
         daynight: row.daynight || '',
         track: row.track || '',
         scan: row.scan || '',
+        // Which FIRMS dataset served this row. Additive. The merged endpoint
+        // returns rows from more than one satellite, so a detection that cannot
+        // say where it came from is not auditable.
+        dataset,
         // Additive geometry tag — never removes/changes existing fields.
         // true => detection falls inside a USGS HVO active volcanic bbox.
         volcanic_zone: inVolcanicZone(lng, lat),
@@ -1880,18 +1982,21 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = ''): { type: s
 // Scope notes, so future edits do not silently break neighbours:
 //   · No MODIS on this path (VIIRS 375 m only). The MODIS cross-reference in
 //     handleFirmsHotspots is a DIFFERENT contract and is left untouched.
-//   · Nothing here mutates handleFirmsHotspots, its default dataset, or
+//   · Nothing here mutates handleFirmsHotspots, its default datasets, or
 //     SUMMARY_FIRMS_KEY. Cache keys are separately namespaced (see below).
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Sensor priority is load-bearing. Suomi NPP end-of-life is anticipated on or
-// before Oct 2026 — it may be dark during the Nov 2026 competition window — so
-// it is a FALLBACK, never a primary. NOAA-20 and NOAA-21 carry this layer.
-const FIRE_DANGER_SENSORS = [
-  'VIIRS_NOAA20_NRT',
-  'VIIRS_NOAA21_NRT',
-  'VIIRS_SNPP_NRT',
-] as const;
+// Suomi NPP removed 2026-08-28. NOAA/NESDIS ends S-NPP delivery 2026-11-01
+// 13:00 UTC, after which the dataset answers HTTP 200 with a header-only CSV —
+// so it would sit in sensors_used forever, reported as a live contributing
+// sensor, while contributing nothing. A source that is healthy in the envelope
+// and dark in reality is worse than an absent one.
+//
+// Aliased to the hotspots primaries on purpose: both paths mean "the VIIRS
+// 375 m datasets we trust", and one literal is what stops them drifting apart.
+// Per-sensor cache keys are unchanged for NOAA-20/21; the SNPP key is simply
+// never written or read again.
+const FIRE_DANGER_SENSORS = FIRMS_PRIMARY_DATASETS;
 
 // FIRMS direct-broadcast cadence for Hawaiʻi is ~20-30 min, so a 10 min TTL
 // never serves meaningfully stale data and keeps us far under the 5000-per-
@@ -2043,9 +2148,9 @@ async function fetchFirmsMultiSensor(
   const [west, south, east, north] = bbox;
   const cache = caches.default;
 
-  // One request per sensor, in parallel. 3 requests is trivial against the
-  // 5000/10-min budget, and allSettled means a dead sensor never blocks a live
-  // one — the whole point of demoting SNPP to fallback.
+  // One request per sensor, in parallel. Trivial against the 5000/10-min
+  // budget, and allSettled means a dead sensor never blocks a live one — the
+  // whole point of running more than one satellite.
   const settled = await Promise.allSettled(
     FIRE_DANGER_SENSORS.map(async (sensor) => {
       const cacheReq = new Request(fireDangerFirmsCacheKey(sensor, bbox, days));
@@ -3914,7 +4019,7 @@ const SUMMARY_SMOKE_STATUS_KEY = 'https://kahuola.org/cache/smoke-hawaii-status-
 const SUMMARY_PERIM_STATUS_KEY = 'https://kahuola.org/cache/perimeters-hawaii-status-v1';
 // Default hawaii FIRMS cache key — built by the SAME helper the writer
 // (handleFirmsHotspots) uses, so the read key and the written key cannot drift.
-const SUMMARY_FIRMS_KEY = firmsCacheKey(FIRMS_PRIMARY_DATASET, REGION_BBOXES.hawaii, 1);
+const SUMMARY_FIRMS_KEY = firmsCacheKey(FIRMS_PRIMARY_TOKEN, REGION_BBOXES.hawaii, 1);
 
 // ── NOAA HMS smoke — KML upstream (GeoJSON dir retired ~2026-01) ─────────────
 // New layout: .../Smoke_Polygons/KML/{YYYY}/{MM}/hms_smoke{YYYYMMDD}.kml (UTC).

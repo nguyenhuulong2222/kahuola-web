@@ -20,22 +20,47 @@ ok('REGION_BBOXES.hawaii has 4 numbers', bbox.length === 4);
 
 const tmpl = rx(/function firmsCacheKey\([^)]*\):\s*string\s*\{\s*return `([^`]+)`/);
 ok('firmsCacheKey builder exists', !!tmpl);
-// Rebuild the key the SAME way firmsCacheKey does, for the hawaii/VIIRS/1 defaults.
+// The dataset token is DERIVED from source, never restated here. Restating it
+// is what killed this file once already: the SNPP->NOAA-20 migration left three
+// assertions pinned to a literal nobody used, so the key-drift guard sat red and
+// unread for weeks. Read the primaries, join them the way the Worker joins them.
+const primariesRaw = rx(/const FIRMS_PRIMARY_DATASETS\s*=\s*\[([^\]]+)\]/);
+const primaries = primariesRaw
+  ? primariesRaw.split(',').map(v => v.trim().replace(/^'|'$/g, '')).filter(Boolean)
+  : [];
+ok('FIRMS_PRIMARY_DATASETS has >= 2 datasets (no single point of failure)', primaries.length >= 2);
+ok('FIRMS_PRIMARY_DATASETS contains no retired SNPP dataset',
+   primaries.length > 0 && !primaries.some(d => d.includes('SNPP')));
+ok('FIRMS_PRIMARY_TOKEN joins the primaries with "+"',
+   /const FIRMS_PRIMARY_TOKEN\s*=\s*FIRMS_PRIMARY_DATASETS\.join\('\+'\)/.test(src));
+const token = primaries.join('+');
+
+// Rebuild the key the SAME way firmsCacheKey does, for the hawaii/1-day defaults.
 const builtKey = tmpl
-  ? tmpl.replace('${dataset}', 'VIIRS_SNPP_NRT')
+  ? tmpl.replace('${dataset}', token)
         .replace('${bbox[0]}', bbox[0]).replace('${bbox[1]}', bbox[1])
         .replace('${bbox[2]}', bbox[2]).replace('${bbox[3]}', bbox[3])
         .replace('${days}', '1')
+        .replace('${limit}', '1000')
   : '';
-// The canonical key value every consumer/upstream cache already uses.
-const CANON = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/VIIRS_SNPP_NRT/-161.2,18.5,-154.5,22.5/1';
-ok('firmsCacheKey(hawaii,VIIRS,1) === canonical key value', builtKey === CANON);
+const CANON = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/_/${token}/-161.2,18.5,-154.5,22.5/1?limit=1000`;
+ok('firmsCacheKey(hawaii, primaries, 1) === canonical key value', builtKey === CANON);
 
 // --- 2. Reader + writer both build the FIRMS key via the shared helper ---
-ok('SUMMARY_FIRMS_KEY built via firmsCacheKey(hawaii defaults)',
-   /const SUMMARY_FIRMS_KEY\s*=\s*firmsCacheKey\('VIIRS_SNPP_NRT',\s*REGION_BBOXES\.hawaii,\s*1\)/.test(src));
-ok('handleFirmsHotspots cache key built via firmsCacheKey(dataset, bbox, days)',
-   /const cacheUrl\s*=\s*firmsCacheKey\(dataset,\s*bbox,\s*days\)/.test(src));
+ok('SUMMARY_FIRMS_KEY built via firmsCacheKey(FIRMS_PRIMARY_TOKEN, hawaii defaults)',
+   /const SUMMARY_FIRMS_KEY\s*=\s*firmsCacheKey\(FIRMS_PRIMARY_TOKEN,\s*REGION_BBOXES\.hawaii,\s*1\)/.test(src));
+ok('handleFirmsHotspots cache key built via firmsCacheKey(keyToken, bbox, days, limit)',
+   /const cacheUrl\s*=\s*firmsCacheKey\(keyToken,\s*bbox,\s*days,\s*limit\)/.test(src));
+// An explicit ?dataset= probe must key SEPARATELY or it overwrites the merged
+// snapshot the summary reads back.
+ok('explicit ?dataset= keys separately from the merged default',
+   /const keyToken\s*=\s*datasetParam\s*\|\|\s*FIRMS_PRIMARY_TOKEN/.test(src));
+// Total upstream failure must NOT be cached — a cached zero becomes fire.status
+// "none" in the summary, i.e. "no fires" on the strength of two dead upstreams.
+ok('total FIRMS failure returns uncached (summary stays on miss)',
+   /if \(datasetsUsed\.length === 0\) return response;\s*\n\s*await cache\.put\(cacheReq/.test(src));
+ok('fire-danger sensors reuse FIRMS_PRIMARY_DATASETS (cannot drift)',
+   /const FIRE_DANGER_SENSORS\s*=\s*FIRMS_PRIMARY_DATASETS;/.test(src));
 ok('summary reads SUMMARY_FIRMS_KEY', /readSummaryFirms\(SUMMARY_FIRMS_KEY,/.test(src));
 
 // --- 3. Warm FIRMS call uses scope=hawaii with NO dataset/days override -----

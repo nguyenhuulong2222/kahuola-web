@@ -70,5 +70,9 @@ The existing `kahuola_n8n_workflow.json` already has Facebook and Telegram post 
   `kahuola.org/api/firms/hotspots` Worker poll (which refreshes every 5 minutes).
 - This alert path is for notification only — the Worker API is the authoritative
   source for the live-map display.
-- FIRMS AOI alerts use the VIIRS 375 m product. The Worker API uses `VIIRS_SNPP_NRT`
-  by default, which is the same dataset.
+- FIRMS AOI alerts use the VIIRS 375 m product. The Worker API merges
+  `VIIRS_NOAA20_NRT` + `VIIRS_NOAA21_NRT` by default — the same 375 m product,
+  read from two satellites instead of one. Suomi NPP (`VIIRS_SNPP_NRT`) was
+  removed from every runtime path ahead of the 2026-11-01 13:00 UTC end of
+  NOAA/NESDIS S-NPP delivery. If your AOI subscription is still pinned to S-NPP,
+  re-point it: after that date it stops producing detections without erroring.

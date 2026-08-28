@@ -17,8 +17,10 @@ ENVIRONMENT = "production"
 REGION = "hawaii"
 
 # Documentation only — no code reads this var; src/index.ts owns the real value
-# in FIRMS_PRIMARY_DATASET. Kept in sync so it stops misreporting the primary.
-NASA_FIRMS_DATASET = "VIIRS_NOAA20_NRT"
+# in FIRMS_PRIMARY_DATASETS. Kept in sync so it stops misreporting the primary.
+# The hotspots endpoint fetches BOTH and merges them; Suomi NPP is retired
+# (NOAA/NESDIS ends S-NPP delivery 2026-11-01 13:00 UTC).
+NASA_FIRMS_DATASETS = "VIIRS_NOAA20_NRT,VIIRS_NOAA21_NRT"
 NASA_FIRMS_BBOX = "-161,18,-154,23"
 NASA_FIRMS_DAY_RANGE = "1"
 
