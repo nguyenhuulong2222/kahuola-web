@@ -2047,6 +2047,86 @@
       line-height: 1.45;
     }
 
+    /* ── P29b · hurricane card detail ─────────────────────────────────── */
+    .hur-chip {
+      display: block;
+      width: 100%;
+      margin: 6px 0 2px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 140, 66, 0.42);
+      border-radius: 12px;
+      background: rgba(255, 106, 0, 0.10);
+      color: #ffd5b5;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .hur-chip:hover { border-color: rgba(255, 140, 66, 0.7); }
+
+    .hur-detail { margin-top: 6px; }
+
+    .hur-storm {
+      padding: 8px 0 6px;
+      border-top: 1px solid rgba(134, 188, 255, 0.10);
+    }
+
+    .hur-storm:first-child { border-top: 0; }
+
+    .hur-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(241, 246, 255, 0.98);
+    }
+
+    .hur-line {
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(194, 206, 228, 0.86);
+    }
+
+    .hur-warn { color: #ffd5b5; }
+
+    /* AC-1. The centre-line disclaimer. Never conditional on layout — it is
+       rendered wherever a track can be seen, and its text comes from the
+       payload's uncertainty_available flag, never from a hardcoded assumption. */
+    .hur-disclaimer {
+      margin: 6px 0 2px;
+      padding: 6px 8px;
+      border-left: 3px solid rgba(255, 140, 66, 0.55);
+      border-radius: 0 8px 8px 0;
+      background: rgba(255, 106, 0, 0.07);
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: rgba(255, 213, 181, 0.95);
+    }
+
+    .hur-sub {
+      margin-top: 5px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: rgba(194, 206, 228, 0.70);
+      text-transform: uppercase;
+    }
+
+    .hur-wp {
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(241, 246, 255, 0.92);
+    }
+
+    .hur-wp-loc { font-weight: 600; }
+
+    .hur-note {
+      margin-top: 5px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: rgba(194, 206, 228, 0.72);
+    }
+
     /* Context mini-module variant — lower contrast, softer than evidence modules */
     .mini-module--context {
       border-color: rgba(134, 188, 255, 0.07);
@@ -2602,8 +2682,13 @@
             </div>
             <div class="status-badge status-none" id="hurricane-badge">·</div>
           </div>
-          <div class="priority-note" id="hurricane-note" data-i18n="map.hurricane_tap_note">NHC Pacific basin — tap to
-            load live status.</div>
+          <!-- No data-i18n: this note is written by updateHurricaneStatusUI on
+               every refresh, and applyAll() would reset it to the placeholder on
+               each language change. Re-translation happens via the language
+               listener in bindButtons(), which re-runs the status render. -->
+          <div class="priority-note" id="hurricane-note">NHC Pacific basin</div>
+          <button class="hur-chip" id="hurricane-offscreen" type="button" hidden></button>
+          <div class="hur-detail" id="hurricane-detail"></div>
         </div>
 
         <!-- Coastal & Surf — High Surf, Coastal Flood, Beach Hazards (NWS), lazy -->
@@ -3039,8 +3124,13 @@
       setAccordionText("secondary-preview-desktop", `${_lSmoke}: ${smokeBadge} \xb7 ${_lPerim}: ${perimBadge}`);
       setAccordionText("secondary-preview-mobile", `${_lSmoke}: ${smokeBadge} \xb7 ${_lPerim}: ${perimBadge}`);
 
-      // Tier 1 has-active: highlight border when any primary hazard is detected
-      const hasActiveHazard = tier1Text !== "No active primary hazards";
+      // Tier 1 has-active: highlight border when any primary hazard is detected.
+      // FIX 8(b): this compared tier1Text against a hardcoded ENGLISH literal
+      // while the fallback below it is translated, so in every non-EN locale the
+      // two could never match and the card was permanently flagged active.
+      // Compare against the same value the fallback actually produced.
+      const noHazardText = _t("map.prev_no_hazards") || "No active primary hazards";
+      const hasActiveHazard = tier1Text !== noHazardText;
       const stormShown = !!stormRow && tier1Text === stormRow.text;
       document.querySelectorAll(".accordion-card.tier-1").forEach(el => {
         el.classList.toggle("has-active", hasActiveHazard);
@@ -3759,10 +3849,25 @@
         visible() { return tsunamiVisible; }
       },
       hurricane: {
-        key: "hurricane", enabled: false, affectsGlobalHealth: false, // lazy — enabled on user request
+        // P29b: eager. At the default Hawaiʻi view a resident saw a grey dot
+        // while the API reported a major hurricane whose forecast centre passes
+        // 184 mi from Niʻihau. Storm data must not wait for a tap.
+        key: "hurricane", enabled: true, affectsGlobalHealth: false,
         endpoint: IS_LOCAL ? "./hurricane-test.json" : "https://kahuola.org/api/hazards/hurricane",
-        parsePayload(json) { const raw = parseCanonicalSignals(json, "hurricane"); return { features: normalizeHurricaneFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "NHC" }; },
-        ensureLayers, applyData(features) { updateHurricaneSource(features); },
+        parsePayload(json) {
+          const raw = parseCanonicalSignals(json, "hurricane");
+          return {
+            features: normalizeHurricaneFeatures(raw),
+            sourceTime: parseDateMaybe(json.generated_at) || new Date(),
+            sourceLabel: "NHC",
+            // The envelope's OWN status. state.sourceStatus is derived from
+            // features.length, so a Worker reporting an NHC outage with zero
+            // signals would otherwise read here as "Clear" — the reassuring
+            // answer at the worst moment.
+            meta: { summaryStatus: json?.summary?.status || null, summaryMessage: json?.summary?.message || null },
+          };
+        },
+        ensureLayers, applyData(features) { updateHurricaneSource(features); updateHurricaneForecastSource(features); },
         onFetchComplete() { updateHurricaneStatusUI(getState("hurricane")); renderUnifiedPanels(); },
         visible() { return hurricaneVisible; }
       },
@@ -3846,6 +3951,22 @@
             source_label: "National Hurricane Center",
             event_time: s.event_time || props.event_time || null,
             note: props.note || "Monitor NHC for official track.",
+            // ── P29b · carried through, previously discarded ──────────────
+            // This normaliser allow-lists fields, so anything not named here is
+            // dropped on the floor. Every field below already existed in the
+            // payload and was being thrown away before it could be rendered.
+            storm_id: props.storm_id ?? null,
+            bin_number: props.bin_number ?? null,
+            advisory_number: props.advisory_number ?? null,
+            advisory_issued_at: props.advisory_issued_at ?? null,
+            advisory_stale: props.advisory_stale ?? null,
+            event_time_source: props.event_time_source ?? null,
+            current_position_nearest_island: props.current_position_nearest_island ?? null,
+            forecast_status: props.forecast_status ?? null,
+            forecast: props.forecast ?? null,
+            forecast_closest_approach: props.forecast_closest_approach ?? null,
+            wind_probabilities: props.wind_probabilities ?? null,
+            wind_probabilities_status: props.wind_probabilities_status ?? null,
           }
         };
       }).filter(Boolean);
@@ -3991,6 +4112,10 @@
         markSuccess();
       } catch (err) {
         state.status = "unavailable"; state.error = err; state.sourceStatus = "unavailable"; state.features = [];
+        // Meta describes the last SUCCESSFUL payload. Leaving it in place after a
+        // failure would let a stale "3 active storms" message be rendered as if
+        // it were current. Every reader already gates on status === "ready".
+        state.meta = {};
         model.applyData([]);
         if (model.affectsGlobalHealth !== false) { appState.diagnostics.isOffline = true; markError(err && err.isParse ? "parse" : "network"); }
       } finally {
@@ -4043,6 +4168,7 @@
       ensureWindRiskLayers();
       ensureTsunamiLayers();       // official tsunami — red (high priority)
       ensureHurricaneLayers();     // NHC storm points
+      ensureHurricaneForecastLayers(); // NHC forecast track + points (P29b)
       ensureCoastalLayers();       // NWS coastal/surf — geometry-bearing alerts only
       ensureLocalHazardLayers();
       ensureFireDangerLayers();    // fire-spread estimate grid — BELOW alerts + fire markers
@@ -4442,6 +4568,70 @@
       ensureLayer({ id: "hurricane-point", type: "circle", source: "hurricane", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 14, "circle-color": "#ff6a00", "circle-stroke-width": 2.5, "circle-stroke-color": "#ffd5b5", "circle-opacity": hurricaneVisible ? 0.9 : 0, "circle-stroke-opacity": hurricaneVisible ? 1 : 0 } });
       if (!map.__hurricaneHoverBound) { map.__hurricaneHoverBound = true; map.on("mouseenter", "hurricane-point", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "hurricane-point", () => { map.getCanvas().style.cursor = ""; }); }
     }
+    // ── P29b · FIX 3 — forecast track, points and labels ──────────────────
+    // A SEPARATE source from "hurricane". That source's only layer filters on
+    // Point geometry, so a LineString pushed into it is silently dropped — no
+    // error, nothing drawn. Modelled on ensureLocalHazardLayers below: one
+    // source, sibling layers each filtered by geometry-type.
+    function ensureHurricaneForecastLayers() {
+      ensureSource("hurricane-forecast", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+
+      // DASHED, deliberately. A solid line reads as "this is where it goes";
+      // dashes read as "projected". The payload ships uncertainty_available
+      // false — no cone, no error radius — and the line's own styling should
+      // not imply more confidence than the data carries.
+      ensureLayer({
+        id: "hurricane-track-line",
+        type: "line",
+        source: "hurricane-forecast",
+        filter: ["any", ["==", ["geometry-type"], "LineString"], ["==", ["geometry-type"], "MultiLineString"]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#ff9d4d",
+          "line-width": 2.2,
+          "line-dasharray": [2, 2],
+          "line-opacity": hurricaneVisible ? 0.9 : 0
+        }
+      });
+
+      ensureLayer({
+        id: "hurricane-forecast-point",
+        type: "circle",
+        source: "hurricane-forecast",
+        filter: ["==", ["geometry-type"], "Point"],
+        paint: {
+          "circle-radius": 6,
+          "circle-color": "#ff9d4d",
+          "circle-stroke-width": 1.6,
+          "circle-stroke-color": "#2a1405",
+          "circle-opacity": hurricaneVisible ? 0.95 : 0,
+          "circle-stroke-opacity": hurricaneVisible ? 1 : 0
+        }
+      });
+
+      ensureLayer({
+        id: "hurricane-forecast-label",
+        type: "symbol",
+        source: "hurricane-forecast",
+        filter: ["==", ["geometry-type"], "Point"],
+        layout: {
+          "text-field": ["get", "label"],
+          "text-font": ["Open Sans Bold"],
+          "text-size": 10,
+          "text-offset": [0, 1.2],
+          "text-anchor": "top",
+          "text-allow-overlap": false
+        },
+        paint: { "text-color": "#ffd5b5", "text-halo-color": "#0b121f", "text-halo-width": 1.2 }
+      });
+
+      if (!map.__hurricaneForecastHoverBound) {
+        map.__hurricaneForecastHoverBound = true;
+        map.on("mouseenter", "hurricane-forecast-point", () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", "hurricane-forecast-point", () => { map.getCanvas().style.cursor = ""; });
+      }
+    }
+
     function ensureLocalHazardLayers() {
       ensureSource("local-hazards", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
@@ -5363,6 +5553,57 @@
     function updateAlertsSource(features) { const s = map.getSource("alerts"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function syncAlertsLayerVisibility() { ["alerts-fill", "alerts-outline", "alerts-point"].forEach(id => setLayerVisibility(id, alertsVisible)); }
     function updateHurricaneSource(features) { const s = map.getSource("hurricane"); if (s) s.setData({ type: "FeatureCollection", features }); }
+
+    // Hawaiʻi keeps one offset year-round and observes no DST, but the zone is
+    // named rather than hardcoded so the browser's own tz database does the work.
+    function hstTime(iso, opts) {
+      const d = parseDateMaybe(iso);
+      if (!d) return "";
+      try { return d.toLocaleString("en-US", Object.assign({ timeZone: "Pacific/Honolulu" }, opts)); }
+      catch (e) { return ""; }
+    }
+    const hstShort = (iso) => hstTime(iso, { weekday: "short", hour: "numeric" });
+    const hstFull = (iso) => { const t = hstTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); return t ? t + " HST" : ""; };
+
+    // Builds the forecast FeatureCollection from forecast.track.coordinates and
+    // forecast.points ONLY. No interpolation, no smoothing, no extension past
+    // the last official point, no closing of the line — the track stops exactly
+    // where NHC stopped forecasting.
+    function updateHurricaneForecastSource(features) {
+      const src = map.getSource("hurricane-forecast");
+      if (!src) return;
+      const out = [];
+      (Array.isArray(features) ? features : []).forEach((f) => {
+        const p = f?.properties || {};
+        const fc = p.forecast;
+        if (!fc) return;
+        const shared = {
+          storm_name: p.name || "",
+          storm_id: p.id || "",
+          uncertainty_available: fc.uncertainty_available === true,
+        };
+        const coords = fc.track && Array.isArray(fc.track.coordinates) ? fc.track.coordinates : null;
+        if (coords && coords.length >= 2) {
+          out.push({ type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: Object.assign({ kind: "track" }, shared) });
+        }
+        (Array.isArray(fc.points) ? fc.points : []).forEach((pt) => {
+          if (!Number.isFinite(pt?.lon) || !Number.isFinite(pt?.lat)) return;
+          out.push({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [pt.lon, pt.lat] },
+            properties: Object.assign({
+              kind: "point",
+              tau: pt.tau,
+              valid_time: pt.valid_time || "",
+              label: hstShort(pt.valid_time),
+              max_wind_kt: pt.max_wind_kt,
+              storm_type: pt.storm_type || "",
+            }, shared)
+          });
+        });
+      });
+      src.setData({ type: "FeatureCollection", features: out });
+    }
     function updateLocalHazardsSource(features) {
       const s = map.getSource("local-hazards");
       if (s) s.setData({ type: "FeatureCollection", features });
@@ -5469,7 +5710,8 @@
       ["tsunami-fill", "tsunami-outline", "tsunami-point"].forEach(id => setLayerVisibility(id, tsunamiVisible));
     }
     function syncHurricaneLayerVisibility() {
-      setLayerVisibility("hurricane-point", hurricaneVisible);
+      ["hurricane-point", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label"]
+        .forEach((id) => setLayerVisibility(id, hurricaneVisible));
     }
     function syncLandslideLayerVisibility() {
       ["landslide-fill", "landslide-outline"].forEach(id => setLayerVisibility(id, landslideVisible));
@@ -5670,11 +5912,12 @@
     function restoreHawaiiDefaults() {
       // Re-disable lazy modules and clear stale USA-scope data from the map
       HAZARD_REGISTRY.tsunami.enabled = false;
-      HAZARD_REGISTRY.hurricane.enabled = false;
       HAZARD_REGISTRY.landslide.enabled = false;
       HAZARD_REGISTRY.tsunami.applyData([]);
-      HAZARD_REGISTRY.hurricane.applyData([]);
       HAZARD_REGISTRY.landslide.applyData([]);
+      // P29b: hurricane is NOT disabled or cleared here any more. Returning to
+      // Hawaiʻi scope used to wipe active storms off the map, which is the one
+      // scope where they matter most.
       // Turn off layers that default to OFF in Hawaiʻi mode
       rainRadarVisible = false;
       airnowVisible = false;
@@ -5992,6 +6235,29 @@
       const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}${linkRow}</div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
     }
+    // AC-1. Every forecast-point popup carries the centre-line disclaimer, and
+    // the copy is chosen from the payload's uncertainty_available flag rather
+    // than hardcoded — if NHC ever ships uncertainty with the track, this must
+    // say something different, and it will.
+    function hurricaneUncertaintyNote(uncertaintyAvailable) {
+      if (uncertaintyAvailable === true) return "";
+      return _L("map.hur_disclaimer_center",
+        "NHC forecast centre line. The storm's actual position may differ substantially. This line does not show where damaging winds reach.");
+    }
+
+    function openHurricaneForecastPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const wind = (p.max_wind_kt != null && p.max_wind_kt !== "") ? escapeHtml(String(p.max_wind_kt)) + " kt" : "\u2014";
+      const lead = (p.tau != null && p.tau !== "") ? (_tmpl("map.hur_hours", { n: p.tau }) || (p.tau + " h")) : "\u2014";
+      const valid = hstFull(p.valid_time) || "\u2014";
+      // MapLibre serialises feature properties, so booleans can arrive as strings.
+      const uncertain = (p.uncertainty_available === true || p.uncertainty_available === "true");
+      const note = hurricaneUncertaintyNote(uncertain);
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u2b55 ${escapeHtml(p.storm_name || "")} \u00b7 ${_L("map.hur_pt_title", "Forecast track point")}</div><div class="popup-coords">NHC</div></div><div class="popup-severity normal">${escapeHtml(p.storm_type || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_valid", "Valid")}</div><div class="popup-metric-value">${escapeHtml(valid)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_lead", "Lead time")}</div><div class="popup-metric-value">${escapeHtml(lead)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_wind", "Max wind")}</div><div class="popup-metric-value">${wind}</div></div></div>${note ? `<div class="popup-note">${escapeHtml(note)}</div>` : ""}</div>`;
+      activePopup = new maplibregl.Popup({ offset: 12, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
+    }
+
     function openHurricanePopup(feature, lngLat) {
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
@@ -6103,7 +6369,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -6124,6 +6390,10 @@
         if (windRiskVisible) { const wind = queryTopFeature(e.point, ["wind-risk-fill"]); if (wind) { openWindRiskPopup(wind, e.lngLat); return; } }
         if (tsunamiVisible) { const tsu = queryTopFeature(e.point, ["tsunami-fill", "tsunami-point"]); if (tsu) { openTsunamiPopup(tsu, e.lngLat); return; } }
         if (hurricaneVisible) { const hur = queryTopFeature(e.point, ["hurricane-point"]); if (hur) { openHurricanePopup(hur, e.lngLat); return; } }
+        // Scoped to the forecast POINT layer only (Invariant 10): the storm
+        // marker above always wins a contested click, and the dashed line
+        // itself is not clickable — only the official points are.
+        if (hurricaneVisible) { const fp = queryTopFeature(e.point, ["hurricane-forecast-point"]); if (fp) { openHurricaneForecastPopup(fp, e.lngLat); return; } }
         if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
         if (alertsVisible) { const al = queryTopFeature(e.point, ["alerts-fill", "alerts-point"]); if (al) { openAlertsPopup(al, e.lngLat); return; } }
         // Official point measurements beat the fire-danger ESTIMATE fill below,
@@ -6168,6 +6438,17 @@
       });
       const el = document.getElementById(`${key}-badge`);
       if (el) { el.className = `status-badge ${cls}`; el.textContent = text; }
+    }
+
+    // The badge helper's missing twin. updateHurricaneStatusUI hand-rolled the
+    // badge loop and wrote the note to the BARE id only, so the note never
+    // updated on the cloned desktop/mobile panels — the two a user actually
+    // sees. Every writer now covers all three ids.
+    function updateModuleNote(key, text) {
+      ["desktop", "mobile", ""].forEach(sfx => {
+        const el = document.getElementById(sfx ? `${key}-note-${sfx}` : `${key}-note`);
+        if (el) el.textContent = text;
+      });
     }
 
       // ── Status UI functions ───────────────────────────────────
@@ -6222,18 +6503,207 @@
           if (note) note.textContent = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_events_note", { events: eventList }) || `Active NWS alerts: ${eventList}.`) : state.sourceStatus === "none" ? (_t("map.s_alerts_none_note") || "No other active NWS alerts.") : (_t("map.s_alerts_unavail_note") || "NWS data unavailable.");
         });
       }
-      function updateHurricaneStatusUI(state) {
-        ["desktop", "mobile"].forEach(sfx => {
-          const badge = document.getElementById(`hurricane-badge-${sfx}`);
-          const b = document.getElementById("hurricane-badge");
-          const n = document.getElementById("hurricane-note");
-          const count = state.features?.length || 0;
-          const cls = count > 0 ? "status-detected" : state.sourceStatus === "unavailable" ? "status-unavailable" : "status-none";
-          const txt = count > 0 ? (_tmpl("map.s_hurricane_active_n", { n: count }) || `ACTIVE \xb7 ${count}`) : state.sourceStatus === "unavailable" ? (_t("map.s_unavailable") || "Unavailable") : (_t("map.s_clear") || "Clear");
-          const ntxt = count > 0 ? (_tmpl("map.s_hurricane_active_note", { n: count }) || `${count} active Pacific storm(s). Monitor NHC.`) : (_t("map.s_hurricane_none_note") || "No active Pacific storms near Hawai\u02bbi.");
-          [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
-          if (n) n.textContent = ntxt;
+      const pctText = (v) => (v === "<1" ? "<1%" : (v == null || v === "" ? "\u2014" : `${v}%`));
+      const ktLabel = (kt) => kt === 34 ? (_t("map.hur_kt34") || "34 kt (tropical storm)")
+        : kt === 64 ? (_t("map.hur_kt64") || "64 kt (hurricane)")
+          : (_t("map.hur_kt50") || "50 kt");
+
+      // AC-3. Only location_class === "named" reaches a human, and the class is
+      // READ from the payload — never re-derived by matching the name string,
+      // which would put a second, drifting copy of the Worker's allowlist here
+      // and invite coordinate-parsing off labels like "21N 160W".
+      function hurricaneWindProbHtml(p) {
+        const status = p.wind_probabilities_status;
+        if (status === "unavailable") return `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_wp_unavailable") || "Wind probabilities could not be retrieved.")}</div>`;
+        if (status === "no_hawaii_locations") return `<div class="hur-line">${escapeHtml(_t("map.hur_wp_none_hawaii") || "NHC's product for this storm names no Hawai\u02bbi location. That means below NHC's reporting threshold, not zero.")}</div>`;
+        const wp = p.wind_probabilities;
+        if (status !== "ok" || !wp || !Array.isArray(wp.locations)) return "";
+
+        const named = wp.locations.filter((l) => l.location_class === "named");
+        const gridNames = new Set(), buoyNames = new Set();
+        wp.locations.forEach((l) => {
+          if (l.location_class === "grid") gridNames.add(l.name);
+          if (l.location_class === "buoy") buoyNames.add(l.name);
         });
+
+        // Group thresholds under each location, preserving payload order.
+        const order = [], byName = new Map();
+        named.forEach((l) => {
+          if (!byName.has(l.name)) { byName.set(l.name, { name: l.name, island_key: l.island_key, rows: [] }); order.push(l.name); }
+          byName.get(l.name).rows.push(l);
+        });
+        // Places with an island key first — that is where people live. The
+        // Northwestern Hawaiian Islands follow under their own heading rather
+        // than being mixed in or dropped.
+        const withKey = order.map((n) => byName.get(n)).filter((g) => g.island_key);
+        const noKey = order.map((n) => byName.get(n)).filter((g) => !g.island_key);
+
+        const locHtml = (g) => {
+          // EVERY named row ships regardless of value, 3% included. A display
+          // threshold here would rebuild the exact "absence reads as safety"
+          // failure the Worker was written to avoid.
+          const parts = g.rows.map((r) => `${escapeHtml(ktLabel(r.threshold_kt))} ${escapeHtml(pctText(r.peak_cumulative_pct))}`).join(" \u00b7 ");
+          return `<div class="hur-wp"><span class="hur-wp-loc">${escapeHtml(g.name)}</span> \u2014 ${parts}</div>`;
+        };
+
+        let html = `<div class="hur-sub">${escapeHtml(_t("map.hur_wp_heading") || "NHC wind probability, next 5 days")}</div>`;
+        html += withKey.map(locHtml).join("");
+        if (noKey.length) {
+          html += `<div class="hur-sub">${escapeHtml(_t("map.hur_wp_nwhi") || "Northwestern Hawaiian Islands")}</div>`;
+          html += noKey.map(locHtml).join("");
+        }
+        if (wp.below_threshold_note) html += `<div class="hur-note">${escapeHtml(wp.below_threshold_note)}</div>`;
+        if (gridNames.size || buoyNames.size) {
+          html += `<div class="hur-note">${escapeHtml(_tmpl("map.hur_wp_hidden", { n: gridNames.size, m: buoyNames.size }) || `${gridNames.size} ocean grid points and ${buoyNames.size} buoys not shown.`)}</div>`;
+        }
+        return html;
+      }
+
+      function hurricaneStormHtml(f) {
+        const p = f.properties || {};
+        const near = p.current_position_nearest_island;
+        const ca = p.forecast_closest_approach;
+        const fc = p.forecast;
+        let html = `<div class="hur-storm"><div class="hur-name">${escapeHtml(p.name || "")}${p.classification ? " \u00b7 " + escapeHtml(p.classification) : ""}${p.wind_mph != null ? " \u00b7 " + escapeHtml(String(p.wind_mph)) + " mph" : ""}</div>`;
+        if (near) {
+          html += `<div class="hur-line">${escapeHtml(_t("map.hur_now") || "Now")}: ${escapeHtml(String(near.distance_mi))} mi ${escapeHtml(near.bearing_compass || "")} \u2014 ${escapeHtml(near.island_label || "")}</div>`;
+        }
+        if (ca) {
+          const vt = hstFull(ca.at_valid_time);
+          html += `<div class="hur-line">${escapeHtml(_t("map.hur_forecast_closest") || "Forecast closest")}: ${escapeHtml(String(ca.distance_mi))} mi \u2014 ${escapeHtml(ca.island_label || "")}${vt ? " \u00b7 " + escapeHtml(vt) : ""}</div>`;
+          // AC-2. The basis literal spelled out in words, always beside the
+          // number. 184 mi reads as comfortable; it is a distance to the
+          // forecast CENTRE, and the probabilities below are the real answer.
+          html += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_basis_center") || "Distance is to the forecast storm centre, not to damaging winds.")}</div>`;
+          if (ca.is_final_point === true) {
+            html += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_final_point") || "Forecast ends while still approaching \u2014 the true closest approach may be nearer.")}</div>`;
+          }
+        }
+        if (fc) {
+          if (fc.forecast_advisory_age_cycles === 1) {
+            if (fc.forecast_advisory_date) {
+              // advdate is basin-local (PDT for EP, HST for CP). Rendered
+              // verbatim: reformatting would mean inferring an offset from a
+              // timezone abbreviation.
+              html += `<div class="hur-line">${escapeHtml(_tmpl("map.hur_advisory_line", { a: fc.forecast_advisory_number, d: fc.forecast_advisory_date }) || `Advisory ${fc.forecast_advisory_number} \u00b7 ${fc.forecast_advisory_date}`)}</div>`;
+            }
+            if (fc.track_origin_offset_mi != null) {
+              html += `<div class="hur-line hur-warn">${escapeHtml(_tmpl("map.hur_prior_advisory_offset", { n: fc.track_origin_offset_mi }) || `Track drawn from the previous advisory; it begins ${fc.track_origin_offset_mi} mi from the storm's current position.`)}</div>`;
+            }
+          }
+          // AC-1. A track exists for this storm, so the disclaimer accompanies
+          // it in the card as well as in every forecast-point popup.
+          const note = hurricaneUncertaintyNote(fc.uncertainty_available === true);
+          if (note) html += `<div class="hur-disclaimer">${escapeHtml(note)}</div>`;
+        } else if (p.forecast_status && p.forecast_status !== "ok") {
+          html += `<div class="hur-line">${escapeHtml(_t("map.hur_no_track") || "No forecast track available for this storm.")}</div>`;
+        }
+        html += hurricaneWindProbHtml(p);
+        return html + `</div>`;
+      }
+
+      // Ascending forecast_closest_approach.distance_mi; storms with no
+      // forecast sort last rather than being treated as distance zero.
+      function hurricaneSorted(features) {
+        return (Array.isArray(features) ? features.slice() : []).sort((a, b) => {
+          const da = a?.properties?.forecast_closest_approach?.distance_mi;
+          const db = b?.properties?.forecast_closest_approach?.distance_mi;
+          if (!Number.isFinite(da) && !Number.isFinite(db)) return 0;
+          if (!Number.isFinite(da)) return 1;
+          if (!Number.isFinite(db)) return -1;
+          return da - db;
+        });
+      }
+
+      function renderHurricaneDetail(state) {
+        const html = hurricaneSorted(state?.features).map(hurricaneStormHtml).join("");
+        ["desktop", "mobile", ""].forEach(sfx => {
+          const el = document.getElementById(sfx ? `hurricane-detail-${sfx}` : "hurricane-detail");
+          if (el) el.innerHTML = html;
+        });
+      }
+
+      // FIX 5 — off-screen chip. Shown only when the module HAS storms and none
+      // of them is inside the current viewport, which is the default Hawaiʻi
+      // view today: three storms active, none on screen.
+      function hurricaneOffscreen() {
+        const feats = getState("hurricane")?.features || [];
+        if (!feats.length) return { show: false, count: 0, target: null };
+        let bounds = null;
+        try { bounds = map.getBounds(); } catch (e) { bounds = null; }
+        let outside = 0;
+        feats.forEach((f) => {
+          const c = f?.geometry?.coordinates;
+          // No bounds, or no coordinate to test, counts as outside. Failing
+          // toward "there are storms" is the safe direction.
+          if (!bounds || !Array.isArray(c) || c.length < 2 || !bounds.contains(c)) outside++;
+        });
+        if (outside !== feats.length) return { show: false, count: outside, target: null };
+        // The storm to fly to is the one with the smallest FORECAST closest
+        // approach, not the nearest current position — the forecast is what a
+        // reader needs to see.
+        const target = hurricaneSorted(feats)[0] || null;
+        return { show: true, count: outside, target };
+      }
+
+      function renderHurricaneOffscreen() {
+        const info = hurricaneOffscreen();
+        const label = info.count === 1
+          ? (_t("map.hur_offscreen_one") || "1 storm outside this view")
+          : (_tmpl("map.hur_offscreen_n", { n: info.count }) || `${info.count} storms outside this view`);
+        ["desktop", "mobile", ""].forEach(sfx => {
+          const el = document.getElementById(sfx ? `hurricane-offscreen-${sfx}` : "hurricane-offscreen");
+          if (!el) return;
+          el.hidden = !info.show;
+          if (info.show) el.textContent = label;
+        });
+      }
+
+      function flyToHurricaneTarget() {
+        const info = hurricaneOffscreen();
+        const f = info.target;
+        if (!f) return;
+        const pts = [];
+        const c = f.geometry?.coordinates;
+        if (Array.isArray(c) && c.length >= 2) pts.push(c);
+        const tc = f.properties?.forecast?.track?.coordinates;
+        if (Array.isArray(tc)) tc.forEach((x) => { if (Array.isArray(x) && x.length >= 2) pts.push(x); });
+        if (!pts.length) return;
+        let w = pts[0][0], e = pts[0][0], s2 = pts[0][1], n = pts[0][1];
+        pts.forEach(([lon, lat]) => { if (lon < w) w = lon; if (lon > e) e = lon; if (lat < s2) s2 = lat; if (lat > n) n = lat; });
+        try { map.fitBounds([[w, s2], [e, n]], { padding: 60, duration: 700, maxZoom: 7 }); } catch (err) { }
+      }
+
+      function updateHurricaneStatusUI(state) {
+        const count = state.features?.length || 0;
+        const meta = state.status === "ready" ? (state.meta || {}) : {};
+        // Two distinct ways this can be unavailable: the fetch failed here, or
+        // the Worker reached us and reported that NHC did not answer IT.
+        const unavailable = state.sourceStatus === "unavailable" || meta.summaryStatus === "unavailable";
+        const cls = count > 0 ? "status-detected" : unavailable ? "status-unavailable" : "status-none";
+        const txt = count > 0 ? (_tmpl("map.s_hurricane_active_n", { n: count }) || `ACTIVE \xb7 ${count}`)
+          : unavailable ? (_t("map.s_unavailable") || "Unavailable")
+            : (_t("map.s_clear") || "Clear");
+        // FIX 8(a). ntxt had no `unavailable` branch, so during an NHC outage the
+        // badge said "Unavailable" while the note beneath it said there were no
+        // storms — the reassuring reading, at the worst possible moment. It now
+        // branches exactly as cls and txt do, and prefers the payload's own
+        // message over a hardcoded sentence.
+        // Translated copy FIRST, the Worker's own sentence as the fallback. The
+        // envelope's summary.message is English-only, so preferring it would have
+        // put an English sentence in front of a Vietnamese reader on every normal
+        // load — caught in browser QA. The two say the same thing; when they do,
+        // the translated one wins. The payload message still surfaces anything the
+        // templates cannot express.
+        const ntxt = unavailable
+          ? (_t("map.s_hurricane_unavail_note") || meta.summaryMessage || "NHC storm data could not be retrieved.")
+          : count > 0
+            ? (_tmpl("map.s_hurricane_active_note", { n: count }) || meta.summaryMessage || `${count} active Pacific storm(s). Monitor NHC.`)
+            : (_t("map.s_hurricane_none_note") || meta.summaryMessage || "NHC reports no active Pacific storms.");
+        updateModuleBadge("hurricane", txt, cls);
+        updateModuleNote("hurricane", ntxt);
+        renderHurricaneDetail(state);
+        renderHurricaneOffscreen();
       }
       function updateLandslideStatusUI(state) {
         ["desktop", "mobile"].forEach(sfx => {
@@ -6349,6 +6819,12 @@
           note: _t("map.hd_tsunami_note") || "Source: NWS Tsunami Warning Center (official).",
           body: _t("map.hd_tsunami_body") || "Tsunami alerts are official NWS products. If a warning is active, follow evacuation guidance immediately."
         })));
+        // The chip lives INSIDE the card, whose own click opens the detail
+        // sheet. stopPropagation keeps a tap on the chip from doing both.
+        document.getElementById(`hurricane-offscreen-${sfx}`)?.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          flyToHurricaneTarget();
+        });
         document.getElementById(`hurricane-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("hurricane", (st) => ({
           title: _t("map.hd_hurricane_title") || "Hurricane Tracks",
           status: st.features?.length > 0 ? (_tmpl("map.hd_hurricane_st_n", { n: st.features.length }) || `${st.features.length} active Pacific storm(s)`) :
@@ -6413,6 +6889,14 @@
     function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
     bindButtons();
+    // Language changes re-run applyAll(), which only knows about data-i18n
+    // attributes. The hurricane card is rendered in JS, so it has to be asked to
+    // redraw itself — otherwise it keeps the previous locale until the next poll.
+    document.getElementById("kahuola-lang-select")?.addEventListener("change", () => {
+      setTimeout(() => {
+        try { updateHurricaneStatusUI(getState("hurricane")); renderUnifiedPanels(); } catch (e) { }
+      }, 0);
+    });
     // Init lazy module badges
     ["tsunami", "hurricane", "landslide", "coastal"].forEach(key => {
       updateModuleBadge(key, "·", "status-none");
@@ -6552,6 +7036,12 @@
     map.on("style.load", () => {
       ensureLayers();
       bindGlobalCanvasClickRouter();
+      // Recompute the off-screen chip from the viewport itself. Event-driven —
+      // nothing polls.
+      if (!map.__hurricaneMoveEndBound) {
+        map.__hurricaneMoveEndBound = true;
+        map.on("moveend", () => { try { renderHurricaneOffscreen(); } catch (e) { } });
+      }
       raiseFireLayersAboveOverlays();
       Object.keys(HAZARD_REGISTRY).forEach((key) => { HAZARD_REGISTRY[key].applyData(getState(key).features); });
       syncSatelliteButtons(); syncSmokeButtons(); syncAirnowButtons(); syncPerimeterButtons(); syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility(); syncWindRiskLayerVisibility(); syncTsunamiLayerVisibility(); syncHurricaneLayerVisibility(); syncLandslideLayerVisibility();
@@ -6579,6 +7069,12 @@
         });
       }
       bindGlobalCanvasClickRouter();
+      // Recompute the off-screen chip from the viewport itself. Event-driven —
+      // nothing polls.
+      if (!map.__hurricaneMoveEndBound) {
+        map.__hurricaneMoveEndBound = true;
+        map.on("moveend", () => { try { renderHurricaneOffscreen(); } catch (e) { } });
+      }
       raiseFireLayersAboveOverlays();
       fitHawaii(false);
       if (window.innerWidth <= MOBILE_BREAKPOINT) setSheetOpen(false);
