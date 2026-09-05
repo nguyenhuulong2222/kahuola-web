@@ -5135,6 +5135,339 @@ function stormPositionsMessage(res: StormPositions): string {
     : 'Pacific storm data is temporarily unavailable. Check the National Hurricane Center directly.';
 }
 
+
+// ── P29a-2 · NHC FORECAST POINTS → TRACK + CLOSEST APPROACH ────────────────
+//
+// Source is the NHC ArcGIS MapServer, queried as GeoJSON. This deliberately
+// replaces the TCM-text route the recon costed out: the .shtml advisory is
+// 26 KB of HTML wrapping ~2 KB of fixed-width text whose position lines carry
+// hemisphere LETTERS ("141.9W"), and deriving a sign from a trailing letter is
+// the inference Invariant III forbids — the same class of bug as the Lala
+// incident. The GeoJSON layer ships signed numeric coordinates, a numeric lead
+// time and a per-point wind, so nothing has to be inferred from prose.
+//
+// LAYER NUMBERING RULE (derived, not guessed).
+// The MapServer root listing was fetched ONCE during development. Its layers
+// are grouped one block per storm bin, in the order AT1–AT5, EP1–EP5, CP1–CP5.
+// The first block (AT1) begins at layer 4 and each block is 26 layers wide, so
+//     block_base(bin) = 4 + 26 * (basin_index * 5 + (n - 1))
+//     basin_index: AT = 0, EP = 1, CP = 2
+// and within a block the offsets are fixed:
+//     +0 group, +1 Forecast Information, +2 Forecast Points,
+//     +3 Forecast Track, +4 Forecast Cone, …
+// So Forecast Points = block_base + 2. Checked against the listing for all 15
+// bins and confirmed live for three of them: 188 = "EP3 Forecast Points"
+// (Marie), 344 = "CP4 Forecast Points" (Lowell), 370 = "CP5 Forecast Points"
+// (Karina).
+//
+// The table below is written out rather than computed at request time. The
+// arithmetic is the derivation, not the contract: NHC could renumber, and a
+// literal table fails loudly on an unknown bin (forecast_status 'no_layer')
+// where a formula would silently compute a plausible-but-wrong layer and hand
+// back another storm's track. A bin absent from this table is never guessed.
+const NHC_FORECAST_POINT_LAYERS: Readonly<Record<string, number>> = {
+  AT1: 6,   AT2: 32,  AT3: 58,  AT4: 84,  AT5: 110,
+  EP1: 136, EP2: 162, EP3: 188, EP4: 214, EP5: 240,
+  CP1: 266, CP2: 292, CP3: 318, CP4: 344, CP5: 370,
+};
+
+const NHC_MAPSERVER_BASE =
+  'https://mapservices.weather.noaa.gov/tropical/rest/services/tropical/NHC_tropical_weather/MapServer';
+
+// Deliberately NOT OUTBOUND_CONCURRENCY_LIMIT (6). This fan-out runs while the
+// CurrentStorms.json connection has just closed and before P29c adds a second
+// per-storm request for the cone; capping at 4 leaves two connections of
+// headroom under Cloudflare's 6-connection ceiling for that increment to spend
+// without revisiting this line.
+const FORECAST_CONCURRENCY_LIMIT = 4;
+
+type ForecastStatus = 'ok' | 'unavailable' | 'mismatch' | 'no_layer' | 'insufficient_points';
+
+type ForecastPoint = {
+  tau: number;
+  valid_time: string | null;
+  lat: number;
+  lon: number;
+  max_wind_kt: number | null;
+  gust_kt: number | null;
+  storm_type: string | null;
+};
+
+type StormForecast = {
+  advisory_number: string;
+  point_count: number;
+  // HARDCODED false for the whole of P29a-2. The cone polygon is not fetched
+  // (P29c) and NHC publishes no fetchable annual track-error table, so this
+  // payload carries a centre line with NO uncertainty attached to it. A client
+  // that draws the track MUST read this flag and say so: a bare line reads as
+  // a promise about where the storm will be, which is the single most
+  // dangerous thing this endpoint could imply.
+  uncertainty_available: false;
+  points: ForecastPoint[];
+  track: { type: 'LineString'; coordinates: [number, number][] } | null;
+};
+
+type ForecastClosestApproach = {
+  distance_mi: number;
+  island_key: IslandKey;
+  island_label: string;
+  at_tau: number;
+  at_valid_time: string | null;
+  // True when the minimum falls on the LAST forecast point. The track may still
+  // be closing when the forecast runs out, so this is a truncation warning, not
+  // a result: the real closest approach may lie beyond the forecast horizon.
+  is_final_point: boolean;
+  // Distance to the forecast storm CENTRE. Not to tropical-storm-force winds,
+  // not to the cone edge, not to hazardous conditions. The name and this
+  // literal both say so because the number is otherwise easy to read as
+  // "how far away the danger is".
+  basis: 'forecast_center_only';
+};
+
+type ForecastResult = {
+  status: ForecastStatus;
+  forecast: StormForecast | null;
+  closest: ForecastClosestApproach | null;
+};
+
+// ArcGIS `validtime` is "DD/HHMM" in UTC — no month, no year. Rather than
+// guessing a month, the day/time is anchored against two values we already
+// hold as authoritative numbers: the advisory's real UTC instant from
+// CurrentStorms.json, and the point's numeric lead time. The candidate month
+// (previous / same / next) whose instant lands nearest advisory+tau wins, which
+// makes a month or year rollover fall out of the arithmetic instead of needing
+// a rule. A candidate more than 7 days from the expectation is refused: the
+// forecast horizon is 120 h and the synoptic offset at most 6 h, so nothing
+// legitimate is ever that far out, while the rejected months sit ~30 days away.
+function forecastValidTimeIso(validtime: unknown, tau: number, advisoryIssuedAt: string | null): string | null {
+  const m = /^(\d{2})\/(\d{2})(\d{2})$/.exec(String(validtime ?? '').trim());
+  if (!m) return null;
+  if (!advisoryIssuedAt) return null;
+  const anchorMs = Date.parse(advisoryIssuedAt);
+  if (!isFinite(anchorMs)) return null;
+  if (!isFinite(tau)) return null;
+
+  const day = Number(m[1]);
+  const hour = Number(m[2]);
+  const minute = Number(m[3]);
+  if (day < 1 || day > 31 || hour > 23 || minute > 59) return null;
+
+  const anchor = new Date(anchorMs);
+  const targetMs = anchorMs + tau * 3_600_000;
+
+  let bestMs: number | null = null;
+  for (const monthDelta of [-1, 0, 1]) {
+    const candidate = Date.UTC(
+      anchor.getUTCFullYear(), anchor.getUTCMonth() + monthDelta, day, hour, minute, 0, 0,
+    );
+    // Date.UTC rolls a day past the month's end into the next month. Such a
+    // candidate is not the date NHC wrote, so it is discarded rather than used.
+    if (new Date(candidate).getUTCDate() !== day) continue;
+    if (bestMs === null || Math.abs(candidate - targetMs) < Math.abs(bestMs - targetMs)) bestMs = candidate;
+  }
+  if (bestMs === null) return null;
+  if (Math.abs(bestMs - targetMs) > 7 * 86_400_000) return null;
+  return new Date(bestMs).toISOString();
+}
+
+function finiteOrNull(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Structural verification, not policy. Every feature must prove it belongs to
+// the storm it was requested for before ANY of its numbers are used. A forecast
+// track drawn onto the wrong storm is worse than no track at all: it is a
+// confident, official-looking line pointing somewhere nobody forecast.
+//
+// Failure is terminal for that storm's forecast — never repaired, never
+// re-requested. The position survives untouched.
+function forecastFeatureMatchesStorm(props: any, storm: NormalizedStorm): boolean {
+  // (a) bin number, exact.
+  const bin = String(props?.binnumber ?? '').trim();
+  if (!bin || !storm.bin_number || bin !== storm.bin_number) return false;
+
+  // (b) storm name, case-insensitive. A CONTAINS check, not equality: the
+  // Forecast Points layer prefixes the classification ("Hurricane Karina")
+  // while CurrentStorms.json carries the bare name ("Karina") — and the
+  // sibling Forecast Track layer uses the bare name too, so the two NHC layers
+  // do not even agree with each other. Equality would reject every real match.
+  const featureName = String(props?.stormname ?? '').trim().toLowerCase();
+  const stormName = String(storm.name ?? '').trim().toLowerCase();
+  if (!featureName || !stormName || !featureName.includes(stormName)) return false;
+
+  // (c) advisory number, compared as INTEGERS. CurrentStorms.json zero-pads
+  // ("035") and ArcGIS does not ("35"), so a string comparison fails on every
+  // advisory past number 9 — it would look like a working guard while silently
+  // dropping every forecast. NaN on either side is a mismatch, never a pass.
+  const featureAdv = parseInt(String(props?.advisnum ?? ''), 10);
+  const stormAdv = parseInt(String(storm.advisory_number ?? ''), 10);
+  if (!Number.isFinite(featureAdv) || !Number.isFinite(stormAdv)) return false;
+  if (featureAdv !== stormAdv) return false;
+
+  return true;
+}
+
+// Minimum distance from any forecast point to any island centroid.
+//
+// Computed ONLY across the discrete points NHC actually published. The track
+// LineString below is drawn between them, but sampling along that line would
+// invent positions NHC never forecast and then report a distance to one of
+// them as if it were official.
+function forecastClosestApproach(points: readonly ForecastPoint[]): ForecastClosestApproach | null {
+  if (points.length === 0) return null;
+  let best: ForecastClosestApproach | null = null;
+  let bestKm = Infinity;
+  let bestIdx = -1;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    for (const isl of ISLAND_CENTROIDS) {
+      // haversineKm is LON-FIRST and returns KILOMETRES.
+      const km = haversineKm(p.lon, p.lat, isl.lon, isl.lat);
+      if (!isFinite(km) || km >= bestKm) continue;
+      bestKm = km;
+      bestIdx = i;
+      best = {
+        distance_mi: Math.round(km * KM_TO_MI),
+        island_key: isl.key,
+        island_label: isl.label,
+        at_tau: p.tau,
+        at_valid_time: p.valid_time,
+        is_final_point: false,
+        basis: 'forecast_center_only',
+      };
+    }
+  }
+  if (best) best.is_final_point = bestIdx === points.length - 1;
+  return best;
+}
+
+// One request per storm, capped at FORECAST_CONCURRENCY_LIMIT. Called ONLY from
+// handleHurricane — never from fetchStormPositions, and therefore never from
+// /api/hazards/summary or the morning brief, both of which bind to
+// fetchStormPositions and must keep their P29a-1 connection counts.
+async function fetchForecastPoints(
+  storms: readonly NormalizedStorm[],
+): Promise<Map<string, ForecastResult>> {
+  const out = new Map<string, ForecastResult>();
+
+  const jobs = storms.map((s) => ({ storm: s, layer: s.bin_number ? NHC_FORECAST_POINT_LAYERS[s.bin_number] : undefined }));
+
+  // A bin we have no layer for is reported as such and never fetched. Guessing
+  // a layer id would attach some other storm's forecast to this one.
+  for (const j of jobs) {
+    if (j.layer === undefined) out.set(j.storm.id, { status: 'no_layer', forecast: null, closest: null });
+  }
+  const fetchable = jobs.filter((j): j is { storm: NormalizedStorm; layer: number } => j.layer !== undefined);
+
+  const settled = await mapWithConcurrency(fetchable, FORECAST_CONCURRENCY_LIMIT, async ({ storm, layer }) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    try {
+      const url = `${NHC_MAPSERVER_BASE}/${layer}/query?where=1%3D1&outFields=*&f=geojson`;
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Kahu Ola / kahuola.org' },
+      });
+      if (!res.ok) throw new Error(`NHC GIS ${res.status}`);
+      return { storm, data: await res.json() as any };
+    } finally {
+      // A timeout is a drop, not a retry. The storm keeps its position and
+      // reports forecast_status 'unavailable'.
+      clearTimeout(timer);
+    }
+  });
+
+  settled.forEach((r, i) => {
+    const storm = fetchable[i].storm;
+    if (r.status === 'rejected') {
+      out.set(storm.id, { status: 'unavailable', forecast: null, closest: null });
+      return;
+    }
+    const feats = Array.isArray(r.value.data?.features) ? r.value.data.features : [];
+
+    // Verify FIRST, use SECOND. Nothing below this line touches an unverified
+    // feature, and a single failed check discards the whole forecast for this
+    // storm rather than keeping the features that happened to pass.
+    let mismatched = false;
+    const verified: any[] = [];
+    for (const f of feats) {
+      if (!forecastFeatureMatchesStorm(f?.properties, storm)) { mismatched = true; break; }
+      verified.push(f);
+    }
+    if (mismatched) {
+      out.set(storm.id, { status: 'mismatch', forecast: null, closest: null });
+      return;
+    }
+
+    const points: ForecastPoint[] = verified
+      .map((f: any): ForecastPoint | null => {
+        const coords = f?.geometry?.type === 'Point' ? f.geometry.coordinates : null;
+        if (!Array.isArray(coords) || coords.length < 2) return null;
+        const lon = Number(coords[0]);
+        const lat = Number(coords[1]);
+        // Same validation gate as the position path: drop, never infer.
+        //
+        // Coordinates come from the GEOMETRY, never from properties.lat/lon —
+        // those are display values ROUNDED TO WHOLE DEGREES (Karina's tau=0
+        // point reads lat 21 / lon -142 for a storm actually at 20.7 / -141.9).
+        // Using them would displace the track by up to ~35 miles.
+        if (!isFinite(lat) || lat < -90 || lat > 90) return null;
+        if (!isFinite(lon) || lon < -180 || lon > 180) return null;
+        const tau = Number(f?.properties?.tau);
+        if (!isFinite(tau)) return null;
+        return {
+          tau,
+          valid_time: forecastValidTimeIso(f?.properties?.validtime, tau, storm.advisory_issued_at),
+          lat,
+          lon,
+          max_wind_kt: finiteOrNull(f?.properties?.maxwind),
+          gust_kt: finiteOrNull(f?.properties?.gust),
+          storm_type: typeof f?.properties?.stormtype === 'string' && f.properties.stormtype
+            ? f.properties.stormtype
+            : null,
+        };
+      })
+      .filter((p: ForecastPoint | null): p is ForecastPoint => p !== null)
+      .sort((a: ForecastPoint, b: ForecastPoint) => a.tau - b.tau);
+
+    // A single point is the storm's current position restated, not a forecast
+    // path, and a one-vertex LineString is not renderable. Both are reported as
+    // insufficient rather than shipped as a degenerate track.
+    if (points.length < 2) {
+      out.set(storm.id, { status: 'insufficient_points', forecast: null, closest: null });
+      return;
+    }
+
+    // Coordinates are passed through VERBATIM — no rounding, no smoothing, no
+    // interpolation, no extension past the last point. Verified against NHC's
+    // own Forecast Track layer (371): the line built this way is identical to
+    // theirs vertex for vertex, down to the floating-point representation.
+    // Rounding here would end that equivalence.
+    const track = {
+      type: 'LineString' as const,
+      coordinates: points.map((p): [number, number] => [p.lon, p.lat]),
+    };
+
+    out.set(storm.id, {
+      status: 'ok',
+      forecast: {
+        advisory_number: String(verified[0]?.properties?.advisnum ?? ''),
+        // The ACTUAL count. NHC publishes 7 points for one storm and 9 for
+        // another in this very snapshot; assuming a fixed 12/24/36/48/72/96/120
+        // series would silently drop or fabricate positions.
+        point_count: points.length,
+        uncertainty_available: false,
+        points,
+        track,
+      },
+      closest: forecastClosestApproach(points),
+    });
+  });
+
+  return out;
+}
+
 async function handleHurricane(cors: CorsHeaders): Promise<Response> {
   const res = await fetchStormPositions();
 
@@ -5159,7 +5492,26 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
     }, 200, cors);
   }
 
-  const signals: Feature[] = res.storms.map((s): Feature => ({
+  // P29a-2. Forecast fetching lives HERE and nowhere else: this is the only
+  // caller of fetchForecastPoints, so the summary and the morning brief — both
+  // bound to fetchStormPositions — cannot inherit the per-storm fan-out.
+  //
+  // A forecast failure must never degrade the position layer. Positions are
+  // independently valid: they came from a different upstream that already
+  // succeeded, and a storm whose track we could not draw is still a storm the
+  // reader needs to see on the map. So this is wrapped, and a total collapse
+  // leaves every storm with forecast null / forecast_status 'unavailable' while
+  // summary.status stays 'active'.
+  let forecasts: Map<string, ForecastResult>;
+  try {
+    forecasts = await fetchForecastPoints(res.storms);
+  } catch {
+    forecasts = new Map();
+  }
+
+  const signals: Feature[] = res.storms.map((s): Feature => {
+    const f = forecasts.get(s.id) ?? { status: 'unavailable' as ForecastStatus, forecast: null, closest: null };
+    return {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
     properties: {
@@ -5184,15 +5536,35 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       advisory_stale: s.advisory_stale,
       event_time_source: s.event_time_source,
       current_position_nearest_island: s.current_position_nearest_island,
+      // ── ADDITIVE (P29a-2) ───────────────────────────────────────────
+      // current_position_nearest_island above is UNCHANGED and stays. The two
+      // distances answer different questions — where the storm is now, versus
+      // how close NHC forecasts it will come — and must never be conflated,
+      // which is why both names carry their own tense.
+      forecast_status: f.status,
+      forecast: f.forecast,
+      forecast_closest_approach: f.closest,
     },
-  }));
+    };
+  });
+
+  const forecastOkCount = res.storms.reduce(
+    (n, s) => n + (forecasts.get(s.id)?.status === 'ok' ? 1 : 0), 0,
+  );
 
   const envelope = buildHazardEnvelope('hurricane', 'NHC', 'hawaii', signals,
     {
+      // Unchanged: driven by POSITION availability only. A forecast outage is
+      // reported per storm in forecast_status and in the two counts below; it
+      // must not make an endpoint full of real storm positions read as broken.
       status: stormPositionsStatus(res),
       count: signals.length,
       raw_count: res.raw_count,
+      // Wording deliberately untouched in this increment — the "near Hawaiʻi"
+      // claim that no code evaluates is P29b's to fix.
       message: stormPositionsMessage(res),
+      forecast_ok_count: forecastOkCount,
+      forecast_total_count: signals.length,
     }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
   return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
 }
