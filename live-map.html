@@ -4594,17 +4594,38 @@
         }
       });
 
+      // P29e. Radius reads max_wind_kt straight from the DATA rather than a
+      // number precomputed in JS. That is the point: a point with no wind value
+      // never resolves through the scale at all, so it cannot be handed a
+      // plausible-looking size. `has` is the discriminator, and the source omits
+      // the property entirely when the value is not finite.
+      //
+      // The scale tops out at 11 while the present-position marker sits at 14.
+      // Where the storm IS is a fact; where it is forecast to be is not, and the
+      // marker stays visually dominant over every forecast point.
+      const _fcHasWind = ["has", "max_wind_kt"];
       ensureLayer({
         id: "hurricane-forecast-point",
         type: "circle",
         source: "hurricane-forecast",
         filter: ["==", ["geometry-type"], "Point"],
         paint: {
-          "circle-radius": 6,
+          "circle-radius": ["case", _fcHasWind,
+            ["interpolate", ["linear"], ["get", "max_wind_kt"],
+              25, 4.5,    // depression
+              34, 5.5,    // tropical storm
+              64, 7.5,    // hurricane
+              96, 9.5,    // major
+              140, 11],
+            // Missing wind: a small FIXED size that is never produced by the
+            // scale above, so it cannot be mistaken for a weak storm.
+            3.5],
           "circle-color": "#ff9d4d",
-          "circle-stroke-width": 1.6,
-          "circle-stroke-color": "#2a1405",
-          "circle-opacity": hurricaneVisible ? 0.95 : 0,
+          "circle-stroke-width": ["case", _fcHasWind, 1.6, 1.4],
+          // Hollow + grey stroke when the value is missing — reads as "no data",
+          // not as "small storm".
+          "circle-stroke-color": ["case", _fcHasWind, "#2a1405", "#c2cee4"],
+          "circle-opacity": hurricaneVisible ? ["case", _fcHasWind, 0.95, 0.12] : 0,
           "circle-stroke-opacity": hurricaneVisible ? 1 : 0
         }
       });
@@ -4615,12 +4636,23 @@
         source: "hurricane-forecast",
         filter: ["==", ["geometry-type"], "Point"],
         layout: {
-          "text-field": ["get", "label"],
+          // "Mon 2 AM · 115 kt". Also data-bound: with no wind value the label
+          // falls back to the time alone rather than printing "null kt" or a
+          // zero that would read as a real measurement. "kt" is NHC's unit and
+          // is not localised — see the note on units in the card renderer.
+          "text-field": ["case", ["has", "max_wind_kt"],
+            ["concat", ["get", "label"], " \u00b7 ", ["to-string", ["get", "max_wind_kt"]], " kt"],
+            ["get", "label"]],
           "text-font": ["Open Sans Bold"],
-          "text-size": 10,
-          "text-offset": [0, 1.2],
+          // One step smaller than P29b to buy room for the added value, and
+          // interpolated so the label stays readable when zoomed in without
+          // crowding the track at low zoom. The NUMBER is never truncated;
+          // MapLibre drops whole labels that collide instead.
+          "text-size": ["interpolate", ["linear"], ["zoom"], 3, 9, 6, 10, 9, 11.5],
+          "text-offset": [0, 1.3],
           "text-anchor": "top",
-          "text-allow-overlap": false
+          "text-allow-overlap": false,
+          "text-optional": true
         },
         paint: { "text-color": "#ffd5b5", "text-halo-color": "#0b121f", "text-halo-width": 1.2 }
       });
@@ -5588,17 +5620,22 @@
         }
         (Array.isArray(fc.points) ? fc.points : []).forEach((pt) => {
           if (!Number.isFinite(pt?.lon) || !Number.isFinite(pt?.lat)) return;
+          // max_wind_kt and gust_kt are set ONLY when finite. An absent property
+          // is what the layer expressions test with `has`, so "we do not know"
+          // stays distinguishable from any real value all the way to the paint.
+          const props = Object.assign({
+            kind: "point",
+            tau: pt.tau,
+            valid_time: pt.valid_time || "",
+            label: hstShort(pt.valid_time),
+            storm_type: pt.storm_type || "",
+          }, shared);
+          if (Number.isFinite(pt.max_wind_kt)) props.max_wind_kt = pt.max_wind_kt;
+          if (Number.isFinite(pt.gust_kt)) props.gust_kt = pt.gust_kt;
           out.push({
             type: "Feature",
             geometry: { type: "Point", coordinates: [pt.lon, pt.lat] },
-            properties: Object.assign({
-              kind: "point",
-              tau: pt.tau,
-              valid_time: pt.valid_time || "",
-              label: hstShort(pt.valid_time),
-              max_wind_kt: pt.max_wind_kt,
-              storm_type: pt.storm_type || "",
-            }, shared)
+            properties: props
           });
         });
       });
@@ -6235,6 +6272,30 @@
       const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">⚠ ${escapeHtml(p.event || _L("map.popup_title_alert","NWS Alert"))}</div><div class="popup-coords">${escapeHtml(p.source_label || "National Weather Service")}</div></div><div class="popup-severity ${sevCls}">${escapeHtml(p.nws_severity || p.severity || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_area","Area")}</div><div class="popup-metric-value">${escapeHtml(p.area_desc || "—")}</div></div></div>${p.instruction ? `<div class="popup-note">${escapeHtml(p.instruction)}</div>` : ""}${linkRow}</div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
     }
+    // P29e. NHC's own classification codes, expanded through an EXPLICIT table
+    // and nothing else. A code that is not listed renders VERBATIM —
+    // unexpanded, unguessed. The category is never derived from the wind speed
+    // either: NHC classifies, and a locally-computed category could disagree
+    // with the code sitting in the same payload.
+    //
+    // Declared at this scope because BOTH the forecast-point popup and the card
+    // renderer expand codes, and two copies of a lookup table drift.
+    const HUR_STORM_TYPES = {
+      MH: "map.hur_type_mh", HU: "map.hur_type_hu", TS: "map.hur_type_ts",
+      STS: "map.hur_type_sts", STD: "map.hur_type_std", PTC: "map.hur_type_ptc",
+    };
+    const HUR_STORM_TYPE_FALLBACK = {
+      MH: "Major hurricane", HU: "Hurricane", TS: "Tropical storm",
+      STS: "Subtropical storm", STD: "Subtropical depression", PTC: "Post-tropical cyclone",
+    };
+    function hurStormType(code) {
+      const c = String(code ?? "").trim();
+      if (!c) return "";
+      const key = HUR_STORM_TYPES[c.toUpperCase()];
+      if (!key) return c;   // unknown code -> verbatim
+      return _t(key) || HUR_STORM_TYPE_FALLBACK[c.toUpperCase()] || c;
+    }
+
     // AC-1. Every forecast-point popup carries the centre-line disclaimer, and
     // the copy is chosen from the payload's uncertainty_available flag rather
     // than hardcoded — if NHC ever ships uncertainty with the track, this must
@@ -6248,13 +6309,19 @@
     function openHurricaneForecastPopup(feature, lngLat) {
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
+      // "kt" is NHC's unit for forecast points and is NOT converted to mph
+      // here. wind_mph elsewhere is the Worker's conversion of the storm's
+      // CURRENT intensity; converting one to match the other would print a
+      // number NHC never published.
       const wind = (p.max_wind_kt != null && p.max_wind_kt !== "") ? escapeHtml(String(p.max_wind_kt)) + " kt" : "\u2014";
+      const gust = (p.gust_kt != null && p.gust_kt !== "") ? escapeHtml(String(p.gust_kt)) + " kt" : "\u2014";
+      const cat = hurStormType(p.storm_type);
       const lead = (p.tau != null && p.tau !== "") ? (_tmpl("map.hur_hours", { n: p.tau }) || (p.tau + " h")) : "\u2014";
       const valid = hstFull(p.valid_time) || "\u2014";
       // MapLibre serialises feature properties, so booleans can arrive as strings.
       const uncertain = (p.uncertainty_available === true || p.uncertainty_available === "true");
       const note = hurricaneUncertaintyNote(uncertain);
-      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u2b55 ${escapeHtml(p.storm_name || "")} \u00b7 ${_L("map.hur_pt_title", "Forecast track point")}</div><div class="popup-coords">NHC</div></div><div class="popup-severity normal">${escapeHtml(p.storm_type || "")}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_valid", "Valid")}</div><div class="popup-metric-value">${escapeHtml(valid)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_lead", "Lead time")}</div><div class="popup-metric-value">${escapeHtml(lead)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_wind", "Max wind")}</div><div class="popup-metric-value">${wind}</div></div></div>${note ? `<div class="popup-note">${escapeHtml(note)}</div>` : ""}</div>`;
+      const html2 = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\u2b55 ${escapeHtml(p.storm_name || "")} \u00b7 ${_L("map.hur_pt_title", "Forecast track point")}</div><div class="popup-coords">NHC</div></div><div class="popup-severity normal">${escapeHtml(cat)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_valid", "Valid")}</div><div class="popup-metric-value">${escapeHtml(valid)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_lead", "Lead time")}</div><div class="popup-metric-value">${escapeHtml(lead)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_wind", "Max wind")}</div><div class="popup-metric-value">${wind}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_gust", "Gusts")}</div><div class="popup-metric-value">${gust}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.hur_pt_category", "NHC category")}</div><div class="popup-metric-value">${escapeHtml(cat || "\u2014")}</div></div></div>${note ? `<div class="popup-note">${escapeHtml(note)}</div>` : ""}</div>`;
       activePopup = new maplibregl.Popup({ offset: 12, closeButton: true, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html2).addTo(map);
     }
 
@@ -6503,6 +6570,20 @@
           if (note) note.textContent = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_events_note", { events: eventList }) || `Active NWS alerts: ${eventList}.`) : state.sourceStatus === "none" ? (_t("map.s_alerts_none_note") || "No other active NWS alerts.") : (_t("map.s_alerts_unavail_note") || "NWS data unavailable.");
         });
       }
+      // Peak intensity across the forecast points. Ties resolve to the EARLIEST
+      // point. Returns null when no point carries a finite wind value, which is
+      // what makes the card line omissible rather than printed empty.
+      function hurForecastPeak(points) {
+        const pts = Array.isArray(points) ? points : [];
+        let best = null, ties = 0;
+        for (const p of pts) {
+          if (!Number.isFinite(p?.max_wind_kt)) continue;
+          if (best === null || p.max_wind_kt > best.max_wind_kt) { best = p; ties = 1; }
+          else if (p.max_wind_kt === best.max_wind_kt) ties++;
+        }
+        return best ? { point: best, tied: ties > 1 } : null;
+      }
+
       const pctText = (v) => (v === "<1" ? "<1%" : (v == null || v === "" ? "\u2014" : `${v}%`));
       const ktLabel = (kt) => kt === 34 ? (_t("map.hur_kt34") || "34 kt (tropical storm)")
         : kt === 64 ? (_t("map.hur_kt64") || "64 kt (hurricane)")
@@ -6591,6 +6672,39 @@
               html += `<div class="hur-line hur-warn">${escapeHtml(_tmpl("map.hur_prior_advisory_offset", { n: fc.track_origin_offset_mi }) || `Track drawn from the previous advisory; it begins ${fc.track_origin_offset_mi} mi from the storm's current position.`)}</div>`;
             }
           }
+          // ── FIX 4 · peak forecast intensity ──────────────────────────
+          // Omitted entirely when no forecast point carries a wind value —
+          // an empty "peak: — kt" line would assert knowledge we do not have.
+          const peak = hurForecastPeak(fc.points);
+          if (peak) {
+            const cat = hurStormType(peak.point.storm_type);
+            const vt = hstFull(peak.point.valid_time);
+            html += `<div class="hur-line">${escapeHtml(_tmpl("map.hur_peak", {
+              kt: peak.point.max_wind_kt,
+              cat: cat,
+              when: vt,
+            }) || `NHC forecast peak: ${peak.point.max_wind_kt} kt (${cat}), ${vt}`)}</div>`;
+
+            // ── FIX 5 · trend, stated ONLY when the series supports it ────
+            // Silence is the default. A tie for the peak, or any missing wind
+            // value in the series, means the comparison cannot carry a claim —
+            // and "forecast to weaken" is the kind of sentence that must never
+            // be guessed, because it reads as reassurance.
+            //
+            // It is also never shown alone: the closest-approach distance and
+            // the wind probabilities are already rendered above and below it.
+            const pts = Array.isArray(fc.points) ? fc.points : [];
+            const anyNull = pts.some((x) => !Number.isFinite(x?.max_wind_kt));
+            const first = pts.length ? pts[0] : null;
+            if (!anyNull && !peak.tied && first && Number.isFinite(first.max_wind_kt)) {
+              if (peak.point !== first && peak.point.max_wind_kt > first.max_wind_kt) {
+                html += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_trend_strengthen") || "Forecast to strengthen before its closest approach.")}</div>`;
+              } else if (peak.point === first) {
+                html += `<div class="hur-line">${escapeHtml(_t("map.hur_trend_weaken") || "Forecast to weaken.")}</div>`;
+              }
+            }
+          }
+
           // AC-1. A track exists for this storm, so the disclaimer accompanies
           // it in the card as well as in every forecast-point popup.
           const note = hurricaneUncertaintyNote(fc.uncertainty_available === true);
