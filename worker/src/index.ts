@@ -5138,7 +5138,15 @@ function stormPositionsStatus(res: StormPositions): 'active' | 'none' | 'unavail
 // pre-P29a-1 envelope so existing consumers see the same text.
 function stormPositionsMessage(res: StormPositions): string {
   const status = stormPositionsStatus(res);
-  if (status === 'active') return `${res.storms.length} active Pacific storm(s) near Hawaiʻi.`;
+  // P29a-4. This said "near Hawaiʻi" while the same response reported Marie at
+  // 2,311 mi with no Hawaiʻi location named in its own NHC product — a proximity
+  // claim contradicted by three other fields beside it, and one that no code on
+  // either side ever evaluated. The string is consumed by API clients and by
+  // brief.hurricane.note, which share no notion of "near", so the honest move is
+  // to drop the claim rather than refine it. Distance lives in
+  // current_position_nearest_island and forecast_closest_approach, per storm,
+  // where it is measured.
+  if (status === 'active') return `${res.storms.length} active Pacific storm(s) tracked by NHC.`;
   if (status === 'none') return 'No active Pacific storms.';
   return res.ok
     ? 'Pacific storm data was received but could not be validated. Check the National Hurricane Center directly.'
@@ -5641,6 +5649,92 @@ function pwsIsHawaiiLocation(name: string): boolean {
   return PWS_HAWAII_LOCATIONS.has(n) || PWS_HAWAII_BUOY_RE.test(n);
 }
 
+// ── P29a-4 · LOCATION CLASSIFICATION ──────────────────────────────────────
+//
+// The client could not tell 'NIIHAU' — a place people live — from '21N 160W',
+// an open-ocean grid point, using any field in the payload. The Worker was
+// already computing that distinction in pwsIsHawaiiLocation and throwing it
+// away, so the client's only route was to re-implement the allowlist in JS
+// (a second copy, guaranteed to drift) or to read a position out of the label
+// (hemisphere-letter parsing — the inference Invariant III forbids). The
+// classification is emitted from where it already runs.
+//
+// The grid pattern matches the SHAPE of a coordinate label, not its content.
+// No latitude, longitude, hemisphere or distance is ever derived from it: the
+// only thing asserted is "this label is written like a coordinate, so it is not
+// a place name". A grid row ships exactly as received, with island_key null.
+const PWS_GRID_LABEL_RE = /^\d{1,2}[NS]\s+\d{1,3}[EW]$/;
+
+type PwsLocationClass = 'named' | 'buoy' | 'grid' | 'other';
+
+// 'other' is a REAL branch, not a fallthrough for tidiness. If NHC introduces a
+// label form none of the three patterns recognise, it must surface as 'other'
+// so the gap is visible — being silently forced into 'grid' would tell a client
+// "this is open ocean" about something we did not actually recognise. Note this
+// also catches a non-Hawaiʻi buoy (say 'BUOY 41043'), since the buoy rule is
+// scoped to NDBC's Hawaii 51xxx series: unrecognised is the honest answer there.
+function pwsLocationClass(name: string): PwsLocationClass {
+  const n = name.trim().toUpperCase();
+  if (PWS_HAWAII_LOCATIONS.has(n)) return 'named';
+  if (PWS_HAWAII_BUOY_RE.test(n)) return 'buoy';
+  if (PWS_GRID_LABEL_RE.test(n)) return 'grid';
+  return 'other';
+}
+
+// ── NHC LABEL → ISLAND KEY ────────────────────────────────────────────────
+// One-to-one, written out, and deliberately short. A label appears here ONLY
+// when it names a place on an island that ISLAND_CENTROIDS actually holds and
+// the match is unambiguous. Everything else is null — there is no fuzzy match,
+// no substring match, and above all no nearest-centroid fallback.
+//
+// The Northwestern Hawaiian Islands (NIHOA, NECKER, FR FRIG SHOALS, GARDNER
+// PINN, MARO REEF, LAYSAN, LISIANSKI, PEARL HERMES, MIDWAY, KURE) are ALL null.
+// They are real islands with real people and real probabilities — Nihoa is at
+// 88% for 34 kt in the current advisory — but they are not in ISLAND_CENTROIDS,
+// and attaching them to the nearest main island would put Nihoa's 88% under
+// Kauaʻi's name. That is a false statement about which island is at risk, and
+// it is exactly the kind of quiet inference this codebase has been burned by.
+// Null is the correct answer: "this is a real location we cannot key".
+//
+// 'HAWAII' is null too: as a bare label it is ambiguous between the island and
+// the state, and guessing which would be a coin flip on a safety surface.
+//
+// The value type is IslandKey, so a typo fails the BUILD rather than shipping.
+// The runtime assertion below additionally catches an IslandKey that is valid
+// but absent from ISLAND_CENTROIDS, which typing alone cannot see.
+const PWS_LABEL_TO_ISLAND: Readonly<Record<string, IslandKey>> = {
+  'BARKING SANDS': 'kauai',      // PMRF, west Kauaʻi
+  'LIHUE': 'kauai',
+  'KAUAI': 'kauai',
+  'NIIHAU': 'niihau',
+  'HONOLULU': 'oahu',
+  'JOINT BASE PHH': 'oahu',      // Joint Base Pearl Harbor–Hickam
+  'KANEOHE': 'oahu',
+  'OAHU': 'oahu',
+  'KAHULUI': 'maui',
+  'MAUI': 'maui',
+  'MOLOKAI': 'molokai',
+  'LANAI': 'lanai',
+  'KAHOOLAWE': 'kahoolawe',
+  'HILO': 'hawaii',
+  'KONA': 'hawaii',
+  'KAILUA KONA': 'hawaii',       // disambiguated from Kailua, Oʻahu by "KONA"
+  'SOUTH POINT': 'hawaii',       // Ka Lae
+};
+
+// Module-load guard. A mapping that points at an island the distance layer does
+// not carry is a bug, and it must fail loudly at boot rather than ship a key no
+// consumer can resolve.
+for (const [label, key] of Object.entries(PWS_LABEL_TO_ISLAND)) {
+  if (!ISLAND_CENTROIDS.some((i) => i.key === key)) {
+    throw new Error(`PWS_LABEL_TO_ISLAND: ${label} -> ${key} is not in ISLAND_CENTROIDS`);
+  }
+}
+
+function pwsIslandKey(name: string): IslandKey | null {
+  return PWS_LABEL_TO_ISLAND[name.trim().toUpperCase()] ?? null;
+}
+
 type WindProbStatus =
   | 'ok'
   | 'no_hawaii_locations'
@@ -5667,6 +5761,14 @@ type WindProbLocation = {
   // key or a coordinate — every one of those would be a guess, and how to
   // display a place name is a display concern.
   name: string;
+  // P29a-4. Derived from the label's SHAPE and from the allowlist — never from
+  // reading a coordinate out of the label. Classifies, never filters: every row
+  // the product contains ships regardless of class.
+  location_class: PwsLocationClass;
+  // Non-null ONLY for an unambiguous main-island place present in
+  // ISLAND_CENTROIDS. Null for every NWHI island, every buoy, every grid point
+  // and every label we cannot key with confidence — see PWS_LABEL_TO_ISLAND.
+  island_key: IslandKey | null;
   threshold_kt: number;             // 34 | 50 | 64
   windows: WindProbWindow[];
   peak_cumulative_pct: WindProbValue;
@@ -5677,10 +5779,24 @@ type WindProbabilities = {
   advisory_number: string;
   advisory_age_cycles: number;
   locations: WindProbLocation[];
+  // ── ROW COUNTS (compatibility) ──────────────────────────────────────
+  // location_count and hawaii_location_count count ROWS, not locations: a
+  // location contributes up to three rows, one per wind threshold. The names
+  // say "location" and the values do not, which is a naming defect — but both
+  // are already published, and silently changing what a shipped field counts is
+  // worse than a bad name. They are frozen. DISPLAY THE distinct_* FIELDS
+  // BELOW; for Lowell today these read 49 rows against 21 distinct locations.
   location_count: number;
   // Kept even when status is 'prior_advisory' so the "NHC named no Hawaiʻi
   // place" fact is never masked by the status precedence below.
   hawaii_location_count: number;
+  // ── HONEST COUNTS (P29a-4) ──────────────────────────────────────────
+  row_count: number;                      // == location_count, correctly named
+  distinct_location_count: number;        // distinct labels of any class
+  distinct_hawaii_location_count: number; // distinct 'named' + 'buoy'
+  // Distinct 'named' only. THIS is the number to put in front of a person:
+  // places, not rows, not buoys, not ocean grid points.
+  distinct_named_place_count: number;
   below_threshold_note: string;
 };
 
@@ -5786,7 +5902,14 @@ function parsePwsProduct(text: string): PwsParsed | null {
     }
     if (bad) continue;
 
-    locations.push({ name, threshold_kt: kt, windows, peak_cumulative_pct: pwsPeak(windows) });
+    locations.push({
+      name,
+      location_class: pwsLocationClass(name),
+      island_key: pwsIslandKey(name),
+      threshold_kt: kt,
+      windows,
+      peak_cumulative_pct: pwsPeak(windows),
+    });
   }
 
   return { stormName, advisoryNumber, advisoryNumberRaw, locations };
@@ -5872,6 +5995,18 @@ async function fetchWindProbabilities(
 
     const hawaiiCount = parsed.locations.reduce((n, l) => n + (pwsIsHawaiiLocation(l.name) ? 1 : 0), 0);
 
+    // Distinct LOCATIONS, keyed on the verbatim label. Each contributes up to
+    // three rows (34/50/64 kt), which is the whole reason the row counts above
+    // read so much higher than the number of places involved.
+    const distinctNames = new Set<string>();
+    const distinctHawaii = new Set<string>();
+    const distinctNamed = new Set<string>();
+    for (const l of parsed.locations) {
+      distinctNames.add(l.name);
+      if (l.location_class === 'named' || l.location_class === 'buoy') distinctHawaii.add(l.name);
+      if (l.location_class === 'named') distinctNamed.add(l.name);
+    }
+
     // Status precedence: age caveat outranks the Hawaiʻi-presence report,
     // because a stale reading is the more important thing to say about the
     // whole block. hawaii_location_count is emitted either way, so choosing
@@ -5895,6 +6030,10 @@ async function fetchWindProbabilities(
         locations: parsed.locations,
         location_count: parsed.locations.length,
         hawaii_location_count: hawaiiCount,
+        row_count: parsed.locations.length,
+        distinct_location_count: distinctNames.size,
+        distinct_hawaii_location_count: distinctHawaii.size,
+        distinct_named_place_count: distinctNamed.size,
         below_threshold_note: PWS_BELOW_THRESHOLD_NOTE,
       },
     });
