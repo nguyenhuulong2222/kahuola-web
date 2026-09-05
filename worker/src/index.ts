@@ -5317,12 +5317,140 @@ type ConeStatus =
 type StormCone = {
   advisory_number: string;
   advisory_age_cycles: number;
-  vertex_count: number;
-  // VERBATIM from the GeoJSON: no simplification, no rounding, no re-winding of
-  // rings, and a MultiPolygon stays a MultiPolygon. The cone is an official
-  // published boundary; a "tidied" edge is a different boundary.
+  vertex_count: number;          // AFTER simplification
+  source_vertex_count: number;   // as NHC published it
+  simplified: boolean;
+  max_deviation_km: number;      // 0 when simplified is false
+  simplification_note?: string;
+  // Ring winding is never changed, and a MultiPolygon stays a MultiPolygon.
+  // Coordinates are never rounded — only whole vertices are dropped, and only
+  // by Douglas–Peucker under a stated bound.
   polygon: any;
 };
+
+// ── P29c AMENDMENT · CONE SIMPLIFICATION ──────────────────────────────────
+//
+// Verbatim cones took the endpoint to 210 KB — 5.4x its previous size, 81% of
+// it cone coordinates. The ruling: simplify the GEOMETRY, do not round the
+// COORDINATES, and do not gate the cone behind a query param (the map is the
+// only consumer and always wants it, so a param just hides the cost from the
+// bill rather than removing it).
+//
+// Why the cone may be simplified when the track may not: the track is nine
+// forecast POINTS, each a datum NHC published, and P29a-2 proved our line is
+// identical to NHC's own vertex for vertex. The cone is a drawn envelope, not a
+// set of measurements, and it is already a 67%-probability boundary rather than
+// an edge anything is on one side of. Dropping vertices from it loses no datum.
+//
+// Douglas–Peucker, NOT "keep every Nth vertex". Uniform sampling discards
+// detail exactly where the boundary curves hardest and retains it along
+// straight runs — it changes the shape in a way nobody controls. DP keeps
+// precisely the vertices that carry the shape and drops the ones that lie
+// within a stated distance of the line they sit on.
+const CONE_TOLERANCE_LADDER_KM = [0.5, 1, 2, 5] as const;
+const CONE_PAYLOAD_BUDGET_BYTES = 100_000;
+
+const KM_PER_DEG_LAT = 110.574;
+
+// Local equirectangular projection. Over a cone spanning a few degrees the
+// distortion is far below the tolerances in play, and the alternative —
+// haversine inside an O(n log n) inner loop — would cost far more than the
+// accuracy is worth here. The projection is only ever used to decide which
+// vertices to DROP; every vertex that survives is emitted unmodified.
+function coneProject(lon: number, lat: number, refLat: number): [number, number] {
+  return [lon * 111.320 * Math.cos(refLat * Math.PI / 180), lat * KM_PER_DEG_LAT];
+}
+
+// Perpendicular distance in km from p to segment a-b. A zero-length segment
+// degrades to point-to-point, which is what makes the closed-ring call below
+// behave as the standard "split at the farthest vertex" opening move.
+function coneSegDistKm(p: [number, number], a: [number, number], b: [number, number]): number {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+  let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
+
+// Iterative Douglas–Peucker. Iterative rather than recursive because a cone ring
+// runs to ~1600 vertices and a pathological split pattern would put that depth
+// on the call stack inside a Worker.
+//
+// The ring arrives closed (first === last). DP is invoked across the whole
+// closed span, so its opening segment is degenerate and every distance is taken
+// from the first vertex — the farthest vertex is retained and splits the ring
+// into two open chains, which is exactly the correct opening move for a ring.
+// Both endpoints are always kept, so closure survives by construction.
+function coneSimplifyRing(ring: any[], toleranceKm: number): { ring: any[]; maxDroppedKm: number } {
+  const n = ring.length;
+  if (n < 5) return { ring, maxDroppedKm: 0 };
+  let latSum = 0;
+  for (const c of ring) latSum += Number(c[1]);
+  const refLat = latSum / n;
+  const proj: [number, number][] = ring.map((c: any) => coneProject(Number(c[0]), Number(c[1]), refLat));
+
+  const keep = new Uint8Array(n);
+  keep[0] = 1; keep[n - 1] = 1;
+  let maxDropped = 0;
+  const stack: Array<[number, number]> = [[0, n - 1]];
+  while (stack.length) {
+    const [first, last] = stack.pop()!;
+    if (last <= first + 1) continue;
+    let dmax = 0, idx = -1;
+    for (let i = first + 1; i < last; i++) {
+      const d = coneSegDistKm(proj[i], proj[first], proj[last]);
+      if (d > dmax) { dmax = d; idx = i; }
+    }
+    if (dmax > toleranceKm && idx > 0) {
+      keep[idx] = 1;
+      stack.push([first, idx], [idx, last]);
+    } else if (dmax > maxDropped) {
+      // Every vertex in this span is being dropped, and dmax is the worst of
+      // them against the segment that replaces them. Tracking it here yields the
+      // TRUE maximum deviation for free, rather than trusting the tolerance.
+      maxDropped = dmax;
+    }
+  }
+  const out: any[] = [];
+  for (let i = 0; i < n; i++) if (keep[i]) out.push(ring[i]);
+  // A closed ring needs at least 4 positions. If DP collapsed it further, the
+  // original is kept: a degenerate ring is worse than an unsimplified one.
+  if (out.length < 4) return { ring, maxDroppedKm: 0 };
+  return { ring: out, maxDroppedKm: maxDropped };
+}
+
+function coneRingCount(g: any): number {
+  if (!g) return 0;
+  if (g.type === 'Polygon') return (g.coordinates || []).reduce((n: number, r: any) => n + (Array.isArray(r) ? r.length : 0), 0);
+  if (g.type === 'MultiPolygon') return (g.coordinates || []).reduce((n: number, poly: any) => n + (Array.isArray(poly) ? poly.reduce((m: number, r: any) => m + (Array.isArray(r) ? r.length : 0), 0) : 0), 0);
+  return 0;
+}
+
+// Simplifies every ring of a Polygon or MultiPolygon. Geometry TYPE is
+// preserved — a MultiPolygon is never flattened to a Polygon.
+function coneSimplifyGeometry(g: any, toleranceKm: number): { geometry: any; maxDroppedKm: number } {
+  let worst = 0;
+  const doRings = (rings: any[]) => rings.map((r: any) => {
+    if (!Array.isArray(r)) return r;
+    const s = coneSimplifyRing(r, toleranceKm);
+    if (s.maxDroppedKm > worst) worst = s.maxDroppedKm;
+    return s.ring;
+  });
+  if (g.type === 'Polygon') return { geometry: { type: 'Polygon', coordinates: doRings(g.coordinates || []) }, maxDroppedKm: worst };
+  if (g.type === 'MultiPolygon') {
+    return {
+      geometry: { type: 'MultiPolygon', coordinates: (g.coordinates || []).map((poly: any) => Array.isArray(poly) ? doRings(poly) : poly) },
+      maxDroppedKm: worst,
+    };
+  }
+  return { geometry: g, maxDroppedKm: 0 };
+}
+
+function coneSimplificationNote(km: number): string {
+  return `Boundary simplified for transfer. Maximum deviation from NHC's published cone: ${km} km. ` +
+    "The cone itself represents a 67% probability of the storm centre's track, not a hard boundary.";
+}
 
 type ForecastResult = {
   status: ForecastStatus;
@@ -5535,12 +5663,18 @@ async function fetchForecastPoints(
       : (Array.isArray(g.coordinates) ? g.coordinates.reduce((n: number, poly: any) => n + (Array.isArray(poly) ? poly.reduce((m: number, ring: any) => m + (Array.isArray(ring) ? ring.length : 0), 0) : 0), 0) : 0);
     if (vertexCount < 4) { cones.set(storm.id, { status: 'unavailable', cone: null }); return; }
 
+    // Emitted UNSIMPLIFIED here. The tolerance ladder needs the whole payload's
+    // size to choose a rung, and that is only knowable once every storm's
+    // envelope exists — so it runs once, in handleHurricane, across all cones.
     cones.set(storm.id, {
       status: age === 1 ? 'prior_advisory' : 'ok',
       cone: {
         advisory_number: String(feats[0]?.properties?.advisnum ?? ''),
         advisory_age_cycles: age,
         vertex_count: vertexCount,
+        source_vertex_count: vertexCount,
+        simplified: false,
+        max_deviation_km: 0,
         polygon: g,
       },
     });
@@ -6302,6 +6436,46 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
   // A storm absent from the map defaults to 'unavailable' — the same default
   // the signal loop above applies — so the three counters always sum to
   // forecast_total_count and a missing entry can never go uncounted.
+  // ── P29c AMENDMENT · tolerance ladder ────────────────────────────────
+  // The rung is chosen by MEASURING the serialised payload, not by guessing.
+  // Smallest tolerance that brings the whole response under budget wins, so a
+  // quiet Pacific with one small cone keeps near-full fidelity and only a busy
+  // one pays. Escalating at request time also means the choice tracks the storm
+  // count instead of being tuned to whatever three storms happened to be up the
+  // day it was written.
+  //
+  // If even the largest rung cannot fit, the largest rung is used anyway and
+  // the payload is simply large: silently DROPPING cones to hit a byte target
+  // would trade a size problem for a safety one.
+  const coneList = signals
+    .map((f) => (f.properties as any).cone as (StormCone | null))
+    .filter((c): c is StormCone => !!c);
+
+  if (coneList.length) {
+    const originals = coneList.map((c) => c.polygon);
+    const baseBytes = JSON.stringify(signals).length
+      - originals.reduce((n, g) => n + JSON.stringify(g).length, 0);
+    for (let rung = 0; rung < CONE_TOLERANCE_LADDER_KM.length; rung++) {
+      const tol = CONE_TOLERANCE_LADDER_KM[rung];
+      const simplified = originals.map((g) => coneSimplifyGeometry(g, tol));
+      const bytes = baseBytes + simplified.reduce((n, s2) => n + JSON.stringify(s2.geometry).length, 0);
+      const lastRung = rung === CONE_TOLERANCE_LADDER_KM.length - 1;
+      if (bytes < CONE_PAYLOAD_BUDGET_BYTES || lastRung) {
+        coneList.forEach((c, i) => {
+          c.polygon = simplified[i].geometry;
+          c.vertex_count = coneRingCount(simplified[i].geometry);
+          c.simplified = c.vertex_count < c.source_vertex_count;
+          c.max_deviation_km = c.simplified ? tol : 0;
+          // Never claim simplified:false while the geometry has in fact been
+          // reduced — the flag is derived from the vertex counts, not asserted.
+          if (c.simplified) c.simplification_note = coneSimplificationNote(tol);
+          else delete c.simplification_note;
+        });
+        break;
+      }
+    }
+  }
+
   const forecastOkCount = res.storms.reduce(
     (n, s) => n + ((forecasts.get(s.id)?.status ?? 'unavailable') === 'ok' ? 1 : 0), 0,
   );
