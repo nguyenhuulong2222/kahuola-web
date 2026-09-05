@@ -2103,6 +2103,22 @@
       color: rgba(255, 213, 181, 0.95);
     }
 
+    /* P29c. The mandatory cone caption. Visually distinct from the AC-1
+       centre-line disclaimer above it so the two corrections do not read as
+       one block a user's eye can skip. */
+    .hur-cone-caption {
+      margin: 6px 0 2px;
+      padding: 6px 8px;
+      border-left: 3px solid rgba(255, 157, 77, 0.75);
+      border-radius: 0 8px 8px 0;
+      background: rgba(255, 157, 77, 0.10);
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: rgba(255, 224, 190, 0.97);
+    }
+
+    .hur-cone-caption strong { color: #ffb066; letter-spacing: .02em; }
+
     .hur-sub {
       margin-top: 5px;
       font-size: 11.5px;
@@ -3967,6 +3983,12 @@
             forecast_closest_approach: props.forecast_closest_approach ?? null,
             wind_probabilities: props.wind_probabilities ?? null,
             wind_probabilities_status: props.wind_probabilities_status ?? null,
+            // P29c. This normaliser is an ALLOW-LIST: anything not named here is
+            // dropped on the floor, which is exactly how P29b's twelve fields
+            // went missing. New payload fields must be added here or they never
+            // reach a renderer.
+            cone: props.cone ?? null,
+            cone_status: props.cone_status ?? null,
           }
         };
       }).filter(Boolean);
@@ -4575,6 +4597,43 @@
     // source, sibling layers each filtered by geometry-type.
     function ensureHurricaneForecastLayers() {
       ensureSource("hurricane-forecast", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+
+      // ── P29c · cone of uncertainty ────────────────────────────────────
+      // Added FIRST so it sits BENEATH the track line and every forecast point:
+      // the cone is context, the line and points are the published forecast.
+      //
+      // NOT in any queryTopFeature list — see bindGlobalCanvasClickRouter. This
+      // is a very large polygon covering much of the map, and "a big layer
+      // swallowing clicks meant for what is under it" is a named historical bug
+      // in this file (Invariant 10). It is drawn and never queried.
+      ensureLayer({
+        id: "hurricane-cone-fill",
+        type: "fill",
+        source: "hurricane-forecast",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+        paint: {
+          // Low enough that island shapes, place labels and the basemap all
+          // read straight through it.
+          "fill-color": "#ff9d4d",
+          "fill-opacity": hurricaneVisible ? 0.10 : 0
+        }
+      });
+
+      ensureLayer({
+        id: "hurricane-cone-outline",
+        type: "line",
+        source: "hurricane-forecast",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+        paint: {
+          "line-color": "#ff9d4d",
+          "line-width": 1.4,
+          // Dashed to match the track. A solid edge reads as a boundary; this is
+          // a 67% probability envelope for the CENTRE, not a line anything is
+          // safely outside.
+          "line-dasharray": [3, 3],
+          "line-opacity": hurricaneVisible ? 0.55 : 0
+        }
+      });
 
       // DASHED, deliberately. A solid line reads as "this is where it goes";
       // dashes read as "projected". The payload ships uncertainty_available
@@ -5614,6 +5673,19 @@
           storm_id: p.id || "",
           uncertainty_available: fc.uncertainty_available === true,
         };
+        // Drawn ONLY when the payload carries a cone. The Worker already
+        // refuses to pair a cone from one advisory with a track from another
+        // (cone_status "advisory_divergence"); the client does not re-pair them
+        // either — it renders what it was given or nothing.
+        const cone = p.cone;
+        if (cone && cone.polygon && (p.cone_status === "ok" || p.cone_status === "prior_advisory")) {
+          out.push({
+            type: "Feature",
+            geometry: cone.polygon,
+            properties: Object.assign({ kind: "cone", cone_status: p.cone_status }, shared)
+          });
+        }
+
         const coords = fc.track && Array.isArray(fc.track.coordinates) ? fc.track.coordinates : null;
         if (coords && coords.length >= 2) {
           out.push({ type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: Object.assign({ kind: "track" }, shared) });
@@ -5747,7 +5819,7 @@
       ["tsunami-fill", "tsunami-outline", "tsunami-point"].forEach(id => setLayerVisibility(id, tsunamiVisible));
     }
     function syncHurricaneLayerVisibility() {
-      ["hurricane-point", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label"]
+      ["hurricane-cone-fill", "hurricane-cone-outline", "hurricane-point", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label"]
         .forEach((id) => setLayerVisibility(id, hurricaneVisible));
     }
     function syncLandslideLayerVisibility() {
@@ -6301,9 +6373,46 @@
     // than hardcoded — if NHC ever ships uncertainty with the track, this must
     // say something different, and it will.
     function hurricaneUncertaintyNote(uncertaintyAvailable) {
-      if (uncertaintyAvailable === true) return "";
+      // P29c. The flag now has two real states instead of one. With a cone on
+      // the map, claiming nothing conveys spread would be false — but the
+      // correction that matters is unchanged and stays in both wordings:
+      // NEITHER the line nor the cone shows where damaging winds reach.
+      if (uncertaintyAvailable === true) {
+        return _L("map.hur_disclaimer_with_cone",
+          "NHC forecast centre line, with the shaded cone showing where the centre may travel. The storm's actual track may still differ. Neither shows where damaging winds reach.");
+      }
       return _L("map.hur_disclaimer_center",
         "NHC forecast centre line. The storm's actual position may differ substantially. This line does not show where damaging winds reach.");
+    }
+
+    // ── P29c · FIX 4 · the mandatory cone caption ──────────────────────────
+    // Rendered ONLY where a cone is actually drawn, and placed immediately
+    // ABOVE the wind probability list so the reader meets the correction before
+    // the numbers. The cone describes where the storm's CENTRE may travel; a
+    // reader who takes "outside the cone" for "safe" has been misled by us, and
+    // Lowell is the live example — its cone will not touch Kauaʻi while LIHUE
+    // sits at 17% and NIIHAU at 41%.
+    //
+    // The emphasised word is a separate key so the emphasis lands on the right
+    // token in each language (CENTRE / TÂM), and the caption is escaped BEFORE
+    // the <strong> is introduced.
+    function hurricaneConeCaptionHtml(cone) {
+      if (!cone) return "";
+      const caption = _L("map.hur_cone_caption",
+        "This shading shows where the storm's CENTRE may travel. Damaging winds can extend far beyond it \u2014 see the location probabilities below.");
+      const word = _L("map.hur_cone_caption_emphasis", "CENTRE");
+      let html = escapeHtml(caption);
+      const w = escapeHtml(word);
+      if (w && html.indexOf(w) !== -1) html = html.replace(w, `<strong>${w}</strong>`);
+      let out = `<div class="hur-cone-caption">${html}</div>`;
+      // FIX 6 — say that the boundary was reduced, and by how much. Read from
+      // the payload; the number is never hardcoded here.
+      if (cone.simplified === true && cone.max_deviation_km != null) {
+        const line = _tmpl("map.hur_cone_simplified", { n: cone.max_deviation_km })
+          || `Boundary simplified for transfer (within ${cone.max_deviation_km} km of NHC's published cone).`;
+        out += `<div class="hur-note">${escapeHtml(line)}</div>`;
+      }
+      return out;
     }
 
     function openHurricaneForecastPopup(feature, lngLat) {
@@ -6436,7 +6545,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-cone-fill", "hurricane-cone-outline", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -6711,6 +6820,10 @@
           if (note) html += `<div class="hur-disclaimer">${escapeHtml(note)}</div>`;
         } else if (p.forecast_status && p.forecast_status !== "ok") {
           html += `<div class="hur-line">${escapeHtml(_t("map.hur_no_track") || "No forecast track available for this storm.")}</div>`;
+        }
+        // FIX 4 — above the probabilities, always, wherever a cone is drawn.
+        if (p.cone && (p.cone_status === "ok" || p.cone_status === "prior_advisory")) {
+          html += hurricaneConeCaptionHtml(p.cone);
         }
         html += hurricaneWindProbHtml(p);
         return html + `</div>`;
