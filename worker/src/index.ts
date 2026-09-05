@@ -4950,6 +4950,13 @@ type NormalizedStorm = {
   event_time: string | null;
   event_time_source: 'advisory' | 'last_update' | 'unknown';
   current_position_nearest_island: NearestIsland | null;
+  // P29d. The Wind Speed Probabilities product URL, taken from the feed rather
+  // than constructed from the basin. NHC publishes it per storm
+  // (windSpeedProbabilities.url), so there is no filename pattern to guess and
+  // no way to build a URL that points at another storm's product. Null when the
+  // feed omits it — that becomes 'unsupported_basin', never a guessed URL.
+  // INTERNAL ONLY: consumed by fetchWindProbabilities, never emitted.
+  wind_prob_url: string | null;
 };
 
 type StormPositions = {
@@ -5092,6 +5099,9 @@ async function fetchStormPositions(): Promise<StormPositions> {
           event_time: advisoryIssuedAt,
           event_time_source: eventTimeSource,
           current_position_nearest_island: nearestIslandTo(lon, lat),
+          wind_prob_url: typeof s?.windSpeedProbabilities?.url === 'string' && s.windSpeedProbabilities.url
+            ? s.windSpeedProbabilities.url
+            : null,
         };
       })
       .filter((s: NormalizedStorm | null): s is NormalizedStorm => s !== null);
@@ -5555,6 +5565,344 @@ async function fetchForecastPoints(
   return out;
 }
 
+
+// ── P29d · NHC WIND SPEED PROBABILITIES FOR NAMED HAWAIʻI LOCATIONS ────────
+//
+// WHY THIS EXISTS. forecast_closest_approach carries basis
+// 'forecast_center_only'. Lowell's centre is hundreds of miles from Niʻihau
+// while its 34 kt wind field reaches far beyond the centre, so that distance
+// cannot answer "when does it get dangerous here" — and a number that looks
+// like it answers that question, but does not, is worse than no number. The
+// Wind Speed Probabilities product is NHC's own answer, stated at named
+// Hawaiʻi places.
+//
+// ── SOURCE CHOICE: the text product, not the ArcGIS layers ─────────────────
+// Both candidates were fetched and inspected before choosing.
+//
+// ArcGIS "Probabilistic Winds 34 kts" (layer 395) returned 1.86 MB of 11
+// MultiPolygons, ~46,000 vertices, whose only data field is `percentage` as a
+// BANDED STRING ("10-20%", "<5%"). It is a contoured surface: it holds no named
+// locations, so reading a value for Honolulu would mean point-in-polygon
+// against a band — inventing a probability NHC did not publish at that point.
+// It also carries NO attribution fields whatsoever (no stormname, binnumber or
+// advisnum), so it is an aggregate over every active storm and the attribution
+// guard below could not be run against it at all. Disqualified twice over.
+//
+// The text product carries per-storm attribution in its header and exact
+// integer probabilities at named places (BARKING SANDS, LIHUE, NIIHAU, NIHOA,
+// NECKER, …). Parsing it is FIXED-WIDTH COLUMN SLICING — no coordinate is ever
+// derived, so the hemisphere-letter inference Invariant III forbids does not
+// arise here. Grid-point rows like "20N 160W" are passed through as opaque
+// labels and their coordinates are deliberately NOT parsed.
+//
+// ── THE ABSENCE RULE ───────────────────────────────────────────────────────
+// A location row exists ONLY when its 5-day cumulative probability clears
+// NHC's reporting threshold (3% for 34/50 kt, 1% for 64 kt). Therefore:
+//   · a MISSING LOCATION means "below threshold" — NOT 0%
+//   · a MISSING PRODUCT means "unknown" — NOT safe
+//   · a literal "X" in a cell means "<1%" — NOT zero and NOT null
+// These are three distinct states and they stay distinct all the way out: "X"
+// ships as the string '<1', an absent location ships as no row at all, and an
+// unreachable product ships as null with status 'unavailable'. Nothing here
+// ever emits 0 for any of them.
+
+const PWS_CONCURRENCY_LIMIT = FORECAST_CONCURRENCY_LIMIT;
+
+// Status-only. NEVER used to filter, annotate, reorder or drop a row: every
+// location the product contains is emitted verbatim regardless of membership
+// here. This set exists solely to answer FIX 4's question "did NHC name any
+// Hawaiʻi place in this product", which the 'no_hawaii_locations' status
+// requires and which cannot be answered without SOME notion of which labels
+// are Hawaiʻi. Deliberately generous: because rows ship either way, an
+// over-broad set costs nothing, while an over-narrow one would report
+// "no Hawaiʻi locations" while a Hawaiʻi row sat in the payload.
+//
+// Grid points ("20N 160W") are NOT included even where they lie over Hawaiian
+// waters — deciding that would mean parsing a coordinate out of a hemisphere
+// letter, which is exactly what Invariant III forbids.
+const PWS_HAWAII_LOCATIONS: ReadonlySet<string> = new Set([
+  // Main islands and installations, as NHC labels them (some truncated to the
+  // product's 15-character field — kept verbatim, never expanded).
+  'BARKING SANDS', 'LIHUE', 'NIIHAU', 'HONOLULU', 'JOINT BASE PHH',
+  'KANEOHE', 'KAHULUI', 'HILO', 'KONA', 'KAILUA KONA', 'SOUTH POINT',
+  'MOLOKAI', 'LANAI', 'KAHOOLAWE', 'KAUAI', 'MAUI', 'OAHU', 'HAWAII',
+  // Northwestern Hawaiian Islands.
+  'NIHOA', 'NECKER', 'FR FRIG SHOALS', 'FRENCH FRIGATE', 'GARDNER PINN',
+  'MARO REEF', 'LAYSAN', 'LISIANSKI', 'PEARL HERMES', 'MIDWAY', 'KURE',
+  'JOHNSTON', 'JOHNSTON ATOLL',
+]);
+
+// NDBC's 51xxx series is its Hawaii region. A documented buoy-numbering fact,
+// not a coordinate derived from the label.
+const PWS_HAWAII_BUOY_RE = /^BUOY\s+51\d{3}$/;
+
+function pwsIsHawaiiLocation(name: string): boolean {
+  const n = name.trim().toUpperCase();
+  return PWS_HAWAII_LOCATIONS.has(n) || PWS_HAWAII_BUOY_RE.test(n);
+}
+
+type WindProbStatus =
+  | 'ok'
+  | 'no_hawaii_locations'
+  | 'prior_advisory'
+  | 'unavailable'
+  | 'mismatch'
+  | 'unsupported_basin';
+
+// A probability is either an exact integer percent, or the literal '<1' for the
+// product's "X". '<1' is a REAL READING meaning "below one percent" — it is not
+// missing data and it is not zero. Typing it as a string union rather than
+// coercing to a number is what stops a downstream `?? 0` from erasing it.
+type WindProbValue = number | '<1';
+
+type WindProbWindow = {
+  tau: number;
+  incremental_pct: WindProbValue;   // chance of onset WITHIN this window
+  cumulative_pct: WindProbValue;    // chance of onset by the end of it
+};
+
+type WindProbLocation = {
+  // VERBATIM from the product, truncations included ("JOINT BASE PHH",
+  // "FR FRIG SHOALS"). Not expanded, not normalised, not mapped to an island
+  // key or a coordinate — every one of those would be a guess, and how to
+  // display a place name is a display concern.
+  name: string;
+  threshold_kt: number;             // 34 | 50 | 64
+  windows: WindProbWindow[];
+  peak_cumulative_pct: WindProbValue;
+};
+
+type WindProbabilities = {
+  status: WindProbStatus;
+  advisory_number: string;
+  advisory_age_cycles: number;
+  locations: WindProbLocation[];
+  location_count: number;
+  // Kept even when status is 'prior_advisory' so the "NHC named no Hawaiʻi
+  // place" fact is never masked by the status precedence below.
+  hawaii_location_count: number;
+  below_threshold_note: string;
+};
+
+type WindProbResult = { status: WindProbStatus; probabilities: WindProbabilities | null };
+
+const PWS_BELOW_THRESHOLD_NOTE =
+  "Locations absent from this product are below NHC's reporting threshold " +
+  '(3% for 34/50 kt, 1% for 64 kt), not at zero probability.';
+
+// The product is plain ASCII inside a <pre>; the only entities the page can
+// introduce are the five XML ones. A full HTML decoder is not warranted and an
+// unknown entity is left as-is rather than guessed at — a stray "&foo;" in a
+// label is preferable to a mangled one.
+function decodeBasicEntities(s: string): string {
+  return s
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, '&');   // last, so "&amp;lt;" does not become "<"
+}
+
+// "X" -> '<1'. Any other token must parse to a finite integer or the row is
+// refused: a half-read row is not a row worth shipping.
+function pwsValue(tok: string): WindProbValue | null {
+  const t = tok.trim().toUpperCase();
+  if (t === 'X') return '<1';
+  const n = parseInt(t, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+// '<1' sorts below every integer. Never resolved to 0 for the comparison.
+function pwsPeak(windows: readonly WindProbWindow[]): WindProbValue {
+  let peak: WindProbValue = '<1';
+  for (const w of windows) {
+    const c = w.cumulative_pct;
+    if (typeof c === 'number' && (peak === '<1' || c > peak)) peak = c;
+  }
+  return peak;
+}
+
+type PwsParsed = {
+  stormName: string;
+  advisoryNumber: number;
+  advisoryNumberRaw: string;
+  locations: WindProbLocation[];
+};
+
+// Fixed-width parse. Column geometry, verified against the live product:
+//   cols  0-14  location label (15 wide; holds embedded spaces, so this MUST be
+//               sliced by position — a whitespace split would shred
+//               "BARKING SANDS" and "FR FRIG SHOALS")
+//   cols 15-16  threshold in kt
+//   cols 17+    one bare value for the first window, then six "N(C)" pairs
+// Lead times are read from the product's own "FORECAST HOUR" line rather than
+// hardcoded, so a change to the window series is inherited instead of silently
+// mislabelled.
+function parsePwsProduct(text: string): PwsParsed | null {
+  const headerRe = /^(.*?)\s+WIND SPEED PROBABILITIES NUMBER\s+(\d+)\s*$/im;
+  const h = headerRe.exec(text);
+  if (!h) return null;
+  const advisoryNumberRaw = h[2];
+  const advisoryNumber = parseInt(advisoryNumberRaw, 10);
+  if (!Number.isFinite(advisoryNumber)) return null;
+  // "HURRICANE LOWELL" / "TROPICAL STORM KARINA" — the classification prefix is
+  // kept; the attribution guard does a containment test, exactly as the
+  // forecast-track guard does for the same reason.
+  const stormName = h[1].trim();
+
+  const lines = text.split('\n');
+  const fhLine = lines.find((l) => l.trim().startsWith('FORECAST HOUR'));
+  if (!fhLine) return null;
+  const taus = (fhLine.match(/\((\d+)\)/g) || []).map((m) => parseInt(m.slice(1, -1), 10));
+  if (taus.length === 0 || taus.some((t) => !Number.isFinite(t))) return null;
+
+  const locations: WindProbLocation[] = [];
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, '');
+    if (line.length < 18) continue;
+    const kt = parseInt(line.slice(15, 17), 10);
+    if (kt !== 34 && kt !== 50 && kt !== 64) continue;
+    const name = line.slice(0, 15).trim();
+    if (!name) continue;
+
+    const rest = line.slice(17);
+    // First window is printed bare (no parentheses): within the opening period
+    // the incremental and cumulative chances are the same number, which the
+    // live product confirms arithmetically — for 15N 165W, 1 then 62(63).
+    const firstM = /^\s*(\d+|X)(?=\s)/i.exec(rest);
+    if (!firstM) continue;
+    const pairs = [...rest.matchAll(/(\d+|X)\s*\(\s*(\d+|X)\s*\)/gi)];
+    if (pairs.length + 1 !== taus.length) continue;   // shape changed — refuse the row
+
+    const first = pwsValue(firstM[1]);
+    if (first === null) continue;
+    const windows: WindProbWindow[] = [{ tau: taus[0], incremental_pct: first, cumulative_pct: first }];
+    let bad = false;
+    for (let i = 0; i < pairs.length; i++) {
+      const inc = pwsValue(pairs[i][1]);
+      const cum = pwsValue(pairs[i][2]);
+      if (inc === null || cum === null) { bad = true; break; }
+      windows.push({ tau: taus[i + 1], incremental_pct: inc, cumulative_pct: cum });
+    }
+    if (bad) continue;
+
+    locations.push({ name, threshold_kt: kt, windows, peak_cumulative_pct: pwsPeak(windows) });
+  }
+
+  return { stormName, advisoryNumber, advisoryNumberRaw, locations };
+}
+
+// Attribution, to the same standard as the forecast-track guard. The product
+// must prove it is this storm's before a single number is read from it.
+// Advisory numbers are compared as PARSED INTEGERS — CurrentStorms zero-pads
+// ("037") and the product header does not ("37") — and a delta of exactly 1 is
+// tolerated as prior_advisory, matching the graded rule already shipped for the
+// GIS lag. Anything else drops the whole block.
+function pwsVerdict(parsed: PwsParsed, storm: NormalizedStorm): ForecastVerdict {
+  const featureName = parsed.stormName.trim().toLowerCase();
+  const stormName = String(storm.name ?? '').trim().toLowerCase();
+  if (!featureName || !stormName || !featureName.includes(stormName)) return { ok: false, status: 'mismatch' };
+
+  const stormAdv = parseInt(String(storm.advisory_number ?? ''), 10);
+  if (!Number.isFinite(stormAdv) || !Number.isFinite(parsed.advisoryNumber)) return { ok: false, status: 'mismatch' };
+
+  const delta = stormAdv - parsed.advisoryNumber;
+  if (delta === 0) return { ok: true, status: 'ok', ageCycles: 0 };
+  if (delta === 1) return { ok: true, status: 'prior_advisory', ageCycles: 1 };
+  if (delta >= 2) return { ok: false, status: 'stale_advisory' };
+  return { ok: false, status: 'mismatch' };
+}
+
+// One request per storm, capped. Called ONLY from handleHurricane — never from
+// fetchStormPositions, so /api/hazards/summary and the morning brief cannot
+// reach it and cannot be changed by a PWS outage.
+async function fetchWindProbabilities(
+  storms: readonly NormalizedStorm[],
+): Promise<Map<string, WindProbResult>> {
+  const out = new Map<string, WindProbResult>();
+
+  // No URL in the feed means no product to ask for. Reported as such rather
+  // than guessed at from the basin.
+  for (const s of storms) {
+    if (!s.wind_prob_url) out.set(s.id, { status: 'unsupported_basin', probabilities: null });
+  }
+  const fetchable = storms.filter((s): s is NormalizedStorm & { wind_prob_url: string } => !!s.wind_prob_url);
+
+  const settled = await mapWithConcurrency(fetchable, PWS_CONCURRENCY_LIMIT, async (storm) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    try {
+      const res = await fetch(storm.wind_prob_url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Kahu Ola / kahuola.org' },
+      });
+      if (!res.ok) throw new Error(`NHC PWS ${res.status}`);
+      return { storm, body: await res.text() };
+    } finally {
+      // A timeout is a drop, not a retry.
+      clearTimeout(timer);
+    }
+  });
+
+  settled.forEach((r, i) => {
+    const storm = fetchable[i];
+    // Fetch failure is UNKNOWN, never safe. It must not look like a quiet sky.
+    if (r.status === 'rejected') {
+      out.set(storm.id, { status: 'unavailable', probabilities: null });
+      return;
+    }
+
+    // The product is served as HTML with the text inside a single <pre>.
+    const pre = /<pre[^>]*>([\s\S]*?)<\/pre>/i.exec(r.value.body);
+    const text = pre ? decodeBasicEntities(pre[1]) : '';
+    const parsed = text ? parsePwsProduct(text) : null;
+    if (!parsed) {
+      // Could not read it — same state as could not fetch it. Not zero.
+      out.set(storm.id, { status: 'unavailable', probabilities: null });
+      return;
+    }
+
+    const verdict = pwsVerdict(parsed, storm);
+    if (!verdict.ok) {
+      // stale_advisory collapses into 'mismatch' here: this endpoint's PWS
+      // status vocabulary has no stale state, and refusing is the same action.
+      out.set(storm.id, { status: 'mismatch', probabilities: null });
+      return;
+    }
+
+    const hawaiiCount = parsed.locations.reduce((n, l) => n + (pwsIsHawaiiLocation(l.name) ? 1 : 0), 0);
+
+    // Status precedence: age caveat outranks the Hawaiʻi-presence report,
+    // because a stale reading is the more important thing to say about the
+    // whole block. hawaii_location_count is emitted either way, so choosing
+    // 'prior_advisory' here never hides the "no Hawaiʻi rows" fact.
+    const status: WindProbStatus =
+      verdict.ageCycles === 1 ? 'prior_advisory'
+        : hawaiiCount === 0 ? 'no_hawaii_locations'
+          : 'ok';
+
+    // NOTE the object is emitted even for 'no_hawaii_locations'. That is the
+    // whole point of the state: "NHC published this and named no Hawaiʻi place"
+    // is EVIDENCE, and it must not be confused with 'unavailable', which is the
+    // absence of evidence and ships null. An empty array alone could never
+    // carry that distinction.
+    out.set(storm.id, {
+      status,
+      probabilities: {
+        status,
+        advisory_number: parsed.advisoryNumberRaw,
+        advisory_age_cycles: verdict.ageCycles,
+        locations: parsed.locations,
+        location_count: parsed.locations.length,
+        hawaii_location_count: hawaiiCount,
+        below_threshold_note: PWS_BELOW_THRESHOLD_NOTE,
+      },
+    });
+  });
+
+  return out;
+}
+
 async function handleHurricane(cors: CorsHeaders): Promise<Response> {
   const res = await fetchStormPositions();
 
@@ -5596,8 +5944,22 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
     forecasts = new Map();
   }
 
+  // P29d. A SECOND sequential pass, not a widening of the first: the forecast
+  // fan-out has fully settled before this one opens a connection, so the peak
+  // simultaneous outbound for this endpoint stays at the per-pass cap (4) rather
+  // than summing to 8. Wrapped for the same reason the forecast fetch is — a
+  // probabilities outage must leave positions, tracks and closest-approach
+  // values completely untouched.
+  let windProbs: Map<string, WindProbResult>;
+  try {
+    windProbs = await fetchWindProbabilities(res.storms);
+  } catch {
+    windProbs = new Map();
+  }
+
   const signals: Feature[] = res.storms.map((s): Feature => {
     const f = forecasts.get(s.id) ?? { status: 'unavailable' as ForecastStatus, forecast: null, closest: null };
+    const wp = windProbs.get(s.id) ?? { status: 'unavailable' as WindProbStatus, probabilities: null };
     return {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
@@ -5631,6 +5993,13 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       forecast_status: f.status,
       forecast: f.forecast,
       forecast_closest_approach: f.closest,
+      // ── ADDITIVE (P29d) ─────────────────────────────────────────────
+      // The honest counterpart to forecast_closest_approach. That field is a
+      // distance to the forecast CENTRE; this is NHC's own probability of
+      // damaging wind arriving AT a named place. A consumer showing the
+      // distance without these is implying an answer the distance cannot give.
+      wind_probabilities_status: wp.status,
+      wind_probabilities: wp.probabilities,
     },
     };
   });
@@ -5651,6 +6020,9 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
   // insufficient_points. Derived from the kept set rather than by listing the
   // drop statuses, so a status added later is counted as dropped by default —
   // failing closed instead of vanishing from every counter.
+  const windProbOkCount = res.storms.reduce(
+    (n, s) => n + ((windProbs.get(s.id)?.status ?? 'unavailable') === 'ok' ? 1 : 0), 0,
+  );
   const forecastDroppedCount = res.storms.reduce(
     (n, s) => n + (FORECAST_STATUS_KEPT.has(forecasts.get(s.id)?.status ?? 'unavailable') ? 0 : 1), 0,
   );
@@ -5671,6 +6043,13 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       forecast_prior_count: forecastPriorCount,
       forecast_dropped_count: forecastDroppedCount,
       forecast_total_count: signals.length,
+      // ok_count counts storms whose probabilities were read AND verified AND
+      // named at least one Hawaiʻi place. 'no_hawaii_locations' is deliberately
+      // NOT counted here — it is a successful read, but counting it as ok would
+      // let "NHC named nowhere in Hawaiʻi" and "NHC named Niʻihau at 35%" share
+      // a number. The per-storm status carries that distinction.
+      wind_prob_ok_count: windProbOkCount,
+      wind_prob_total_count: signals.length,
     }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
   return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
 }
