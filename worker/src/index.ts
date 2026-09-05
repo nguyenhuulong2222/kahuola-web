@@ -5722,17 +5722,36 @@ const PWS_LABEL_TO_ISLAND: Readonly<Record<string, IslandKey>> = {
   'SOUTH POINT': 'hawaii',       // Ka Lae
 };
 
-// Module-load guard. A mapping that points at an island the distance layer does
-// not carry is a bug, and it must fail loudly at boot rather than ship a key no
-// consumer can resolve.
-for (const [label, key] of Object.entries(PWS_LABEL_TO_ISLAND)) {
-  if (!ISLAND_CENTROIDS.some((i) => i.key === key)) {
-    throw new Error(`PWS_LABEL_TO_ISLAND: ${label} -> ${key} is not in ISLAND_CENTROIDS`);
-  }
-}
-
-function pwsIslandKey(name: string): IslandKey | null {
-  return PWS_LABEL_TO_ISLAND[name.trim().toUpperCase()] ?? null;
+// P29a-4b. This was a module-load assertion that THREW. That was wrong, and the
+// reason is the blast radius rather than the check itself.
+//
+// ISLAND_CENTROIDS is derived from FIRE_DANGER_ISLANDS — a FIRE-layer constant.
+// The realistic trigger is not a deliberate cast: it is someone editing
+// fire-danger to remove or rename an island. tsc still passes as long as the key
+// remains in the IslandKey union, and the Worker then refuses to boot at module
+// scope. A hurricane display-label table would take down /api/hazards/summary,
+// and with it the FIRMS fire signal, on a wildfire-first platform. That is an
+// Invariant II violation: one layer's config drift must never remove another
+// layer's data.
+//
+// Not emitting an unresolvable key is still correct. Refusing to serve is not.
+// So the check stays and the consequence changes: the key resolves to null and
+// the degradation is REPORTED in the payload rather than swallowed.
+//
+// The compile-time guard is untouched — PWS_LABEL_TO_ISLAND is typed
+// Readonly<Record<string, IslandKey>>, so an honest typo still fails the build
+// before it can reach a commit. This path only catches the case typing cannot
+// see: a key valid in the union but no longer carried by ISLAND_CENTROIDS.
+function pwsResolveIslandKey(name: string): { key: IslandKey | null; degraded: boolean } {
+  const mapped = PWS_LABEL_TO_ISLAND[name.trim().toUpperCase()];
+  // No mapping is the ordinary case — grid points, buoys, every NWHI island.
+  // Not a degradation, just an honest null.
+  if (mapped === undefined) return { key: null, degraded: false };
+  // Mapped, but the distance layer no longer carries that island. Emitting the
+  // key would hand a consumer an id it cannot resolve; emitting null quietly
+  // would hide a real config drift. Do neither: null AND say so.
+  if (!ISLAND_CENTROIDS.some((i) => i.key === mapped)) return { key: null, degraded: true };
+  return { key: mapped, degraded: false };
 }
 
 type WindProbStatus =
@@ -5797,6 +5816,11 @@ type WindProbabilities = {
   // Distinct 'named' only. THIS is the number to put in front of a person:
   // places, not rows, not buoys, not ocean grid points.
   distinct_named_place_count: number;
+  // P29a-4b. True when a label in this storm's rows mapped to an island key
+  // ISLAND_CENTROIDS no longer carries — its island_key is null and this says
+  // why. Normally false; a true here means the label table and the fire layer's
+  // island list have drifted apart and someone should look.
+  island_key_map_degraded: boolean;
   below_threshold_note: string;
 };
 
@@ -5843,6 +5867,10 @@ type PwsParsed = {
   advisoryNumber: number;
   advisoryNumberRaw: string;
   locations: WindProbLocation[];
+  // True when at least one row in THIS product mapped to an island key that
+  // ISLAND_CENTROIDS no longer carries. Accumulated during the parse so it
+  // describes exactly the rows that shipped, not the whole table.
+  islandKeyMapDegraded: boolean;
 };
 
 // Fixed-width parse. Column geometry, verified against the live product:
@@ -5873,6 +5901,7 @@ function parsePwsProduct(text: string): PwsParsed | null {
   if (taus.length === 0 || taus.some((t) => !Number.isFinite(t))) return null;
 
   const locations: WindProbLocation[] = [];
+  let islandKeyMapDegraded = false;
   for (const raw of lines) {
     const line = raw.replace(/\s+$/, '');
     if (line.length < 18) continue;
@@ -5902,17 +5931,19 @@ function parsePwsProduct(text: string): PwsParsed | null {
     }
     if (bad) continue;
 
+    const island = pwsResolveIslandKey(name);
+    if (island.degraded) islandKeyMapDegraded = true;
     locations.push({
       name,
       location_class: pwsLocationClass(name),
-      island_key: pwsIslandKey(name),
+      island_key: island.key,
       threshold_kt: kt,
       windows,
       peak_cumulative_pct: pwsPeak(windows),
     });
   }
 
-  return { stormName, advisoryNumber, advisoryNumberRaw, locations };
+  return { stormName, advisoryNumber, advisoryNumberRaw, locations, islandKeyMapDegraded };
 }
 
 // Attribution, to the same standard as the forecast-track guard. The product
@@ -6034,6 +6065,7 @@ async function fetchWindProbabilities(
         distinct_location_count: distinctNames.size,
         distinct_hawaii_location_count: distinctHawaii.size,
         distinct_named_place_count: distinctNamed.size,
+        island_key_map_degraded: parsed.islandKeyMapDegraded,
         below_threshold_note: PWS_BELOW_THRESHOLD_NOTE,
       },
     });
