@@ -5189,6 +5189,17 @@ const NHC_FORECAST_POINT_LAYERS: Readonly<Record<string, number>> = {
   CP1: 266, CP2: 292, CP3: 318, CP4: 344, CP5: 370,
 };
 
+// P29c. Forecast Cone sits at block_base + 4, i.e. two past Forecast Points
+// (+2). Written out for the same reason the points table is: NHC could
+// renumber, and a literal fails loudly on an unknown bin where a formula would
+// compute a plausible-but-wrong layer and hand back another storm's cone.
+// Confirmed live: 190 = EP3 (Marie), 346 = CP4 (Lowell), 372 = CP5 (Karina).
+const NHC_FORECAST_CONE_LAYERS: Readonly<Record<string, number>> = {
+  AT1: 8,   AT2: 34,  AT3: 60,  AT4: 86,  AT5: 112,
+  EP1: 138, EP2: 164, EP3: 190, EP4: 216, EP5: 242,
+  CP1: 268, CP2: 294, CP3: 320, CP4: 346, CP5: 372,
+};
+
 const NHC_MAPSERVER_BASE =
   'https://mapservices.weather.noaa.gov/tropical/rest/services/tropical/NHC_tropical_weather/MapServer';
 
@@ -5267,7 +5278,7 @@ type StormForecast = {
   // that draws the track MUST read this flag and say so: a bare line reads as
   // a promise about where the storm will be, which is the single most
   // dangerous thing this endpoint could imply.
-  uncertainty_available: false;
+  uncertainty_available: boolean;
   points: ForecastPoint[];
   track: { type: 'LineString'; coordinates: [number, number][] } | null;
 };
@@ -5289,10 +5300,36 @@ type ForecastClosestApproach = {
   basis: 'forecast_center_only';
 };
 
+// P29c. 'advisory_divergence' is the cone's own failure mode and exists in no
+// other status vocabulary: the cone and the forecast points come from two
+// SEPARATE ArcGIS layers, so both can individually pass the CurrentStorms
+// attribution guard while describing different advisories. Drawing one
+// advisory's cone around another advisory's line is a pairing NHC never
+// published — it looks authoritative and is fabricated.
+type ConeStatus =
+  | 'ok'
+  | 'prior_advisory'
+  | 'unavailable'
+  | 'mismatch'
+  | 'advisory_divergence'
+  | 'no_layer';
+
+type StormCone = {
+  advisory_number: string;
+  advisory_age_cycles: number;
+  vertex_count: number;
+  // VERBATIM from the GeoJSON: no simplification, no rounding, no re-winding of
+  // rings, and a MultiPolygon stays a MultiPolygon. The cone is an official
+  // published boundary; a "tidied" edge is a different boundary.
+  polygon: any;
+};
+
 type ForecastResult = {
   status: ForecastStatus;
   forecast: StormForecast | null;
   closest: ForecastClosestApproach | null;
+  coneStatus: ConeStatus;
+  cone: StormCone | null;
 };
 
 // ArcGIS `validtime` is "DD/HHMM" in UTC — no month, no year. Rather than
@@ -5432,16 +5469,23 @@ async function fetchForecastPoints(
 ): Promise<Map<string, ForecastResult>> {
   const out = new Map<string, ForecastResult>();
 
-  const jobs = storms.map((s) => ({ storm: s, layer: s.bin_number ? NHC_FORECAST_POINT_LAYERS[s.bin_number] : undefined }));
-
-  // A bin we have no layer for is reported as such and never fetched. Guessing
-  // a layer id would attach some other storm's forecast to this one.
-  for (const j of jobs) {
-    if (j.layer === undefined) out.set(j.storm.id, { status: 'no_layer', forecast: null, closest: null });
+  // P29c. Points AND cone in ONE concurrency pass: 2N jobs at cap 4, so the peak
+  // simultaneous outbound stays 4 rather than doubling to a second sequential
+  // pass's worth of wall-clock. The CurrentStorms connection has already closed
+  // before this pass opens.
+  type FcJob = { storm: NormalizedStorm; layer: number; kind: 'points' | 'cone' };
+  const jobs: FcJob[] = [];
+  for (const s of storms) {
+    const pl = s.bin_number ? NHC_FORECAST_POINT_LAYERS[s.bin_number] : undefined;
+    const cl = s.bin_number ? NHC_FORECAST_CONE_LAYERS[s.bin_number] : undefined;
+    // A bin we have no layer for is reported as such and never fetched. Guessing
+    // a layer id would attach some other storm's forecast to this one.
+    if (pl === undefined) out.set(s.id, { status: 'no_layer', forecast: null, closest: null, coneStatus: 'no_layer', cone: null });
+    else jobs.push({ storm: s, layer: pl, kind: 'points' });
+    if (cl !== undefined) jobs.push({ storm: s, layer: cl, kind: 'cone' });
   }
-  const fetchable = jobs.filter((j): j is { storm: NormalizedStorm; layer: number } => j.layer !== undefined);
 
-  const settled = await mapWithConcurrency(fetchable, FORECAST_CONCURRENCY_LIMIT, async ({ storm, layer }) => {
+  const settled = await mapWithConcurrency(jobs, FORECAST_CONCURRENCY_LIMIT, async ({ storm, layer, kind }) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
     try {
@@ -5451,7 +5495,7 @@ async function fetchForecastPoints(
         headers: { 'User-Agent': 'Kahu Ola / kahuola.org' },
       });
       if (!res.ok) throw new Error(`NHC GIS ${res.status}`);
-      return { storm, data: await res.json() as any };
+      return { storm, kind, data: await res.json() as any };
     } finally {
       // A timeout is a drop, not a retry. The storm keeps its position and
       // reports forecast_status 'unavailable'.
@@ -5459,10 +5503,56 @@ async function fetchForecastPoints(
     }
   });
 
+  // ── Cone pass ────────────────────────────────────────────────────────
+  // Resolved first so the points pass below can cross-check advisories. Keyed
+  // by storm id; a storm with no cone job simply never appears here.
+  const cones = new Map<string, { status: ConeStatus; cone: StormCone | null }>();
   settled.forEach((r, i) => {
-    const storm = fetchable[i].storm;
+    const job = jobs[i];
+    if (job.kind !== 'cone') return;
+    const storm = job.storm;
+    if (r.status === 'rejected') { cones.set(storm.id, { status: 'unavailable', cone: null }); return; }
+    const feats = Array.isArray(r.value.data?.features) ? r.value.data.features : [];
+    if (feats.length === 0) { cones.set(storm.id, { status: 'unavailable', cone: null }); return; }
+
+    // FIX 2 — the SAME guard the track uses. binnumber exact, stormname
+    // contains, advisnum as parsed integers with the graded delta. The cone
+    // must never be attached to a storm it was not issued for.
+    let age = 0;
+    for (const f of feats) {
+      const v = forecastFeatureVerdict(f?.properties, storm);
+      if (!v.ok) { cones.set(storm.id, { status: 'mismatch', cone: null }); return; }
+      if (v.ageCycles > age) age = v.ageCycles;
+    }
+
+    const g = feats[0]?.geometry;
+    if (!g || (g.type !== 'Polygon' && g.type !== 'MultiPolygon')) {
+      cones.set(storm.id, { status: 'unavailable', cone: null });
+      return;
+    }
+    const vertexCount = g.type === 'Polygon'
+      ? (Array.isArray(g.coordinates) ? g.coordinates.reduce((n: number, ring: any) => n + (Array.isArray(ring) ? ring.length : 0), 0) : 0)
+      : (Array.isArray(g.coordinates) ? g.coordinates.reduce((n: number, poly: any) => n + (Array.isArray(poly) ? poly.reduce((m: number, ring: any) => m + (Array.isArray(ring) ? ring.length : 0), 0) : 0), 0) : 0);
+    if (vertexCount < 4) { cones.set(storm.id, { status: 'unavailable', cone: null }); return; }
+
+    cones.set(storm.id, {
+      status: age === 1 ? 'prior_advisory' : 'ok',
+      cone: {
+        advisory_number: String(feats[0]?.properties?.advisnum ?? ''),
+        advisory_age_cycles: age,
+        vertex_count: vertexCount,
+        polygon: g,
+      },
+    });
+  });
+
+  settled.forEach((r, i) => {
+    const job = jobs[i];
+    if (job.kind !== 'points') return;
+    const storm = job.storm;
+    const coneRaw = cones.get(storm.id) ?? { status: 'no_layer' as ConeStatus, cone: null };
     if (r.status === 'rejected') {
-      out.set(storm.id, { status: 'unavailable', forecast: null, closest: null });
+      out.set(storm.id, { status: 'unavailable', forecast: null, closest: null, coneStatus: coneRaw.status, cone: coneRaw.cone });
       return;
     }
     const feats = Array.isArray(r.value.data?.features) ? r.value.data.features : [];
@@ -5483,7 +5573,7 @@ async function fetchForecastPoints(
       verified.push(f);
     }
     if (rejected) {
-      out.set(storm.id, { status: rejected, forecast: null, closest: null });
+      out.set(storm.id, { status: rejected, forecast: null, closest: null, coneStatus: coneRaw.status, cone: coneRaw.cone });
       return;
     }
 
@@ -5522,7 +5612,7 @@ async function fetchForecastPoints(
     // path, and a one-vertex LineString is not renderable. Both are reported as
     // insufficient rather than shipped as a degenerate track.
     if (points.length < 2) {
-      out.set(storm.id, { status: 'insufficient_points', forecast: null, closest: null });
+      out.set(storm.id, { status: 'insufficient_points', forecast: null, closest: null, coneStatus: coneRaw.status, cone: coneRaw.cone });
       return;
     }
 
@@ -5547,7 +5637,34 @@ async function fetchForecastPoints(
     );
 
     const arcgisAdv = String(verified[0]?.properties?.advisnum ?? '');
+
+    // ── FIX 3 · cone/track cross-check ───────────────────────────────
+    // The cone and the points come from two SEPARATE layers, so both can pass
+    // the CurrentStorms guard independently while describing different
+    // advisories — one refreshed, the other not yet. Pairing them anyway would
+    // draw an official-looking boundary around a line NHC never paired it with.
+    // Compared as parsed INTEGERS for the same zero-padding reason as
+    // everywhere else in this file.
+    let coneStatus = coneRaw.status;
+    let cone = coneRaw.cone;
+    if (cone) {
+      const coneAdv = parseInt(cone.advisory_number, 10);
+      const trackAdv = parseInt(arcgisAdv, 10);
+      if (!Number.isFinite(coneAdv) || !Number.isFinite(trackAdv) || coneAdv !== trackAdv) {
+        coneStatus = 'advisory_divergence';
+        cone = null;
+      }
+    }
+
+    // ── FIX 5 · uncertainty_available is now DERIVED ─────────────────
+    // It was hardcoded false because nothing conveyed spread. It is true only
+    // when a cone actually ships, so the flag and the drawing can never
+    // disagree — and it goes back to false the moment the cone drops.
+    const hasCone = cone !== null && (coneStatus === 'ok' || coneStatus === 'prior_advisory');
+
     out.set(storm.id, {
+      coneStatus,
+      cone,
       status: ageCycles === 1 ? 'prior_advisory' : 'ok',
       forecast: {
         advisory_number: arcgisAdv,
@@ -5562,7 +5679,7 @@ async function fetchForecastPoints(
         // another in this very snapshot; assuming a fixed 12/24/36/48/72/96/120
         // series would silently drop or fabricate positions.
         point_count: points.length,
-        uncertainty_available: false,
+        uncertainty_available: hasCone,
         points,
         track,
       },
@@ -6129,7 +6246,7 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
   }
 
   const signals: Feature[] = res.storms.map((s): Feature => {
-    const f = forecasts.get(s.id) ?? { status: 'unavailable' as ForecastStatus, forecast: null, closest: null };
+    const f = forecasts.get(s.id) ?? { status: 'unavailable' as ForecastStatus, forecast: null, closest: null, coneStatus: 'unavailable' as ConeStatus, cone: null };
     const wp = windProbs.get(s.id) ?? { status: 'unavailable' as WindProbStatus, probabilities: null };
     return {
     type: 'Feature',
@@ -6164,6 +6281,13 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       forecast_status: f.status,
       forecast: f.forecast,
       forecast_closest_approach: f.closest,
+      // ── ADDITIVE (P29c) ─────────────────────────────────────────────
+      // The cone describes where the storm's CENTRE may travel. It is NOT a
+      // damage boundary, and a reader who treats "outside the cone" as "safe"
+      // has been misled — which is why the client is required to caption it
+      // alongside the per-location wind probabilities.
+      cone_status: f.coneStatus,
+      cone: f.cone,
       // ── ADDITIVE (P29d) ─────────────────────────────────────────────
       // The honest counterpart to forecast_closest_approach. That field is a
       // distance to the forecast CENTRE; this is NHC's own probability of
@@ -6191,6 +6315,12 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
   // insufficient_points. Derived from the kept set rather than by listing the
   // drop statuses, so a status added later is counted as dropped by default —
   // failing closed instead of vanishing from every counter.
+  // Counts a cone that actually SHIPS — 'ok' or 'prior_advisory' with a
+  // non-null polygon. Matches exactly what uncertainty_available reports.
+  const coneOkCount = res.storms.reduce((n, s) => {
+    const f = forecasts.get(s.id);
+    return n + ((f?.cone && (f.coneStatus === 'ok' || f.coneStatus === 'prior_advisory')) ? 1 : 0);
+  }, 0);
   const windProbOkCount = res.storms.reduce(
     (n, s) => n + ((windProbs.get(s.id)?.status ?? 'unavailable') === 'ok' ? 1 : 0), 0,
   );
@@ -6214,6 +6344,8 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       forecast_prior_count: forecastPriorCount,
       forecast_dropped_count: forecastDroppedCount,
       forecast_total_count: signals.length,
+      cone_ok_count: coneOkCount,
+      cone_total_count: signals.length,
       // ok_count counts storms whose probabilities were read AND verified AND
       // named at least one Hawaiʻi place. 'no_hawaii_locations' is deliberately
       // NOT counted here — it is a successful read, but counting it as ok would
