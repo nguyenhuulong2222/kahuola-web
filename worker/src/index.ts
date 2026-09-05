@@ -1297,8 +1297,13 @@ type MorningBrief = {
   };
   hurricane: {
     status: BriefStatus;
+    // P29a-1: NHC's own three-way status, verbatim. BriefStatus above collapses
+    // 'none' and an unreachable feed into MONITORING; this does not.
+    source_status: 'active' | 'none' | 'unavailable';
     active: boolean;
-    storms_tracked: number;
+    // null when source_status is 'unavailable' — a count of 0 there would be a
+    // claim we cannot make.
+    storms_tracked: number | null;
     note: string;
     source: string;
   };
@@ -1371,7 +1376,12 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
     handleFlashFlood(regionUrl, cors).then(r => r.json()),
     handleRainRadar(regionUrl, cors).then(r => r.json()),
     handleTsunami(cors).then(r => r.json()),
-    handleHurricane(cors).then(r => r.json()),
+    // P29a-1: the brief binds to fetchStormPositions(), NOT handleHurricane().
+    // This Promise.allSettled is already 6-way; P29a-2 adds 2N ArcGIS fetches
+    // inside the handler, and inheriting that here would breach Cloudflare's
+    // 6-connection cap the moment a second storm is active. Same one outbound
+    // request as before — only the entry point changed.
+    fetchStormPositions(),
     handleLandslide(regionUrl, cors).then(r => r.json()),
   ]);
 
@@ -1384,7 +1394,17 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
 
   const wildfireDetections = Array.isArray(fire?.features) ? fire.features.length : 0;
   const tsunamiSignals = Array.isArray(tsunami?.signals) ? tsunami.signals.length : 0;
-  const hurricaneSignals = Array.isArray(hurricane?.signals) ? hurricane.signals.length : 0;
+  // P29a-1. `hurricane` is now a StormPositions, not a parsed envelope.
+  // source_status is read from the result itself because
+  // inferBriefStatusFromSettled CANNOT see an outage here: fetchStormPositions
+  // (like handleHurricane before it) catches internally and always RESOLVES, so
+  // `hurricaneJson.status === 'rejected'` was unreachable and an unreachable NHC
+  // emitted byte-identical output to a quiet Pacific — active:false,
+  // storms_tracked:0. Nothing downstream could tell them apart.
+  const hurricaneSourceStatus: 'active' | 'none' | 'unavailable' =
+    hurricane ? stormPositionsStatus(hurricane) : 'unavailable';
+  const hurricaneUnavailable = hurricaneSourceStatus === 'unavailable';
+  const hurricaneSignals = hurricane ? hurricane.storms.length : 0;
   const landslideSignals = Array.isArray(landslide?.signals) ? landslide.signals.length : 0;
   const rainSignals = Array.isArray(rain?.signals) ? rain.signals.length : 0;
 
@@ -1450,13 +1470,22 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
       source: 'NWS Tsunami Warning Center'
     },
     hurricane: {
-      status: inferBriefStatusFromSettled(hurricaneJson, hurricaneSignals > 0),
+      // UNAVAILABLE is asserted from source_status, not from the settled state:
+      // the promise always fulfils, so inferBriefStatusFromSettled would call an
+      // NHC outage 'MONITORING' — the reassuring answer — every time.
+      status: hurricaneUnavailable
+        ? 'UNAVAILABLE'
+        : inferBriefStatusFromSettled(hurricaneJson, hurricaneSignals > 0),
+      source_status: hurricaneSourceStatus,
       active: hurricaneSignals > 0,
-      storms_tracked: hurricaneSignals,
-      note:
-        hurricaneJson.status === 'rejected'
-          ? 'Hurricane source could not be verified right now.'
-          : hurricane?.summary?.message || 'No active tropical cyclone hazard affecting Hawaiʻi right now.',
+      // NULL, never 0. "We could not reach NHC" is not "we counted zero storms",
+      // and a 0 here is the exact shape that let an outage read as calm.
+      storms_tracked: hurricaneUnavailable ? null : hurricaneSignals,
+      // Wording for the reachable cases is unchanged — stormPositionsMessage
+      // reproduces the same four strings the envelope's summary.message carried.
+      note: hurricane
+        ? stormPositionsMessage(hurricane)
+        : 'Hurricane source could not be verified right now.',
       source: 'NHC Pacific basin'
     },
     landslide: {
@@ -1528,8 +1557,11 @@ async function handleMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promis
       },
       hurricane: {
         status: degradedStatus,
+        // The whole brief failed to build, so NHC was not reached either. Same
+        // rule as the success path: null count, never 0.
+        source_status: 'unavailable',
         active: false,
-        storms_tracked: 0,
+        storms_tracked: null,
         note: 'Hurricane source could not be verified right now.',
         source: 'NHC Pacific basin',
       },
@@ -2317,6 +2349,27 @@ const FIRE_DANGER_ISLANDS: readonly IslandSpec[] = [
   { key: 'kahoolawe', label: 'Kahoʻolawe', bbox: [-156.72, 20.49, -156.53, 20.60], step: 0.02 }, //   54
   { key: 'hawaii',    label: 'Hawaiʻi',    bbox: [-156.10, 18.86, -154.75, 20.30], step: 0.04 }, // 1224
 ];
+
+// ── P29a-1 · ISLAND REFERENCE POINTS ───────────────────────────────────────
+// No per-island reference POINT existed anywhere in this file — every constant
+// (FIRE_DANGER_ISLANDS, SMART_HAWAII_CELLS, REGION_BBOXES) is a bbox or a ring.
+// Storm distance needs a point, so one is DERIVED from the bboxes above rather
+// than hand-typed: a second hand-entered coordinate set would drift silently
+// against the first, and the fire layer's bboxes are already the audited ones.
+//
+// bbox is the tuple [west, south, east, north] (see IslandSpec), so the
+// centroid is the midpoint of the W/E and S/N pairs. All eight islands are
+// carried through, Niʻihau and Kahoʻolawe included — an uninhabited island is
+// still a distance the reader may want, and dropping one here would silently
+// bias "nearest island" toward its larger neighbour.
+type IslandCentroid = { key: IslandKey; label: string; lon: number; lat: number };
+
+const ISLAND_CENTROIDS: readonly IslandCentroid[] = FIRE_DANGER_ISLANDS.map((i) => ({
+  key: i.key,
+  label: i.label,
+  lon: (i.bbox[0] + i.bbox[2]) / 2,
+  lat: (i.bbox[1] + i.bbox[3]) / 2,
+}));
 
 // One FIRMS query covers every island. This is a CORRECTNESS requirement, not an
 // optimisation: the proximity radius is 20 km and the channels are narrower than
@@ -4415,11 +4468,18 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
   // The alerts fetch joins the existing Promise.all rather than adding a round
   // trip: the other three are KV/cache reads, so this is the summary path's
   // ONLY outbound request and sits far under the 6-connection cap.
-  let [smoke, perim, fire, stormAlerts] = await Promise.all([
+  //
+  // P29a-1 adds ONE more: fetchStormPositions(). It joins this same Promise.all
+  // rather than adding a round trip, taking the summary path to TWO outbound
+  // connections (NWS alerts + NHC) — still far under the 6-connection cap, and
+  // it binds to fetchStormPositions rather than handleHurricane precisely so
+  // P29a-2's per-storm ArcGIS fan-out cannot land on this path.
+  let [smoke, perim, fire, stormAlerts, stormPositions] = await Promise.all([
     readSummarySource(SUMMARY_SMOKE_KEY, SUMMARY_SMOKE_STATUS_KEY, nowMs),
     readSummarySource(SUMMARY_PERIM_KEY, SUMMARY_PERIM_STATUS_KEY, nowMs),
     readSummaryFirms(SUMMARY_FIRMS_KEY, nowMs),
     fetchNwsAlerts(cors, ['HI']),
+    fetchStormPositions(),
   ]);
 
   // Warm only genuinely-missing sources. Each warm task is isolated via
@@ -4488,6 +4548,40 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
     if (newestMs !== null) stormAgeSeconds = Math.max(0, Math.round((nowMs - newestMs) / 1000));
   }
 
+  // ── Pacific position context (P29a-1) ────────────────────────────────
+  // NWS remains the sole AUTHORITY for watch/warning above — that block is
+  // untouched. This adds the other half of the question it cannot answer: the
+  // NWS feed says whether a warning is posted for Hawaiʻi, never where the
+  // storm actually is. A reader looking at "no watch or warning" with three
+  // hurricanes in the Pacific deserves to see them.
+  //
+  // Failure here degrades this sub-object ONLY. The rest of the summary must
+  // still render (Invariant II), so nothing below reads stormPositions.
+  const pacificStatus = stormPositionsStatus(stormPositions);
+  const pacificUnavailable = pacificStatus === 'unavailable';
+
+  // Nearest storm to any island, by the distance already computed per storm.
+  // Storms whose position failed validation never reach here, so a null
+  // current_position_nearest_island simply excludes that storm from the
+  // comparison rather than defaulting it to zero distance.
+  let pacificNearest: {
+    name: string; distance_mi: number; island_label: string; bearing_compass: string;
+  } | null = null;
+  if (!pacificUnavailable) {
+    for (const s of stormPositions.storms) {
+      const n = s.current_position_nearest_island;
+      if (!n) continue;
+      if (pacificNearest === null || n.distance_mi < pacificNearest.distance_mi) {
+        pacificNearest = {
+          name: s.name,
+          distance_mi: n.distance_mi,
+          island_label: n.island_label,
+          bearing_compass: n.bearing_compass,
+        };
+      }
+    }
+  }
+
   const body: Record<string, unknown> = {
     region: 'hawaii',
     generated_at: new Date(nowMs).toISOString(),
@@ -4503,6 +4597,16 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
       status: stormStatus,
       age_seconds: stormAgeSeconds,
       source: 'NWS',
+      // ADDITIVE — every storm.* key above is byte-shape identical to P29.
+      // NWS is still the authority for watch/warning; NHC is position context.
+      pacific: {
+        source: 'NHC',
+        status: pacificStatus,
+        // null, NOT 0, when unavailable. Zero storms and an unreachable feed
+        // are the two things this whole increment exists to keep apart.
+        count: pacificUnavailable ? null : stormPositions.storms.length,
+        nearest: pacificNearest,
+      },
     },
     note: 'Situational awareness only. Follow official sources.',
   };
@@ -4788,8 +4892,101 @@ async function handleCoastal(cors: CorsHeaders): Promise<Response> {
 }
 
 // ── HURRICANE TRACKS — NHC Active Storms ──────────────────────────────
-async function handleHurricane(cors: CorsHeaders): Promise<Response> {
-  const now = new Date().toISOString();
+//
+// P29a-1 · WHY THE FETCH IS SPLIT OUT OF THE HANDLER.
+// buildMorningBrief (:1374) calls handleHurricane inside a 6-way
+// Promise.allSettled, and handleHazardsSummary already holds an open NWS
+// connection. P29a-2 adds 2N ArcGIS fetches (forecast track + cone, one pair
+// per storm) INSIDE handleHurricane. If the brief and the summary keep calling
+// the handler, they inherit that fan-out and breach Cloudflare's 6-connection
+// cap the day a third storm spins up. So position fetching lives here, in one
+// function with exactly one outbound request, and the two aggregate callers
+// bind to IT rather than to the handler. The redirection is wired now, before
+// the fan-out exists, so P29a-2 is a change to one function instead of three.
+
+const KT_TO_MPH = 1.15078;
+const KM_TO_MI = 0.621371;
+
+// NHC issues a forecast advisory every 6 h. 9 h is one full cycle plus a 3 h
+// grace window for late issuance and mirror lag — past that the advisory is
+// genuinely behind, not merely between issuances.
+const ADVISORY_STALE_AFTER_MS = 9 * 60 * 60 * 1000;
+
+const COMPASS_16 = [
+  'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+  'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
+] as const;
+
+function compass16(deg: number): string {
+  return COMPASS_16[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+}
+
+type NearestIsland = {
+  island_key: IslandKey;
+  island_label: string;
+  distance_mi: number;
+  // Bearing FROM THE ISLAND TOWARD THE STORM — i.e. "stand on Maui, look this
+  // way, the storm is out there". The opposite convention (storm → island)
+  // reads as the storm's heading and would be mistaken for movement direction,
+  // which is a separate field. The field name carries the direction so the two
+  // can never be confused by a reader who has not opened this file.
+  bearing_from_island_deg: number;
+  bearing_compass: string;
+};
+
+type NormalizedStorm = {
+  id: string;
+  storm_id: string | null;
+  bin_number: string | null;
+  name: string;
+  classification: string;
+  lon: number;
+  lat: number;
+  wind_mph: number | null;
+  movement: string;
+  advisory_number: string | null;
+  advisory_issued_at: string | null;
+  advisory_stale: boolean | null;
+  event_time: string | null;
+  event_time_source: 'advisory' | 'last_update' | 'unknown';
+  current_position_nearest_island: NearestIsland | null;
+};
+
+type StormPositions = {
+  storms: NormalizedStorm[];
+  raw_count: number;
+  ok: boolean;
+};
+
+// Nearest island to a storm's CURRENT position. Deliberately named for the
+// current position throughout: P29a-2 adds forecast_closest_approach beside
+// this, and a reader glancing at a field called merely "nearest_island" would
+// have no way to tell a live measurement from a five-day projection.
+function nearestIslandTo(lon: number, lat: number): NearestIsland | null {
+  let best: NearestIsland | null = null;
+  let bestKm = Infinity;
+  for (const isl of ISLAND_CENTROIDS) {
+    // haversineKm is LON-FIRST and returns KILOMETRES (:EARTH_RADIUS_KM).
+    const km = haversineKm(lon, lat, isl.lon, isl.lat);
+    if (!isFinite(km) || km >= bestKm) continue;
+    bestKm = km;
+    const bearing = bearingDeg(isl.lon, isl.lat, lon, lat);
+    best = {
+      island_key: isl.key,
+      island_label: isl.label,
+      // Statute miles, matching the existing wind_mph unit the client renders
+      // with a literal " mph" suffix. NHC speaks nautical miles internally;
+      // converting here keeps one unit system in the payload.
+      distance_mi: Math.round(km * KM_TO_MI),
+      bearing_from_island_deg: Math.round(bearing),
+      bearing_compass: compass16(bearing),
+    };
+  }
+  return best;
+}
+
+// The one outbound request on this path. No other fetch belongs in here.
+async function fetchStormPositions(): Promise<StormPositions> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
@@ -4803,9 +5000,17 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
     const data: any = await res.json();
     const storms = Array.isArray(data?.activeStorms) ? data.activeStorms : [];
 
-    // Filter Pacific basin storms only (relevant to Hawaii)
+    // Filter Pacific basin storms only (relevant to Hawaii).
+    //
+    // P29a-1: this previously read `s.basin || s.id`. CurrentStorms.json has NO
+    // `basin` key on any storm — verified against the live feed — so the filter
+    // ran entirely on `id` and only appeared correct because NHC numbers CPHC
+    // storms in the EP sequence ("ep112026" for Karina, whose bin is CP5).
+    // `binNumber` is the field that actually carries the basin ("EP3", "CP4",
+    // "CP5"); it is read first, with `id` retained as the fallback so the pass
+    // set is unchanged for any storm that lacks a bin.
     const pacificStorms = storms.filter((s: any) => {
-      const basin = String(s?.basin || s?.id || '').toUpperCase();
+      const basin = String(s?.binNumber || s?.id || '').toUpperCase();
       return basin.includes('CP') || basin.includes('EP') || basin.includes('CENTRAL') || basin.includes('EAST');
     });
 
@@ -4824,10 +5029,8 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
     // 35 mph would sit below the 34 kt / 39 mph tropical-storm threshold). The
     // client renders wind_mph with a literal " mph" suffix, so it is converted
     // here rather than shipped under a mislabelled unit.
-    const KT_TO_MPH = 1.15078;
-
-    const signals: Feature[] = pacificStorms
-      .map((s: any, idx: number): Feature | null => {
+    const normalized: NormalizedStorm[] = pacificStorms
+      .map((s: any, idx: number): NormalizedStorm | null => {
         const lat = s?.latitudeNumeric;
         const lon = s?.longitudeNumeric;
         // Drop, never infer. A storm we cannot place is not a storm we can draw.
@@ -4846,60 +5049,152 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
           ? `${Math.round(dir)}° at ${Math.round(spd * KT_TO_MPH)} mph`
           : '';
 
+        // Advisory provenance. Every field is copied from CurrentStorms.json as
+        // it stands; nothing here is synthesised, and an absent field is null
+        // rather than a placeholder that would read as a real value.
+        const issuance = typeof s?.forecastAdvisory?.issuance === 'string' && s.forecastAdvisory.issuance
+          ? s.forecastAdvisory.issuance
+          : null;
+        const lastUpdate = typeof s?.lastUpdate === 'string' && s.lastUpdate ? s.lastUpdate : null;
+        const advisoryIssuedAt = issuance ?? lastUpdate;
+        const eventTimeSource: NormalizedStorm['event_time_source'] =
+          issuance ? 'advisory' : lastUpdate ? 'last_update' : 'unknown';
+
+        // NULL, not false, when the timestamp is missing. "We do not know how
+        // old this advisory is" and "this advisory is current" are different
+        // facts, and a false-by-default would collapse them into the reassuring
+        // one — the same silent-failure family the raw_count guard below exists
+        // to prevent.
+        const issuedMs = advisoryIssuedAt ? Date.parse(advisoryIssuedAt) : NaN;
+        const advisoryStale = isFinite(issuedMs)
+          ? (Date.now() - issuedMs) > ADVISORY_STALE_AFTER_MS
+          : null;
+
         return {
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [lon, lat] },
-          properties: {
-            id: s?.id || `hurricane-${idx}`,
-            source: 'National Hurricane Center',
-            source_label: 'NHC',
-            name: s?.name || 'Unnamed Storm',
-            classification: s?.classification || s?.type || 'Tropical System',
-            wind_mph: windMph,
-            movement,
-            risk_index: 'HIGH',
-            severity: 'HIGH',
-            event_time: now,
-            note: 'Active Pacific storm. Monitor NHC for official track and cone.',
-          },
+          id: s?.id || `hurricane-${idx}`,
+          storm_id: typeof s?.id === 'string' && s.id ? s.id : null,
+          bin_number: typeof s?.binNumber === 'string' && s.binNumber ? s.binNumber : null,
+          name: s?.name || 'Unnamed Storm',
+          classification: s?.classification || s?.type || 'Tropical System',
+          lon,
+          lat,
+          wind_mph: windMph,
+          movement,
+          advisory_number: typeof s?.forecastAdvisory?.advNum === 'string' && s.forecastAdvisory.advNum
+            ? s.forecastAdvisory.advNum
+            : null,
+          advisory_issued_at: advisoryIssuedAt,
+          advisory_stale: advisoryStale,
+          // event_time used to be the REQUEST time, so a 12-hour-old advisory
+          // rendered as freshly observed. It now carries the advisory's own
+          // issuance, and event_time_source says which field it came from so a
+          // consumer can tell an advisory timestamp from a feed-update one.
+          event_time: advisoryIssuedAt,
+          event_time_source: eventTimeSource,
+          current_position_nearest_island: nearestIslandTo(lon, lat),
         };
       })
-      .filter((f: Feature | null): f is Feature => f !== null);
+      .filter((s: NormalizedStorm | null): s is NormalizedStorm => s !== null);
 
-    // Silent-failure guard, same family as the Number(null)===0 trap: "upstream
-    // had no storms" and "upstream had storms we could not validate" must never
-    // render as the same reassuring sentence. raw_count is the PACIFIC candidate
-    // count, not every storm NHC lists — using the unfiltered total would make a
-    // quiet Pacific read as "unavailable" whenever an Atlantic storm was active.
-    const rawCount = pacificStorms.length;
-    const allDropped = rawCount > 0 && signals.length === 0;
-
-    const envelope = buildHazardEnvelope('hurricane', 'NHC', 'hawaii', signals,
-      {
-        status: signals.length > 0 ? 'active' : (allDropped ? 'unavailable' : 'none'),
-        count: signals.length,
-        raw_count: rawCount,
-        message: signals.length > 0
-          ? `${signals.length} active Pacific storm(s) near Hawaiʻi.`
-          : allDropped
-            ? 'Pacific storm data was received but could not be validated. Check the National Hurricane Center directly.'
-            : 'No active Pacific storms.',
-      }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
-    return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
+    // raw_count is the PACIFIC candidate count, not every storm NHC lists —
+    // using the unfiltered total would make a quiet Pacific read as
+    // "unavailable" whenever an Atlantic storm was active.
+    return { storms: normalized, raw_count: pacificStorms.length, ok: true };
   } catch (e: unknown) {
+    // Upstream unreachable is NOT a quiet Pacific. ok:false is the only thing
+    // that distinguishes them; every caller must branch on it before reporting
+    // a count.
+    return { storms: [], raw_count: 0, ok: false };
+  }
+}
+
+// Single source of truth for the three-way status every caller reports. Derived
+// here rather than re-implemented per caller so the hurricane endpoint, the
+// morning brief and the hazards summary can never disagree about whether the
+// Pacific is quiet or the feed is down.
+function stormPositionsStatus(res: StormPositions): 'active' | 'none' | 'unavailable' {
+  if (!res.ok) return 'unavailable';
+  if (res.storms.length > 0) return 'active';
+  // Silent-failure guard, same family as the Number(null)===0 trap: "upstream
+  // had no storms" and "upstream had storms we could not validate" must never
+  // render as the same reassuring sentence.
+  if (res.raw_count > 0) return 'unavailable';
+  return 'none';
+}
+
+// The four sentences this path can say, in one place. handleHurricane and
+// buildMorningBrief both render it, so an outage cannot be worded reassuringly
+// in one surface and honestly in the other. Strings are unchanged from the
+// pre-P29a-1 envelope so existing consumers see the same text.
+function stormPositionsMessage(res: StormPositions): string {
+  const status = stormPositionsStatus(res);
+  if (status === 'active') return `${res.storms.length} active Pacific storm(s) near Hawaiʻi.`;
+  if (status === 'none') return 'No active Pacific storms.';
+  return res.ok
+    ? 'Pacific storm data was received but could not be validated. Check the National Hurricane Center directly.'
+    : 'Pacific storm data is temporarily unavailable. Check the National Hurricane Center directly.';
+}
+
+async function handleHurricane(cors: CorsHeaders): Promise<Response> {
+  const res = await fetchStormPositions();
+
+  if (!res.ok) {
     // Upstream unreachable is NOT the same as a quiet Pacific. Reporting 'none'
     // here meant an NHC outage during a hurricane warning read as reassuring
     // calm — the same silent-failure family raw_count was added to prevent on
     // the validation path. Fail closed and say so.
-    return jsonResp(buildHazardEnvelope('hurricane', 'NHC', 'hawaii', [],
-      {
-        status: 'unavailable',
-        count: 0,
-        raw_count: 0,
-        message: 'Pacific storm data is temporarily unavailable. Check the National Hurricane Center directly.',
-      }, {}
-    ), 200, cors);
+    //
+    // stale_after_seconds matches the success path: omitting it handed a client
+    // `undefined` for freshness at precisely the moment the data was worst.
+    return jsonResp({
+      ...buildHazardEnvelope('hurricane', 'NHC', 'hawaii', [],
+        {
+          status: 'unavailable',
+          count: 0,
+          raw_count: 0,
+          message: 'Pacific storm data is temporarily unavailable. Check the National Hurricane Center directly.',
+        }, {}
+      ),
+      stale_after_seconds: 1800,
+    }, 200, cors);
   }
+
+  const signals: Feature[] = res.storms.map((s): Feature => ({
+    type: 'Feature',
+    geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
+    properties: {
+      id: s.id,
+      source: 'National Hurricane Center',
+      source_label: 'NHC',
+      name: s.name,
+      classification: s.classification,
+      wind_mph: s.wind_mph,
+      movement: s.movement,
+      risk_index: 'HIGH',
+      severity: 'HIGH',
+      event_time: s.event_time,
+      note: 'Active Pacific storm. Monitor NHC for official track and cone.',
+      // ── ADDITIVE (P29a-1). Every field above is byte-shape identical to
+      // pre-P29a-1 except event_time, which now carries the advisory issuance
+      // instead of the request time.
+      storm_id: s.storm_id,
+      bin_number: s.bin_number,
+      advisory_number: s.advisory_number,
+      advisory_issued_at: s.advisory_issued_at,
+      advisory_stale: s.advisory_stale,
+      event_time_source: s.event_time_source,
+      current_position_nearest_island: s.current_position_nearest_island,
+    },
+  }));
+
+  const envelope = buildHazardEnvelope('hurricane', 'NHC', 'hawaii', signals,
+    {
+      status: stormPositionsStatus(res),
+      count: signals.length,
+      raw_count: res.raw_count,
+      message: stormPositionsMessage(res),
+    }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
+  return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
 }
 
 
