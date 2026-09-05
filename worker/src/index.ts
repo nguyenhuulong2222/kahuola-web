@@ -5181,7 +5181,33 @@ const NHC_MAPSERVER_BASE =
 // without revisiting this line.
 const FORECAST_CONCURRENCY_LIMIT = 4;
 
-type ForecastStatus = 'ok' | 'unavailable' | 'mismatch' | 'no_layer' | 'insufficient_points';
+// P29a-3. 'prior_advisory' and 'stale_advisory' split what used to collapse
+// into 'mismatch'. CurrentStorms.json and the ArcGIS MapServer do NOT update in
+// lockstep — the JSON advances first — so an exact advisory-number match made
+// every forecast drop for most of each cycle. Measured live in production:
+// all three storms sat at delta 1, binnumber and stormname matching, and
+// forecast_ok_count was 0 with three hurricanes active. An empty map beside
+// three live storms is the "absence reads as safety" failure this feature was
+// built to prevent.
+type ForecastStatus =
+  | 'ok'                    // ArcGIS is on the same advisory as the position
+  | 'prior_advisory'        // one cycle behind — KEPT, and labelled with its age
+  | 'stale_advisory'        // two or more cycles behind (≥12 h) — dropped
+  | 'unavailable'
+  | 'mismatch'
+  | 'no_layer'
+  | 'insufficient_points';
+
+const FORECAST_STATUS_KEPT: ReadonlySet<ForecastStatus> = new Set<ForecastStatus>(['ok', 'prior_advisory']);
+
+// Outcome of verifying one ArcGIS feature against the storm it was requested
+// for. A boolean could not carry the age, and the age is the whole point: a
+// one-cycle-old forecast is NHC's own previous forecast for THIS storm, not
+// some other storm's track, and it is shown with its age stated rather than
+// silently withheld.
+type ForecastVerdict =
+  | { ok: true; status: 'ok' | 'prior_advisory'; ageCycles: 0 | 1 }
+  | { ok: false; status: 'mismatch' | 'stale_advisory' };
 
 type ForecastPoint = {
   tau: number;
@@ -5194,7 +5220,28 @@ type ForecastPoint = {
 };
 
 type StormForecast = {
+  // Retained from P29a-2 for payload-shape stability; same value as
+  // forecast_advisory_number below, which is the name a reader can act on.
   advisory_number: string;
+  // ── P29a-3 · WHOSE ADVISORY IS THIS, AND HOW OLD ────────────────────
+  // The client must never have to infer the forecast's age by comparing two
+  // numbers itself, and must never be able to assume the track and the marker
+  // came from the same advisory. Both numbers and the delta are stated.
+  forecast_advisory_number: string;
+  position_advisory_number: string | null;
+  forecast_advisory_age_cycles: number;   // 0 or 1; ≥2 never ships
+  // ArcGIS `advdate`, VERBATIM — e.g. "500 PM HST Fri Sep 04 2026". A local
+  // time with its zone spelled out, which is what a person in Hawaiʻi should
+  // see. Deliberately not parsed and not converted to UTC: reformatting it
+  // would mean inferring an offset from a timezone abbreviation, and the
+  // string is already the honest, readable form.
+  forecast_advisory_date: string | null;
+  // Great-circle distance between the storm's CURRENT position and the track's
+  // origin vertex. At age_cycles 1 the origin is where the storm was at the
+  // previous advisory, so the line visibly does not start at the marker. This
+  // number exists so P29b can say that out loud instead of leaving the user to
+  // notice the gap and distrust the whole layer. ~0 when age_cycles is 0.
+  track_origin_offset_mi: number | null;
   point_count: number;
   // HARDCODED false for the whole of P29a-2. The cone polygon is not fetched
   // (P29c) and NHC publishes no fetchable annual track-error table, so this
@@ -5282,10 +5329,12 @@ function finiteOrNull(v: unknown): number | null {
 //
 // Failure is terminal for that storm's forecast — never repaired, never
 // re-requested. The position survives untouched.
-function forecastFeatureMatchesStorm(props: any, storm: NormalizedStorm): boolean {
-  // (a) bin number, exact.
+function forecastFeatureVerdict(props: any, storm: NormalizedStorm): ForecastVerdict {
+  // (a) bin number, exact. UNCHANGED by P29a-3 and still absolute: this and
+  // (b) are what make tolerating an advisory delta safe at all. A delta of 1
+  // on a different storm still drops here, before (c) is ever reached.
   const bin = String(props?.binnumber ?? '').trim();
-  if (!bin || !storm.bin_number || bin !== storm.bin_number) return false;
+  if (!bin || !storm.bin_number || bin !== storm.bin_number) return { ok: false, status: 'mismatch' };
 
   // (b) storm name, case-insensitive. A CONTAINS check, not equality: the
   // Forecast Points layer prefixes the classification ("Hurricane Karina")
@@ -5294,18 +5343,32 @@ function forecastFeatureMatchesStorm(props: any, storm: NormalizedStorm): boolea
   // do not even agree with each other. Equality would reject every real match.
   const featureName = String(props?.stormname ?? '').trim().toLowerCase();
   const stormName = String(storm.name ?? '').trim().toLowerCase();
-  if (!featureName || !stormName || !featureName.includes(stormName)) return false;
+  if (!featureName || !stormName || !featureName.includes(stormName)) return { ok: false, status: 'mismatch' };
 
-  // (c) advisory number, compared as INTEGERS. CurrentStorms.json zero-pads
-  // ("035") and ArcGIS does not ("35"), so a string comparison fails on every
-  // advisory past number 9 — it would look like a working guard while silently
-  // dropping every forecast. NaN on either side is a mismatch, never a pass.
+  // (c) advisory number, GRADED by delta rather than tested for equality.
+  //
+  // Compared as INTEGERS: CurrentStorms.json zero-pads ("035") and ArcGIS does
+  // not ("35"), so a string comparison fails on every advisory past number 9 —
+  // it would look like a working guard while silently dropping every forecast.
+  // NaN on either side is a mismatch, never a pass.
   const featureAdv = parseInt(String(props?.advisnum ?? ''), 10);
   const stormAdv = parseInt(String(storm.advisory_number ?? ''), 10);
-  if (!Number.isFinite(featureAdv) || !Number.isFinite(stormAdv)) return false;
-  if (featureAdv !== stormAdv) return false;
+  if (!Number.isFinite(featureAdv) || !Number.isFinite(stormAdv)) return { ok: false, status: 'mismatch' };
 
-  return true;
+  const delta = stormAdv - featureAdv;
+  if (delta === 0) return { ok: true, status: 'ok', ageCycles: 0 };
+  // One cycle behind. NHC publishes every 6 h, and the GIS mirror trails the
+  // JSON, so this is the normal state for part of every cycle. The track is
+  // NHC's own previous forecast for this same storm — already proven by (a)
+  // and (b) — and it is kept, labelled with its age and its own advisory date.
+  if (delta === 1) return { ok: true, status: 'prior_advisory', ageCycles: 1 };
+  // Two or more cycles is ≥12 h of drift. Past that the forecast has been
+  // superseded twice over and showing it would be worse than showing nothing.
+  if (delta >= 2) return { ok: false, status: 'stale_advisory' };
+  // ArcGIS ahead of CurrentStorms is an ordering inversion we have no
+  // explanation for. Refused rather than accepted: "newer" is an assumption,
+  // and an unexplained inversion is exactly when an assumption is least safe.
+  return { ok: false, status: 'mismatch' };
 }
 
 // Minimum distance from any forecast point to any island centroid.
@@ -5389,14 +5452,20 @@ async function fetchForecastPoints(
     // Verify FIRST, use SECOND. Nothing below this line touches an unverified
     // feature, and a single failed check discards the whole forecast for this
     // storm rather than keeping the features that happened to pass.
-    let mismatched = false;
+    let rejected: ForecastStatus | null = null;
+    let ageCycles = 0;
     const verified: any[] = [];
     for (const f of feats) {
-      if (!forecastFeatureMatchesStorm(f?.properties, storm)) { mismatched = true; break; }
+      const v = forecastFeatureVerdict(f?.properties, storm);
+      if (!v.ok) { rejected = v.status; break; }
+      // Every feature in a layer carries the same advisory, but each is checked
+      // and the OLDEST age wins — a layer half-refreshed mid-update must be
+      // described by its oldest part, never its newest.
+      if (v.ageCycles > ageCycles) ageCycles = v.ageCycles;
       verified.push(f);
     }
-    if (mismatched) {
-      out.set(storm.id, { status: 'mismatch', forecast: null, closest: null });
+    if (rejected) {
+      out.set(storm.id, { status: rejected, forecast: null, closest: null });
       return;
     }
 
@@ -5449,10 +5518,28 @@ async function fetchForecastPoints(
       coordinates: points.map((p): [number, number] => [p.lon, p.lat]),
     };
 
+    // Distance from the CURRENT position to the track's origin vertex (lowest
+    // tau — tau 0 in every advisory observed). At age_cycles 1 this is the
+    // 6-hour gap between where the storm was at the previous advisory and where
+    // it is now, and it is the visible symptom of the lag: the line will not
+    // start at the marker. Emitted in every case so a consumer can trust the
+    // field to exist rather than branching on its absence.
+    const trackOriginOffsetMi = Math.round(
+      haversineKm(storm.lon, storm.lat, points[0].lon, points[0].lat) * KM_TO_MI,
+    );
+
+    const arcgisAdv = String(verified[0]?.properties?.advisnum ?? '');
     out.set(storm.id, {
-      status: 'ok',
+      status: ageCycles === 1 ? 'prior_advisory' : 'ok',
       forecast: {
-        advisory_number: String(verified[0]?.properties?.advisnum ?? ''),
+        advisory_number: arcgisAdv,
+        forecast_advisory_number: arcgisAdv,
+        position_advisory_number: storm.advisory_number,
+        forecast_advisory_age_cycles: ageCycles,
+        forecast_advisory_date: typeof verified[0]?.properties?.advdate === 'string' && verified[0].properties.advdate
+          ? verified[0].properties.advdate
+          : null,
+        track_origin_offset_mi: trackOriginOffsetMi,
         // The ACTUAL count. NHC publishes 7 points for one storm and 9 for
         // another in this very snapshot; assuming a fixed 12/24/36/48/72/96/120
         // series would silently drop or fabricate positions.
@@ -5548,8 +5635,24 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
     };
   });
 
+  // A storm absent from the map defaults to 'unavailable' — the same default
+  // the signal loop above applies — so the three counters always sum to
+  // forecast_total_count and a missing entry can never go uncounted.
   const forecastOkCount = res.storms.reduce(
-    (n, s) => n + (forecasts.get(s.id)?.status === 'ok' ? 1 : 0), 0,
+    (n, s) => n + ((forecasts.get(s.id)?.status ?? 'unavailable') === 'ok' ? 1 : 0), 0,
+  );
+  // P29a-3. Kept separate from ok_count rather than folded into it: ok_count
+  // keeps its P29a-2 meaning of "current advisory", so a consumer already
+  // reading it is not silently handed older forecasts under the same name.
+  const forecastPriorCount = res.storms.reduce(
+    (n, s) => n + ((forecasts.get(s.id)?.status ?? 'unavailable') === 'prior_advisory' ? 1 : 0), 0,
+  );
+  // Everything not shown: stale_advisory, mismatch, unavailable, no_layer,
+  // insufficient_points. Derived from the kept set rather than by listing the
+  // drop statuses, so a status added later is counted as dropped by default —
+  // failing closed instead of vanishing from every counter.
+  const forecastDroppedCount = res.storms.reduce(
+    (n, s) => n + (FORECAST_STATUS_KEPT.has(forecasts.get(s.id)?.status ?? 'unavailable') ? 0 : 1), 0,
   );
 
   const envelope = buildHazardEnvelope('hurricane', 'NHC', 'hawaii', signals,
@@ -5563,7 +5666,10 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       // Wording deliberately untouched in this increment — the "near Hawaiʻi"
       // claim that no code evaluates is P29b's to fix.
       message: stormPositionsMessage(res),
+      // ok_count keeps its P29a-2 semantics: current-advisory forecasts ONLY.
       forecast_ok_count: forecastOkCount,
+      forecast_prior_count: forecastPriorCount,
+      forecast_dropped_count: forecastDroppedCount,
       forecast_total_count: signals.length,
     }, { authority: 'official', note: 'National Hurricane Center active storm data.' });
   return jsonResp({ ...envelope, stale_after_seconds: 1800 }, 200, cors);
