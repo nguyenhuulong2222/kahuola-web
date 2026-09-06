@@ -3577,9 +3577,19 @@
         // applyData can keep them off the map; they are surfaced as text in the
         // alerts card instead (never dropped — absence would read as safety).
         // Absent is treated as synthesized: fail toward the safer branch.
-        if (!s.geometry) return null;
+        //
+        // P32a-2: this test used to be `if (!s.geometry) return null;`, which
+        // assumed the Worker always sends SOME geometry. Today it does — the
+        // fabricated Point. The moment that fabrication is removed the alert
+        // arrives with geometry: null and would die here, before the card could
+        // list it: badge 9 -> 6 and the "N alerts cover multiple areas" block
+        // gone, with no console error. Keep a feature when it can be drawn OR
+        // when the Worker flagged it as located by zone; drop only what is
+        // neither, since that can be neither mapped nor listed.
+        const zoneBased = props.zone_based === true || props.geometry_synthesized === true;
+        if (!s.geometry && !zoneBased) return null;
         return {
-          type: "Feature", geometry: s.geometry,
+          type: "Feature", geometry: s.geometry || null,
           properties: {
             id: props.id || s.id || "nws-alert",
             severity: props.kahu_severity || "INFO",       // kahu tier drives color/sort
@@ -3592,7 +3602,16 @@
             onset: props.onset || null,
             ends: props.ends || props.expires || null,
             zone_based: !!props.zone_based,
-            geometry_synthesized: props.geometry_synthesized !== false,
+            // P32a-2: `|| !s.geometry` closes a hole the kept-when-flagged test
+            // above would otherwise open. Today's Worker sets zone_based and
+            // geometry_synthesized independently — an alert with null geometry
+            // whose UGC codes resolve to nothing gets zone_based true but
+            // geometry_synthesized false. Kept by the new test, it would then
+            // pass applyData's filter onto the map with null geometry AND be
+            // skipped by renderUnplacedAlerts: neither drawn nor listed.
+            // A feature we keep without geometry is by definition unmappable,
+            // so it is flagged as such and the two sets stay identical.
+            geometry_synthesized: props.geometry_synthesized !== false || !s.geometry,
             source: "NWS",
             source_label: "National Weather Service",
           }
