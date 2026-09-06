@@ -313,63 +313,24 @@ const REGION_NWS_AREAS: Record<string, string[] | null> = {
   usa: null,
 };
 
-// NWS UGC code → approximate centroid [lng, lat]. Used to synthesize a
-// Point geometry for flood alerts whose upstream `geometry` is null, so
-// client maps can render a marker instead of silently dropping them.
+// P32b: NWS_ZONE_CENTROIDS and centroidsForUgc lived here. The table mapped
+// UGC zone codes to hand-written "approximate centroids" and was used to
+// synthesize a Point for alerts whose upstream geometry is null.
 //
-// UGC format: SSXNNN where SS=state, X=Z (forecast zone) or C (county
-// FIPS), NNN=3-digit code. Example: HIC009 = Hawaiʻi state, County,
-// FIPS 009 = Maui. Prefix keys (HIC, HIZ, CAC, ...) act as fallbacks,
-// and 2-letter state keys (HI, CA, ...) as a last resort.
-const NWS_ZONE_CENTROIDS: Record<string, [number, number]> = {
-  // NWS Forecast Zones (HIZ)
-  HIZ001: [-156.3, 20.8],
-  HIZ002: [-155.5, 19.6],
-  HIZ003: [-155.9, 19.6],
-  HIZ004: [-157.9, 21.4],
-  HIZ005: [-159.5, 22.0],
-  HIZ006: [-156.9, 21.1],
-  HIZ007: [-156.9, 20.8],
-
-  // Hawaiʻi County FIPS (HIC)
-  HIC001: [-156.3, 20.8], // Maui (alt FIPS)
-  HIC003: [-157.9, 21.4], // Honolulu (Oʻahu)
-  HIC005: [-159.5, 22.0], // Kauaʻi
-  HIC007: [-155.5, 19.6], // Hawaiʻi Island
-  HIC009: [-156.3, 20.8], // Maui
-
-  // Prefix fallbacks
-  HIC: [-157.0, 20.8],
-  HIZ: [-157.0, 20.8],
-  HI: [-157.0, 20.8],
-
-  // US State prefixes
-  CAZ: [-119.4, 36.7],
-  CAC: [-119.4, 36.7],
-  CA: [-119.4, 36.7],
-  ORZ: [-120.5, 43.8],
-  ORC: [-120.5, 43.8],
-  OR: [-120.5, 43.8],
-  WAZ: [-120.5, 47.5],
-  WAC: [-120.5, 47.5],
-  WA: [-120.5, 47.5],
-};
-
-function centroidsForUgc(codes: string[]): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  for (const raw of codes) {
-    const code = String(raw || '').toUpperCase();
-    if (!code) continue;
-    // Exact code (HIC009, HIZ001, ...)
-    let hit = NWS_ZONE_CENTROIDS[code];
-    // 3-char prefix (HIC, HIZ, CAC, ...)
-    if (!hit) hit = NWS_ZONE_CENTROIDS[code.slice(0, 3)];
-    // 2-char state (HI, CA, ...)
-    if (!hit) hit = NWS_ZONE_CENTROIDS[code.slice(0, 2)];
-    if (hit) out.push(hit);
-  }
-  return out;
-}
+// It was deleted rather than corrected. It cited no source, covered 5 of
+// Hawaiʻi's 43 public forecast zones, and had a median error of 106 km and a
+// maximum of 467 km; exactly one of its 24 entries (HIC003) was right. Three
+// keys named zones that do not exist upstream, and its own comments misnamed
+// codes — HIC007 was labelled "Hawaiʻi Island" but is Niihau, 510 km away.
+//
+// Correcting it would have preserved the deeper falsehood: a Flood Watch
+// covering 43 zones still collapses to a single dot, merely a better-placed
+// one, and the table would go stale in silence whenever NWS redraws a zone.
+//
+// Alerts NWS locates only by zone code now carry geometry: null with
+// zone_based and geometry_synthesized set, and area_desc as the locator.
+// Clients list them as text (live-map.html, P32a) or attribute them by
+// area_desc (index.html, P31). Nothing is dropped and nothing is invented.
 
 async function handleAlerts(url: URL, cors: CorsHeaders): Promise<Response> {
   const region = resolveRegion(url);
@@ -394,12 +355,11 @@ async function handleAlerts(url: URL, cors: CorsHeaders): Promise<Response> {
     const ugcCodes: string[] = Array.isArray(f?.properties?.geocode?.UGC)
       ? f.properties.geocode.UGC
       : [];
-    const centroids = centroidsForUgc(ugcCodes);
-    const geometry =
-      f.geometry ||
-      (centroids.length > 0
-        ? { type: 'Point', coordinates: centroids[0] }
-        : null);
+    // Real upstream geometry passes through untouched. When NWS gives none,
+    // we say so — we do not invent a point. ugc_codes still names the zones
+    // and area_desc still names them in words, which is what NWS actually
+    // published; that is the locator, not a coordinate we made up.
+    const geometry = f.geometry || null;
     const rawSeverity = f?.properties?.severity || '';
     const kahu_severity =
       rawSeverity === 'Extreme' ? 'CRITICAL'
@@ -428,8 +388,7 @@ async function handleAlerts(url: URL, cors: CorsHeaders): Promise<Response> {
         instruction: f?.properties?.instruction || '',
         response: f?.properties?.response || '',
         ugc_codes: ugcCodes,
-        centroids,
-        geometry_synthesized: !f.geometry && centroids.length > 0,
+        geometry_synthesized: !f.geometry,
         zone_based: !f.geometry,
       },
     };
@@ -497,15 +456,11 @@ async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> 
       const ugcCodes: string[] = Array.isArray(f?.properties?.geocode?.UGC)
         ? f.properties.geocode.UGC
         : [];
-      const centroids = centroidsForUgc(ugcCodes);
-      // Synthesize a Point geometry from the first centroid when the
-      // upstream geometry is null — NWS often omits polygons for
-      // forecast-zone alerts, which would otherwise drop the signal.
-      const geometry =
-        f.geometry ||
-        (centroids.length > 0
-          ? { type: 'Point', coordinates: centroids[0] }
-          : null);
+      // Same rule as handleAlerts: real geometry passes through, absent
+      // geometry is reported as absent. NWS often omits polygons for
+      // forecast-zone flood alerts; those alerts stay in the payload as
+      // text-locatable signals rather than being placed at a guess.
+      const geometry = f.geometry || null;
       return {
         type: 'Feature',
         geometry,
@@ -525,12 +480,16 @@ async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> 
           instruction: f?.properties?.instruction || '',
           response: f?.properties?.response || '',
           ugc_codes: ugcCodes,
-          centroids,
-          geometry_synthesized: !f.geometry && centroids.length > 0,
+          geometry_synthesized: !f.geometry,
+          zone_based: !f.geometry,
         },
       };
-    })
-    .filter((f: Feature) => !!f.geometry);
+    });
+  // P32b: a `.filter((f) => !!f.geometry)` used to sit here. It existed to
+  // drop zones the centroid table could not resolve. With the table gone it
+  // would delete EVERY zone-based flash-flood alert — trading a wrong
+  // location for a vanished flood warning, which is strictly worse. A flash
+  // flood alert without a polygon is still a flash flood alert.
 
   const warningCount = signals.filter(
     (f) => String(f.properties.event || '').toLowerCase().includes('warning')
@@ -551,9 +510,12 @@ async function handleFlashFlood(url: URL, cors: CorsHeaders): Promise<Response> 
         count: signals.length,
         warning_count: warningCount,
         watch_count: watchCount,
+        // P32b: this said "polygons". Signals may now carry geometry: null
+        // when NWS locates an alert only by zone code, so the copy would have
+        // promised a shape the payload does not contain. It counts alerts.
         message: signals.length > 0
-          ? 'Active National Weather Service flash flood polygons are available in this snapshot.'
-          : 'No active National Weather Service flash flood watch or warning polygons were returned in this snapshot.',
+          ? 'Active National Weather Service flash flood alerts are available in this snapshot. Some may be located by zone name rather than by polygon.'
+          : 'No active National Weather Service flash flood watch or warning was returned in this snapshot.',
       },
       {
         authority: 'official',
