@@ -811,6 +811,15 @@
       // ── Kupuna & Keiki notes (Class B — civic safety) ─────────
       "kupuna.title.fire": "K\u016bpuna & Keiki Fire Safety",
       "kupuna.title.flood_warning": "K\u016bpuna & Keiki Flood Safety",
+      // P36b — the kūpuna note is gated on primaryEvent tier for tier. A
+      // WARNING must say warning and must call for action: this paragraph is
+      // written for the readers where that decides monitoring vs acting.
+      "kupuna.title.storm_warning": "Kūpuna & Keiki Storm Safety",
+      "kupuna.body.storm_warning": "A tropical storm warning is in effect. Storm conditions are expected, not just possible. Kūpuna, keiki, and those in low-lying or exposed areas should act now — secure your home, charge devices, gather medicines and water, and follow county emergency instructions. E mālama pono.",
+      "kupuna.title.storm_watch": "Kūpuna & Keiki Storm Awareness",
+      "kupuna.body.storm_watch": "A tropical storm watch is in effect. Storm conditions are possible. Kūpuna, keiki, and those in low-lying or exposed areas should prepare now and stay informed — have an emergency plan, medicines, and water ready. E mālama pono.",
+      "kupuna.title.flood_advisory": "Kūpuna & Keiki Flood Awareness",
+      "kupuna.body.flood_advisory": "A flood advisory is in effect. Nuisance flooding is possible in low-lying areas and at stream crossings. Kūpuna and keiki should avoid flooded roads and allow extra time to travel. E mālama pono.",
       "kupuna.title.flood_watch": "K\u016bpuna & Keiki Flood Awareness",
       "kupuna.title.elevated": "K\u016bpuna & Keiki Safety",
       "kupuna.title.calm": "K\u016bpuna & Keiki Safety",
@@ -866,7 +875,7 @@
       "status.advisory": "ADVISORY",
       "context.flood_advisory_active": "Advisory Active",
       "context.flood_none_scoped": "No NWS flood alert",
-      "kupuna.body.watch": "An official National Weather Service watch is in effect for parts of Hawai\u02bbi. K\u016bpuna, keiki, and those in low-lying areas should stay informed and be ready to act. E m\u0101lama pono.",
+      "kupuna.body.watch": "An official National Weather Service alert is in effect for parts of Hawai\u02bbi. K\u016bpuna, keiki, and those in low-lying areas should stay informed and be ready to act. E m\u0101lama pono.",
       "kupuna.body.degraded": "Kahu Ola cannot confirm current conditions right now. K\u016bpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance directly.",
       "kupuna.body.checking": "Checking current conditions. K\u016bpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance.",
 
@@ -1795,6 +1804,12 @@
       // "K\u016bpuna" (ng\u01b0\u1eddi cao tu\u1ed5i), "keiki" (tr\u1ebb em), "E m\u0101lama pono" kept in all languages
       "kupuna.title.fire": "An To\xe0n Ch\u00e1y cho Ng\u01b0\u1eddi Cao Tu\u1ed5i & Tr\u1ebb Em",
       "kupuna.title.flood_warning": "An To\xe0n L\u0169 cho Ng\u01b0\u1eddi Cao Tu\u1ed5i & Tr\u1ebb Em",
+      "kupuna.title.storm_warning": "An Toàn Bão cho Người Cao Tuổi & Trẻ Em",
+      "kupuna.body.storm_warning": "Cảnh báo bão nhiệt đới đang hiệu lực. Điều kiện bão được dự báo sẽ xảy ra, không chỉ là khả năng. Người cao tuổi, trẻ em và những người ở vùng trũng thấp hoặc lộ thiên cần hành động ngay — gia cố nhà cửa, sạc đầy thiết bị, chuẩn bị thuốc men và nước uống, và làm theo hướng dẫn khẩn cấp của quận. E mālama pono.",
+      "kupuna.title.storm_watch": "Nhận Thức Bão cho Người Cao Tuổi & Trẻ Em",
+      "kupuna.body.storm_watch": "Theo dõi bão nhiệt đới đang hiệu lực. Điều kiện bão có thể xảy ra. Người cao tuổi, trẻ em và những người ở vùng trũng thấp hoặc lộ thiên nên chuẩn bị ngay và theo dõi thông tin — có sẵn kế hoạch khẩn cấp, thuốc men và nước uống. E mālama pono.",
+      "kupuna.title.flood_advisory": "Nhận Thức Ngập Lụt cho Người Cao Tuổi & Trẻ Em",
+      "kupuna.body.flood_advisory": "Khuyến cáo ngập lụt đang hiệu lực. Có thể xảy ra ngập nhẹ ở vùng trũng thấp và các đoạn suối băng qua đường. Người cao tuổi và trẻ em nên tránh những con đường bị ngập và dành thêm thời gian khi di chuyển. E mālama pono.",
       "kupuna.title.flood_watch": "Nh\u1eadn Th\u1ee9c L\u0169 cho Ng\u01b0\u1eddi Cao Tu\u1ed5i & Tr\u1ebb Em",
       "kupuna.title.elevated": "An To\xe0n cho Ng\u01b0\u1eddi Cao Tu\u1ed5i & Tr\u1ebb Em",
       "kupuna.title.calm": "An To\xe0n cho Ng\u01b0\u1eddi Cao Tu\u1ed5i & Tr\u1ebb Em",
@@ -1848,7 +1863,7 @@
       "status.advisory": "KHUY\u1ebeN C\u00c1O",
       "context.flood_advisory_active": "C\u00f3 khuy\u1ebfn c\u00e1o",
       "context.flood_none_scoped": "Kh\u00f4ng c\u00f3 c\u1ea3nh b\u00e1o l\u0169 NWS",
-      "kupuna.body.watch": "M\u1ed9t th\u00f4ng b\u00e1o theo d\u00f5i ch\u00ednh th\u1ee9c c\u1ee7a National Weather Service \u0111ang hi\u1ec7u l\u1ef1c cho m\u1ed9t s\u1ed1 khu v\u1ef1c Hawai\u02bbi. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\u00e0 c\u01b0 d\u00e2n v\u00f9ng th\u1ea5p n\u00ean theo d\u00f5i tin t\u1ee9c v\u00e0 s\u1eb5n s\u00e0ng h\u00e0nh \u0111\u1ed9ng. E m\u0101lama pono.",
+      "kupuna.body.watch": "M\u1ed9t c\u1ea3nh b\u00e1o ch\u00ednh th\u1ee9c c\u1ee7a National Weather Service \u0111ang hi\u1ec7u l\u1ef1c cho m\u1ed9t s\u1ed1 khu v\u1ef1c Hawai\u02bbi. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\u00e0 c\u01b0 d\u00e2n v\u00f9ng th\u1ea5p n\u00ean theo d\u00f5i tin t\u1ee9c v\u00e0 s\u1eb5n s\u00e0ng h\u00e0nh \u0111\u1ed9ng. E m\u0101lama pono.",
       "kupuna.body.degraded": "Kahu Ola hi\u1ec7n kh\u00f4ng x\u00e1c nh\u1eadn \u0111\u01b0\u1ee3c t\u00ecnh h\u00ecnh. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\u00e0 c\u01b0 d\u00e2n v\u00f9ng th\u1ea5p n\u00ean theo d\u00f5i tr\u1ef1c ti\u1ebfp h\u01b0\u1edbng d\u1eabn c\u1ee7a National Weather Service v\u00e0 c\u1ee7a qu\u1eadn.",
       "kupuna.body.checking": "\u0110ang ki\u1ec3m tra t\u00ecnh h\u00ecnh hi\u1ec7n t\u1ea1i. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\u00e0 c\u01b0 d\u00e2n v\u00f9ng th\u1ea5p n\u00ean theo d\u00f5i h\u01b0\u1edbng d\u1eabn c\u1ee7a National Weather Service v\u00e0 c\u1ee7a qu\u1eadn.",
 

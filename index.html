@@ -3484,8 +3484,23 @@
         const redFlag     = fireWeatherPayload?.summary?.red_flag_active;
         // elevated = only when NWS Red Flag or Watch — not terrain estimate
         const elevated    = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
-        const floodWarn   = floodPayload?.summary?.warning_count > 0;
-        const floodWatch  = floodPayload?.summary?.watch_count > 0;
+
+        // ── P36b — this note is gated on primaryEvent, tier for tier ──────
+        // It used to branch on floodPayload.summary counts instead. That is a
+        // DIFFERENT source from the hero: the flash-flood endpoint is scoped to
+        // flash-flood products, so with six Tropical Storm WARNINGS in force
+        // both counts were zero and every storm state fell through to a single
+        // generic string — "An official National Weather Service watch is in
+        // effect ... stay informed and be ready to act."
+        //
+        // A watch means conditions are possible. A warning means they are
+        // expected or occurring. This paragraph is written for kūpuna and keiki,
+        // the readers for whom that distinction decides between monitoring and
+        // acting, and it was quietly downgrading the severity for them.
+        //
+        // primaryEvent already folds in both flood sources (the hero ORs the
+        // alerts tier with the flash-flood counts), so gating on it is strictly
+        // more coverage than the counts gave, never less.
 
         if (primaryEvent === "FIRE_ACTIVE" || redFlag) {
           // Advisory switching via the SHARED classifier (same decision as the
@@ -3508,18 +3523,44 @@
             noteEl.style.background  = "rgba(255,122,0,.08)";
             titleEl.style.color      = "#ffd8ba";
           }
-        } else if (floodWarn) {
+        } else if (primaryEvent === "FLOOD_WARNING") {
           titleEl.textContent = _t("kupuna.title.flood_warning") || "K\u016bpuna & Keiki Flood Safety";
           bodyEl.textContent  = _t("kupuna.body.flood_warning")  || "Flash flood warning is active. K\u016bpuna, keiki, and residents near streams or low-lying roads should move to higher ground immediately. Do not attempt to cross flooded roadways. Follow official NWS and county emergency instructions. E m\u0101lama pono.";
           noteEl.style.borderColor = "rgba(77,168,255,.28)";
           noteEl.style.background  = "rgba(77,168,255,.08)";
           titleEl.style.color      = "#dbeeff";
-        } else if (floodWatch) {
+        } else if (primaryEvent === "STORM_WARNING") {
+          // Warning tier: says warning, and calls for action rather than
+          // awareness. The rose tint matches the mini map's warning state.
+          titleEl.textContent = _t("kupuna.title.storm_warning") || "K\u016bpuna & Keiki Storm Safety";
+          bodyEl.textContent  = _t("kupuna.body.storm_warning")  || "A tropical storm warning is in effect. Storm conditions are expected, not just possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should act now \u2014 secure your home, charge devices, gather medicines and water, and follow county emergency instructions. E m\u0101lama pono.";
+          noteEl.style.borderColor = "rgba(255,94,123,.30)";
+          noteEl.style.background  = "rgba(255,94,123,.08)";
+          titleEl.style.color      = "#ffd6de";
+        } else if (primaryEvent === "FLOOD_WATCH") {
           titleEl.textContent = _t("kupuna.title.flood_watch")   || "K\u016bpuna & Keiki Flood Awareness";
           bodyEl.textContent  = _t("kupuna.body.flood_watch")    || "A flood watch is in effect. K\u016bpuna, keiki, and those in low-lying or flood-prone areas should prepare for possible rapid water rises. Have an emergency plan ready and monitor official alerts. E m\u0101lama pono.";
           noteEl.style.borderColor = "rgba(255,204,102,.22)";
           noteEl.style.background  = "rgba(255,204,102,.07)";
           titleEl.style.color      = "#ffe9b5";
+        } else if (primaryEvent === "STORM_WATCH") {
+          titleEl.textContent = _t("kupuna.title.storm_watch")   || "K\u016bpuna & Keiki Storm Awareness";
+          bodyEl.textContent  = _t("kupuna.body.storm_watch")    || "A tropical storm watch is in effect. Storm conditions are possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should prepare now and stay informed \u2014 have an emergency plan, medicines, and water ready. E m\u0101lama pono.";
+          noteEl.style.borderColor = "rgba(255,204,102,.22)";
+          noteEl.style.background  = "rgba(255,204,102,.07)";
+          titleEl.style.color      = "#ffe9b5";
+        } else if (primaryEvent === "FLOOD_ADVISORY") {
+          titleEl.textContent = _t("kupuna.title.flood_advisory") || "K\u016bpuna & Keiki Flood Awareness";
+          bodyEl.textContent  = _t("kupuna.body.flood_advisory")  || "A flood advisory is in effect. Nuisance flooding is possible in low-lying areas and at stream crossings. K\u016bpuna and keiki should avoid flooded roads and allow extra time to travel. E m\u0101lama pono.";
+          noteEl.style.borderColor = "rgba(255,204,102,.18)";
+          noteEl.style.background  = "rgba(255,204,102,.05)";
+          titleEl.style.color      = "#ffe9b5";
+        } else if (primaryEvent === "DEGRADED") {
+          titleEl.textContent = _t("kupuna.title.calm")          || "K\u016bpuna & Keiki Safety";
+          bodyEl.textContent  = _t("kupuna.body.degraded")       || "Kahu Ola cannot confirm current conditions right now. K\u016bpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance directly.";
+          noteEl.style.borderColor = "";
+          noteEl.style.background  = "";
+          titleEl.style.color      = "";
         } else if (elevated) {
           titleEl.textContent = _t("kupuna.title.elevated")      || "K\u016bpuna & Keiki Safety";
           bodyEl.textContent  = _t("kupuna.body.elevated")       || "Fire weather conditions are elevated across parts of Hawai\u02bfi. K\u016bpuna, keiki, and those with breathing concerns should stay informed and limit strenuous outdoor activity during dry, windy periods. E m\u0101lama pono.";
@@ -3527,14 +3568,13 @@
           noteEl.style.background  = "";
           titleEl.style.color      = "";
         } else if (primaryEvent !== "MONITORING") {
-          // FIX 5. This paragraph is aimed at the most vulnerable readers, so it
-          // is gated on the SAME condition as the hero: if the hero is not
-          // MONITORING — storm watch, flood watch, or an outage we cannot see
-          // through — "statewide conditions are calm" must not appear at all.
+          // P30 FIX 5, retained as a backstop. Every state the ladder can
+          // currently produce is handled above, so this is unreachable today.
+          // It stays because a future primaryEvent added to the ladder and not
+          // to this function must never fall through to "conditions are calm" —
+          // it lands on the neutral watch wording instead. Fail toward caution.
           titleEl.textContent = _t("kupuna.title.calm")          || "K\u016bpuna & Keiki Safety";
-          bodyEl.textContent  = (primaryEvent === "DEGRADED")
-            ? (_t("kupuna.body.degraded") || "Kahu Ola cannot confirm current conditions right now. K\u016bpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance directly.")
-            : (_t("kupuna.body.watch")    || "An official National Weather Service watch is in effect for parts of Hawai\u02bfi. K\u016bpuna, keiki, and those in low-lying areas should stay informed and be ready to act. E m\u0101lama pono.");
+          bodyEl.textContent  = _t("kupuna.body.watch")          || "An official National Weather Service alert is in effect for parts of Hawai\u02bfi. K\u016bpuna, keiki, and those in low-lying areas should stay informed and be ready to act. E m\u0101lama pono.";
           noteEl.style.borderColor = "";
           noteEl.style.background  = "";
           titleEl.style.color      = "";
