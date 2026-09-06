@@ -4652,11 +4652,19 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
       const isRedFlag = props.event === "Red Flag Warning";
       const severity = isRedFlag ? "HIGH" : "ELEVATED";
 
-      // NWS alerts have geometry OR affected zones
-      const geometry = alert.geometry ?? {
-        type: "Point",
-        coordinates: [-157.8, 20.5], // Hawaii center fallback
-      };
+      // NWS alerts carry a polygon OR only their affected zone codes. Until
+      // P33 a zone-only alert was given [-157.8, 20.5] — a point in the Kaʻiwi
+      // Channel — with nothing in the payload marking it as invented, so no
+      // consumer could tell a fabricated fire-weather location from a real
+      // one. On a wildfire-first platform that is the worst shape this defect
+      // takes. We now emit null and say so.
+      //
+      // geometry_synthesized here means "there is no trustworthy geometry on
+      // this feature", NOT "a point was invented" — nothing is invented any
+      // more. It matches the flag /api/hazards/alerts already emits so a
+      // client needs one gate, not two. The alert itself is never dropped:
+      // area carries the location as text, which is what NWS actually said.
+      const geometry = alert.geometry ?? null;
 
       return {
         type: "Feature",
@@ -4666,6 +4674,12 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
           event: props.event,
           headline: props.headline ?? props.event,
           area: props.areaDesc ?? "Hawaiʻi",
+          // Alias of `area` under the name the alerts payload uses. With null
+          // geometry the area text is the only locator a client has, and it
+          // should not have to know which layer it is reading to find it.
+          area_desc: props.areaDesc ?? "Hawaiʻi",
+          zone_based: !alert.geometry,
+          geometry_synthesized: !alert.geometry,
           severity: severity,
           risk_index: severity,
           red_flag_active: isRedFlag,
