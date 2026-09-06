@@ -2106,79 +2106,228 @@
 
     .hur-detail { margin-top: 6px; }
 
-    .hur-storm {
-      padding: 8px 0 6px;
-      border-top: 1px solid rgba(134, 188, 255, 0.10);
+    /* ── P38 · hurricane card visual hierarchy ─────────────────────────
+       Every colour below is a design token. Before P38 this block held
+       fourteen hand-written rgba()/hex values and zero var() calls, which
+       is how the card drifted into a private palette. Literals that remain
+       are annotated with why no token matches.
+
+       Type scale, using the file's existing steps, with real gaps so the
+       eye can rank things: 14 storm name / 12 data / 11 threshold rows /
+       10 group labels and notes. It was 13/12/11.5/11 — a 2px range across
+       the whole card, which is why nothing read as more important. */
+
+    /* One storm = one <details class="accordion-card tier-N">. Tier is
+       assigned by rank in hurricaneSorted(), so "nearest" and "heaviest"
+       are the same thing on screen. */
+    .hur-card { margin-top: 8px; }
+    .hur-card:first-child { margin-top: 0; }
+
+    .hur-sum-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
     }
 
-    .hur-storm:first-child { border-top: 0; }
+    /* Classification is the storm's category, not its name — it must not
+       share the name's weight. */
+    .hur-sum-cat {
+      margin-left: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
 
-    .hur-name {
-      font-size: 13px;
+    /* Deliberately NOT .accordion-subline: that class is nowrap + ellipsis,
+       which would truncate the collapsed summary. A reader must be able to
+       learn a storm is near WITHOUT opening it, so this wraps. */
+    .hur-sum-line {
+      margin-top: 3px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text-dim);
+      white-space: normal;
+    }
+
+    .hur-sum-near { color: var(--accent); font-weight: 600; }
+
+    .tier-3 .hur-sum-name { font-size: 13px; }
+
+    /* ── the three questions, as three groups ───────────────────────────
+       Where is it now / where is it going / what are the odds for my
+       island. 18px between groups against a 4px rhythm inside them: the
+       step is the separation. */
+    .hur-group { margin-top: 18px; }
+    .hur-group:first-child { margin-top: 10px; }
+
+    .hur-group-label {
+      margin-bottom: 6px;
+      font-size: 10px;
       font-weight: 700;
-      color: rgba(241, 246, 255, 0.98);
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
     .hur-line {
       font-size: 12px;
-      line-height: 1.45;
-      color: rgba(194, 206, 228, 0.86);
-    }
-
-    .hur-warn { color: #ffd5b5; }
-
-    /* AC-1. The centre-line disclaimer. Never conditional on layout — it is
-       rendered wherever a track can be seen, and its text comes from the
-       payload's uncertainty_available flag, never from a hardcoded assumption. */
-    .hur-disclaimer {
-      margin: 6px 0 2px;
-      padding: 6px 8px;
-      border-left: 3px solid rgba(255, 140, 66, 0.55);
-      border-radius: 0 8px 8px 0;
-      background: rgba(255, 106, 0, 0.07);
-      font-size: 11.5px;
-      line-height: 1.45;
-      color: rgba(255, 213, 181, 0.95);
-    }
-
-    /* P29c. The mandatory cone caption. Visually distinct from the AC-1
-       centre-line disclaimer above it so the two corrections do not read as
-       one block a user's eye can skip. */
-    .hur-cone-caption {
-      margin: 6px 0 2px;
-      padding: 6px 8px;
-      border-left: 3px solid rgba(255, 157, 77, 0.75);
-      border-radius: 0 8px 8px 0;
-      background: rgba(255, 157, 77, 0.10);
-      font-size: 11.5px;
-      line-height: 1.45;
-      color: rgba(255, 224, 190, 0.97);
-    }
-
-    .hur-cone-caption strong { color: #ffb066; letter-spacing: .02em; }
-
-    .hur-sub {
-      margin-top: 5px;
-      font-size: 11.5px;
-      font-weight: 700;
-      letter-spacing: .02em;
-      color: rgba(194, 206, 228, 0.70);
-      text-transform: uppercase;
-    }
-
-    .hur-wp {
-      font-size: 12px;
       line-height: 1.5;
-      color: rgba(241, 246, 255, 0.92);
+      color: var(--text-dim);
     }
 
-    .hur-wp-loc { font-weight: 600; }
+    /* The headline figure of its group. */
+    .hur-key { font-size: 13px; color: var(--text); }
+    .hur-key b { font-weight: 700; }
 
-    .hur-note {
-      margin-top: 5px;
+    .hur-warn { color: var(--amber); }
+
+    /* FIX 5 — AC-2 is a footnote to the distance it corrects, not one more
+       row in the stream. Indented and rule-attached so it reads as bound to
+       the number above it. Visible always: never a tooltip, never a click. */
+    .hur-footnote {
+      margin: 2px 0 0 10px;
+      padding-left: 8px;
+      border-left: 2px solid rgba(255, 152, 0, .45);   /* --amber @45%, no token for alpha variants */
       font-size: 11px;
       line-height: 1.45;
-      color: rgba(194, 206, 228, 0.72);
+      color: var(--amber);
+    }
+
+    /* FIX 4 — one correction block, not two near-identical ones. Carries
+       the AC-1 centre-line disclaimer and, when a cone is drawn, the
+       CENTRE/damaging-winds caption. Heavier than a .hur-line by
+       construction: full border, tinted ground, accent rule. */
+    .hur-correction {
+      margin: 12px 0 2px;
+      padding: 9px 11px;
+      border: 1px solid rgba(255, 106, 0, .30);        /* --accent @30% */
+      border-left: 3px solid var(--accent);
+      border-radius: 0 10px 10px 0;
+      background: rgba(255, 106, 0, .09);              /* --accent @9% */
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #ffd9bd;                                  /* tinted --text on the accent ground; no token */
+    }
+
+    .hur-correction p { margin: 0; }
+    .hur-correction p + p { margin-top: 6px; }
+    .hur-correction strong { color: var(--accent); font-weight: 700; letter-spacing: .02em; }
+
+    /* ── FIX 2 · probability table ──────────────────────────────────────
+       Location | bar | three thresholds, each keeping its own number AND
+       its label. The bar encodes the 34 kt cumulative percentage; the
+       number is always beside it, so severity is never colour-only. */
+    .hur-prob-group { margin-top: 10px; }
+
+    /* Louder than the rows it governs — the old .hur-sub was 11.5px at 70%
+       opacity, quieter than its own contents. */
+    .hur-prob-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .hur-prob-head::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* The NWHI group is uninhabited and must not compete with places where
+       people live. Separated by an inset rule and dimmed as a whole. */
+    .hur-prob-group--nwhi {
+      margin-top: 14px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border);
+      /* Secondary, not buried. At .72 a 96% NWHI reading rendered fainter than
+         a 5% Honolulu one, which inverts the hierarchy it was meant to create.
+         .82 keeps "people live over there, not here" while leaving the largest
+         numbers on the card legible. */
+      opacity: .82;
+    }
+
+    .hur-prob-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 4px 10px;
+      align-items: center;
+      padding: 5px 0;
+      border-top: 1px solid rgba(255, 255, 255, .04);  /* half --border; a full one reads as a table grid */
+    }
+    .hur-prob-row:first-of-type { border-top: 0; }
+
+    .hur-prob-loc {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      overflow-wrap: anywhere;
+    }
+
+    .hur-prob-bar {
+      position: relative;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .07);
+      overflow: hidden;
+    }
+
+    .hur-prob-fill {
+      height: 100%;
+      border-radius: 999px;
+      min-width: 3px;          /* "<1%" still draws something — never an empty row */
+      transition: width .3s ease;
+    }
+
+    .hur-prob-fill.lvl-low  { background: var(--green); }
+    .hur-prob-fill.lvl-mid  { background: var(--amber); }
+    .hur-prob-fill.lvl-high { background: var(--accent); }
+    .hur-prob-fill.lvl-max  { background: var(--crit); }
+
+    .hur-prob-vals {
+      grid-column: 2;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px 14px;
+    }
+
+    .hur-prob-v {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .hur-prob-v b {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* The 34 kt figure is the one the bar encodes and the one that decides
+       whether a reader acts — it carries full text weight. */
+    .hur-prob-v--lead b { color: var(--text); }
+
+    .hur-note {
+      margin-top: 8px;
+      font-size: 10px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    @media (max-width: 460px) {
+      .hur-prob-row { grid-template-columns: 78px 1fr; }
+      .hur-prob-vals { gap: 3px 10px; }
     }
 
     /* Context mini-module variant — lower contrast, softer than evidence modules */
@@ -6466,35 +6615,13 @@
         "NHC forecast centre line. The storm's actual position may differ substantially. This line does not show where damaging winds reach.");
     }
 
-    // ── P29c · FIX 4 · the mandatory cone caption ──────────────────────────
-    // Rendered ONLY where a cone is actually drawn, and placed immediately
-    // ABOVE the wind probability list so the reader meets the correction before
-    // the numbers. The cone describes where the storm's CENTRE may travel; a
-    // reader who takes "outside the cone" for "safe" has been misled by us, and
-    // Lowell is the live example — its cone will not touch Kauaʻi while LIHUE
-    // sits at 17% and NIIHAU at 41%.
-    //
-    // The emphasised word is a separate key so the emphasis lands on the right
-    // token in each language (CENTRE / TÂM), and the caption is escaped BEFORE
-    // the <strong> is introduced.
-    function hurricaneConeCaptionHtml(cone) {
-      if (!cone) return "";
-      const caption = _L("map.hur_cone_caption",
-        "This shading shows where the storm's CENTRE may travel. Damaging winds can extend far beyond it \u2014 see the location probabilities below.");
-      const word = _L("map.hur_cone_caption_emphasis", "CENTRE");
-      let html = escapeHtml(caption);
-      const w = escapeHtml(word);
-      if (w && html.indexOf(w) !== -1) html = html.replace(w, `<strong>${w}</strong>`);
-      let out = `<div class="hur-cone-caption">${html}</div>`;
-      // FIX 6 — say that the boundary was reduced, and by how much. Read from
-      // the payload; the number is never hardcoded here.
-      if (cone.simplified === true && cone.max_deviation_km != null) {
-        const line = _tmpl("map.hur_cone_simplified", { n: cone.max_deviation_km })
-          || `Boundary simplified for transfer (within ${cone.max_deviation_km} km of NHC's published cone).`;
-        out += `<div class="hur-note">${escapeHtml(line)}</div>`;
-      }
-      return out;
-    }
+    // P38: hurricaneConeCaptionHtml() lived here. Its text is now emitted by
+    // hurricaneCorrectionHtml(), merged with the AC-1 disclaimer into a single
+    // emphasis block — two adjacent orange rules differing by a 17-unit hue
+    // shift read as one skippable thing. The caption itself is unchanged, and
+    // still appears immediately above the probability list, with CENTRE
+    // emphasised via a separate i18n key so the emphasis lands on the right
+    // token in each language.
 
     function openHurricaneForecastPopup(feature, lngLat) {
       const p = feature.properties || {};
@@ -6821,10 +6948,30 @@
       // READ from the payload — never re-derived by matching the name string,
       // which would put a second, drifting copy of the Worker's allowlist here
       // and invite coordinate-parsing off labels like "21N 160W".
+      // FIX 2. Numeric value of a probability cell. "<1" is a real reading —
+      // NHC's floor, not zero — so it gets a real, minimal bar rather than an
+      // empty row. null/"" means the threshold was not reported at all.
+      function hurProbNum(v) {
+        if (v === "<1") return 0.5;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      // Bar colour breakpoints on the 34 kt cumulative percentage.
+      // <20 low · 20–49 mid · 50–74 high · >=75 max.
+      // Colour is redundant encoding only: every bar ships its number beside
+      // it, so a reader who cannot separate these hues loses nothing.
+      function hurProbLevel(pct) {
+        if (pct >= 75) return "lvl-max";
+        if (pct >= 50) return "lvl-high";
+        if (pct >= 20) return "lvl-mid";
+        return "lvl-low";
+      }
+
       function hurricaneWindProbHtml(p) {
         const status = p.wind_probabilities_status;
-        if (status === "unavailable") return `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_wp_unavailable") || "Wind probabilities could not be retrieved.")}</div>`;
-        if (status === "no_hawaii_locations") return `<div class="hur-line">${escapeHtml(_t("map.hur_wp_none_hawaii") || "NHC's product for this storm names no Hawai\u02bbi location. That means below NHC's reporting threshold, not zero.")}</div>`;
+        if (status === "unavailable") return `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t("map.hur_group_prob") || "Probability by location")}</div><div class="hur-line hur-warn">${escapeHtml(_t("map.hur_wp_unavailable") || "Wind probabilities could not be retrieved.")}</div></div>`;
+        if (status === "no_hawaii_locations") return `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t("map.hur_group_prob") || "Probability by location")}</div><div class="hur-line">${escapeHtml(_t("map.hur_wp_none_hawaii") || "NHC's product for this storm names no Hawai\u02bbi location. That means below NHC's reporting threshold, not zero.")}</div></div>`;
         const wp = p.wind_probabilities;
         if (status !== "ok" || !wp || !Array.isArray(wp.locations)) return "";
 
@@ -6851,41 +6998,139 @@
           // EVERY named row ships regardless of value, 3% included. A display
           // threshold here would rebuild the exact "absence reads as safety"
           // failure the Worker was written to avoid.
-          const parts = g.rows.map((r) => `${escapeHtml(ktLabel(r.threshold_kt))} ${escapeHtml(pctText(r.peak_cumulative_pct))}`).join(" \u00b7 ");
-          return `<div class="hur-wp"><span class="hur-wp-loc">${escapeHtml(g.name)}</span> \u2014 ${parts}</div>`;
+          //
+          // The bar length comes from the 34 kt cumulative percentage — the
+          // threshold that decides whether a reader acts. When 34 kt is absent
+          // the largest reported figure stands in, so the row is never barless.
+          const lead = g.rows.find((r) => r.threshold_kt === 34);
+          const nums = g.rows.map((r) => hurProbNum(r.peak_cumulative_pct)).filter((n) => n !== null);
+          const barPct = lead ? hurProbNum(lead.peak_cumulative_pct)
+            : (nums.length ? Math.max.apply(null, nums) : null);
+          const width = barPct === null ? 0 : Math.max(0, Math.min(100, barPct));
+          const bar = barPct === null
+            ? ""
+            : `<div class="hur-prob-bar"><div class="hur-prob-fill ${hurProbLevel(barPct)}" style="width:${width}%"></div></div>`;
+          const vals = g.rows.map((r) => {
+            const isLead = r.threshold_kt === 34;
+            return `<span class="hur-prob-v${isLead ? " hur-prob-v--lead" : ""}">${escapeHtml(ktLabel(r.threshold_kt))} <b>${escapeHtml(pctText(r.peak_cumulative_pct))}</b></span>`;
+          }).join("");
+          return `<div class="hur-prob-row"><div class="hur-prob-loc">${escapeHtml(g.name)}</div>${bar}<div class="hur-prob-vals">${vals}</div></div>`;
         };
 
-        let html = `<div class="hur-sub">${escapeHtml(_t("map.hur_wp_heading") || "NHC wind probability, next 5 days")}</div>`;
+        let html = `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t("map.hur_group_prob") || "Probability by location")}</div>`;
+        html += `<div class="hur-prob-group"><div class="hur-prob-head">${escapeHtml(_t("map.hur_wp_heading") || "NHC wind probability, next 5 days")}</div>`;
         html += withKey.map(locHtml).join("");
+        html += `</div>`;
         if (noKey.length) {
-          html += `<div class="hur-sub">${escapeHtml(_t("map.hur_wp_nwhi") || "Northwestern Hawaiian Islands")}</div>`;
+          html += `<div class="hur-prob-group hur-prob-group--nwhi"><div class="hur-prob-head">${escapeHtml(_t("map.hur_wp_nwhi") || "Northwestern Hawaiian Islands")}</div>`;
           html += noKey.map(locHtml).join("");
+          html += `</div>`;
         }
         if (wp.below_threshold_note) html += `<div class="hur-note">${escapeHtml(wp.below_threshold_note)}</div>`;
         if (gridNames.size || buoyNames.size) {
           html += `<div class="hur-note">${escapeHtml(_tmpl("map.hur_wp_hidden", { n: gridNames.size, m: buoyNames.size }) || `${gridNames.size} ocean grid points and ${buoyNames.size} buoys not shown.`)}</div>`;
         }
-        return html;
+        return html + `</div>`;
       }
 
-      function hurricaneStormHtml(f) {
+      // FIX 4. ONE correction block instead of two adjacent orange rules that
+      // differed by a 17-unit hue shift and read as a single skippable thing.
+      // Carries the AC-1 centre-line disclaimer and, when a cone is drawn, the
+      // CENTRE/damaging-winds caption — both sentences intact, neither
+      // shortened. With no cone, only the AC-1 sentence appears.
+      function hurricaneCorrectionHtml(fc, cone) {
+        if (!fc) return "";
+        const parts = [];
+        const note = hurricaneUncertaintyNote(fc.uncertainty_available === true);
+        if (note) parts.push(`<p>${escapeHtml(note)}</p>`);
+        const showCone = cone && (cone.__show === true);
+        if (showCone) {
+          const caption = _L("map.hur_cone_caption",
+            "This shading shows where the storm's CENTRE may travel. Damaging winds can extend far beyond it \u2014 see the location probabilities below.");
+          const word = _L("map.hur_cone_caption_emphasis", "CENTRE");
+          let capHtml = escapeHtml(caption);
+          const w = escapeHtml(word);
+          if (w && capHtml.indexOf(w) !== -1) capHtml = capHtml.replace(w, `<strong>${w}</strong>`);
+          parts.push(`<p>${capHtml}</p>`);
+        }
+        if (!parts.length) return "";
+        let out = `<div class="hur-correction">${parts.join("")}</div>`;
+        // FIX 6 (P29c) — say that the boundary was reduced, and by how much.
+        if (showCone && cone.simplified === true && cone.max_deviation_km != null) {
+          const line = _tmpl("map.hur_cone_simplified", { n: cone.max_deviation_km })
+            || `Boundary simplified for transfer (within ${cone.max_deviation_km} km of NHC's published cone).`;
+          out += `<div class="hur-note">${escapeHtml(line)}</div>`;
+        }
+        return out;
+      }
+
+      // The line a reader sees for a COLLAPSED storm. It has to be enough to
+      // decide without opening: name, classification, wind, forecast distance
+      // and the island it approaches. Nobody should have to click to find out
+      // a storm is near.
+      function hurricaneSummaryHtml(p, tier) {
+        const ca = p.forecast_closest_approach;
+        const bits = [];
+        if (p.wind_mph != null) bits.push(`${escapeHtml(String(p.wind_mph))} mph`);
+        if (ca && ca.distance_mi != null) {
+          const near = `${escapeHtml(_t("map.hur_forecast_closest") || "Forecast closest")}: <span class="hur-sum-near">${escapeHtml(String(ca.distance_mi))} mi</span>${ca.island_label ? " \u2014 " + escapeHtml(ca.island_label) : ""}`;
+          bits.push(near);
+        } else if (p.current_position_nearest_island) {
+          const n = p.current_position_nearest_island;
+          bits.push(`${escapeHtml(_t("map.hur_now") || "Now")}: ${escapeHtml(String(n.distance_mi))} mi ${escapeHtml(n.bearing_compass || "")}${n.island_label ? " \u2014 " + escapeHtml(n.island_label) : ""}`);
+        }
+        return `<summary class="accordion-summary">`
+          + `<div class="accordion-title-wrap">`
+          + `<div class="hur-sum-name">${escapeHtml(p.name || "")}`
+          // A literal space before the span: margin-left alone looks right but
+          // concatenates to "LowellHU" for a screen reader or a copy-paste.
+          // The classification stays NHC's own code, never expanded (P29e).
+          + (p.classification ? ` <span class="hur-sum-cat">${escapeHtml(p.classification)}</span>` : "")
+          + `</div>`
+          + (bits.length ? `<div class="hur-sum-line">${bits.join(" \u00b7 ")}</div>` : "")
+          + `</div></summary>`;
+      }
+
+      // FIX 1. Tier by rank, using the file's own .accordion-card component.
+      // Rank 1 tier-1 open, rank 2 tier-2 open, rank 3+ tier-3 collapsed —
+      // EXCEPT that no storm whose forecast closest approach is under 300 mi
+      // may ever be collapsed, whatever its rank. Distance overrides ordering.
+      const HUR_NEVER_COLLAPSE_MI = 300;
+
+      function hurricaneStormHtml(f, idx) {
         const p = f.properties || {};
         const near = p.current_position_nearest_island;
         const ca = p.forecast_closest_approach;
         const fc = p.forecast;
-        let html = `<div class="hur-storm"><div class="hur-name">${escapeHtml(p.name || "")}${p.classification ? " \u00b7 " + escapeHtml(p.classification) : ""}${p.wind_mph != null ? " \u00b7 " + escapeHtml(String(p.wind_mph)) + " mph" : ""}</div>`;
+
+        const tier = idx === 0 ? 1 : idx === 1 ? 2 : 3;
+        const dist = ca && Number(ca.distance_mi);
+        const isNear = Number.isFinite(dist) && dist < HUR_NEVER_COLLAPSE_MI;
+        const open = (tier < 3) || isNear;
+
+        let html = `<details class="accordion-card hur-card tier-${tier}"${open ? " open" : ""}>`;
+        html += hurricaneSummaryHtml(p, tier);
+        html += `<div class="accordion-content">`;
+
+        // ── (a) where is it now ─────────────────────────────────────────
         if (near) {
-          html += `<div class="hur-line">${escapeHtml(_t("map.hur_now") || "Now")}: ${escapeHtml(String(near.distance_mi))} mi ${escapeHtml(near.bearing_compass || "")} \u2014 ${escapeHtml(near.island_label || "")}</div>`;
+          html += `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t("map.hur_group_now") || "Where it is now")}</div>`;
+          html += `<div class="hur-line hur-key"><b>${escapeHtml(String(near.distance_mi))} mi</b> ${escapeHtml(near.bearing_compass || "")} \u2014 ${escapeHtml(near.island_label || "")}</div>`;
+          html += `</div>`;
         }
+
+        // ── (b) where is it going ───────────────────────────────────────
+        let fwd = "";
         if (ca) {
           const vt = hstFull(ca.at_valid_time);
-          html += `<div class="hur-line">${escapeHtml(_t("map.hur_forecast_closest") || "Forecast closest")}: ${escapeHtml(String(ca.distance_mi))} mi \u2014 ${escapeHtml(ca.island_label || "")}${vt ? " \u00b7 " + escapeHtml(vt) : ""}</div>`;
-          // AC-2. The basis literal spelled out in words, always beside the
-          // number. 184 mi reads as comfortable; it is a distance to the
-          // forecast CENTRE, and the probabilities below are the real answer.
-          html += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_basis_center") || "Distance is to the forecast storm centre, not to damaging winds.")}</div>`;
+          fwd += `<div class="hur-line hur-key">${escapeHtml(_t("map.hur_forecast_closest") || "Forecast closest")}: <b>${escapeHtml(String(ca.distance_mi))} mi</b> \u2014 ${escapeHtml(ca.island_label || "")}${vt ? " \u00b7 " + escapeHtml(vt) : ""}</div>`;
+          // AC-2 / FIX 5. The basis literal, attached to the number it
+          // corrects as an indented footnote. 116 mi reads as comfortable; it
+          // is a distance to the forecast CENTRE, and the probabilities below
+          // are the real answer. Always rendered, never behind an interaction.
+          fwd += `<div class="hur-footnote">${escapeHtml(_t("map.hur_basis_center") || "Distance is to the forecast storm centre, not to damaging winds.")}</div>`;
           if (ca.is_final_point === true) {
-            html += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_final_point") || "Forecast ends while still approaching \u2014 the true closest approach may be nearer.")}</div>`;
+            fwd += `<div class="hur-footnote">${escapeHtml(_t("map.hur_final_point") || "Forecast ends while still approaching \u2014 the true closest approach may be nearer.")}</div>`;
           }
         }
         if (fc) {
@@ -6894,58 +7139,62 @@
               // advdate is basin-local (PDT for EP, HST for CP). Rendered
               // verbatim: reformatting would mean inferring an offset from a
               // timezone abbreviation.
-              html += `<div class="hur-line">${escapeHtml(_tmpl("map.hur_advisory_line", { a: fc.forecast_advisory_number, d: fc.forecast_advisory_date }) || `Advisory ${fc.forecast_advisory_number} \u00b7 ${fc.forecast_advisory_date}`)}</div>`;
+              fwd += `<div class="hur-line">${escapeHtml(_tmpl("map.hur_advisory_line", { a: fc.forecast_advisory_number, d: fc.forecast_advisory_date }) || `Advisory ${fc.forecast_advisory_number} \u00b7 ${fc.forecast_advisory_date}`)}</div>`;
             }
             if (fc.track_origin_offset_mi != null) {
-              html += `<div class="hur-line hur-warn">${escapeHtml(_tmpl("map.hur_prior_advisory_offset", { n: fc.track_origin_offset_mi }) || `Track drawn from the previous advisory; it begins ${fc.track_origin_offset_mi} mi from the storm's current position.`)}</div>`;
+              fwd += `<div class="hur-line hur-warn">${escapeHtml(_tmpl("map.hur_prior_advisory_offset", { n: fc.track_origin_offset_mi }) || `Track drawn from the previous advisory; it begins ${fc.track_origin_offset_mi} mi from the storm's current position.`)}</div>`;
             }
           }
-          // ── FIX 4 · peak forecast intensity ──────────────────────────
+          // ── peak forecast intensity ──────────────────────────────────
           // Omitted entirely when no forecast point carries a wind value —
           // an empty "peak: — kt" line would assert knowledge we do not have.
           const peak = hurForecastPeak(fc.points);
           if (peak) {
             const cat = hurStormType(peak.point.storm_type);
             const vt = hstFull(peak.point.valid_time);
-            html += `<div class="hur-line">${escapeHtml(_tmpl("map.hur_peak", {
+            fwd += `<div class="hur-line">${escapeHtml(_tmpl("map.hur_peak", {
               kt: peak.point.max_wind_kt,
               cat: cat,
               when: vt,
             }) || `NHC forecast peak: ${peak.point.max_wind_kt} kt (${cat}), ${vt}`)}</div>`;
 
-            // ── FIX 5 · trend, stated ONLY when the series supports it ────
+            // ── trend, stated ONLY when the series supports it ──────────
             // Silence is the default. A tie for the peak, or any missing wind
             // value in the series, means the comparison cannot carry a claim —
             // and "forecast to weaken" is the kind of sentence that must never
             // be guessed, because it reads as reassurance.
-            //
-            // It is also never shown alone: the closest-approach distance and
-            // the wind probabilities are already rendered above and below it.
             const pts = Array.isArray(fc.points) ? fc.points : [];
             const anyNull = pts.some((x) => !Number.isFinite(x?.max_wind_kt));
             const first = pts.length ? pts[0] : null;
             if (!anyNull && !peak.tied && first && Number.isFinite(first.max_wind_kt)) {
               if (peak.point !== first && peak.point.max_wind_kt > first.max_wind_kt) {
-                html += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_trend_strengthen") || "Forecast to strengthen before its closest approach.")}</div>`;
+                fwd += `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_trend_strengthen") || "Forecast to strengthen before its closest approach.")}</div>`;
               } else if (peak.point === first) {
-                html += `<div class="hur-line">${escapeHtml(_t("map.hur_trend_weaken") || "Forecast to weaken.")}</div>`;
+                fwd += `<div class="hur-line">${escapeHtml(_t("map.hur_trend_weaken") || "Forecast to weaken.")}</div>`;
               }
             }
           }
-
-          // AC-1. A track exists for this storm, so the disclaimer accompanies
-          // it in the card as well as in every forecast-point popup.
-          const note = hurricaneUncertaintyNote(fc.uncertainty_available === true);
-          if (note) html += `<div class="hur-disclaimer">${escapeHtml(note)}</div>`;
         } else if (p.forecast_status && p.forecast_status !== "ok") {
-          html += `<div class="hur-line">${escapeHtml(_t("map.hur_no_track") || "No forecast track available for this storm.")}</div>`;
+          fwd += `<div class="hur-line">${escapeHtml(_t("map.hur_no_track") || "No forecast track available for this storm.")}</div>`;
         }
-        // FIX 4 — above the probabilities, always, wherever a cone is drawn.
-        if (p.cone && (p.cone_status === "ok" || p.cone_status === "prior_advisory")) {
-          html += hurricaneConeCaptionHtml(p.cone);
+
+        // AC-1 + the cone caption, merged, at the END of the forecast group —
+        // which is also immediately ABOVE the probability list, so P29c's
+        // placement rule (the reader meets the correction before the numbers)
+        // still holds.
+        const coneShown = !!(p.cone && (p.cone_status === "ok" || p.cone_status === "prior_advisory"));
+        const correction = hurricaneCorrectionHtml(fc, coneShown ? Object.assign({}, p.cone, { __show: true }) : null);
+
+        if (fwd || correction) {
+          html += `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t("map.hur_group_forecast") || "Where it is going")}</div>`;
+          html += fwd + correction;
+          html += `</div>`;
         }
+
+        // ── (c) what are the odds for my island ─────────────────────────
         html += hurricaneWindProbHtml(p);
-        return html + `</div>`;
+
+        return html + `</div></details>`;
       }
 
       // Ascending forecast_closest_approach.distance_mi; storms with no
@@ -6962,7 +7211,7 @@
       }
 
       function renderHurricaneDetail(state) {
-        const html = hurricaneSorted(state?.features).map(hurricaneStormHtml).join("");
+        const html = hurricaneSorted(state?.features).map((f, i) => hurricaneStormHtml(f, i)).join("");
         ["desktop", "mobile", ""].forEach(sfx => {
           const el = document.getElementById(sfx ? `hurricane-detail-${sfx}` : "hurricane-detail");
           if (el) el.innerHTML = html;

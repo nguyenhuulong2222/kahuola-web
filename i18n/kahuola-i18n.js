@@ -577,6 +577,11 @@
       "map.hur_disclaimer_center": "NHC forecast centre line. The storm's actual position may differ substantially. This line does not show where damaging winds reach.",
       "map.hur_offscreen_n": "{n} storms outside this view",
       "map.hur_offscreen_one": "1 storm outside this view",
+      // P38 — the card groups its content into the three questions a reader
+      // actually asks. These label those groups.
+      "map.hur_group_now": "Where it is now",
+      "map.hur_group_forecast": "Where it is going",
+      "map.hur_group_prob": "Probability by location",
       "map.hur_now": "Now",
       "map.hur_forecast_closest": "Forecast closest",
       "map.hur_basis_center": "Distance is to the forecast storm centre, not to damaging winds.",
@@ -1560,6 +1565,9 @@
       "map.hur_disclaimer_center": "\u0110\u01b0\u1eddng t\u00e2m b\u00e3o d\u1ef1 b\u00e1o c\u1ee7a NHC. V\u1ecb tr\u00ed th\u1eadt c\u00f3 th\u1ec3 l\u1ec7ch \u0111\u00e1ng k\u1ec3. \u0110\u01b0\u1eddng n\u00e0y kh\u00f4ng th\u1ec3 hi\u1ec7n ph\u1ea1m vi gi\u00f3 nguy hi\u1ec3m.",
       "map.hur_offscreen_n": "{n} c\u01a1n b\u00e3o ngo\u00e0i khung nh\u00ecn n\u00e0y",
       "map.hur_offscreen_one": "1 c\u01a1n b\u00e3o ngo\u00e0i khung nh\u00ecn n\u00e0y",
+      "map.hur_group_now": "Hiện đang ở đâu",
+      "map.hur_group_forecast": "Dự báo sẽ đi đâu",
+      "map.hur_group_prob": "Xác suất theo địa điểm",
       "map.hur_now": "Hi\u1ec7n t\u1ea1i",
       "map.hur_forecast_closest": "D\u1ef1 b\u00e1o g\u1ea7n nh\u1ea5t",
       "map.hur_basis_center": "Kho\u1ea3ng c\u00e1ch t\u00ednh \u0111\u1ebfn t\u00e2m b\u00e3o d\u1ef1 b\u00e1o, kh\u00f4ng ph\u1ea3i \u0111\u1ebfn v\u00f9ng gi\u00f3 nguy hi\u1ec3m.",
