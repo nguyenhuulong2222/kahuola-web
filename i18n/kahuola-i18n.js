@@ -129,6 +129,11 @@
       "legend.monitoring": "Monitoring",
       "legend.fire_active": "Fire Active",
       "legend.flood_alert": "Flood Alert",
+      "legend.nws_alert": "NWS Watch / Warning",
+      "legend.mixed": "Fire + Flood",
+      "legend.unknown": "Could not check",
+      "map.unmatched_zones": "{n} alert areas could not be matched to an island \u2014 open the Live Map.",
+      "map.island.kauai": "Kaua\u02bbi \u00b7 Ni\u02bbihau",
 
       // CTAs
       "cta.view_live_map": "View Live Map",
@@ -1079,6 +1084,11 @@
       "legend.monitoring": "\u0110ang theo d\xf5i",
       "legend.fire_active": "Ch\u00e1y \u0111ang x\u1ea3y ra",
       "legend.flood_alert": "C\u1ea3nh b\u00e1o l\u0169",
+      "legend.nws_alert": "Theo d\u00f5i / C\u1ea3nh b\u00e1o NWS",
+      "legend.mixed": "Ch\u00e1y + L\u0169",
+      "legend.unknown": "Ch\u01b0a ki\u1ec3m tra \u0111\u01b0\u1ee3c",
+      "map.unmatched_zones": "{n} khu v\u1ef1c c\u1ea3nh b\u00e1o ch\u01b0a kh\u1edbp \u0111\u01b0\u1ee3c v\u1edbi \u0111\u1ea3o n\u00e0o \u2014 m\u1edf B\u1ea3n \u0111\u1ed3 Tr\u1ef1c ti\u1ebfp.",
+      "map.island.kauai": "Kaua\u02bbi \u00b7 Ni\u02bbihau",
 
       // CTAs
       "cta.view_live_map": "Xem b\u1ea3n \u0111\u1ed3 tr\u1ef1c ti\u1ebfp",
@@ -2033,6 +2043,11 @@
       "legend.monitoring": "E n\u0101n\u0101 ana",
       "legend.fire_active": KEEP_ENGLISH,
       "legend.flood_alert": KEEP_ENGLISH,
+      "legend.nws_alert": KEEP_ENGLISH,
+      "legend.mixed": KEEP_ENGLISH,
+      "legend.unknown": KEEP_ENGLISH,
+      "map.unmatched_zones": KEEP_ENGLISH,
+      "map.island.kauai": KEEP_ENGLISH,
 
       // CTAs: safe non-hazard labels
       "cta.view_live_map": "N\u0101n\u0101 i ka Palapala \u02bb\u0100ina",
@@ -2704,6 +2719,11 @@
       "legend.monitoring": "Sinusubaybayan",
       "legend.fire_active": KEEP_ENGLISH,
       "legend.flood_alert": KEEP_ENGLISH,
+      "legend.nws_alert": KEEP_ENGLISH,
+      "legend.mixed": KEEP_ENGLISH,
+      "legend.unknown": KEEP_ENGLISH,
+      "map.unmatched_zones": KEEP_ENGLISH,
+      "map.island.kauai": KEEP_ENGLISH,
 
       // CTAs
       "cta.view_live_map": "Tingnan ang Live na Mapa",
@@ -3318,6 +3338,11 @@
       "legend.monitoring": "Agmonitor",
       "legend.fire_active": KEEP_ENGLISH,
       "legend.flood_alert": KEEP_ENGLISH,
+      "legend.nws_alert": KEEP_ENGLISH,
+      "legend.mixed": KEEP_ENGLISH,
+      "legend.unknown": KEEP_ENGLISH,
+      "map.unmatched_zones": KEEP_ENGLISH,
+      "map.island.kauai": KEEP_ENGLISH,
 
       // CTAs
       "cta.view_live_map": "Kitaen ti Live nga Mapa",
@@ -3841,6 +3866,11 @@
       "legend.monitoring": "\u76e3\u8996\u4e2d",
       "legend.fire_active": KEEP_ENGLISH,
       "legend.flood_alert": KEEP_ENGLISH,
+      "legend.nws_alert": KEEP_ENGLISH,
+      "legend.mixed": KEEP_ENGLISH,
+      "legend.unknown": KEEP_ENGLISH,
+      "map.unmatched_zones": KEEP_ENGLISH,
+      "map.island.kauai": KEEP_ENGLISH,
 
       // CTAs
       "cta.view_live_map": "\u30e9\u30a4\u30d6\u30de\u30c3\u30d7\u3092\u8868\u793a",

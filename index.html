@@ -782,6 +782,12 @@
     .map-badge.flood{background:var(--flood);box-shadow:0 0 0 4px rgba(77,168,255,.2),0 0 14px rgba(77,168,255,.55)}
     .map-badge.mixed{background:linear-gradient(135deg,var(--fire) 50%,var(--flood) 50%);box-shadow:0 0 0 4px rgba(255,255,255,.12),0 0 14px rgba(255,255,255,.22)}
     .map-badge.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(103,194,126,.16),0 0 11px rgba(103,194,126,.38)}
+    /* P31: NWS watch/warning — reuses the existing --warn token, the same one
+       the hero uses for a storm watch, so the two surfaces agree on colour. */
+    .map-badge.alert{background:var(--warn);box-shadow:0 0 0 4px rgba(255,204,102,.20),0 0 14px rgba(255,204,102,.55)}
+    /* P31: could-not-check. Hollow and grey on purpose — it must read as
+       "no data", never as a low-severity green. */
+    .map-badge.unknown{background:transparent;border:2px solid rgba(160,175,195,.75);box-shadow:0 0 0 4px rgba(160,175,195,.10)}
 
     .map-live{
       position:absolute;top:11px;right:13px;
@@ -840,6 +846,9 @@
       color:var(--text-dim);font-size:11px;font-weight:600;
     }
     .legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .legend-dot--mixed{background:linear-gradient(135deg,var(--fire) 50%,var(--flood) 50%)}
+    .legend-dot--unknown{background:transparent;border:1.5px solid rgba(160,175,195,.75)}
+    .map-unmatched{margin:6px 0 0;font-size:11.5px;line-height:1.45;color:var(--muted)}
 
     .section{
       margin-top:18px;
@@ -1802,7 +1811,11 @@
 
           <!-- Island labels with status dots -->
           <div class="map-island" style="left:6%;top:16%;">
-            <div class="map-island-dot" id="kauaiDot" style="background:var(--ok)"></div>Kauaʻi
+            <!-- P31 · FIX 6. Niʻihau is one of the six zones under watch today
+                 and has no shape, dot or ISLANDS entry. Its centroid falls inside
+                 the kauai bbox, so its alerts DO reach this dot — the label now
+                 says so, rather than leaving a Niʻihau resident invisible. -->
+            <div class="map-island-dot" id="kauaiDot" style="background:var(--ok)"></div><span data-i18n="map.island.kauai">Kauaʻi · Niʻihau</span>
           </div>
           <div class="map-island" style="left:22%;top:34%;">
             <div class="map-island-dot" id="oahuDot" style="background:var(--ok)"></div>Oʻahu
@@ -1833,12 +1846,18 @@
           <a href="live-map" data-i18n="map.preview_open_cta" style="color:var(--accent);margin-left:auto;white-space:nowrap;font-size:12px">Open Full Map ↗</a>
         </div>
 
+        <!-- P31: every state the component can paint now appears here. `mixed`
+             was implemented and undocumented; `alert` and `unknown` are new. -->
         <div class="legend">
           <span class="legend-label" data-i18n="legend.signal">Signal</span>
           <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span><span data-i18n="legend.monitoring">Monitoring</span></span>
           <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span><span data-i18n="legend.fire_active">Fire Active</span></span>
           <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span><span data-i18n="legend.flood_alert">Flood Alert</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span><span data-i18n="legend.nws_alert">NWS Watch / Warning</span></span>
+          <span class="legend-item"><span class="legend-dot legend-dot--mixed"></span><span data-i18n="legend.mixed">Fire + Flood</span></span>
+          <span class="legend-item"><span class="legend-dot legend-dot--unknown"></span><span data-i18n="legend.unknown">Could not check</span></span>
         </div>
+        <p class="map-unmatched" id="mapUnmatchedZones" hidden></p>
       </aside>
     </section>
 
@@ -2730,15 +2749,72 @@
 
       function blankIslandCounts() {
         return {
-          kauai: { fire: 0, flood: 0 },
-          oahu: { fire: 0, flood: 0 },
-          maui: { fire: 0, flood: 0 },
-          bigisland: { fire: 0, flood: 0 }
+          kauai: { fire: 0, flood: 0, alert: 0 },
+          oahu: { fire: 0, flood: 0, alert: 0 },
+          maui: { fire: 0, flood: 0, alert: 0 },
+          bigisland: { fire: 0, flood: 0, alert: 0 }
         };
       }
 
-      function countByIsland(firePayload, floodPayload) {
+      // ── P31 · which NWS products colour an island ─────────────────────────
+      // Watches, warnings and advisories only. "Statement" products are excluded
+      // for the same reason P30 excluded them from the flood flag: a Statement
+      // is a follow-up that can CANCEL an event, so treating one as an active
+      // hazard could light an island for something that just ended.
+      function alertCountsForMap(item) {
+        const event = String(item?.properties?.event || "").trim().toLowerCase();
+        if (!event) return false;
+        return !event.endsWith("statement");
+      }
+
+      // ── P31 · island attribution for an NWS alert ─────────────────────────
+      // GEOMETRY FIRST, but only when the geometry is NHC/NWS's own.
+      //
+      // The Worker synthesises a Point from NWS_ZONE_CENTROIDS for alerts that
+      // arrive without a polygon, and that table is WRONG for the zones under
+      // watch right now: HIZ001 (Niihau) maps to Maui, HIZ003 (Kauai Southwest)
+      // maps to Hawaiʻi Island, and HIZ029/030/031 (Kauai North/East/South) are
+      // absent and fall through to an open-ocean prefix default. Trusting a
+      // synthesized point would paint the wrong island — a false positive and a
+      // false negative in one move, which is worse than the current all-green.
+      //
+      // properties.geometry_synthesized is the guard. When it is true — or
+      // ABSENT, which is treated the same way, failing toward the safer
+      // resolver — attribution comes from the area_desc text and never from the
+      // point. Returns { islands: [...], unmatched: [...] } so zones that match
+      // nothing can be reported rather than silently dropped.
+      function alertIslandKeys(item) {
+        const props = item?.properties || {};
+        const synthesized = props.geometry_synthesized !== false;
+
+        if (!synthesized) {
+          const key = resolveIslandFromCoords(readCoords(item));
+          return { islands: key ? [key] : [], unmatched: key ? [] : ["(geometry outside all island bounds)"] };
+        }
+
+        const areaDesc = String(props.area_desc || props.areaDesc || "");
+        if (!areaDesc) return { islands: [], unmatched: [] };
+        const parts = areaDesc.split(";").map(function (x) { return x.trim(); }).filter(Boolean);
+        const islands = [];
+        const unmatched = [];
+        parts.forEach(function (part) {
+          const key = resolveIslandFromText(part);
+          if (key) { if (islands.indexOf(key) === -1) islands.push(key); }
+          else unmatched.push(part);
+        });
+        return { islands: islands, unmatched: unmatched };
+      }
+
+      // Zone names that match no island — Waianae Coast, Olomana, Kona,
+      // Kahoolawe and ~20 others carry no island name. They are counted and
+      // surfaced under the legend: an unmatched alert area is MISSING
+      // INFORMATION, not absence of hazard, and dropping it silently would be
+      // the same false-absence error one more level down.
+      let _unmatchedAlertZones = [];
+
+      function countByIsland(firePayload, floodPayload, alertsPayload) {
         const counts = blankIslandCounts();
+        const unmatchedSet = [];
 
         getItems(firePayload).forEach((item) => {
           const key = getItemIslandKey(item);
@@ -2763,22 +2839,38 @@
           if (shouldCount) counts[key].flood += 1;
         });
 
+        getItems(alertsPayload).forEach((item) => {
+          if (!alertCountsForMap(item)) return;
+          const res = alertIslandKeys(item);
+          res.islands.forEach(function (key) { if (counts[key]) counts[key].alert += 1; });
+          res.unmatched.forEach(function (z) { if (unmatchedSet.indexOf(z) === -1) unmatchedSet.push(z); });
+        });
+
+        _unmatchedAlertZones = unmatchedSet;
         return counts;
       }
 
+      // P31. Doctrinal ladder Fire > Flood > Storm, so an island with both a
+      // fire and an alert is named by its TOP hazard. `mixed` stays what it has
+      // always been — fire AND flood together — rather than becoming a
+      // catch-all, because a two-colour dot that could mean three different
+      // pairings tells a reader nothing.
       function badgeMode(entry) {
         if (entry.fire > 0 && entry.flood > 0) return "mixed";
         if (entry.fire > 0) return "fire";
         if (entry.flood > 0) return "flood";
+        if (entry.alert > 0) return "alert";
         return "ok";
       }
 
-      function applyBadgeState(islandKey, entry) {
+      function applyBadgeState(islandKey, entry, forcedMode) {
         const badgeId = ISLANDS[islandKey]?.badgeId;
         if (!badgeId) return;
         const badge = document.getElementById(badgeId);
         if (!badge) return;
-        const mode = badgeMode(entry);
+        // P31: `forcedMode` lets the DEGRADED gate paint every island "unknown"
+        // without inventing counts that were never measured.
+        const mode = forcedMode || badgeMode(entry);
         badge.className = `map-badge ${mode}`;
 
         // Sync the island label dot
@@ -2786,10 +2878,25 @@
         const dot = document.getElementById(dotMap[islandKey]);
         if (dot) {
           dot.style.background =
-            mode === "fire"  ? "var(--fire)"  :
-            mode === "flood" ? "var(--flood)" :
-            mode === "mixed" ? "var(--fire)"  : "var(--ok)";
+            mode === "fire"    ? "var(--fire)"  :
+            mode === "flood"   ? "var(--flood)" :
+            mode === "alert"   ? "var(--warn)"  :
+            mode === "mixed"   ? "var(--fire)"  :
+            mode === "unknown" ? "var(--muted)" : "var(--ok)";
         }
+      }
+
+      // FIX 5. One line under the legend naming how many alert areas could not
+      // be attributed to an island. Hidden when there are none, and hidden when
+      // the page is degraded (nothing was measured, so a count would be a lie).
+      function renderUnmatchedZones(isDegraded) {
+        const el = document.getElementById("mapUnmatchedZones");
+        if (!el) return;
+        const n = isDegraded ? 0 : _unmatchedAlertZones.length;
+        if (n === 0) { el.hidden = true; el.textContent = ""; return; }
+        el.hidden = false;
+        el.textContent = _tmpl("map.unmatched_zones", { n: n })
+          || (n + " alert areas could not be matched to an island — open the Live Map.");
       }
 
       function normalizeHomeSummary(payload, firePayload, floodPayload) {
@@ -3508,8 +3615,15 @@
         // correct locale value as the final state.
         if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
 
-        const islandCounts = countByIsland(firePayload, floodPayload);
-        Object.entries(islandCounts).forEach(([key, entry]) => applyBadgeState(key, entry));
+        // ── P31 · FIX 1 — the map must never show green when the page could
+        // not confirm conditions. applyBadgeState used to run unconditionally,
+        // so a TOTAL outage painted four green dots — byte-identical to a quiet
+        // day. That is the P30 F10 failure surviving in a component P30 did not
+        // touch, and it is why this gate ships first.
+        const islandCounts = countByIsland(firePayload, floodPayload, alertsPayload);
+        const forcedMode = primaryEvent === "DEGRADED" ? "unknown" : null;
+        Object.entries(islandCounts).forEach(([key, entry]) => applyBadgeState(key, entry, forcedMode));
+        renderUnmatchedZones(primaryEvent === "DEGRADED");
 
         const chip = document.getElementById("freshnessChip");
         if (chip && primaryEvent === "DEGRADED") {
@@ -3625,6 +3739,9 @@
         renderFireCard(fire);
         // renderFloodCard(payload, alertsPayload)
         renderFloodCard(flood, alerts);
+        // P31: the island dots are colour, not text, so they survive a locale
+        // switch untouched. The unmatched-zone line is a sentence and does not.
+        renderUnmatchedZones(primaryEvent === "DEGRADED");
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
         renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire));
 
