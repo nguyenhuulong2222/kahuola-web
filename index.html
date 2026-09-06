@@ -785,6 +785,11 @@
     /* P31: NWS watch/warning — reuses the existing --warn token, the same one
        the hero uses for a storm watch, so the two surfaces agree on colour. */
     .map-badge.alert{background:var(--warn);box-shadow:0 0 0 4px rgba(255,204,102,.20),0 0 14px rgba(255,204,102,.55)}
+    /* P36: warning-grade NWS alert. Distinct from the amber watch so an island
+       under a Tropical Storm Warning cannot be mistaken for one under a watch.
+       --danger, not --fire: orange is the wildfire layer's colour and must not
+       be borrowed for a storm. */
+    .map-badge.alertwarn{background:var(--danger);box-shadow:0 0 0 4px rgba(255,94,123,.22),0 0 14px rgba(255,94,123,.6)}
     /* P31: could-not-check. Hollow and grey on purpose — it must read as
        "no data", never as a low-severity green. */
     .map-badge.unknown{background:transparent;border:2px solid rgba(160,175,195,.75);box-shadow:0 0 0 4px rgba(160,175,195,.10)}
@@ -848,7 +853,11 @@
     .legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
     .legend-dot--mixed{background:linear-gradient(135deg,var(--fire) 50%,var(--flood) 50%)}
     .legend-dot--unknown{background:transparent;border:1.5px solid rgba(160,175,195,.75)}
-    .map-unmatched{margin:6px 0 0;font-size:11.5px;line-height:1.45;color:var(--muted)}
+    /* P36 FIX 5: this sits beside .legend, which carries padding:10px 16px 14px.
+       With no horizontal padding of its own the line ran to the card edge and
+       was clipped. Match the legend's inset and allow it to wrap. */
+    .map-unmatched{margin:0;padding:0 16px 14px;font-size:11.5px;line-height:1.45;
+      color:var(--muted);overflow-wrap:anywhere;white-space:normal}
 
     .section{
       margin-top:18px;
@@ -1853,7 +1862,8 @@
           <span class="legend-item"><span class="legend-dot" style="background:var(--ok)"></span><span data-i18n="legend.monitoring">Monitoring</span></span>
           <span class="legend-item"><span class="legend-dot" style="background:var(--fire)"></span><span data-i18n="legend.fire_active">Fire Active</span></span>
           <span class="legend-item"><span class="legend-dot" style="background:var(--flood)"></span><span data-i18n="legend.flood_alert">Flood Alert</span></span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span><span data-i18n="legend.nws_alert">NWS Watch / Warning</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span><span data-i18n="legend.nws_warning">NWS Warning</span></span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span><span data-i18n="legend.nws_watch">NWS Watch</span></span>
           <span class="legend-item"><span class="legend-dot legend-dot--mixed"></span><span data-i18n="legend.mixed">Fire + Flood</span></span>
           <span class="legend-item"><span class="legend-dot legend-dot--unknown"></span><span data-i18n="legend.unknown">Could not check</span></span>
         </div>
@@ -2749,10 +2759,10 @@
 
       function blankIslandCounts() {
         return {
-          kauai: { fire: 0, flood: 0, alert: 0 },
-          oahu: { fire: 0, flood: 0, alert: 0 },
-          maui: { fire: 0, flood: 0, alert: 0 },
-          bigisland: { fire: 0, flood: 0, alert: 0 }
+          kauai: { fire: 0, flood: 0, alert: 0, alertWarning: 0 },
+          oahu: { fire: 0, flood: 0, alert: 0, alertWarning: 0 },
+          maui: { fire: 0, flood: 0, alert: 0, alertWarning: 0 },
+          bigisland: { fire: 0, flood: 0, alert: 0, alertWarning: 0 }
         };
       }
 
@@ -2765,6 +2775,19 @@
         const event = String(item?.properties?.event || "").trim().toLowerCase();
         if (!event) return false;
         return !event.endsWith("statement");
+      }
+
+      // P36. Warning-grade or not, for the mini map only. NWS names the tier in
+      // the product itself ("Tropical Storm Warning" vs "Tropical Storm Watch"),
+      // so the event name is the authority; kahu_severity is the fallback for
+      // products whose name carries no tier word. An island under six Tropical
+      // Storm Warnings must not paint the same colour as one under a watch.
+      function alertIsWarningLevel(item) {
+        const event = String(item?.properties?.event || "").toLowerCase();
+        if (event.indexOf("warning") !== -1) return true;
+        if (event.indexOf("watch") !== -1 || event.indexOf("advisory") !== -1) return false;
+        const sev = String(item?.properties?.kahu_severity || "").toUpperCase();
+        return sev === "CRITICAL" || sev === "WARNING";
       }
 
       // ── P31 · island attribution for an NWS alert ─────────────────────────
@@ -2842,7 +2865,14 @@
         getItems(alertsPayload).forEach((item) => {
           if (!alertCountsForMap(item)) return;
           const res = alertIslandKeys(item);
-          res.islands.forEach(function (key) { if (counts[key]) counts[key].alert += 1; });
+          // P36: attribution is unchanged (P31 geometry-first / area_desc).
+          // Only the SEVERITY carried through is new.
+          const warnLevel = alertIsWarningLevel(item);
+          res.islands.forEach(function (key) {
+            if (!counts[key]) return;
+            counts[key].alert += 1;
+            if (warnLevel) counts[key].alertWarning += 1;
+          });
           res.unmatched.forEach(function (z) { if (unmatchedSet.indexOf(z) === -1) unmatchedSet.push(z); });
         });
 
@@ -2859,6 +2889,8 @@
         if (entry.fire > 0 && entry.flood > 0) return "mixed";
         if (entry.fire > 0) return "fire";
         if (entry.flood > 0) return "flood";
+        // P36: an island with both a warning and a watch takes the warning.
+        if (entry.alertWarning > 0) return "alertwarn";
         if (entry.alert > 0) return "alert";
         return "ok";
       }
@@ -2880,6 +2912,7 @@
           dot.style.background =
             mode === "fire"    ? "var(--fire)"  :
             mode === "flood"   ? "var(--flood)" :
+            mode === "alertwarn" ? "var(--danger)" :
             mode === "alert"   ? "var(--warn)"  :
             mode === "mixed"   ? "var(--fire)"  :
             mode === "unknown" ? "var(--muted)" : "var(--ok)";
@@ -2976,6 +3009,20 @@
             narrative:   _t("hero.narrative.flood_watch")    || "NWS is monitoring conditions that could produce flash flooding. Prepare, stay informed, and avoid flood-prone areas.",
             bannerTitle: _t("hero.banner.flood_watch")       || "\ud83d\udc41 NWS Flash Flood Watch Active",
             bannerCopy:  _t("hero.banner_copy.nws_watch")    || "Source: National Weather Service \xb7 watch in effect",
+            kicClass: "warn"
+          };
+        }
+        // P36 — Tier 3. Before this, a live Flood Advisory with nothing else
+        // active fell through to MONITORING and the page said "Hawaiʻi is calm
+        // right now" while NWS had an advisory out. An advisory is not a watch
+        // and the copy must not inflate it, but it is not calm either.
+        if (primaryEvent === "FLOOD_ADVISORY") {
+          return {
+            kicker:      _t("hero.kicker.flood_advisory")    || "FLOOD ADVISORY",
+            title:       _t("hero.title.flood_advisory")     || "Flood advisory in effect.",
+            narrative:   _t("hero.narrative.flood_advisory") || "NWS has issued a flood advisory for parts of Hawaiʿi. Nuisance flooding is possible — avoid low crossings and check the Live Map for which areas are covered.",
+            bannerTitle: _t("hero.banner.flood_advisory")    || "💧 NWS Flood Advisory Active",
+            bannerCopy:  _t("hero.banner_copy.nws_advisory") || "Source: National Weather Service \xb7 advisory in effect",
             kicClass: "warn"
           };
         }
@@ -3174,6 +3221,7 @@
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',          cls: 'fire'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
+            FLOOD_ADVISORY:{ html: _t("hero.title_html.flood_advisory")|| 'Flood <span class="hero-title-key">advisory</span> in effect.',                  cls: 'flood' },
             DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',           cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
@@ -3575,16 +3623,40 @@
         // ── FIX 3 — storm branch ─────────────────────────────────────────
         const stormStatus  = summaryPayload?.storm?.status;
 
+        // ── P36 — SEVERITY FIRST, HAZARD TYPE SECOND ─────────────────────
+        // P30 appended the storm branches below the flood ones, which put
+        // hazard type above severity: with six Tropical Storm WARNINGS in
+        // force the page led with "Flood watch conditions developing",
+        // because a Flood Watch was evaluated first and short-circuited.
+        //
+        // Fire > Flood > Storm breaks ties WITHIN a severity level. It was
+        // never meant to let a Watch outrank a Warning. NWS ranks Warning
+        // above Watch above Advisory whatever the hazard is, and so do we.
+        //
+        // Only one precedence actually moves here: a storm warning now beats
+        // a flood or storm WATCH. Every other pair keeps the order it had.
         let primaryEvent = "MONITORING";
-        // DEGRADED outranks everything. A page that cannot see is not a page
-        // that can say "calm", and it is not a page that should cry fire either.
-        if (isDegraded)                       primaryEvent = "DEGRADED";
+        // Tier 0 — DEGRADED outranks everything. A page that cannot see is not
+        // a page that can say "calm", and not one that should cry fire either.
+        if (isDegraded)                            primaryEvent = "DEGRADED";
+        // Tier 1 — WARNING: fire, then flood, then storm.
+        // The >= 3 split is kept. A single FIRMS pixel is a detection, not a
+        // warning — it can be an agricultural burn or a hot roof — and
+        // promoting one to warning level would cry wolf on the layer this
+        // platform exists for. Three clustered detections, or an NWS Red Flag
+        // Warning, are warning-grade and stay at the top of Tier 1.
         else if (fireItems.length >= 3 || redFlag) primaryEvent = "FIRE_ACTIVE";
-        else if (floodWarning)               primaryEvent = "FLOOD_WARNING";
-        else if (floodWatch)                 primaryEvent = "FLOOD_WATCH";
-        else if (stormStatus === "warning")  primaryEvent = "STORM_WARNING";
-        else if (stormStatus === "watch")    primaryEvent = "STORM_WATCH";
-        else if (fireItems.length > 0)       primaryEvent = "FIRE_ACTIVE";
+        else if (floodWarning)                     primaryEvent = "FLOOD_WARNING";
+        else if (stormStatus === "warning")        primaryEvent = "STORM_WARNING";
+        // Tier 2 — WATCH: flood, then storm. (No fire product sits here: a
+        // Fire Weather Watch is folded into redFlag upstream.)
+        else if (floodWatch)                       primaryEvent = "FLOOD_WATCH";
+        else if (stormStatus === "watch")          primaryEvent = "STORM_WATCH";
+        // Tier 3 — ADVISORY. One or two fire detections keep the precedence
+        // they have always had: below every watch, above MONITORING.
+        else if (fireItems.length > 0)             primaryEvent = "FIRE_ACTIVE";
+        else if (floodAdvisory)                    primaryEvent = "FLOOD_ADVISORY";
+        // Tier 4 — MONITORING (the initialiser above).
         _lastFailedLayers = failedLayers;
 
         // Derive freshness from most recent API call — check all possible timestamp fields
@@ -3694,6 +3766,11 @@
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
+            // P36: this map is the language-change twin of the one in applyHero.
+            // A state missing here silently falls back to MONITORING — "Hawaiʻi
+            // is calm right now" — the moment a reader switches language. Any
+            // new hero state must be added to BOTH maps.
+            FLOOD_ADVISORY:{ html: _t("hero.title_html.flood_advisory")|| 'Flood <span class="hero-title-key">advisory</span> in effect.',                cls: 'flood' },
             DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',         cls: 'warn'  },
           };
           const td = titleMap[primaryEvent] || titleMap.MONITORING;
