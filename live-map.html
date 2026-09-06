@@ -2047,6 +2047,44 @@
       line-height: 1.45;
     }
 
+    /* ── P32a · alerts NWS locates only by zone code ───────────────────── */
+    /* The zone list is capped in HEIGHT, never in content: every area name
+       stays in the DOM and stays scrollable, selectable and findable. A
+       reader must be able to locate their own zone here, because this is the
+       only surface that carries these alerts. */
+    .alerts-unplaced {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-left: 2px solid rgba(240, 173, 78, 0.7);
+      background: rgba(240, 173, 78, 0.07);
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(203, 214, 232, 0.92);
+    }
+    .alerts-unplaced-head {
+      color: #f0ad4e;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .alerts-unplaced-list {
+      max-height: 144px;          /* 8 × the 18px line box — clips between lines */
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(240, 173, 78, 0.55) transparent;
+    }
+    .alerts-unplaced-list::-webkit-scrollbar { width: 6px; }
+    .alerts-unplaced-list::-webkit-scrollbar-track { background: transparent; }
+    .alerts-unplaced-list::-webkit-scrollbar-thumb {
+      background: rgba(240, 173, 78, 0.55);
+      border-radius: 3px;
+    }
+    .alerts-unplaced-item { margin-bottom: 6px; }
+    .alerts-unplaced-item:last-child { margin-bottom: 0; }
+    .alerts-unplaced-event { display: block; color: #e6edf8; font-weight: 600; }
+    .alerts-unplaced-areas { display: block; color: rgba(194, 206, 228, 0.8); }
+
     /* ── P29b · hurricane card detail ─────────────────────────────────── */
     .hur-chip {
       display: block;
@@ -2819,6 +2857,11 @@
             <div class="status-badge status-none" id="alerts-badge">·</div>
           </div>
           <div class="priority-note" id="alerts-note" data-i18n="map.alerts_tap_note">Other active NWS alerts for Hawaiʻi.</div>
+          <!-- P32a: alerts whose location NWS reports only as zone codes. They are
+               kept off the map rather than drawn at a fabricated point, so this
+               list is the ONLY place a reader can find their own zone. It renders
+               unconditionally whenever such alerts exist — no tap required. -->
+          <div class="alerts-unplaced" id="alerts-unplaced" hidden></div>
         </div>
       </div>
     </details>
@@ -3526,7 +3569,14 @@
       return (Array.isArray(rawSignals) ? rawSignals : []).map((s) => {
         const props = s.properties || {};
         if (isExcludedAlertEvent(props.event)) return null;   // covered elsewhere
-        // Worker already synthesizes a Point for zone-based alerts; keep whatever geometry exists.
+        // P32a: the Worker synthesizes a Point for zone-based alerts from a UGC
+        // centroid table that is wrong for 42 of Hawaiʻi's 43 forecast zones —
+        // HIZ001 (Niʻihau) resolves to Maui, and 38 zones have no entry at all
+        // and fall through to an open-ocean prefix default. Those points were
+        // being drawn as real locations. Carry geometry_synthesized through so
+        // applyData can keep them off the map; they are surfaced as text in the
+        // alerts card instead (never dropped — absence would read as safety).
+        // Absent is treated as synthesized: fail toward the safer branch.
         if (!s.geometry) return null;
         return {
           type: "Feature", geometry: s.geometry,
@@ -3542,6 +3592,7 @@
             onset: props.onset || null,
             ends: props.ends || props.expires || null,
             zone_based: !!props.zone_based,
+            geometry_synthesized: props.geometry_synthesized !== false,
             source: "NWS",
             source_label: "National Weather Service",
           }
@@ -3847,10 +3898,21 @@
           const raw = parseCanonicalSignals(json, "alerts");
           return { features: normalizeAlertsFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "National Weather Service" };
         },
-        ensureLayers, applyData(features) { updateAlertsSource(features); },
+        // P32a: state.features keeps EVERY active alert so the badge and the
+        // card count them all; only the map source is filtered. A synthesized
+        // point is a lookup-table guess, not a location, and must not be drawn.
+        ensureLayers, applyData(features) { updateAlertsSource(features.filter(f => !f?.properties?.geometry_synthesized)); },
         onFetchComplete() {
           const s = getState("alerts");
-          s.sourceStatus = s.features.length > 0 ? "detected" : "none";
+          // P32a: a failed fetch already set sourceStatus="unavailable" and
+          // emptied features. Recomputing from features.length overwrote that
+          // with "none", so a dead endpoint rendered as "Clear — no other
+          // active NWS alerts". That was always wrong; it became critical when
+          // zone-based alerts stopped being drawn on the map, because this card
+          // is now their only surface. A down source must say so.
+          if (s.status !== "unavailable") {
+            s.sourceStatus = s.features.length > 0 ? "detected" : "none";
+          }
           updateAlertsStatusUI(s);
           renderUnifiedPanels();
         },
@@ -6678,6 +6740,44 @@
           const note = document.getElementById(id);
           if (note) note.textContent = state.sourceStatus === "detected" ? (_tmpl("map.s_alerts_events_note", { events: eventList }) || `Active NWS alerts: ${eventList}.`) : state.sourceStatus === "none" ? (_t("map.s_alerts_none_note") || "No other active NWS alerts.") : (_t("map.s_alerts_unavail_note") || "NWS data unavailable.");
         });
+        renderUnplacedAlerts(state);
+      }
+
+      // P32a. Alerts NWS locates only by zone code are held off the map (their
+      // synthesized point is a lookup-table guess). Removing them from the map
+      // without saying so would be the "absence reads as safety" failure, so
+      // every one is listed here in full: event name, then the area text
+      // verbatim. The block is height-capped, never content-capped — no name is
+      // dropped, because a reader has to be able to find their own zone.
+      function renderUnplacedAlerts(state) {
+        // The alerts card is cloned into desktop and mobile panels with the
+        // suffix appended to every id, so write to all of them — the same
+        // pattern updateAlertsStatusUI uses for the note.
+        const els = ["desktop", "mobile", ""]
+          .map(sfx => document.getElementById(sfx ? `alerts-unplaced-${sfx}` : "alerts-unplaced"))
+          .filter(Boolean);
+        if (els.length === 0) return;
+        const unplaced = (state?.features || []).filter(f => f?.properties?.geometry_synthesized);
+        if (state?.sourceStatus !== "detected" || unplaced.length === 0) {
+          els.forEach(el => { el.hidden = true; el.innerHTML = ""; });
+          return;
+        }
+        const n = unplaced.length;
+        const head = n === 1
+          ? (_t("map.alerts_unplaced_head_one") || "1 alert covers multiple areas and cannot be placed precisely on the map.")
+          : (_tmpl("map.alerts_unplaced_head", { n }) || `${n} alerts cover multiple areas and cannot be placed precisely on the map.`);
+        const noArea = _t("map.alerts_unplaced_no_area") || "Area not stated by NWS.";
+        const items = unplaced.map(f => {
+          const p = f.properties || {};
+          const areas = String(p.area_desc || "").trim();
+          return `<div class="alerts-unplaced-item">`
+            + `<span class="alerts-unplaced-event">${escapeHtml(p.event || "NWS Alert")}</span>`
+            + `<span class="alerts-unplaced-areas">${areas ? escapeHtml(areas) : escapeHtml(noArea)}</span>`
+            + `</div>`;
+        }).join("");
+        const html = `<div class="alerts-unplaced-head">${escapeHtml(head)}</div>`
+          + `<div class="alerts-unplaced-list">${items}</div>`;
+        els.forEach(el => { el.innerHTML = html; el.hidden = false; });
       }
       // Peak intensity across the forecast points. Ties resolve to the EARLIEST
       // point. Returns null when no point carries a finite wind value, which is
@@ -7332,6 +7432,11 @@
       if (_mft && !IS_LOCAL) _mft.textContent = _t("map.footer") || "Kahu Ola civic technology";
       // Re-apply freshness chips — applyFreshness() reads _t() on each call
       applyFreshness((window._lastFireFetchAt instanceof Date) ? window._lastFireFetchAt : null, window._lastFireStatus);
+      // P32a: applyAll() resets #alerts-note to its data-i18n placeholder and
+      // the unplaced-zone list is JS-built, so both have to be re-rendered from
+      // live state after a language switch — otherwise the only surface these
+      // alerts have disappears when a reader picks Vietnamese.
+      updateAlertsStatusUI(getState("alerts"));
       // Re-render panel accordion content (JS-driven strings)
       renderUnifiedPanels();
     });

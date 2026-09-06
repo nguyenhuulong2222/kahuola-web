@@ -543,6 +543,11 @@
       "map.kicker_nws_alerts": "Official \xb7 National Weather Service",
       "map.hazard_alerts": "Wind, Heat & Other Alerts",
       "map.alerts_tap_note": "Wind, heat, and other NWS alerts not in the dedicated layers.",
+      // P32a — alerts NWS locates only by zone code. They are listed as text
+      // in the alerts card instead of being drawn at a fabricated map point.
+      "map.alerts_unplaced_head": "{n} alerts cover multiple areas and cannot be placed precisely on the map.",
+      "map.alerts_unplaced_head_one": "1 alert covers multiple areas and cannot be placed precisely on the map.",
+      "map.alerts_unplaced_no_area": "Area not stated by NWS.",
       "map.popup_title_alert": "NWS Alert",
       // map.popup_area reused from existing key (already defined below)
       // Hurricane status
@@ -1504,6 +1509,9 @@
       "map.kicker_nws_alerts": "Chính thức \xb7 Cơ quan Thời tiết Quốc gia",
       "map.hazard_alerts": "Cảnh báo Gió, Nắng nóng & Khác",
       "map.alerts_tap_note": "Cảnh báo gió, nắng nóng và các cảnh báo NWS khác ngoài các lớp riêng.",
+      "map.alerts_unplaced_head": "{n} cảnh báo bao trùm nhiều khu vực, không thể định vị chính xác trên bản đồ.",
+      "map.alerts_unplaced_head_one": "1 cảnh báo bao trùm nhiều khu vực, không thể định vị chính xác trên bản đồ.",
+      "map.alerts_unplaced_no_area": "NWS không nêu khu vực.",
       "map.popup_title_alert": "Cảnh báo NWS",
       // map.popup_area reused from existing key (already defined below)
       // Hurricane status
