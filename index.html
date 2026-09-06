@@ -1604,10 +1604,16 @@
         <!-- ── NARRATIVE HEADER — answers "should I worry?" in one line ── -->
         <div class="hero-head">
           <div style="min-width:0;flex:1">
-            <div class="hero-state-kicker" id="heroKicker">SYSTEM NORMAL</div>
-            <h2 class="hero-title calm" id="heroTitle">Hawaiʻi is <span class="hero-title-key">calm</span> right now.</h2>
+            <!-- P30: this markup is the FIRST PAINT, before any fetch resolves.
+                 It used to read "Hawaiʻi is calm right now" on every load, on a
+                 slow connection, regardless of conditions — a safety claim made
+                 before a single byte of hazard data had arrived. It is now
+                 neutral: it says the check is running, and nothing more. Same
+                 elements, same classes, so nothing jumps when JS replaces it. -->
+            <div class="hero-state-kicker" id="heroKicker">CHECKING CONDITIONS</div>
+            <h2 class="hero-title" id="heroTitle">Checking <span class="hero-title-key">conditions</span>…</h2>
             <p class="hero-narrative" id="heroNarrative">
-              No active watches, warnings, or satellite fire detections across the state.
+              Loading the current statewide hazard picture from official sources.
             </p>
           </div>
           <div class="freshness" id="freshnessChip">
@@ -1625,8 +1631,8 @@
 
         <!-- ── PRIMARY ANSWER BANNER ── -->
         <div class="primary-banner" id="primaryBanner">
-          <div id="heroBannerTitle">✅ No Active Hazards Detected</div>
-          <div class="primary-banner-source" id="heroBannerCopy">NASA FIRMS · NWS · NEXRAD · checked just now</div>
+          <div id="heroBannerTitle">⏳ Checking official sources…</div>
+          <div class="primary-banner-source" id="heroBannerCopy">NASA FIRMS · NWS · NEXRAD</div>
         </div>
 
         <!-- ── SIGNAL STRIP — 3 answers, not 3 data points ── -->
@@ -1634,28 +1640,28 @@
           <div class="signal-strip-item" id="fireStrip">
             <div class="signal-strip-icon">🔥</div>
             <div class="signal-strip-body">
-              <div class="signal-strip-answer" id="fireStripAnswer">No fire detections</div>
+              <div class="signal-strip-answer" id="fireStripAnswer">Checking…</div>
               <div class="signal-strip-source">NASA FIRMS · <span id="fireFreshnessChip">—</span></div>
             </div>
-            <div class="signal-strip-status ok" id="fireStatus">CLEAR</div>
+            <div class="signal-strip-status" id="fireStatus">—</div>
           </div>
           <div class="signal-strip-divider"></div>
           <div class="signal-strip-item" id="floodStrip">
             <div class="signal-strip-icon">🌊</div>
             <div class="signal-strip-body">
-              <div class="signal-strip-answer" id="floodStripAnswer">No flood watches</div>
+              <div class="signal-strip-answer" id="floodStripAnswer">Checking…</div>
               <div class="signal-strip-source">NWS Official · <span id="floodFreshnessChip">—</span></div>
             </div>
-            <div class="signal-strip-status ok" id="floodStatus">CLEAR</div>
+            <div class="signal-strip-status" id="floodStatus">—</div>
           </div>
           <div class="signal-strip-divider"></div>
           <div class="signal-strip-item" id="weatherStrip">
             <div class="signal-strip-icon">💨</div>
             <div class="signal-strip-body">
-              <div class="signal-strip-answer" id="weatherStripAnswer">Fire weather moderate</div>
+              <div class="signal-strip-answer" id="weatherStripAnswer">Checking…</div>
               <div class="signal-strip-source" data-i18n="signal.strip.wx_source">NWS / RAWS terrain</div>
             </div>
-            <div class="signal-strip-status ok" id="windStatus">NORMAL</div>
+            <div class="signal-strip-status" id="windStatus">—</div>
           </div>
         </div>
 
@@ -1696,7 +1702,7 @@
                   <div class="signal-label" data-i18n="signal.fire_label">Fire · NASA FIRMS</div>
                   <h3 class="signal-title" id="fireTitle">🔥 Fire Signal — Monitoring</h3>
                 </div>
-                <div class="status ok" id="fireStatusDetail">CLEAR</div>
+                <div class="status" id="fireStatusDetail">—</div>
               </div>
               <p class="signal-copy" id="fireCopy">
                 No satellite wildfire detections in the current statewide snapshot.
@@ -1712,7 +1718,7 @@
                   <div class="signal-label" data-i18n="signal.flood_label">Flood · NWS Official</div>
                   <h3 class="signal-title" id="floodTitle">🌊 Flood Signal — Monitoring</h3>
                 </div>
-                <div class="status ok" id="floodStatusDetail">CLEAR</div>
+                <div class="status" id="floodStatusDetail">—</div>
               </div>
               <p class="signal-copy" id="floodCopy">
                 No active NWS flash flood watches or warnings statewide.
@@ -1727,7 +1733,7 @@
 
         <div class="cultural-note" id="kupunaNote">
           <strong id="kupunaTitle">Kūpuna &amp; Keiki Safety</strong>
-          <span id="kupunaBody">Statewide conditions are calm. Kūpuna, keiki, and those in low-lying areas should remain informed through official alerts. E mālama pono — care for one another.</span>
+          <span id="kupunaBody">Checking current conditions. Kūpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance.</span>
         </div>
 
         <div class="note" id="systemNote">
@@ -2488,11 +2494,59 @@
 
       const ENDPOINTS = {
         fire:        "/api/firms/hotspots?bbox=-161.5,18.5,-154.5,22.8",
+        // NOTE: this endpoint is scoped to FLASH flood products only (the Worker
+        // filters to flash flood warning/watch/statement). That scoping is
+        // correct for the map layer that consumes it — the bug this file had was
+        // treating it as the answer to "are there flood watches?". A plain
+        // "Flood Watch" is invisible here, which is why `alerts` is fetched too.
         flood:       "/api/hazards/flash-flood",
         fireWeather: "/api/hazards/fire-weather",
         mrms:        "/api/hazards/mrms-qpe",
+        // P30. summary carries storm.status / storm.watch_count; alerts carries
+        // the actual NWS event names. Both were already served and CORS-open;
+        // the homepage simply never asked for them, which is why six Tropical
+        // Storm Watches and a statewide Flood Watch read as "calm".
+        summary:     "/api/hazards/summary",
+        alerts:      "/api/hazards/alerts",
         health:      "/api/health"
       };
+
+      // ── P30 · NWS flood products ──────────────────────────────────────────
+      // Verified against the National Weather Service's own published
+      // alert-types list (111 event types, checked at development time via the
+      // Worker's upstream). Every name below appears in that list verbatim.
+      // Invariant I: this file never references an upstream API host, not even
+      // in a comment — all data reaches the page through /api/*.
+      //
+      // "Areal Flood Advisory" is NOT one of them — NWS publishes "Flood
+      // Advisory" — so the real name is used and the invented one is not.
+      //
+      // Deliberately EXCLUDED, each for a reason:
+      //   · "Flood Statement" / "Flash Flood Statement" — follow-up products
+      //     that can CANCEL an event. Treating one as an active hazard could
+      //     assert a flood that has just ended.
+      //   · "Coastal Flood *" / "Lakeshore Flood *" — a different hazard class
+      //     with its own layer; folding them in here would silently widen what
+      //     the flood row claims to cover.
+      const FLOOD_EVENTS_WARNING  = ["flood warning", "flash flood warning"];
+      const FLOOD_EVENTS_WATCH    = ["flood watch", "flash flood watch"];
+      const FLOOD_EVENTS_ADVISORY = ["flood advisory"];
+
+      // Exact, case-insensitive match on the event string as NWS publishes it.
+      // Not a substring test: "flood warning" must not be matched by
+      // "coastal flood warning".
+      function alertEventNames(alertsPayload) {
+        return getItems(alertsPayload)
+          .map(function (f) { return String(f?.properties?.event || "").trim().toLowerCase(); })
+          .filter(Boolean);
+      }
+      function floodTierFromAlerts(alertsPayload) {
+        var names = alertEventNames(alertsPayload);
+        if (names.some(function (n) { return FLOOD_EVENTS_WARNING.indexOf(n) !== -1; })) return "warning";
+        if (names.some(function (n) { return FLOOD_EVENTS_WATCH.indexOf(n) !== -1; })) return "watch";
+        if (names.some(function (n) { return FLOOD_EVENTS_ADVISORY.indexOf(n) !== -1; })) return "advisory";
+        return "none";
+      }
 
       const ISLANDS = {
         kauai: {
@@ -2538,7 +2592,8 @@
 
       // Track last freshness timestamp and payloads so langchange can re-render
       let _lastGeneratedAt = null;
-      let _lastPayloads = null;  // { fire, flood, fireWeather, mrms, primaryEvent, counts }
+      let _lastPayloads = null;  // { fire, flood, fireWeather, mrms, summary, alerts, primaryEvent, counts }
+      let _lastFailedLayers = [];  // P30: layer labels whose fetch returned null
 
       function timeAgo(input) {
         if (!input) return _t("freshness.updated_recently") || "Updated recently";
@@ -2760,10 +2815,16 @@
 
       function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind) {
         if (primaryEvent === "DEGRADED") {
+          // Names the LAYER that failed, never an upstream agency.
+          var _failed = (_lastFailedLayers && _lastFailedLayers.length)
+            ? _lastFailedLayers.join(", ")
+            : (_t("degraded.layer.some") || "some");
           return {
             kicker:      _t("hero.kicker.degraded")       || "DATA DELAYED",
-            title:       "Latest data temporarily delayed.",
-            narrative:   _t("hero.narrative.degraded")    || "Some data sources are delayed. Showing last known state. Always follow official emergency instructions.",
+            title:       _t("hero.title.degraded")        || "Conditions could not be confirmed.",
+            narrative:   (_tmpl("hero.narrative.degraded_layers", { layers: _failed })
+                          || ("Kahu Ola could not reach the " + _failed + " data right now, so it cannot confirm whether hazards are active. Check the National Weather Service directly."))
+                         + "",
             bannerTitle: _t("hero.banner.degraded")       || "\u26a0\ufe0f Degraded snapshot active",
             bannerCopy:  _t("hero.banner_copy.degraded")  || "Fallback data \u2014 not current",
             kicClass: "warn"
@@ -2794,7 +2855,7 @@
         if (primaryEvent === "FLOOD_WARNING") {
           return {
             kicker:      _t("hero.kicker.flood_warning")     || "FLOOD WARNING ACTIVE",
-            title:       "Flash flood warning in effect.",
+            title:       _t("hero.title.flood_warning") || "Flood warning in effect.",
             narrative:   _t("hero.narrative.flood_warning")  || "NWS has issued an active flash flood warning. Move away from streams, avoid low-lying roads, and follow official instructions.",
             bannerTitle: _t("hero.banner.flood_warning")     || "\ud83c\udf0a Flash Flood Warning \u2014 NWS Official",
             bannerCopy:  _t("hero.banner_copy.nws_official") || "Source: National Weather Service \xb7 official alert",
@@ -2807,6 +2868,27 @@
             title:       "Flood watch conditions developing.",
             narrative:   _t("hero.narrative.flood_watch")    || "NWS is monitoring conditions that could produce flash flooding. Prepare, stay informed, and avoid flood-prone areas.",
             bannerTitle: _t("hero.banner.flood_watch")       || "\ud83d\udc41 NWS Flash Flood Watch Active",
+            bannerCopy:  _t("hero.banner_copy.nws_watch")    || "Source: National Weather Service \xb7 watch in effect",
+            kicClass: "warn"
+          };
+        }
+        // ── P30 · FIX 3 — storm branches, modelled on the flood branches ──
+        if (primaryEvent === "STORM_WARNING") {
+          return {
+            kicker:      _t("hero.kicker.storm_warning")     || "TROPICAL STORM WARNING",
+            title:       _t("hero.title.storm_warning")      || "Tropical storm warning in effect.",
+            narrative:   _t("hero.narrative.storm_warning")  || "NWS has issued a tropical storm warning for parts of Hawai\u02bfi. Follow county emergency instructions and prepare now.",
+            bannerTitle: _t("hero.banner.storm_warning")     || "\ud83c\udf00 NWS Tropical Storm Warning Active",
+            bannerCopy:  _t("hero.banner_copy.nws_official") || "Source: National Weather Service \xb7 official alert",
+            kicClass: "flood"
+          };
+        }
+        if (primaryEvent === "STORM_WATCH") {
+          return {
+            kicker:      _t("hero.kicker.storm_watch")       || "TROPICAL STORM WATCH",
+            title:       _t("hero.title.storm_watch")        || "Tropical storm watch in effect.",
+            narrative:   _t("hero.narrative.storm_watch")    || "NWS has issued a tropical storm watch for parts of Hawai\u02bfi. Stay informed and be ready to act \u2014 open the Live Map for which areas are covered.",
+            bannerTitle: _t("hero.banner.storm_watch")       || "\ud83c\udf00 NWS Tropical Storm Watch Active",
             bannerCopy:  _t("hero.banner_copy.nws_watch")    || "Source: National Weather Service \xb7 watch in effect",
             kicClass: "warn"
           };
@@ -2868,9 +2950,23 @@
         }
       }
 
-      function renderSignalStrip(fireCount, floodPayload, fireWeatherPayload) {
-        const floodWarning = floodPayload?.summary?.warning_count > 0;
-        const floodWatch   = floodPayload?.summary?.watch_count > 0;
+      // P30. Shared "we could not check" state. A row whose own source failed
+      // must not print CLEAR: that is the same false-absence error as the hero,
+      // one level down, and during a total outage every row would have said it.
+      function markUnknown(answerId, statusId) {
+        setText(answerId, _t("signal.strip.unavailable") || "Could not check right now");
+        const el = document.getElementById(statusId);
+        if (el) { el.className = el.className.replace(/\b(ok|active|watch)\b/g, "").trim(); }
+        setText(statusId, _t("status.unavailable") || "\u2014");
+      }
+
+      function renderSignalStrip(fireCount, floodPayload, fireWeatherPayload, alertsPayload, firePayload) {
+        // P30: the alerts feed is the authority for flood products; the
+        // flash-flood counts are OR-ed in so nothing that layer sees is lost.
+        const floodTier    = floodTierFromAlerts(alertsPayload);
+        const floodWarning = floodTier === "warning" || floodPayload?.summary?.warning_count > 0;
+        const floodWatch   = floodTier === "watch"   || floodPayload?.summary?.watch_count > 0;
+        const floodAdvisory= floodTier === "advisory";
         const redFlag      = fireWeatherPayload?.summary?.red_flag_active;
         // highWind = only when NWS has issued actual Red Flag Warning or Fire Weather Watch
         const highWind     = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
@@ -2879,7 +2975,9 @@
         const fireAns  = document.getElementById("fireStripAnswer");
         const fireStat = document.getElementById("fireStatus");
         if (fireAns && fireStat) {
-          if (fireCount === 0) {
+          if (firePayload === null) {
+            markUnknown("fireStripAnswer", "fireStatus");
+          } else if (fireCount === 0) {
             fireAns.textContent  = _t("signal.strip.fire_clear") || "No fire detections";
             fireStat.className   = "signal-strip-status ok";
             fireStat.textContent = _t("status.clear") || "CLEAR";
@@ -2894,16 +2992,26 @@
         const floodAns  = document.getElementById("floodStripAnswer");
         const floodStat = document.getElementById("floodStatus");
         if (floodAns && floodStat) {
-          if (floodWarning) {
+          // alerts is the authority for flood products; without it we cannot say
+          // "no flood alert", only that we could not check.
+          if (alertsPayload === null && !floodWarning && !floodWatch) {
+            markUnknown("floodStripAnswer", "floodStatus");
+          } else if (floodWarning) {
             floodAns.textContent  = _t("signal.strip.flood_warning_active") || "Flash flood warning active";
             floodStat.className   = "signal-strip-status active";
             floodStat.textContent = _t("status.warning") || "WARNING";
           } else if (floodWatch) {
-            floodAns.textContent  = _t("signal.strip.flood_watch_active") || "Flash flood watch active";
+            floodAns.textContent  = _t("signal.strip.flood_watch_active") || "Flood watch active";
             floodStat.className   = "signal-strip-status watch";
             floodStat.textContent = _t("status.watch") || "WATCH";
+          } else if (floodAdvisory) {
+            floodAns.textContent  = _t("signal.strip.flood_advisory_active") || "Flood advisory active";
+            floodStat.className   = "signal-strip-status watch";
+            floodStat.textContent = _t("status.advisory") || "ADVISORY";
           } else {
-            floodAns.textContent  = _t("signal.strip.flood_clear") || "No flood watches or warnings";
+            // Says WHAT is clear. The old copy ("No flood watches or warnings")
+            // claimed more coverage than the check behind it had.
+            floodAns.textContent  = _t("signal.strip.flood_clear_scoped") || "No NWS flood watch, warning or advisory";
             floodStat.className   = "signal-strip-status ok";
             floodStat.textContent = _t("status.clear") || "CLEAR";
           }
@@ -2913,7 +3021,9 @@
         const wxAns  = document.getElementById("weatherStripAnswer");
         const wxStat = document.getElementById("windStatus");
         if (wxAns && wxStat) {
-          if (redFlag) {
+          if (fireWeatherPayload === null) {
+            markUnknown("weatherStripAnswer", "windStatus");
+          } else if (redFlag) {
             wxAns.textContent  = _t("signal.strip.wx_redflag") || "Red Flag Warning active";
             wxStat.className   = "signal-strip-status active";
             wxStat.textContent = _t("status.red_flag") || "RED FLAG";
@@ -2929,7 +3039,7 @@
         }
       }
 
-      function applyHero(primaryEvent, counts, _freshStr, fireWeatherPayload, floodPayload) {
+      function applyHero(primaryEvent, counts, _freshStr, fireWeatherPayload, floodPayload, summaryPayload, alertsPayload) {
         const fireCount   = counts.fireCount || 0;
         const floodWarn   = floodPayload?.summary?.warning_count > 0;
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
@@ -2952,10 +3062,12 @@
         if (titleEl) {
           const titleMap = {
             MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',            cls: 'calm'  },
+            STORM_WARNING: { html: _t("hero.title_html.storm_warning") || 'Tropical storm <span class="hero-title-key">warning</span> in effect.',        cls: 'flood' },
+            STORM_WATCH:   { html: _t("hero.title_html.storm_watch")   || 'Tropical storm <span class="hero-title-key">watch</span> in effect.',          cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',          cls: 'fire'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
-            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Latest data temporarily <span class="hero-title-key">delayed</span>.',           cls: 'warn'  },
+            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',           cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
           titleEl.innerHTML = hv ? hv.titleHtml : titleData.html;
@@ -3032,7 +3144,7 @@
         }
       }
 
-            function renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload) {
+            function renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload) {
         // Fire Weather — only from real NWS alerts, not terrain estimates
         const fwSignals = getItems(fireWeatherPayload);
         const redFlag   = fireWeatherPayload?.summary?.red_flag_active;
@@ -3040,7 +3152,11 @@
         const hasAlert  = redFlag || hasWatch;
         // Only surface HIGH/CRITICAL from real NWS alerts
         const highAlert = fwSignals.find(s => s.properties?.red_flag_active || s.properties?.risk_index === "HIGH");
-        if (redFlag) {
+        const UNAVAIL = _t("context.unavailable") || "Unavailable";
+        if (fireWeatherPayload === null) {
+          setText("windValue", UNAVAIL);
+          const el0 = document.getElementById("windValue"); if (el0) el0.style.color = "";
+        } else if (redFlag) {
           setText("windValue", _t("context.wind_red_flag") || "Red Flag");
           const el = document.getElementById("windValue");
           if (el) el.style.color = "var(--fire)";
@@ -3058,7 +3174,10 @@
         const mrmsSignals = getItems(mrmsPayload);
         const heavyRain   = mrmsSignals.find(s => s.properties?.intensity === "INTENSE" || s.properties?.intensity === "HEAVY");
         const modRain     = mrmsSignals.find(s => s.properties?.intensity === "MODERATE");
-        if (heavyRain) {
+        if (mrmsPayload === null) {
+          setText("rainValue", UNAVAIL);
+          document.getElementById("rainValue").style.color = "";
+        } else if (heavyRain) {
           setText("rainValue", _t("context.rain_heavy") || "Heavy Rain");
           document.getElementById("rainValue").style.color = "var(--flood)";
         } else if (modRain) {
@@ -3071,16 +3190,25 @@
         const rainSource = document.getElementById("rainSource");
         if (rainSource) rainSource.textContent = _t("context.nexrad_mrms") || "NEXRAD / MRMS";
 
-        // Flood Risk — from NWS flash flood
+        // Flood Risk — P30: from the NWS ALERTS feed, with the flash-flood
+        // counts OR-ed in. Reading flash-flood alone made a statewide
+        // "Flood Watch" render as "None Active".
         const floodSummary = floodPayload?.summary;
-        if (floodSummary?.warning_count > 0) {
+        const ctxFloodTier = floodTierFromAlerts(alertsPayload);
+        if (alertsPayload === null && ctxFloodTier === "none" && !(floodSummary?.warning_count > 0) && !(floodSummary?.watch_count > 0)) {
+          setText("floodRiskValue", UNAVAIL);
+          document.getElementById("floodRiskValue").style.color = "";
+        } else if (ctxFloodTier === "warning" || floodSummary?.warning_count > 0) {
           setText("floodRiskValue", _t("context.flood_warning_active") || "Warning Active");
           document.getElementById("floodRiskValue").style.color = "var(--danger)";
-        } else if (floodSummary?.watch_count > 0) {
+        } else if (ctxFloodTier === "watch" || floodSummary?.watch_count > 0) {
           setText("floodRiskValue", _t("context.flood_watch_active") || "Watch Active");
           document.getElementById("floodRiskValue").style.color = "var(--warn)";
+        } else if (ctxFloodTier === "advisory") {
+          setText("floodRiskValue", _t("context.flood_advisory_active") || "Advisory Active");
+          document.getElementById("floodRiskValue").style.color = "var(--warn)";
         } else {
-          setText("floodRiskValue", _t("context.flood_none_active") || "None Active");
+          setText("floodRiskValue", _t("context.flood_none_scoped") || "No NWS flood alert");
           document.getElementById("floodRiskValue").style.color = "";
         }
         const floodSource = document.getElementById("floodSource");
@@ -3088,6 +3216,7 @@
       }
 
       function renderFireCard(payload) {
+        if (payload === null) { markUnknown("fireStripAnswer", "fireStatusDetail"); setText("fireStatus", _t("status.unavailable") || "\u2014"); return; }
         const items = getItems(payload);
         const count = items.length;
         const freshness = timeAgo(getGeneratedAt(payload));
@@ -3108,10 +3237,40 @@
         setText("fireFreshnessChip", freshness);
       }
 
-      function renderFloodCard(payload) {
+      function renderFloodCard(payload, alertsPayload) {
         const items = getItems(payload);
         const count = items.length;
         const freshness = timeAgo(getGeneratedAt(payload));
+        // P30: this function writes #floodStatus — the SAME element the signal
+        // strip writes — and it runs afterwards, so it was overwriting the
+        // strip's "WATCH" with "CLEAR". Pre-existing id collision, left in place
+        // (out of scope), but both writers must now agree: the alerts feed is
+        // the authority for whether a flood product is active.
+        const cardFloodTier = floodTierFromAlerts(alertsPayload);
+
+        if (alertsPayload === null && cardFloodTier === "none" && count === 0) {
+          setText("floodTitle", _t("signal.flood_title_unavailable") || "\ud83c\udf27 Flood Signal \u2014 Could not check");
+          setText("floodCopy",  _t("signal.flood_copy_unavailable") || "Kahu Ola could not reach the official alerts feed, so it cannot confirm whether a flood watch or warning is active. Check the National Weather Service directly.");
+          const fe = document.getElementById("floodStatus");
+          if (fe) fe.className = "status";
+          setText("floodStatus", _t("status.unavailable") || "\u2014");
+          setText("floodSourceChip", "NWS / PacIOOS");
+          setText("floodFreshnessChip", freshness);
+          return;
+        }
+
+        if (cardFloodTier !== "none") {
+          const lbl = cardFloodTier === "warning" ? (_t("status.warning") || "WARNING")
+            : cardFloodTier === "watch" ? (_t("status.watch") || "WATCH")
+              : (_t("status.advisory") || "ADVISORY");
+          setText("floodTitle", _t("signal.flood_title_alert") || "\ud83c\udf27 Flood Signal \u2014 NWS Alert Active");
+          setText("floodCopy",  _t("signal.flood_copy_alert") || "An official National Weather Service flood product is in effect for part of Hawai\u02bfi. Open the Live Map for the areas covered, and follow county guidance.");
+          document.getElementById("floodStatus").className = "status " + (cardFloodTier === "warning" ? "active" : "watch");
+          setText("floodStatus", lbl);
+          setText("floodSourceChip", "NWS / PacIOOS");
+          setText("floodFreshnessChip", freshness);
+          return;
+        }
 
         if (count > 0) {
           setText("floodTitle", _tmpl("signal.flood_title_active", { n: count }) || `\ud83c\udf27 Flood Signal \u2014 ${count} Elevated`);
@@ -3212,6 +3371,18 @@
           noteEl.style.borderColor = "";
           noteEl.style.background  = "";
           titleEl.style.color      = "";
+        } else if (primaryEvent !== "MONITORING") {
+          // FIX 5. This paragraph is aimed at the most vulnerable readers, so it
+          // is gated on the SAME condition as the hero: if the hero is not
+          // MONITORING — storm watch, flood watch, or an outage we cannot see
+          // through — "statewide conditions are calm" must not appear at all.
+          titleEl.textContent = _t("kupuna.title.calm")          || "K\u016bpuna & Keiki Safety";
+          bodyEl.textContent  = (primaryEvent === "DEGRADED")
+            ? (_t("kupuna.body.degraded") || "Kahu Ola cannot confirm current conditions right now. K\u016bpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance directly.")
+            : (_t("kupuna.body.watch")    || "An official National Weather Service watch is in effect for parts of Hawai\u02bfi. K\u016bpuna, keiki, and those in low-lying areas should stay informed and be ready to act. E m\u0101lama pono.");
+          noteEl.style.borderColor = "";
+          noteEl.style.background  = "";
+          titleEl.style.color      = "";
         } else {
           titleEl.textContent = _t("kupuna.title.calm")          || "K\u016bpuna & Keiki Safety";
           bodyEl.textContent  = _t("kupuna.body.calm")           || "Statewide conditions are calm. K\u016bpuna, keiki, and those in low-lying areas should remain informed through official alerts. E m\u0101lama pono \u2014 care for one another.";
@@ -3221,25 +3392,93 @@
         }
       }
 
+      // P30. The static markup above is the FIRST PAINT and is deliberately
+      // plain English with NO data-i18n: applyAll() runs after every render, so
+      // a data-i18n attribute on a JS-managed element resets it to the
+      // placeholder — the exact trap that ate the live map's hurricane note.
+      // Instead the checking state is localised here, the moment JS runs and
+      // before any fetch resolves, then replaced by the real state.
+      function setCheckingState() {
+        setText("heroKicker",      _t("hero.kicker.checking")      || "CHECKING CONDITIONS");
+        setText("heroNarrative",   _t("hero.narrative.checking")   || "Loading the current statewide hazard picture from official sources.");
+        setText("heroBannerTitle", _t("hero.banner.checking")      || "\u23f3 Checking official sources\u2026");
+        setText("heroBannerCopy",  _t("hero.banner_copy.checking") || "NASA FIRMS \xb7 NWS \xb7 NEXRAD");
+        setText("kupunaBody",      _t("kupuna.body.checking")      || "Checking current conditions. K\u016bpuna, keiki, and those in low-lying areas should follow National Weather Service and county guidance.");
+        ["fireStripAnswer", "floodStripAnswer", "weatherStripAnswer"].forEach(function (id) {
+          setText(id, _t("signal.strip.checking") || "Checking\u2026");
+        });
+        ["fireStatus", "floodStatus", "windStatus", "fireStatusDetail", "floodStatusDetail"].forEach(function (id) {
+          setText(id, _t("status.checking") || "\u2014");
+        });
+      }
+
       async function loadHomepage() {
-        const [firePayload, floodPayload, fireWeatherPayload, mrmsPayload] = await Promise.all([
+        setCheckingState();
+        const [firePayload, floodPayload, fireWeatherPayload, mrmsPayload, summaryPayload, alertsPayload] = await Promise.all([
           safeFetchJson(ENDPOINTS.fire),
           safeFetchJson(ENDPOINTS.flood),
           safeFetchJson(ENDPOINTS.fireWeather),
-          safeFetchJson(ENDPOINTS.mrms)
+          safeFetchJson(ENDPOINTS.mrms),
+          safeFetchJson(ENDPOINTS.summary),
+          safeFetchJson(ENDPOINTS.alerts)
         ]);
 
+        // ── P30 · FIX 1 — an outage must never render as calm ─────────────
+        // safeFetchJson turns every network error, HTTP error and timeout into
+        // null. Every guard below then reads null as false, so before this
+        // check a TOTAL API outage produced the identical sentence to a
+        // genuinely quiet day: "Hawaiʻi is calm right now. No active watches,
+        // warnings, or satellite fire detections across the state."
+        //
+        // That is not a missing input. It is failure being indistinguishable
+        // from safety by construction, and it is the reason this fix is first.
+        //
+        // safeFetchJson's swallow is deliberately left alone — the page must
+        // still render (Invariant II). What changes is that it renders honestly.
+        //
+        // Sources are named by LAYER, never by upstream agency: "NASA is down"
+        // is not ours to say, and is usually wrong anyway (the failure is far
+        // more often our own edge or a transient timeout).
+        const sourceStatus = [
+          { key: "fire",        ok: firePayload        !== null, label: _t("degraded.layer.fire")     || "fire detections" },
+          { key: "flood",       ok: floodPayload       !== null, label: _t("degraded.layer.flood")    || "flood" },
+          { key: "fireWeather", ok: fireWeatherPayload !== null, label: _t("degraded.layer.fire_wx")  || "fire weather" },
+          { key: "mrms",        ok: mrmsPayload        !== null, label: _t("degraded.layer.rain")     || "rainfall" },
+          { key: "summary",     ok: summaryPayload     !== null, label: _t("degraded.layer.summary")  || "statewide summary" },
+          { key: "alerts",      ok: alertsPayload      !== null, label: _t("degraded.layer.alerts")   || "official alerts" }
+        ];
+        const failedLayers = sourceStatus.filter(function (x) { return !x.ok; }).map(function (x) { return x.label; });
+        const isDegraded   = failedLayers.length > 0;
+
         // Derive primary event from live data
-        const fireItems    = getItems(firePayload);
-        const floodWarning = floodPayload?.summary?.warning_count > 0;
-        const floodWatch   = floodPayload?.summary?.watch_count > 0;
-        const redFlag      = fireWeatherPayload?.summary?.red_flag_active;
+        const fireItems  = getItems(firePayload);
+        const redFlag    = fireWeatherPayload?.summary?.red_flag_active;
+
+        // ── FIX 4 — flood truth comes from the ALERTS feed ────────────────
+        // The flash-flood endpoint is scoped to flash-flood products, so a plain
+        // "Flood Watch" — exactly what is active statewide today — never appears
+        // in it. The alerts feed carries the event names NWS actually published.
+        // The flash-flood counts are still honoured so nothing that layer sees
+        // is lost.
+        const floodTier    = floodTierFromAlerts(alertsPayload);
+        const floodWarning = floodTier === "warning"  || floodPayload?.summary?.warning_count > 0;
+        const floodWatch   = floodTier === "watch"    || floodPayload?.summary?.watch_count > 0;
+        const floodAdvisory= floodTier === "advisory";
+
+        // ── FIX 3 — storm branch ─────────────────────────────────────────
+        const stormStatus  = summaryPayload?.storm?.status;
 
         let primaryEvent = "MONITORING";
-        if (fireItems.length >= 3 || redFlag) primaryEvent = "FIRE_ACTIVE";
+        // DEGRADED outranks everything. A page that cannot see is not a page
+        // that can say "calm", and it is not a page that should cry fire either.
+        if (isDegraded)                       primaryEvent = "DEGRADED";
+        else if (fireItems.length >= 3 || redFlag) primaryEvent = "FIRE_ACTIVE";
         else if (floodWarning)               primaryEvent = "FLOOD_WARNING";
         else if (floodWatch)                 primaryEvent = "FLOOD_WATCH";
+        else if (stormStatus === "warning")  primaryEvent = "STORM_WARNING";
+        else if (stormStatus === "watch")    primaryEvent = "STORM_WATCH";
         else if (fireItems.length > 0)       primaryEvent = "FIRE_ACTIVE";
+        _lastFailedLayers = failedLayers;
 
         // Derive freshness from most recent API call — check all possible timestamp fields
         const generatedAt =
@@ -3248,20 +3487,20 @@
           mrmsPayload?.generated_at ||
           firePayload?.generated_at;
         _lastGeneratedAt = generatedAt || null;
-        _lastPayloads = { fire: firePayload, flood: floodPayload, fireWeather: fireWeatherPayload, mrms: mrmsPayload, primaryEvent, counts: { fireCount: fireItems.length, floodCount: floodPayload?.summary?.count || 0, stormCount: 0 } };
+        _lastPayloads = { fire: firePayload, flood: floodPayload, fireWeather: fireWeatherPayload, mrms: mrmsPayload, summary: summaryPayload, alerts: alertsPayload, primaryEvent, counts: { fireCount: fireItems.length, floodCount: floodPayload?.summary?.count || 0, stormCount: summaryPayload?.storm?.count || 0 } };
         const freshnessStr = generatedAt ? timeAgo(generatedAt) : (_t("freshness.updated_just_now") || "Updated just now");
 
         applyHero(primaryEvent, {
           fireCount:  fireItems.length,
           floodCount: floodPayload?.summary?.count || 0,
-          stormCount: 0,
+          stormCount: summaryPayload?.storm?.count || 0,
           fireSplit:  fireZoneSplit(firePayload)
-        }, freshnessStr, fireWeatherPayload, floodPayload);
+        }, freshnessStr, fireWeatherPayload, floodPayload, summaryPayload, alertsPayload);
 
-        renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload);
-        renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload);
+        renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload);
+        renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
         renderFireCard(firePayload);
-        renderFloodCard(floodPayload);
+        renderFloodCard(floodPayload, alertsPayload);
         renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload));
 
         // Re-apply locale translations after all JS renders — ensures data-i18n elements
@@ -3313,10 +3552,16 @@
         if (updatedPillEl) updatedPillEl.innerHTML = `<span class="dot"></span> ${freshStr}`;
 
         if (!_lastPayloads) return;
-        const { fire, flood, fireWeather, mrms, primaryEvent, counts } = _lastPayloads;
+        // P30: `alerts` and `summary` MUST be destructured here. Without alerts
+        // the flood surfaces fall back to the flash-flood-only path and print
+        // "no flood alert" on every language switch, while a Flood Watch is
+        // active — the exact bug this increment exists to remove, reintroduced
+        // by a stale destructure.
+        const { fire, flood, fireWeather, mrms, summary, alerts, primaryEvent, counts } = _lastPayloads;
         const fireCount  = counts.fireCount || 0;
-        const floodWarn  = flood?.summary?.warning_count > 0;
-        const floodWatch = flood?.summary?.watch_count > 0;
+        const _langFloodTier = floodTierFromAlerts(alerts);
+        const floodWarn  = _langFloodTier === "warning" || flood?.summary?.warning_count > 0;
+        const floodWatch = _langFloodTier === "watch"   || flood?.summary?.watch_count > 0;
         const redFlag    = fireWeather?.summary?.red_flag_active;
         const highWind   = redFlag || (fireWeather?.summary?.red_flag_count > 0) || (fireWeather?.summary?.watch_count > 0);
         // 100%-volcanic wording override (text only; SAME shared classifier).
@@ -3330,10 +3575,12 @@
         if (titleEl) {
           const titleMap = {
             MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',          cls: 'calm'  },
+            STORM_WARNING: { html: _t("hero.title_html.storm_warning") || 'Tropical storm <span class="hero-title-key">warning</span> in effect.',      cls: 'flood' },
+            STORM_WATCH:   { html: _t("hero.title_html.storm_watch")   || 'Tropical storm <span class="hero-title-key">watch</span> in effect.',        cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
-            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Latest data temporarily <span class="hero-title-key">delayed</span>.',         cls: 'warn'  },
+            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',         cls: 'warn'  },
           };
           const td = titleMap[primaryEvent] || titleMap.MONITORING;
           titleEl.innerHTML = hv ? hv.titleHtml : td.html;
@@ -3370,14 +3617,14 @@
         }
 
         // Re-render the remaining JS-driven sections (verified signatures)
-        // renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload)
-        renderContextMetrics(fireWeather, mrms, flood);
-        // renderSignalStrip(fireCount, floodPayload, fireWeatherPayload)
-        renderSignalStrip(fireCount, flood, fireWeather);
+        // renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload)
+        renderContextMetrics(fireWeather, mrms, flood, alerts);
+        // renderSignalStrip(fireCount, floodPayload, fireWeatherPayload, alertsPayload, firePayload)
+        renderSignalStrip(fireCount, flood, fireWeather, alerts, fire);
         // renderFireCard(payload)
         renderFireCard(fire);
-        // renderFloodCard(payload)
-        renderFloodCard(flood);
+        // renderFloodCard(payload, alertsPayload)
+        renderFloodCard(flood, alerts);
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
         renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire));
 
