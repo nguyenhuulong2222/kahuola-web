@@ -279,29 +279,160 @@ function buildHazardEnvelope(layer: string, source: string, region: string, sign
   };
 }
 
-async function fetchNwsAlerts(cors: CorsHeaders, areas: string[] | null = ['HI']): Promise<any> {
-  const nwsUrl = new URL('https://api.weather.gov/alerts/active');
-  if (areas && areas.length > 0) {
-    for (const a of areas) nwsUrl.searchParams.append('area', a);
-  }
+// ── P44 · NWS/NOAA identification ────────────────────────────────────────
+// NWS documentation: "A User Agent is required to identify your application"
+// and, if contact information is included, "we can contact you if your string
+// is associated to a security event." Three different strings were in use and
+// two fetches sent none at all. One constant, used everywhere, carrying
+// product, site and contact.
+const NWS_USER_AGENT = 'Kahu Ola / Maui Civic Hazard Intelligence (contact: long@kahuola.org)';
+
+// ── P44 · upstream cache TTLs ────────────────────────────────────────────
+// The same NWS page warns: "Proxies are more likely to reach the limit,
+// whereas requests directly from clients are not likely." This Worker is that
+// proxy — every visitor's poll lands on a handful of Cloudflare egress IPs.
+// caches.default is per-colo and free; KV is deliberately not used here.
+const NWS_ALERTS_TTL = 30;        // upstream sends max-age=5; alerts are unpredictable
+const NHC_POSITIONS_TTL = 300;    // matches NHC's own max-age=300 on CurrentStorms.json
+const NHC_FORECAST_TTL = 300;     // ArcGIS content changes per advisory (3-6 h)
+const NHC_WINDPROB_TTL = 300;     // same advisory cadence as the track
+const FIRE_WEATHER_TTL = 300;     // Red Flag Warnings are issued hours ahead
+
+// P44 FIX 4. In-flight deduplication, NOT a cache. buildMorningBrief runs
+// handleFlashFlood, handleTsunami and handleLandslide in one Promise.allSettled
+// and each independently requested the identical /alerts/active?area=HI.
+// Entries are deleted the moment the promise settles, so nothing is ever
+// reused across invocations — a caller only ever joins a request that is still
+// on the wire. Zero staleness by construction.
+const nwsAlertsInFlight = new Map<string, Promise<any>>();
+
+// P44. One read-through cache for the NHC paths, so each call site stays a
+// single line and the store/skip rule lives in exactly one place.
+//
+// Only 2xx bodies are stored. A cached 500 would convert one upstream blip
+// into `ttl` seconds of manufactured outage for every reader in the colo,
+// which is strictly worse than paying the fetch again.
+//
+// Returns the parsed JSON, or throws exactly as the caller's own fetch did —
+// callers already treat a throw as "unavailable" and none of that changes.
+async function cachedJsonFetch(url: string, ttl: number, accept?: string): Promise<any> {
+  try {
+    const hit = await caches.default.match(new Request(url));
+    if (hit) return await hit.json();
+  } catch (e) { /* a cache read must never fail the request */ }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
   try {
-    const res = await fetch(nwsUrl.toString(), {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/geo+json',
-        'User-Agent': 'Kahu Ola / Maui Civic Hazard Intelligence (contact: long@kahuola.org)',
-      },
-    });
-    if (!res.ok) return { ok: false, error: `HTTP_${res.status}` };
-    return { ok: true, data: await res.json() };
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'unknown';
-    return { ok: false, error: msg };
+    const headers: Record<string, string> = { 'User-Agent': NWS_USER_AGENT };
+    if (accept) headers.Accept = accept;
+    const res = await fetch(url, { signal: controller.signal, headers });
+    if (!res.ok) throw new Error(`upstream ${res.status}`);
+    const body = await res.text();
+    try {
+      await caches.default.put(
+        new Request(url),
+        new Response(body, {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${ttl}` },
+        }),
+      );
+    } catch (e) { /* a cache write must never fail the request */ }
+    return JSON.parse(body);
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// Same contract for a text (non-JSON) upstream — the NHC wind-probability
+// product is a fixed-width text bulletin, not JSON.
+async function cachedTextFetch(url: string, ttl: number): Promise<string> {
+  try {
+    const hit = await caches.default.match(new Request(url));
+    if (hit) return await hit.text();
+  } catch (e) { /* a cache read must never fail the request */ }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  try {
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': NWS_USER_AGENT } });
+    if (!res.ok) throw new Error(`upstream ${res.status}`);
+    const body = await res.text();
+    try {
+      await caches.default.put(
+        new Request(url),
+        new Response(body, { headers: { 'Content-Type': 'text/plain', 'Cache-Control': `public, max-age=${ttl}` } }),
+      );
+    } catch (e) { /* a cache write must never fail the request */ }
+    return body;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// `useCache: false` skips the stored entry in BOTH directions — no read, no
+// write — while still allowing the caller to join an in-flight request. That
+// is what handleTsunami uses: it may share a fetch that is happening anyway,
+// but must never be served something up to 30 s old.
+async function fetchNwsAlerts(
+  cors: CorsHeaders,
+  areas: string[] | null = ['HI'],
+  opts: { useCache?: boolean } = {},
+): Promise<any> {
+  const useCache = opts.useCache !== false;
+  const nwsUrl = new URL('https://api.weather.gov/alerts/active');
+  if (areas && areas.length > 0) {
+    for (const a of areas) nwsUrl.searchParams.append('area', a);
+  }
+  // The full URL is the cache key: every parameter that varies the response
+  // (each `area`) is already in it.
+  const key = nwsUrl.toString();
+
+  if (useCache) {
+    try {
+      const hit = await caches.default.match(new Request(key));
+      if (hit) return { ok: true, data: await hit.json() };
+    } catch (e) { /* a cache read must never fail the request */ }
+  }
+
+  const existing = nwsAlertsInFlight.get(key);
+  if (existing) return existing;
+
+  const inflight = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+    try {
+      const res = await fetch(key, {
+        signal: controller.signal,
+        headers: { Accept: 'application/geo+json', 'User-Agent': NWS_USER_AGENT },
+      });
+      // ONLY 2xx is stored. A 500 cached for 30 s would turn one upstream
+      // blip into 30 s of manufactured outage for every reader.
+      if (!res.ok) return { ok: false, error: `HTTP_${res.status}` };
+      const body = await res.text();
+      if (useCache) {
+        try {
+          await caches.default.put(
+            new Request(key),
+            new Response(body, {
+              headers: { 'Content-Type': 'application/geo+json', 'Cache-Control': `public, max-age=${NWS_ALERTS_TTL}` },
+            }),
+          );
+        } catch (e) { /* a cache write must never fail the request */ }
+      }
+      return { ok: true, data: JSON.parse(body) };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'unknown';
+      return { ok: false, error: msg };
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+
+  nwsAlertsInFlight.set(key, inflight);
+  try {
+    return await inflight;
+  } finally {
+    nwsAlertsInFlight.delete(key);
   }
 }
 
@@ -592,7 +723,7 @@ async function handleRainRadar(url: URL, cors: CorsHeaders): Promise<Response> {
     // Iowa State Mesonet — current NEXRAD attributes for all US stations
     const res = await fetch('https://mesonet.agron.iastate.edu/geojson/nexrad_attr.geojson', {
       signal: controller.signal,
-      headers: { 'User-Agent': 'Kahu Ola / kahuola.org', Accept: 'application/geo+json' },
+      headers: { 'User-Agent': NWS_USER_AGENT, Accept: 'application/geo+json' },
     });
     clearTimeout(timer);
     if (!res.ok) throw new Error(`Mesonet HTTP ${res.status}`);
@@ -727,7 +858,7 @@ async function handleLocalHazards(url: URL, cors: CorsHeaders): Promise<Response
       signal: controller.signal,
       headers: {
         Accept: 'application/geo+json, application/json;q=0.9, */*;q=0.8',
-        'User-Agent': 'Kahu Ola / Hawaiʻi Civic Hazard Intelligence',
+        'User-Agent': NWS_USER_AGENT,
       },
     });
 
@@ -836,7 +967,7 @@ async function handleMrmsQpe(url: URL, cors: CorsHeaders): Promise<Response> {
     // NEXRAD max_dbz per station → per-cell QPE estimate
     const res = await fetch('https://mesonet.agron.iastate.edu/geojson/nexrad_attr.geojson', {
       signal: controller.signal,
-      headers: { 'User-Agent': 'Kahu Ola / kahuola.org', Accept: 'application/geo+json' },
+      headers: { 'User-Agent': NWS_USER_AGENT, Accept: 'application/geo+json' },
     });
     clearTimeout(timer);
     if (!res.ok) throw new Error(`Mesonet HTTP ${res.status}`);
@@ -1306,7 +1437,7 @@ async function fetchJsonSafe(url: string): Promise<any> {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'Kahu Ola / kahuola.org' }
+      headers: { 'User-Agent': NWS_USER_AGENT }
     });
     if (!res.ok) throw new Error(`HTTP_${res.status}`);
     return await res.json();
@@ -2404,7 +2535,7 @@ async function fetchNwsConditions(
       } else {
         const res = await fetch(`https://api.weather.gov/stations/${st.id}/observations/latest`, {
           signal: AbortSignal.timeout(FETCH_TIMEOUT),
-          headers: { 'User-Agent': 'KahuOla/1.0 kahuola.org', Accept: 'application/geo+json' },
+          headers: { 'User-Agent': NWS_USER_AGENT, Accept: 'application/geo+json' },
         });
         if (!res.ok) throw new Error(`obs ${res.status}`);
         const text = await res.text();
@@ -3411,7 +3542,7 @@ async function fetchConusWeather(lat: number, lon: number, nowMs: number): Promi
     const cached = await cache.match(cacheReq);
     if (cached) return (await cached.json()) as ConusWeather;
 
-    const headers = { 'User-Agent': 'KahuOla/1.0 kahuola.org', Accept: 'application/geo+json' };
+    const headers = { 'User-Agent': NWS_USER_AGENT, Accept: 'application/geo+json' };
     const ptRes = await fetch(`https://api.weather.gov/points/${rLat},${rLon}`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT), headers,
     });
@@ -4056,26 +4187,78 @@ function hmsKmlUrl(date: Date): string {
 }
 
 // Fetch one day's KML with an 8s timeout + size guard. Never throws.
+//
+// P44 FIX 5. The probe order is today-UTC-first, and NOAA does not publish
+// today's file until partway through the UTC day, so for much of every day the
+// first request is a guaranteed 404: 256 of 349 requests to this host were
+// 4xx. Neither the 404 nor the fallback was cached, so every cache miss on the
+// smoke endpoint re-paid both.
+//
+// The order is NOT changed. I could not establish, with evidence, the UTC hour
+// at which NOAA publishes — nhc.noaa.gov/gis/ documents no cadence and the
+// directory carries no schedule — and reordering on a guess would trade a
+// known-cheap 404 for silently serving yesterday's smoke on a day when today's
+// file was in fact available.
+//
+// Instead BOTH outcomes are cached for 900 s, negative included. A 404 is a
+// fact about the world ("NOAA has not published this file yet"), not an error
+// to retry hot, and caching it is what removes the amplification.
+const HMS_KML_TTL = 900;
+
 async function fetchHmsKml(date: Date): Promise<{ ok: boolean; text: string | null; status: number }> {
+  const url = hmsKmlUrl(date);
+  // The negative marker is stored under a separate key so it can never be
+  // mistaken for a body. A stored 404 says only "asked recently, not there".
+  const missKey = `https://kahuola.org/cache/hms-miss/${encodeURIComponent(url)}`;
+
+  try {
+    const hit = await caches.default.match(new Request(url));
+    if (hit) return { ok: true, text: await hit.text(), status: 200 };
+    const miss = await caches.default.match(new Request(missKey));
+    if (miss) return { ok: false, text: null, status: Number(await miss.text()) || 404 };
+  } catch (e) { /* a cache read must never fail the request */ }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  const rememberMiss = async (status: number) => {
+    try {
+      await caches.default.put(
+        new Request(missKey),
+        new Response(String(status), {
+          headers: { 'Content-Type': 'text/plain', 'Cache-Control': `public, max-age=${HMS_KML_TTL}` },
+        }),
+      );
+    } catch (e) { /* ignore */ }
+  };
+
   try {
-    const res = await fetch(hmsKmlUrl(date), {
+    const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'Kahu Ola / kahuola.org', Accept: 'application/vnd.google-earth.kml+xml, application/xml, */*' },
+      headers: { 'User-Agent': NWS_USER_AGENT, Accept: 'application/vnd.google-earth.kml+xml, application/xml, */*' },
     });
     clearTimeout(timer);
-    if (!res.ok) return { ok: false, text: null, status: res.status };
+    if (!res.ok) { await rememberMiss(res.status); return { ok: false, text: null, status: res.status }; }
     const declared = Number(res.headers.get('content-length') || '0');
     if (Number.isFinite(declared) && declared > HMS_MAX_KML_BYTES) {
+      await rememberMiss(413);
       return { ok: false, text: null, status: 413 };   // too large → unavailable
     }
     const text = await res.text();
-    if (text.length > HMS_MAX_KML_BYTES) return { ok: false, text: null, status: 413 };
+    if (text.length > HMS_MAX_KML_BYTES) { await rememberMiss(413); return { ok: false, text: null, status: 413 }; }
+    try {
+      await caches.default.put(
+        new Request(url),
+        new Response(text, {
+          headers: { 'Content-Type': 'application/vnd.google-earth.kml+xml', 'Cache-Control': `public, max-age=${HMS_KML_TTL}` },
+        }),
+      );
+    } catch (e) { /* ignore */ }
     return { ok: true, text, status: res.status };
-  } catch {
+  } catch (e) {
     clearTimeout(timer);
-    return { ok: false, text: null, status: 0 };        // timeout / network
+    // A transport error is NOT cached: unlike a 404 it carries no fact about
+    // whether the file exists, and caching it would manufacture an outage.
+    return { ok: false, text: null, status: 0 };
   }
 }
 
@@ -4265,7 +4448,7 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
 
     const res = await fetch(wfigsUrl, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'Kahu Ola / kahuola.org', Accept: 'application/geo+json' },
+      headers: { 'User-Agent': NWS_USER_AGENT, Accept: 'application/geo+json' },
     });
     clearTimeout(timer);
     if (!res.ok) throw new Error(`WFIGS HTTP ${res.status}`);
@@ -4591,20 +4774,20 @@ async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response>
   const timeout = setTimeout(() => controller.abort(), 8000);
 
   try {
-    // Fetch both Red Flag Warning and Fire Weather Watch in parallel
+    // P44. Both event-filtered queries go through the shared read-through
+    // cache. Each URL carries its own `event=` parameter, so the URL is a
+    // complete key and the two never collide. Red Flag Warnings are issued
+    // hours ahead of the conditions they describe, so 300 s costs nothing.
+    // allSettled is retained: a dead query must never block the live one.
     const [rfResp, fwResp] = await Promise.allSettled([
-      fetch(NWS_RED_FLAG_URL, { signal: controller.signal, headers: { "User-Agent": "KahuOla/1.0 kahuola.org" } }),
-      fetch(NWS_FIRE_WATCH_URL, { signal: controller.signal, headers: { "User-Agent": "KahuOla/1.0 kahuola.org" } }),
+      cachedJsonFetch(NWS_RED_FLAG_URL, FIRE_WEATHER_TTL, "application/geo+json"),
+      cachedJsonFetch(NWS_FIRE_WATCH_URL, FIRE_WEATHER_TTL, "application/geo+json"),
     ]);
     clearTimeout(timeout);
 
     // Parse responses safely
-    const rfAlerts: any[] = rfResp.status === "fulfilled" && rfResp.value.ok
-      ? (await rfResp.value.json().catch(() => ({ features: [] }))).features ?? []
-      : [];
-    const fwAlerts: any[] = fwResp.status === "fulfilled" && fwResp.value.ok
-      ? (await fwResp.value.json().catch(() => ({ features: [] }))).features ?? []
-      : [];
+    const rfAlerts: any[] = rfResp.status === "fulfilled" ? (rfResp.value?.features ?? []) : [];
+    const fwAlerts: any[] = fwResp.status === "fulfilled" ? (fwResp.value?.features ?? []) : [];
 
     const allAlerts = [...rfAlerts, ...fwAlerts];
 
@@ -4744,16 +4927,19 @@ const COASTAL_EVENTS: Record<string, { severity: string; risk_index: string }> =
 async function handleTsunami(cors: CorsHeaders): Promise<Response> {
   const now = new Date().toISOString();
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-    // NWS alerts filtered for tsunami events
-    const res = await fetch('https://api.weather.gov/alerts/active?area=HI', {
-      signal: controller.signal,
-      headers: { Accept: 'application/geo+json', 'User-Agent': 'Kahu Ola / kahuola.org' }
-    });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error(`NWS ${res.status}`);
-    const data: any = await res.json();
+    // ── P44 · FIX 2 · THIS PATH IS DELIBERATELY UNCACHED. DO NOT "FIX" IT. ──
+    // Every other NWS path in this file gained a caches.default TTL in P44.
+    // This one did not, and the inconsistency is the point: a tsunami warning
+    // must not be delayed by up to 30 seconds to save a subrequest. Tsunami is
+    // a lazy client module with small volume, so the saving would be trivial
+    // and the cost is the one hazard where minutes decide outcomes.
+    //
+    // `useCache: false` skips the stored entry in both directions — no read,
+    // no write. It may still JOIN a request already on the wire, which costs
+    // nothing in freshness because that fetch is happening right now anyway.
+    const upstream = await fetchNwsAlerts(cors, ['HI'], { useCache: false });
+    if (!upstream.ok) throw new Error(`NWS ${upstream.error}`);
+    const data: any = upstream.data;
     const rawFeatures = Array.isArray(data?.features) ? data.features : [];
     const signals: Feature[] = rawFeatures
       .filter((f: any) => {
@@ -4797,16 +4983,16 @@ async function handleTsunami(cors: CorsHeaders): Promise<Response> {
 async function handleCoastal(cors: CorsHeaders): Promise<Response> {
   const now = new Date().toISOString();
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-    const res = await fetch('https://api.weather.gov/alerts/active?area=HI', {
-      signal: controller.signal,
-      headers: { Accept: 'application/geo+json', 'User-Agent': 'Kahu Ola / kahuola.org' },
-    });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error(`NWS ${res.status}`);
-
-    const data: any = await res.json();
+    // P44 FIX 3. Advisory-grade, not life-critical minutes, so this may be
+    // cached — and it goes through fetchNwsAlerts rather than carrying its own
+    // 300 s key. DEVIATION FROM THE BRIEF, deliberately: it asks for the
+    // identical /alerts/active?area=HI that the alerts cache already holds, so
+    // a separate 300 s entry would add an upstream fetch every 5 minutes AND
+    // serve data up to 300 s old. Sharing the 30 s entry costs ZERO extra
+    // subrequests and is ten times fresher.
+    const upstream = await fetchNwsAlerts(cors, ['HI']);
+    if (!upstream.ok) throw new Error(`NWS ${upstream.error}`);
+    const data: any = upstream.data;
     const rawFeatures = Array.isArray(data?.features) ? data.features : [];
 
     const signals: Feature[] = rawFeatures
@@ -4970,17 +5156,12 @@ function nearestIslandTo(lon: number, lat: number): NearestIsland | null {
 
 // The one outbound request on this path. No other fetch belongs in here.
 async function fetchStormPositions(): Promise<StormPositions> {
+  // P44. NHC sends max-age=300 on this file; a 300 s TTL adds no staleness
+  // beyond what NHC already declares. Full advisories are 6-hourly with
+  // 3-hourly intermediates, so the data is hours old by construction.
+  const POSITIONS_KEY = 'https://www.nhc.noaa.gov/CurrentStorms.json';
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-    // NHC active storms GeoJSON feed
-    const res = await fetch('https://www.nhc.noaa.gov/CurrentStorms.json', {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'Kahu Ola / kahuola.org' }
-    });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error(`NHC ${res.status}`);
-    const data: any = await res.json();
+    const data: any = await cachedJsonFetch(POSITIONS_KEY, NHC_POSITIONS_TTL);
     const storms = Array.isArray(data?.activeStorms) ? data.activeStorms : [];
 
     // Filter Pacific basin storms only (relevant to Hawaii).
@@ -5593,13 +5774,13 @@ async function fetchForecastPoints(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
     try {
+      // P44. The layer id is the only thing that varies, and it is in the URL,
+      // so the URL is a complete cache key. ArcGIS sends
+      // `max-age=0,must-revalidate`, but that describes its revalidation
+      // policy, not its data cadence — the content only changes when NHC
+      // issues an advisory, every 3-6 h.
       const url = `${NHC_MAPSERVER_BASE}/${layer}/query?where=1%3D1&outFields=*&f=geojson`;
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'Kahu Ola / kahuola.org' },
-      });
-      if (!res.ok) throw new Error(`NHC GIS ${res.status}`);
-      return { storm, kind, data: await res.json() as any };
+      return { storm, kind, data: await cachedJsonFetch(url, NHC_FORECAST_TTL) as any };
     } finally {
       // A timeout is a drop, not a retry. The storm keeps its position and
       // reports forecast_status 'unavailable'.
@@ -6209,20 +6390,13 @@ async function fetchWindProbabilities(
   }
   const fetchable = storms.filter((s): s is NormalizedStorm & { wind_prob_url: string } => !!s.wind_prob_url);
 
+  // P44. Keyed on the product URL from the feed, which already carries the
+  // storm id and advisory. Same 3-6 h advisory cadence as the track it
+  // accompanies. A timeout is still a drop, not a retry — cachedTextFetch
+  // throws exactly as the bare fetch did, and the rejected branch below is
+  // unchanged.
   const settled = await mapWithConcurrency(fetchable, PWS_CONCURRENCY_LIMIT, async (storm) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-    try {
-      const res = await fetch(storm.wind_prob_url, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'Kahu Ola / kahuola.org' },
-      });
-      if (!res.ok) throw new Error(`NHC PWS ${res.status}`);
-      return { storm, body: await res.text() };
-    } finally {
-      // A timeout is a drop, not a retry.
-      clearTimeout(timer);
-    }
+    return { storm, body: await cachedTextFetch(storm.wind_prob_url, NHC_WINDPROB_TTL) };
   });
 
   settled.forEach((r, i) => {
