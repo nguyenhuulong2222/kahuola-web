@@ -2516,7 +2516,12 @@
 
   </div>
 
-  <script src="/i18n/kahuola-i18n.js"></script>
+  <!-- P47: the ?v token pins the bundle to the HTML that needs it, so a
+       released string can never pair with a cached older bundle. It is
+       the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
+       whenever that file changes — this is a MANUAL step; there is no
+       build pipeline here to derive it automatically. -->
+  <script src="/i18n/kahuola-i18n.js?v=aeaed821"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -2691,8 +2696,32 @@
       }
 
       // i18n helper — safe if KAHUOLA_I18N not loaded
-      const _t = (key) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.t(key) : null);
-      const _tmpl = (key, vars) => (window.KAHUOLA_I18N ? window.KAHUOLA_I18N.tmpl(key, vars) : null);
+      // ── P47 · a missing key must be FALSY, or every fallback is dead ──────
+      // KAHUOLA_I18N.t() returns the KEY ITSELF when a key is absent. A key is
+      // a truthy string, so the `_t(k) || "English fallback"` idiom used at
+      // several hundred sites in this file never fired — and an iPhone holding
+      // a pre-P46 bundle (max-age 4 h) rendered the literal text
+      // "hero.title_html.hurricane_warning" as its headline while Kauaʻi and
+      // Niʻihau were under a Hurricane Warning.
+      //
+      // The comparison is `v === key` and nothing more: it works against ANY
+      // bundle version, including the stale one already in a user's cache. A
+      // new module API would have been useless here, since the whole failure
+      // mode is that the module is old.
+      //
+      // live-map.html has had this guard since it was written; only this file
+      // was missing it. applyAll() in the bundle guards the same way.
+      const _t = (key) => {
+        if (!window.KAHUOLA_I18N) return null;
+        const v = window.KAHUOLA_I18N.t(key);
+        return (v !== undefined && v !== null && v !== key) ? v : null;
+      };
+      const _tmpl = (key, vars) => {
+        if (!window.KAHUOLA_I18N) return null;
+        const base = window.KAHUOLA_I18N.t(key);
+        if (base === undefined || base === null || base === key) return null;
+        return window.KAHUOLA_I18N.tmpl(key, vars);
+      };
 
       // Track last freshness timestamp and payloads so langchange can re-render
       let _lastGeneratedAt = null;

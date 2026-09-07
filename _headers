@@ -41,5 +41,13 @@
 /layers.config.js
   Cache-Control: public, max-age=300, must-revalidate
 
+# P47. The i18n bundle was observed at max-age=14400 (4 h) while the HTML that
+# depends on it caches for 30-60 s. Any release adding a string opened a 4-hour
+# window in which a user held new HTML and old strings — which is how an iPhone
+# rendered "hero.title_html.hurricane_warning" as its headline during a live
+# Hurricane Warning. The bundle must never outlive the HTML that needs it.
+/i18n/*
+  Cache-Control: public, max-age=60, must-revalidate
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

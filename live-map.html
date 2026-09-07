@@ -3099,7 +3099,12 @@
     </div>
   </template>
 
-  <script src="/i18n/kahuola-i18n.js"></script>
+  <!-- P47: the ?v token pins the bundle to the HTML that needs it, so a
+       released string can never pair with a cached older bundle. It is
+       the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
+       whenever that file changes — this is a MANUAL step; there is no
+       build pipeline here to derive it automatically. -->
+  <script src="/i18n/kahuola-i18n.js?v=aeaed821"></script>
 
   <script>
     "use strict";
