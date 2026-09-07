@@ -385,8 +385,19 @@
       "map.s_flood_watch_n": "Watch active \xb7 {n}",
       "map.s_flood_watch_note_1": "Official source: National Weather Service. One flood watch geometry is active.",
       "map.s_flood_watch_note_n": "Official source: National Weather Service. {n} flood watch areas are active.",
-      "map.s_flood_none": "No active watch",
-      "map.s_flood_none_note": "Official source: National Weather Service. No active flash flood watch geometry was returned.",
+      // P39 — warning wording. The card hardcoded "watch" and rendered a live
+      // Flash Flood Warning as a watch on the map people open for detail.
+      "map.s_flood_warn_1": "Warning active",
+      "map.s_flood_warn_n": "Warning active \xb7 {n}",
+      "map.s_flood_warn_note_1": "Official source: National Weather Service. One flash flood warning is active.",
+      "map.s_flood_warn_note_n": "Official source: National Weather Service. {n} flash flood warnings are active.",
+      // P39 — case 3: signals present but the payload carries no usable tier.
+      // Name what NWS published; never invent "watch" or "warning".
+      "map.s_flood_active_n": "Active \xb7 {n}",
+      "map.s_flood_event_note": "Official source: National Weather Service. Active: {events}.",
+      "map.s_flood_generic": "Flash flood alert",
+      "map.s_flood_none": "No flood alert",
+      "map.s_flood_none_note": "Official source: National Weather Service. No flash flood warning, watch or advisory was returned.",
       "map.s_flood_unavail_note": "Official flood status could not be confirmed right now.",
       // Flood context status
       "map.s_fc_active_n": "Active \xb7 {n}",
@@ -532,7 +543,11 @@
       // Tsunami status
       "map.s_tsunami_alert_n": "ALERT \xb7 {n}",
       "map.s_tsunami_warn_note": "\u26a0 Tsunami warning active \u2014 follow official guidance.",
-      "map.s_tsunami_none_note": "No active tsunami warnings.",
+      // P39 — the tsunami card names the event NWS published instead of calling
+      // every signal a "warning". No tier is derived for tsunami.
+      "map.s_tsunami_event_note": "\u26a0 {events} \u2014 follow official guidance.",
+      "map.s_tsunami_unnamed_note": "\u26a0 Tsunami alert active \u2014 check the NWS Tsunami Warning Center.",
+      "map.s_tsunami_none_note": "No active tsunami warning, advisory or watch.",
       "map.s_tsunami_unavail_note": "NWS data unavailable.",
       // Other NWS Alerts (superset) status + card
       "map.s_alerts_n": "{n} alert(s)",
@@ -1375,8 +1390,15 @@
       "map.s_flood_watch_n": "Đang theo dõi · {n}",
       "map.s_flood_watch_note_1": "Nguồn chính thức: NWS. Một vùng theo dõi lũ đang hoạt động.",
       "map.s_flood_watch_note_n": "Nguồn chính thức: NWS. {n} vùng theo dõi lũ đang hoạt động.",
-      "map.s_flood_none": "Không có theo dõi",
-      "map.s_flood_none_note": "Nguồn chính thức: NWS. Không có vùng theo dõi lũ quét nào đang hoạt động.",
+      "map.s_flood_warn_1": "Cảnh báo đang hiệu lực",
+      "map.s_flood_warn_n": "Cảnh báo đang hiệu lực \xb7 {n}",
+      "map.s_flood_warn_note_1": "Nguồn chính thức: NWS. Một cảnh báo lũ quét đang hiệu lực.",
+      "map.s_flood_warn_note_n": "Nguồn chính thức: NWS. {n} cảnh báo lũ quét đang hiệu lực.",
+      "map.s_flood_active_n": "Đang hoạt động \xb7 {n}",
+      "map.s_flood_event_note": "Nguồn chính thức: NWS. Đang hoạt động: {events}.",
+      "map.s_flood_generic": "Cảnh báo lũ quét",
+      "map.s_flood_none": "Không có cảnh báo lũ",
+      "map.s_flood_none_note": "Nguồn chính thức: NWS. Không có cảnh báo, theo dõi hay khuyến cáo lũ quét nào được trả về.",
       "map.s_flood_unavail_note": "Tình trạng lũ chính thức không thể xác nhận lúc này.",
       // Flood context status
       "map.s_fc_active_n": "Đang hoạt động · {n}",
@@ -1522,7 +1544,9 @@
       // Tsunami status
       "map.s_tsunami_alert_n": "CẢNH BÁO \xb7 {n}",
       "map.s_tsunami_warn_note": "\u26a0 Cảnh báo sóng thần đang hoạt động \u2014 làm theo hướng dẫn chính thức.",
-      "map.s_tsunami_none_note": "Không có cảnh báo sóng thần nào đang hoạt động.",
+      "map.s_tsunami_event_note": "\u26a0 {events} \u2014 hãy làm theo hướng dẫn chính thức.",
+      "map.s_tsunami_unnamed_note": "\u26a0 Cảnh báo sóng thần đang hoạt động \u2014 xem Trung tâm Cảnh báo Sóng thần NWS.",
+      "map.s_tsunami_none_note": "Không có cảnh báo, khuyến cáo hay theo dõi sóng thần nào đang hoạt động.",
       "map.s_tsunami_unavail_note": "Dữ liệu NWS không khả dụng.",
       // Other NWS Alerts (superset) status + card
       "map.s_alerts_n": "{n} cảnh báo",
@@ -2919,7 +2943,7 @@
       "map.s_none": "Wala",
       "map.s_off": "Naka-off",
       "map.s_inactive": "Hindi Aktibo",
-      "map.s_flood_none": "Walang aktibong bantay",
+      "map.s_flood_none": KEEP_ENGLISH,   // P39: was "Walang aktibong bantay" (watch) — key meaning changed, needs retranslation
       "map.s_flood_none_note": KEEP_ENGLISH,
       "map.s_flood_unavail_note": KEEP_ENGLISH,
       "map.s_flood_watch_1": KEEP_ENGLISH,
@@ -3515,7 +3539,7 @@
       "map.s_none": "Awan",
       "map.s_off": "Off",
       "map.s_inactive": "Diak Aktibo",
-      "map.s_flood_none": "Awan aktibo nga watch",
+      "map.s_flood_none": KEEP_ENGLISH,   // P39: was "Awan aktibo nga watch" — key meaning changed, needs retranslation
       "map.s_flood_none_note": KEEP_ENGLISH, "map.s_flood_unavail_note": KEEP_ENGLISH,
       "map.s_flood_watch_1": KEEP_ENGLISH, "map.s_flood_watch_n": KEEP_ENGLISH,
       "map.s_flood_watch_note_1": KEEP_ENGLISH, "map.s_flood_watch_note_n": KEEP_ENGLISH,
@@ -4042,7 +4066,7 @@
       "map.s_none": "\u306a\u3057",
       "map.s_off": "\u30aa\u30d5",
       "map.s_inactive": "\u975e\u30a2\u30af\u30c6\u30a3\u30d6",
-      "map.s_flood_none": "\u6d2a\u6c34\u6ce8\u610f\u306a\u3057",
+      "map.s_flood_none": KEEP_ENGLISH,   // P39: was 洪水注意なし (advisory) — key meaning changed, needs retranslation
       "map.s_flood_none_note": KEEP_ENGLISH, "map.s_flood_unavail_note": KEEP_ENGLISH,
       "map.s_flood_watch_1": KEEP_ENGLISH, "map.s_flood_watch_n": KEEP_ENGLISH,
       "map.s_flood_watch_note_1": KEEP_ENGLISH, "map.s_flood_watch_note_n": KEEP_ENGLISH,

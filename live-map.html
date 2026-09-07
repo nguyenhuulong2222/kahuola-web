@@ -2826,7 +2826,12 @@
               <div class="priority-kicker" data-i18n="map.kicker_nws">Official · National Weather Service</div>
               <div class="priority-title" data-i18n="map.hazard_flood">Flash Flood</div>
             </div>
-            <div class="status-badge status-none" id="flood-status-badge" data-i18n="map.s_flood_none">No active watch
+            <!-- P39: no data-i18n on this badge. It is written by
+                 updateFlashFloodStatusUI on every refresh, and applyAll() was
+                 overwriting the live severity with the "none" string on every
+                 language change — a live Flash Flood Warning silently became
+                 "No flood alert". The langchange handler redraws it from state. -->
+            <div class="status-badge status-none" id="flood-status-badge">No active watch
             </div>
           </div>
           <div class="priority-note" id="flood-status-note">Official source: National Weather Service. No active flash
@@ -2871,7 +2876,8 @@
             </div>
             <div class="status-badge status-none" id="tsunami-badge">·</div>
           </div>
-          <div class="priority-note" id="tsunami-note" data-i18n="map.tsunami_tap_note">NWS Tsunami Warning Center — tap
+          <!-- P39: JS-managed once the module loads; see the flood badge. -->
+          <div class="priority-note" id="tsunami-note">NWS Tsunami Warning Center — tap
             to load live status.</div>
         </div>
 
@@ -3876,11 +3882,15 @@
         key: "flashFlood",
         endpoint: IS_LOCAL ? "./flash-flood-test.json" : "https://kahuola.org/api/hazards/flash-flood?region=hawaii",
         enabled: true, affectsGlobalHealth: false,
-        parsePayload(json) { const raw = parseCanonicalSignals(json, "flashFlood"); return { features: normalizeFlashFloodFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "National Weather Service" }; },
+        // P39: the Worker's summary is carried through so the card can read the
+        // TIER, not just the row count. meta is the existing channel for this —
+        // refreshHazard already clears it on failure, so an unavailable card can
+        // never render a stale warning.
+        parsePayload(json) { const raw = parseCanonicalSignals(json, "flashFlood"); return { features: normalizeFlashFloodFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "National Weather Service", meta: { summary: json && json.summary ? json.summary : null } }; },
         ensureLayers, applyData(features) { updateFlashFloodSource(features); },
         onFetchComplete() {
           const s = getState("flashFlood");
-          updateFlashFloodStatusUI(s.sourceStatus, s.features.length);
+          updateFlashFloodStatusUI(s);
           // Auto-enable rain radar when flood warning is active
           if (s.sourceStatus === "detected" && s.features.length > 0 && !rainRadarVisible) {
             rainRadarVisible = true;
@@ -4358,6 +4368,17 @@
         state.generatedAt = parseDateMaybe(json.generated_at) || parsed.sourceTime || state.fetchAt;
         state.sourceLabel = parsed.sourceLabel || null;
         state.status = "ready";
+        // ── P39 · READ THIS BEFORE USING sourceStatus IN CARD COPY ──────────
+        // sourceStatus carries PRESENCE, never SEVERITY. "detected" means the
+        // payload had at least one row; it says nothing about whether that row
+        // is a warning, a watch or an advisory.
+        //
+        // Any card that asserts a tier word must read that tier from the
+        // payload (summary.warning_count / watch_count) or name the event
+        // verbatim from properties.event. This shape has cost us three times:
+        // the flash flood card said "Watch active" during a live Flash Flood
+        // Warning, the tsunami card said "warning" for any signal, and the
+        // alerts card once reported "Clear" while its endpoint was down.
         state.sourceStatus = state.features.length > 0 ? "detected" : "none";
         state.meta = parsed.meta || {};
         model.applyData(state.features);
@@ -6085,7 +6106,7 @@
     function syncPerimeterButtons() { ["perimeter-btn-panel-desktop", "perimeter-btn-panel-mobile", "perimeter-btn-mobile"].forEach((id) => { const el = document.getElementById(id); if (!el) return; el.textContent = perimeterVisible ? (_t("map.perimeters_on") || "Perimeters: On") : (_t("map.perimeters_off") || "Perimeters: Off"); el.classList.toggle("active", perimeterVisible); }); }
     function toggleSmokeLayer() { smokeVisible = !smokeVisible; getState("smoke").visible = smokeVisible; syncSmokeLayerVisibility(); updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length); renderUnifiedPanels(); }
     function togglePerimeterLayer() { perimeterVisible = !perimeterVisible; getState("perimeter").visible = perimeterVisible; syncPerimeterLayerVisibility(); updatePerimeterStatusUI(getState("perimeter").sourceStatus, getState("perimeter").features.length); renderUnifiedPanels(); }
-    function toggleFlashFloodLayer() { flashFloodVisible = !flashFloodVisible; floodContextVisible = flashFloodVisible; mrmsVisible = flashFloodVisible; getState("flashFlood").visible = flashFloodVisible; getState("floodContext").visible = floodContextVisible; getState("mrmsRain").visible = mrmsVisible; syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); updateFlashFloodStatusUI(getState("flashFlood").sourceStatus, getState("flashFlood").features.length); updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }
+    function toggleFlashFloodLayer() { flashFloodVisible = !flashFloodVisible; floodContextVisible = flashFloodVisible; mrmsVisible = flashFloodVisible; getState("flashFlood").visible = flashFloodVisible; getState("floodContext").visible = floodContextVisible; getState("mrmsRain").visible = mrmsVisible; syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); updateFlashFloodStatusUI(getState("flashFlood")); updateMrmsStatusUI(getState("mrmsRain")); renderUnifiedPanels(); }
     function toggleWindRiskLayer() { windRiskVisible = !windRiskVisible; getState("windRisk").visible = windRiskVisible; syncWindRiskLayerVisibility(); updateWindRiskStatusUI(getState("windRisk")); renderUnifiedPanels(); }
     function syncAirnowButtons() { ["airnow-btn-panel-desktop","airnow-btn-panel-mobile","airnow-btn-mobile"].forEach((id) => { const el = document.getElementById(id); if (!el) return; el.textContent = airnowVisible ? "AQI Layer: On" : "AQI Layer: Off"; el.classList.toggle("active", airnowVisible); }); }
     // S2(a): ONE toggle, both layers. They are complementary across zoom rather
@@ -6115,12 +6136,83 @@
         if (metric) { metric.textContent = _t("map.s_perim_unavail_metric") || "Perimeter data unavailable"; metric.className = "metric-value v-dim"; } if (badge) { badge.classList.add("status-unavailable"); badge.textContent = _t("map.s_unavailable") || "Unavailable"; } if (note) note.textContent = _t("map.s_perim_unavail_note") || "Perimeter data is temporarily unavailable.";
       });
     }
-    function updateFlashFloodStatusUI(state, count = 0) {
+    // ── P39 · the flash flood card reads SEVERITY, not just presence ──────
+    // It used to take (sourceStatus, count) and hardcode the word "watch", so a
+    // live Flash Flood WARNING for Oʻahu rendered as "Watch active · One flood
+    // watch geometry is active" on the map people open for detail. index.html
+    // had it right all along because it reads summary.warning_count.
+    //
+    // The Worker's summary is the authority. The client-side event-name match
+    // in normalizeFlashFloodFeatures is deliberately NOT used here: it is a
+    // second parser of the same NWS fact, and two parsers drift. The aggregator
+    // owns truth.
+    //
+    // Resolution order, and case 3 is the one that matters:
+    //   warning_count > 0            -> warning wording
+    //   watch_count > 0              -> watch wording
+    //   signals but no usable counts -> NAME THE EVENT, invent no tier
+    //   no signals                   -> clear
+    //   fetch failed                 -> unavailable
+    function updateFlashFloodStatusUI(state) {
+      const st = state && typeof state === "object" ? state : {};
+      const sourceStatus = st.sourceStatus;
+      const features = Array.isArray(st.features) ? st.features : [];
+      const count = features.length;
+      const summary = (st.meta && st.meta.summary) || null;
+
+      // Number() on undefined/null/"" gives NaN, which fails > 0 — so a missing
+      // or non-numeric count falls through to case 3 rather than reading as 0.
+      const warnN = summary ? Number(summary.warning_count) : NaN;
+      const watchN = summary ? Number(summary.watch_count) : NaN;
+      const hasWarn = Number.isFinite(warnN) && warnN > 0;
+      const hasWatch = Number.isFinite(watchN) && watchN > 0;
+
+      // Case 3's text: whatever NWS actually published, verbatim. Distinct
+      // event names only, so three Flash Flood Warnings read as one name.
+      const eventNames = [];
+      features.forEach((f) => {
+        const e = f && f.properties && typeof f.properties.event === "string" ? f.properties.event.trim() : "";
+        if (e && eventNames.indexOf(e) === -1) eventNames.push(e);
+      });
+
+      let cls, badgeText, noteText;
+      if (sourceStatus === "detected" || count > 0) {
+        cls = "status-detected";
+        if (hasWarn) {
+          badgeText = warnN === 1 ? (_t("map.s_flood_warn_1") || "Warning active")
+            : (_tmpl("map.s_flood_warn_n", { n: warnN }) || `Warning active \u00b7 ${warnN}`);
+          noteText = warnN === 1 ? (_t("map.s_flood_warn_note_1") || "Official source: National Weather Service. One flash flood warning is active.")
+            : (_tmpl("map.s_flood_warn_note_n", { n: warnN }) || `Official source: National Weather Service. ${warnN} flash flood warnings are active.`);
+        } else if (hasWatch) {
+          badgeText = watchN === 1 ? (_t("map.s_flood_watch_1") || "Watch active")
+            : (_tmpl("map.s_flood_watch_n", { n: watchN }) || `Watch active \u00b7 ${watchN}`);
+          noteText = watchN === 1 ? (_t("map.s_flood_watch_note_1") || "Official source: National Weather Service. One flood watch geometry is active.")
+            : (_tmpl("map.s_flood_watch_note_n", { n: watchN }) || `Official source: National Weather Service. ${watchN} flood watch areas are active.`);
+        } else {
+          // Counts absent or zero while signals exist. Name what NWS published
+          // and stop — asserting a tier here would be guessing.
+          const named = eventNames.length ? eventNames.join(", ") : (_t("map.s_flood_generic") || "Flash flood alert");
+          badgeText = _tmpl("map.s_flood_active_n", { n: count }) || `Active \u00b7 ${count}`;
+          noteText = _tmpl("map.s_flood_event_note", { events: named })
+            || `Official source: National Weather Service. Active: ${named}.`;
+        }
+      } else if (sourceStatus === "none") {
+        cls = "status-none";
+        // FIX 3. Names what the endpoint actually checks. "No active watch"
+        // named the wrong product as absent.
+        badgeText = _t("map.s_flood_none") || "No flood alert";
+        noteText = _t("map.s_flood_none_note") || "Official source: National Weather Service. No flash flood warning, watch or advisory was returned.";
+      } else {
+        cls = "status-unavailable";
+        badgeText = _t("map.s_unavailable") || "Unavailable";
+        noteText = _t("map.s_flood_unavail_note") || "Official flood status could not be confirmed right now.";
+      }
+
       ["desktop", "mobile"].forEach((suffix) => {
-        const badge = document.getElementById(`flood-status-badge-${suffix}`); const note = document.getElementById(`flood-status-note-${suffix}`); if (badge) badge.className = "status-badge";
-        if (state === "detected") { if (badge) { badge.classList.add("status-detected"); badge.textContent = count === 1 ? (_t("map.s_flood_watch_1") || "Watch active") : (_tmpl("map.s_flood_watch_n", { n: count }) || `Watch active \xb7 ${count}`); } if (note) note.textContent = count === 1 ? (_t("map.s_flood_watch_note_1") || "Official source: National Weather Service. One flood watch geometry is active.") : (_tmpl("map.s_flood_watch_note_n", { n: count }) || `Official source: National Weather Service. ${count} flood watch areas are active.`); return; }
-        if (state === "none") { if (badge) { badge.classList.add("status-none"); badge.textContent = _t("map.s_flood_none") || "No active watch"; } if (note) note.textContent = _t("map.s_flood_none_note") || "Official source: National Weather Service. No active flash flood watch geometry was returned."; return; }
-        if (badge) { badge.classList.add("status-unavailable"); badge.textContent = _t("map.s_unavailable") || "Unavailable"; } if (note) note.textContent = _t("map.s_flood_unavail_note") || "Official flood status could not be confirmed right now.";
+        const badge = document.getElementById(`flood-status-badge-${suffix}`);
+        const note = document.getElementById(`flood-status-note-${suffix}`);
+        if (badge) { badge.className = `status-badge ${cls}`; badge.textContent = badgeText; }
+        if (note) note.textContent = noteText;
       });
     }
     function updateLocalHazardStatusUI(state) {
@@ -6836,19 +6928,64 @@
     }
 
       // ── Status UI functions ───────────────────────────────────
+      // ── P39 · FIX 2 · tsunami names the EVENT, never a derived tier ───────
+      // This printed "⚠ Tsunami warning active" on ANY signal. NWS publishes
+      // Tsunami Warning, Advisory, Watch and Information Statement; rendering an
+      // Advisory as a Warning is crying wolf on the one hazard where minutes
+      // matter, and rendering a Warning as anything softer is worse.
+      //
+      // No tier is derived here. The tsunami payload carries no warning_count /
+      // watch_count (summary is {status, count, message} only), so there is no
+      // authority to read one from — and guessing from the event string would be
+      // the second-parser mistake P39 exists to remove. We print what NWS
+      // published, the way the alerts card already does.
       function updateTsunamiStatusUI(state) {
+        const st = state && typeof state === "object" ? state : {};
+        const features = Array.isArray(st.features) ? st.features : [];
+        const count = features.length;
+        const sourceStatus = st.sourceStatus;
+
+        const eventNames = [];
+        features.forEach((f) => {
+          const e = f && f.properties && typeof f.properties.event === "string" ? f.properties.event.trim() : "";
+          if (e && eventNames.indexOf(e) === -1) eventNames.push(e);
+        });
+
+        // Tsunami is a LAZY module: until a reader taps it, sourceStatus is
+        // still "unknown" and nothing has been fetched. That is not an outage
+        // and must not read as one — "NWS data unavailable" on an untouched
+        // card would claim a failure that never happened. Before P39 this state
+        // was masked by applyAll() rewriting the note from data-i18n; now it is
+        // handled explicitly.
+        const notLoaded = !sourceStatus || sourceStatus === "unknown";
+        const cls = notLoaded ? "status-none" :
+          sourceStatus === "detected" ? "status-detected" :
+          sourceStatus === "none" ? "status-none" : "status-unavailable";
+        const txt = notLoaded ? "\u00b7" :
+          sourceStatus === "detected" ? (_tmpl("map.s_tsunami_alert_n", { n: count }) || `ALERT \u00b7 ${count}`) :
+          sourceStatus === "none" ? (_t("map.s_clear") || "Clear") : (_t("map.s_unavailable") || "Unavailable");
+
+        let ntxt;
+        if (notLoaded) {
+          ntxt = _t("map.tsunami_tap_note") || "NWS Tsunami Warning Center \u2014 tap to load live status.";
+        } else if (sourceStatus === "detected") {
+          ntxt = eventNames.length
+            ? (_tmpl("map.s_tsunami_event_note", { events: eventNames.join(", ") }) || `\u26a0 ${eventNames.join(", ")} \u2014 follow official guidance.`)
+            // No event name at all: say only what we can stand behind.
+            : (_t("map.s_tsunami_unnamed_note") || "\u26a0 Tsunami alert active \u2014 check the NWS Tsunami Warning Center.");
+        } else if (sourceStatus === "none") {
+          // FIX 3. Names every tsunami product the endpoint checks, not just
+          // warnings — the old copy left an active Advisory sounding covered.
+          ntxt = _t("map.s_tsunami_none_note") || "No active tsunami warning, advisory or watch.";
+        } else {
+          ntxt = _t("map.s_tsunami_unavail_note") || "NWS data unavailable.";
+        }
+
         ["desktop", "mobile"].forEach(sfx => {
           const badge = document.getElementById(`tsunami-badge-${sfx}`);
           const note = document.getElementById(`tsunami-note-${sfx}`);
           const b = document.getElementById("tsunami-badge");
           const n = document.getElementById("tsunami-note");
-          const count = state.features?.length || 0;
-          const cls = state.sourceStatus === "detected" ? "status-detected" :
-            state.sourceStatus === "none" ? "status-none" : "status-unavailable";
-          const txt = state.sourceStatus === "detected" ? (_tmpl("map.s_tsunami_alert_n", { n: count }) || `ALERT \xb7 ${count}`) :
-            state.sourceStatus === "none" ? (_t("map.s_clear") || "Clear") : (_t("map.s_unavailable") || "Unavailable");
-          const ntxt = state.sourceStatus === "detected" ? (_t("map.s_tsunami_warn_note") || "\u26a0 Tsunami warning active \u2014 follow official guidance.") :
-            state.sourceStatus === "none" ? (_t("map.s_tsunami_none_note") || "No active tsunami warnings.") : (_t("map.s_tsunami_unavail_note") || "NWS data unavailable.");
           [badge, b].forEach(el => { if (!el) return; el.className = `status-badge ${cls}`; el.textContent = txt; });
           [note, n].forEach(el => { if (el) el.textContent = ntxt; });
         });
@@ -7509,7 +7646,7 @@
     syncWindRiskLayerVisibility();
     updateSmokeStatusUI("unknown", 0);
     updatePerimeterStatusUI("unknown", 0);
-    updateFlashFloodStatusUI("unknown", 0);
+    updateFlashFloodStatusUI({ sourceStatus: "unknown", features: [], meta: {} });
     updateFloodContextStatusUI(getState("floodContext"));
     updateMrmsStatusUI(getState("mrmsRain"));
     updateWindRiskStatusUI(getState("windRisk"));
@@ -7705,6 +7842,11 @@
       // live state after a language switch — otherwise the only surface these
       // alerts have disappears when a reader picks Vietnamese.
       updateAlertsStatusUI(getState("alerts"));
+      // P39: same reason — these two write severity into JS-managed nodes
+      // and must be redrawn from live state, not left at whatever
+      // applyAll() put there. Switching language must not lose a warning.
+      updateFlashFloodStatusUI(getState("flashFlood"));
+      updateTsunamiStatusUI(getState("tsunami"));
       // Re-render panel accordion content (JS-driven strings)
       renderUnifiedPanels();
     });
