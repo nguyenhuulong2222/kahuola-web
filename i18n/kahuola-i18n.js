@@ -906,6 +906,9 @@
       "hero.narrative.generic_storm_watch": "NWS has issued a storm watch for {area}. Stay informed and be ready to act \u2014 open the Live Map for the specific product and areas.",
       "hero.banner.generic_storm_watch": "\ud83c\udf00 NWS Storm Watch Active",
       "kupuna.title.hurricane_warning": "Kūpuna & Keiki \u2014 Hurricane Warning",
+      // P48 — appended to the hurricane note when a flood warning is ALSO
+      // active, so the flood advice is not lost when the hero changes.
+      "kupuna.body.hurricane_plus_flood": "A flash flood warning is also in effect. Do not drive or walk through flood water, and move away from streams and low crossings while you prepare.",
       "kupuna.body.hurricane_warning": "A HURRICANE WARNING is in effect. Hurricane conditions are expected, not merely possible. Kūpuna, keiki, and anyone in a low-lying, coastal or exposed area should complete preparations now and be ready to shelter or evacuate on county instruction. Do not wait for the wind to arrive. E mālama pono.",
       "kupuna.body.hurricane_watch": "A hurricane watch is in effect. Hurricane conditions are possible. Kūpuna, keiki, and those in low-lying, coastal or exposed areas should prepare now \u2014 medicines, water, and a plan for where to go \u2014 and stay informed. E mālama pono.",
       "kupuna.body.generic_storm_warning": "A storm warning is in effect. Dangerous conditions are expected, not just possible. Kūpuna, keiki, and those in low-lying or exposed areas should act now and follow county emergency instructions. E mālama pono.",
@@ -1934,6 +1937,7 @@
       "hero.narrative.generic_storm_watch": "NWS đã ban hành theo dõi bão cho {area}. Hãy theo dõi thông tin và sẵn sàng hành động \u2014 mở Bản đồ Trực tiếp để xem loại cảnh báo và khu vực cụ thể.",
       "hero.banner.generic_storm_watch": "\ud83c\udf00 Theo dõi bão NWS đang hoạt động",
       "kupuna.title.hurricane_warning": "Người Cao Tuổi & Trẻ Em \u2014 Cảnh báo Bão Cuồng phong",
+      "kupuna.body.hurricane_plus_flood": "Cảnh báo lũ quét cũng đang hiệu lực. Không lái xe hay đi bộ qua vùng nước lũ, và hãy tránh xa suối và các đoạn đường trũng trong khi chuẩn bị.",
       "kupuna.body.hurricane_warning": "CẢNH BÁO BÃO CUỒNG PHONG đang hiệu lực. Điều kiện bão cuồng phong được dự báo sẽ xảy ra, không chỉ là khả năng. Người cao tuổi, trẻ em và bất kỳ ai ở vùng trũng thấp, ven biển hoặc lộ thiên cần hoàn tất chuẩn bị ngay và sẵn sàng trú ẩn hoặc sơ tán theo chỉ dẫn của quận. Đừng chờ đến khi gió tới. E mālama pono.",
       "kupuna.body.hurricane_watch": "Theo dõi bão cuồng phong đang hiệu lực. Điều kiện bão cuồng phong có thể xảy ra. Người cao tuổi, trẻ em và những người ở vùng trũng thấp, ven biển hoặc lộ thiên nên chuẩn bị ngay \u2014 thuốc men, nước uống và kế hoạch nơi trú \u2014 và theo dõi thông tin. E mālama pono.",
       "kupuna.body.generic_storm_warning": "Cảnh báo bão đang hiệu lực. Điều kiện nguy hiểm được dự báo sẽ xảy ra, không chỉ là khả năng. Người cao tuổi, trẻ em và những người ở vùng trũng thấp hoặc lộ thiên cần hành động ngay và làm theo hướng dẫn khẩn cấp của quận. E mālama pono.",

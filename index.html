@@ -2521,7 +2521,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=aeaed821"></script>
+  <script src="/i18n/kahuola-i18n.js?v=92abb908"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -3086,7 +3086,15 @@
             kicClass: "fire"
           };
         }
-        if (redFlag) {
+        // P48. This branch used to read `if (redFlag)` and ignored primaryEvent
+        // entirely, so a Red Flag Warning pre-empted the flood AND storm copy
+        // regardless of where the ladder had ranked it. With P48 putting a
+        // Hurricane Warning above fire, the page split in half: the chip and
+        // title said HURRICANE WARNING while the kicker and narrative said RED
+        // FLAG WARNING. The ladder is the authority on ranking; this function
+        // only describes what the ladder chose. Gating on FIRE_ACTIVE makes
+        // that true. Fire weather remains visible in its own signal strip.
+        if (redFlag && primaryEvent === "FIRE_ACTIVE") {
           return {
             kicker:      _t("hero.kicker.red_flag")          || "RED FLAG WARNING",
             title:       "Critical fire weather conditions active.",
@@ -3630,7 +3638,7 @@
           bannerTitle: _tmpl("hero.banner.volcanic_heat", { n: n, s: s }) || `🌋 ${n} Heat Signal${s} · Kīlauea/Mauna Loa Volcanic Zone`,
         };
       }
-      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit, storm) {
+      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit, storm, floodWarn) {
         const titleEl = document.getElementById("kupunaTitle");
         const bodyEl  = document.getElementById("kupunaBody");
         const noteEl  = document.getElementById("kupunaNote");
@@ -3693,7 +3701,22 @@
           var kw = (storm && storm.key) || "generic_warning";
           if (kw === "hurricane_warning") {
             titleEl.textContent = _t("kupuna.title.hurricane_warning") || "K\u016bpuna & Keiki \u2014 Hurricane Warning";
-            bodyEl.textContent  = _t("kupuna.body.hurricane_warning")  || "A HURRICANE WARNING is in effect. Hurricane conditions are expected, not merely possible. K\u016bpuna, keiki, and anyone in a low-lying, coastal or exposed area should complete preparations now and be ready to shelter or evacuate on county instruction. Do not wait for the wind to arrive. E m\u0101lama pono.";
+            // P48. The hurricane instruction leads, because that is the
+            // decision in front of the reader. But a flood warning running
+            // underneath a hurricane must NOT disappear just because the hero
+            // changed — the water is what actually reaches most people. Both
+            // sentences ship, hurricane first.
+            var hurBody = _t("kupuna.body.hurricane_warning") || "A HURRICANE WARNING is in effect. Hurricane conditions are expected, not merely possible. K\u016bpuna, keiki, and anyone in a low-lying, coastal or exposed area should complete preparations now and be ready to shelter or evacuate on county instruction. Do not wait for the wind to arrive. E m\u0101lama pono.";
+            if (floodWarn) {
+              var floodAlso = _t("kupuna.body.hurricane_plus_flood") || "A flash flood warning is also in effect. Do not drive or walk through flood water, and move away from streams and low crossings while you prepare.";
+              // The flood sentence goes BEFORE "E mālama pono" so the note
+              // still closes on the blessing rather than on an instruction.
+              var close = "E m\u0101lama pono.";
+              hurBody = hurBody.indexOf(close) !== -1
+                ? hurBody.replace(close, floodAlso + " " + close)
+                : (hurBody + " " + floodAlso);
+            }
+            bodyEl.textContent = hurBody;
           } else if (kw === "generic_warning") {
             titleEl.textContent = _t("kupuna.title.storm_warning") || "K\u016bpuna & Keiki Storm Safety";
             bodyEl.textContent  = _t("kupuna.body.generic_storm_warning") || "A storm warning is in effect. Dangerous conditions are expected, not just possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should act now and follow county emergency instructions. E m\u0101lama pono.";
@@ -3847,16 +3870,42 @@
         //
         // Only one precedence actually moves here: a storm warning now beats
         // a flood or storm WATCH. Every other pair keeps the order it had.
+        // P48. Resolved before the ladder so Tier 1 can rank on the PRODUCT.
+        // Same P46 resolver the hero copy uses — not a second derivation.
+        const _ladderStormProduct = resolveStormProduct(alertsPayload, stormStatus);
+        const isHurricaneWarning = _ladderStormProduct.key === "hurricane_warning";
+
         let primaryEvent = "MONITORING";
         // Tier 0 — DEGRADED outranks everything. A page that cannot see is not
         // a page that can say "calm", and not one that should cry fire either.
         if (isDegraded)                            primaryEvent = "DEGRADED";
-        // Tier 1 — WARNING: fire, then flood, then storm.
+        // ── Tier 1 — WARNING · P48 reorder ──────────────────────────────
+        //   1. Hurricane Warning   2. Fire   3. Flood Warning
+        //   4. Tropical Storm Warning
+        //
+        // P36 set this as Fire > Flood > Storm, written when "storm" meant a
+        // tropical storm — context, not the main event. With six Hurricane
+        // Warnings out for Kauaʻi and Niʻihau the page led with "Flash flood
+        // warning", and a flash flood during a hurricane is a CONSEQUENCE of
+        // the hurricane, not a parallel event. Naming the symptom instead of
+        // the cause tells a Kauaʻi reader to move to higher ground when the
+        // decision in front of them is whether to evacuate.
+        //
+        // Only a HURRICANE Warning is promoted above fire: it is the highest
+        // product NWS issues for this hazard class and it carries an
+        // evacuation decision. A Tropical Storm Warning stays below flood,
+        // exactly where P36 put it. Tiers 2-4 are untouched.
+        //
+        // The test reads the alerts feed through P46's resolver, not
+        // summary.storm.status — so a Hurricane Warning is honoured even if the
+        // Worker's storm aggregation has not caught up, which closes the gap
+        // P46 flagged as its residual risk.
+        else if (isHurricaneWarning)               primaryEvent = "STORM_WARNING";
         // The >= 3 split is kept. A single FIRMS pixel is a detection, not a
         // warning — it can be an agricultural burn or a hot roof — and
         // promoting one to warning level would cry wolf on the layer this
         // platform exists for. Three clustered detections, or an NWS Red Flag
-        // Warning, are warning-grade and stay at the top of Tier 1.
+        // Warning, are warning-grade.
         else if (fireItems.length >= 3 || redFlag) primaryEvent = "FIRE_ACTIVE";
         else if (floodWarning)                     primaryEvent = "FLOOD_WARNING";
         else if (stormStatus === "warning")        primaryEvent = "STORM_WARNING";
@@ -3892,7 +3941,7 @@
         renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
         renderFireCard(firePayload);
         renderFloodCard(floodPayload, alertsPayload);
-        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload), resolveStormProduct(alertsPayload, summaryPayload?.storm?.status));
+        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload), resolveStormProduct(alertsPayload, summaryPayload?.storm?.status), floodWarning);
 
         // Re-apply locale translations after all JS renders — ensures data-i18n elements
         // that were overwritten by render functions (e.g. signalDetailLabel) get the
@@ -4036,7 +4085,7 @@
         // switch untouched. The unmatched-zone line is a sentence and does not.
         renderUnmatchedZones(primaryEvent === "DEGRADED");
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
-        renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire), _langStormProduct);
+        renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire), _langStormProduct, floodWarn);
 
         // Final applyAll — must be last. JS renders above can overwrite data-i18n elements
         // (e.g. signalDetailLabel overwritten at L2331 with KEEP_ENGLISH dynamic text).
