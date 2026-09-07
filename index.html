@@ -2569,6 +2569,81 @@
           .map(function (f) { return String(f?.properties?.event || "").trim().toLowerCase(); })
           .filter(Boolean);
       }
+      // ── P46 · name the NWS product, never a severity-derived guess ──────
+      // summary.storm.status carries SEVERITY only — "warning"|"watch"|"none".
+      // It cannot express hazard TYPE, so the hero read status === "warning"
+      // and printed a hardcoded "Tropical storm warning" while NWS had six
+      // HURRICANE WARNINGS out for Niʻihau and every Kauaʻi zone. Telling a
+      // Kauaʻi resident "tropical storm" when NWS says "hurricane" tells them
+      // to prepare for less than what is coming.
+      //
+      // EXACT matches only. A substring test for "hurricane" would also catch
+      // "Post-Tropical Cyclone" and similar products that are not hurricane
+      // warnings. alertEventNames() already lowercases, so these compare whole
+      // strings, and the array order IS the severity order.
+      var STORM_PRODUCTS = [
+        { event: "hurricane warning",      key: "hurricane_warning",      tier: "warning" },
+        { event: "tropical storm warning", key: "tropical_storm_warning", tier: "warning" },
+        { event: "hurricane watch",        key: "hurricane_watch",        tier: "watch"   },
+        { event: "tropical storm watch",   key: "tropical_storm_watch",   tier: "watch"   }
+      ];
+
+      // Highest-severity storm product NWS has actually issued, or a generic
+      // tier when the alerts feed cannot tell us. The generic branch is the
+      // point of this fix: when the product is unknown we say "storm warning"
+      // and name NO storm type, because defaulting to "tropical storm" is
+      // precisely the bug.
+      function resolveStormProduct(alertsPayload, stormStatus) {
+        var names = alertEventNames(alertsPayload);
+        for (var i = 0; i < STORM_PRODUCTS.length; i++) {
+          var p = STORM_PRODUCTS[i];
+          if (names.indexOf(p.event) !== -1) return { key: p.key, tier: p.tier, event: p.event };
+        }
+        if (stormStatus === "warning") return { key: "generic_warning", tier: "warning", event: null };
+        if (stormStatus === "watch")   return { key: "generic_watch",   tier: "watch",   event: null };
+        return { key: null, tier: null, event: null };
+      }
+
+      // P46 FIX 3. Islands covered by the TOP-severity product only, resolved
+      // through the P31 attribution path rather than a second copy of it.
+      // Returns null unless EVERY zone in that set resolved — naming a subset
+      // as though it were the whole is worse than saying "parts of Hawaiʻi".
+      // P46. Hero title markup per product. Both titleMaps call this so they
+      // cannot drift apart — a storm state missing from one of them silently
+      // falls back to MONITORING ("Hawaiʻi is calm right now"), which is how
+      // P36 shipped FLOOD_ADVISORY broken for one increment.
+      function stormTitleHtml(product, tier) {
+        var key = (product && product.key) || (tier === "warning" ? "generic_warning" : "generic_watch");
+        var M = {
+          hurricane_warning:      _t("hero.title_html.hurricane_warning")      || '<span class="hero-title-key">Hurricane warning</span> in effect.',
+          tropical_storm_warning: _t("hero.title_html.storm_warning")          || 'Tropical storm <span class="hero-title-key">warning</span> in effect.',
+          hurricane_watch:        _t("hero.title_html.hurricane_watch")        || 'Hurricane <span class="hero-title-key">watch</span> in effect.',
+          tropical_storm_watch:   _t("hero.title_html.storm_watch")            || 'Tropical storm <span class="hero-title-key">watch</span> in effect.',
+          generic_warning:        _t("hero.title_html.generic_storm_warning")  || 'Storm <span class="hero-title-key">warning</span> in effect.',
+          generic_watch:          _t("hero.title_html.generic_storm_watch")    || 'Storm <span class="hero-title-key">watch</span> in effect.'
+        };
+        return M[key] || M[tier === "warning" ? "generic_warning" : "generic_watch"];
+      }
+
+      var ISLAND_DISPLAY = { kauai: "Kauaʻi · Niʻihau", oahu: "Oʻahu", maui: "Maui Nui", bigisland: "Hawaiʻi Island" };
+      function stormProductIslands(alertsPayload, product) {
+        if (!product || !product.event) return null;
+        var items = getItems(alertsPayload).filter(function (f) {
+          return String(f && f.properties && f.properties.event || "").trim().toLowerCase() === product.event;
+        });
+        if (!items.length) return null;
+        var keys = [], ok = true;
+        items.forEach(function (item) {
+          var res = alertIslandKeys(item);
+          if (!res || !res.islands.length || (res.unmatched && res.unmatched.length)) { ok = false; return; }
+          res.islands.forEach(function (k) { if (keys.indexOf(k) === -1) keys.push(k); });
+        });
+        if (!ok || !keys.length) return null;
+        var labels = keys.map(function (k) { return ISLAND_DISPLAY[k]; }).filter(Boolean);
+        if (labels.length !== keys.length) return null;   // an unlabelled key = incomplete list
+        return labels.join(", ");
+      }
+
       function floodTierFromAlerts(alertsPayload) {
         var names = alertEventNames(alertsPayload);
         if (names.some(function (n) { return FLOOD_EVENTS_WARNING.indexOf(n) !== -1; })) return "warning";
@@ -2953,7 +3028,7 @@
       // localStorage key for "what changed" delta
       const DELTA_KEY = "kahuola_last_state_v1";
 
-      function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind) {
+      function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind, storm, where) {
         if (primaryEvent === "DEGRADED") {
           // Names the LAYER that failed, never an upstream agency.
           var _failed = (_lastFailedLayers && _lastFailedLayers.length)
@@ -3026,25 +3101,72 @@
             kicClass: "warn"
           };
         }
-        // ── P30 · FIX 3 — storm branches, modelled on the flood branches ──
-        if (primaryEvent === "STORM_WARNING") {
-          return {
-            kicker:      _t("hero.kicker.storm_warning")     || "TROPICAL STORM WARNING",
-            title:       _t("hero.title.storm_warning")      || "Tropical storm warning in effect.",
-            narrative:   _t("hero.narrative.storm_warning")  || "NWS has issued a tropical storm warning for parts of Hawai\u02bfi. Follow county emergency instructions and prepare now.",
-            bannerTitle: _t("hero.banner.storm_warning")     || "\ud83c\udf00 NWS Tropical Storm Warning Active",
-            bannerCopy:  _t("hero.banner_copy.nws_official") || "Source: National Weather Service \xb7 official alert",
-            kicClass: "flood"
+        // ── P30 FIX 3 storm branches · P46: driven by the PRODUCT ───────────
+        // `storm` is resolveStormProduct()'s verdict. STORM_WARNING/STORM_WATCH
+        // still come from the P36 severity ladder — only the words change here,
+        // so a Hurricane Warning and a Tropical Storm Warning stop reading the
+        // same. `where` is the island list when every zone resolved, else null,
+        // in which case the copy falls back to "parts of Hawaiʻi".
+        if (primaryEvent === "STORM_WARNING" || primaryEvent === "STORM_WATCH") {
+          var sKey = (storm && storm.key) || (primaryEvent === "STORM_WARNING" ? "generic_warning" : "generic_watch");
+          var isWarn = sKey.indexOf("watch") === -1;
+          var area = where || (_t("hero.area.parts_of_hawaii") || "parts of Hawai\u02bbi");
+          var COPY = {
+            hurricane_warning: {
+              kicker: _t("hero.kicker.hurricane_warning") || "HURRICANE WARNING",
+              title:  _t("hero.title.hurricane_warning")  || "Hurricane warning in effect.",
+              nar:    _tmpl("hero.narrative.hurricane_warning", { area: area })
+                      || `NWS has issued a HURRICANE WARNING for ${area}. Hurricane conditions are expected. Finish preparations now and follow county emergency instructions.`,
+              banner: _t("hero.banner.hurricane_warning")  || "\ud83c\udf00 NWS Hurricane Warning Active"
+            },
+            tropical_storm_warning: {
+              kicker: _t("hero.kicker.storm_warning") || "TROPICAL STORM WARNING",
+              title:  _t("hero.title.storm_warning")  || "Tropical storm warning in effect.",
+              nar:    _tmpl("hero.narrative.storm_warning_area", { area: area })
+                      || `NWS has issued a tropical storm warning for ${area}. Follow county emergency instructions and prepare now.`,
+              banner: _t("hero.banner.storm_warning")  || "\ud83c\udf00 NWS Tropical Storm Warning Active"
+            },
+            hurricane_watch: {
+              kicker: _t("hero.kicker.hurricane_watch") || "HURRICANE WATCH",
+              title:  _t("hero.title.hurricane_watch")  || "Hurricane watch in effect.",
+              nar:    _tmpl("hero.narrative.hurricane_watch", { area: area })
+                      || `NWS has issued a hurricane watch for ${area}. Hurricane conditions are possible. Prepare now and stay informed.`,
+              banner: _t("hero.banner.hurricane_watch")  || "\ud83c\udf00 NWS Hurricane Watch Active"
+            },
+            tropical_storm_watch: {
+              kicker: _t("hero.kicker.storm_watch") || "TROPICAL STORM WATCH",
+              title:  _t("hero.title.storm_watch")  || "Tropical storm watch in effect.",
+              nar:    _tmpl("hero.narrative.storm_watch_area", { area: area })
+                      || `NWS has issued a tropical storm watch for ${area}. Stay informed and be ready to act \u2014 open the Live Map for which areas are covered.`,
+              banner: _t("hero.banner.storm_watch")  || "\ud83c\udf00 NWS Tropical Storm Watch Active"
+            },
+            // No event name reached us. Name the TIER and no storm type.
+            generic_warning: {
+              kicker: _t("hero.kicker.generic_storm_warning") || "STORM WARNING",
+              title:  _t("hero.title.generic_storm_warning")  || "Storm warning in effect.",
+              nar:    _tmpl("hero.narrative.generic_storm_warning", { area: area })
+                      || `NWS has issued a storm warning for ${area}. Follow county emergency instructions and prepare now \u2014 open the Live Map for the specific product and areas.`,
+              banner: _t("hero.banner.generic_storm_warning")  || "\ud83c\udf00 NWS Storm Warning Active"
+            },
+            generic_watch: {
+              kicker: _t("hero.kicker.generic_storm_watch") || "STORM WATCH",
+              title:  _t("hero.title.generic_storm_watch")  || "Storm watch in effect.",
+              nar:    _tmpl("hero.narrative.generic_storm_watch", { area: area })
+                      || `NWS has issued a storm watch for ${area}. Stay informed and be ready to act \u2014 open the Live Map for the specific product and areas.`,
+              banner: _t("hero.banner.generic_storm_watch")  || "\ud83c\udf00 NWS Storm Watch Active"
+            }
           };
-        }
-        if (primaryEvent === "STORM_WATCH") {
+          var c = COPY[sKey] || COPY[isWarn ? "generic_warning" : "generic_watch"];
           return {
-            kicker:      _t("hero.kicker.storm_watch")       || "TROPICAL STORM WATCH",
-            title:       _t("hero.title.storm_watch")        || "Tropical storm watch in effect.",
-            narrative:   _t("hero.narrative.storm_watch")    || "NWS has issued a tropical storm watch for parts of Hawai\u02bfi. Stay informed and be ready to act \u2014 open the Live Map for which areas are covered.",
-            bannerTitle: _t("hero.banner.storm_watch")       || "\ud83c\udf00 NWS Tropical Storm Watch Active",
-            bannerCopy:  _t("hero.banner_copy.nws_watch")    || "Source: National Weather Service \xb7 watch in effect",
-            kicClass: "warn"
+            kicker: c.kicker,
+            title: c.title,
+            narrative: c.nar,
+            bannerTitle: c.banner,
+            bannerCopy: isWarn
+              ? (_t("hero.banner_copy.nws_official") || "Source: National Weather Service \xb7 official alert")
+              : (_t("hero.banner_copy.nws_watch")    || "Source: National Weather Service \xb7 watch in effect"),
+            // A hurricane warning is the strongest thing this page can say.
+            kicClass: sKey === "hurricane_warning" ? "fire" : (isWarn ? "flood" : "warn")
           };
         }
         if (highWind) {
@@ -3202,7 +3324,11 @@
         // elevated_count không dùng nữa vì terrain cells luôn ELEVATED
         const highWind    = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
 
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
+        // P46. The product NWS actually issued, and (FIX 3) the islands it covers
+        // when every zone in that set resolved.
+        const stormProduct = resolveStormProduct(alertsPayload, summaryPayload?.storm?.status);
+        const stormWhere = stormProductIslands(alertsPayload, stormProduct);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, stormProduct, stormWhere);
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
         // 100%-volcanic wording override (text only; SAME shared classifier as the
         // Kūpuna advisory). Colour/state unchanged — hero state machine is backlog.
@@ -3216,8 +3342,8 @@
         if (titleEl) {
           const titleMap = {
             MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',            cls: 'calm'  },
-            STORM_WARNING: { html: _t("hero.title_html.storm_warning") || 'Tropical storm <span class="hero-title-key">warning</span> in effect.',        cls: 'flood' },
-            STORM_WATCH:   { html: _t("hero.title_html.storm_watch")   || 'Tropical storm <span class="hero-title-key">watch</span> in effect.',          cls: 'warn'  },
+            STORM_WARNING: { html: stormTitleHtml(stormProduct, "warning"), cls: (stormProduct && stormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
+            STORM_WATCH:   { html: stormTitleHtml(stormProduct, "watch"),   cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',          cls: 'fire'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
@@ -3475,7 +3601,7 @@
           bannerTitle: _tmpl("hero.banner.volcanic_heat", { n: n, s: s }) || `🌋 ${n} Heat Signal${s} · Kīlauea/Mauna Loa Volcanic Zone`,
         };
       }
-      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit) {
+      function renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit, storm) {
         const titleEl = document.getElementById("kupunaTitle");
         const bodyEl  = document.getElementById("kupunaBody");
         const noteEl  = document.getElementById("kupunaNote");
@@ -3530,10 +3656,22 @@
           noteEl.style.background  = "rgba(77,168,255,.08)";
           titleEl.style.color      = "#dbeeff";
         } else if (primaryEvent === "STORM_WARNING") {
-          // Warning tier: says warning, and calls for action rather than
-          // awareness. The rose tint matches the mini map's warning state.
-          titleEl.textContent = _t("kupuna.title.storm_warning") || "K\u016bpuna & Keiki Storm Safety";
-          bodyEl.textContent  = _t("kupuna.body.storm_warning")  || "A tropical storm warning is in effect. Storm conditions are expected, not just possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should act now \u2014 secure your home, charge devices, gather medicines and water, and follow county emergency instructions. E m\u0101lama pono.";
+          // P46. Same product resolution as the hero. primaryEvent alone cannot
+          // tell a hurricane from a tropical storm, and this paragraph is read
+          // by the people for whom that difference decides how hard they
+          // prepare. A hurricane warning gets the strongest language on the
+          // page; an unknown product gets the tier and no storm type.
+          var kw = (storm && storm.key) || "generic_warning";
+          if (kw === "hurricane_warning") {
+            titleEl.textContent = _t("kupuna.title.hurricane_warning") || "K\u016bpuna & Keiki \u2014 Hurricane Warning";
+            bodyEl.textContent  = _t("kupuna.body.hurricane_warning")  || "A HURRICANE WARNING is in effect. Hurricane conditions are expected, not merely possible. K\u016bpuna, keiki, and anyone in a low-lying, coastal or exposed area should complete preparations now and be ready to shelter or evacuate on county instruction. Do not wait for the wind to arrive. E m\u0101lama pono.";
+          } else if (kw === "generic_warning") {
+            titleEl.textContent = _t("kupuna.title.storm_warning") || "K\u016bpuna & Keiki Storm Safety";
+            bodyEl.textContent  = _t("kupuna.body.generic_storm_warning") || "A storm warning is in effect. Dangerous conditions are expected, not just possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should act now and follow county emergency instructions. E m\u0101lama pono.";
+          } else {
+            titleEl.textContent = _t("kupuna.title.storm_warning") || "K\u016bpuna & Keiki Storm Safety";
+            bodyEl.textContent  = _t("kupuna.body.storm_warning")  || "A tropical storm warning is in effect. Storm conditions are expected, not just possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should act now \u2014 secure your home, charge devices, gather medicines and water, and follow county emergency instructions. E m\u0101lama pono.";
+          }
           noteEl.style.borderColor = "rgba(255,94,123,.30)";
           noteEl.style.background  = "rgba(255,94,123,.08)";
           titleEl.style.color      = "#ffd6de";
@@ -3544,8 +3682,13 @@
           noteEl.style.background  = "rgba(255,204,102,.07)";
           titleEl.style.color      = "#ffe9b5";
         } else if (primaryEvent === "STORM_WATCH") {
+          var kwa = (storm && storm.key) || "generic_watch";
           titleEl.textContent = _t("kupuna.title.storm_watch")   || "K\u016bpuna & Keiki Storm Awareness";
-          bodyEl.textContent  = _t("kupuna.body.storm_watch")    || "A tropical storm watch is in effect. Storm conditions are possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should prepare now and stay informed \u2014 have an emergency plan, medicines, and water ready. E m\u0101lama pono.";
+          bodyEl.textContent  = kwa === "hurricane_watch"
+            ? (_t("kupuna.body.hurricane_watch") || "A hurricane watch is in effect. Hurricane conditions are possible. K\u016bpuna, keiki, and those in low-lying, coastal or exposed areas should prepare now \u2014 medicines, water, and a plan for where to go \u2014 and stay informed. E m\u0101lama pono.")
+            : kwa === "generic_watch"
+              ? (_t("kupuna.body.generic_storm_watch") || "A storm watch is in effect. Dangerous conditions are possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should prepare now and stay informed. E m\u0101lama pono.")
+              : (_t("kupuna.body.storm_watch") || "A tropical storm watch is in effect. Storm conditions are possible. K\u016bpuna, keiki, and those in low-lying or exposed areas should prepare now and stay informed \u2014 have an emergency plan, medicines, and water ready. E m\u0101lama pono.");
           noteEl.style.borderColor = "rgba(255,204,102,.22)";
           noteEl.style.background  = "rgba(255,204,102,.07)";
           titleEl.style.color      = "#ffe9b5";
@@ -3720,7 +3863,7 @@
         renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
         renderFireCard(firePayload);
         renderFloodCard(floodPayload, alertsPayload);
-        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload));
+        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload), resolveStormProduct(alertsPayload, summaryPayload?.storm?.status));
 
         // Re-apply locale translations after all JS renders — ensures data-i18n elements
         // that were overwritten by render functions (e.g. signalDetailLabel) get the
@@ -3786,6 +3929,10 @@
         const { fire, flood, fireWeather, mrms, summary, alerts, primaryEvent, counts } = _lastPayloads;
         const fireCount  = counts.fireCount || 0;
         const _langFloodTier = floodTierFromAlerts(alerts);
+        // P46: re-resolve on a language switch, or the hero reverts to whatever
+        // the titleMap default says instead of the product NWS issued.
+        const _langStormProduct = resolveStormProduct(alerts, summary?.storm?.status);
+        const _langStormWhere = stormProductIslands(alerts, _langStormProduct);
         const floodWarn  = _langFloodTier === "warning" || flood?.summary?.warning_count > 0;
         const floodWatch = _langFloodTier === "watch"   || flood?.summary?.watch_count > 0;
         const redFlag    = fireWeather?.summary?.red_flag_active;
@@ -3801,8 +3948,8 @@
         if (titleEl) {
           const titleMap = {
             MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',          cls: 'calm'  },
-            STORM_WARNING: { html: _t("hero.title_html.storm_warning") || 'Tropical storm <span class="hero-title-key">warning</span> in effect.',      cls: 'flood' },
-            STORM_WATCH:   { html: _t("hero.title_html.storm_watch")   || 'Tropical storm <span class="hero-title-key">watch</span> in effect.',        cls: 'warn'  },
+            STORM_WARNING: { html: stormTitleHtml(_langStormProduct, "warning"), cls: (_langStormProduct && _langStormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
+            STORM_WATCH:   { html: stormTitleHtml(_langStormProduct, "watch"),   cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
@@ -3820,7 +3967,7 @@
 
         // Re-render hero narrative / kicker / banner
         // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere);
         setText("heroNarrative", hv ? hv.narrative : n.narrative);
         setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
@@ -3860,7 +4007,7 @@
         // switch untouched. The unmatched-zone line is a sentence and does not.
         renderUnmatchedZones(primaryEvent === "DEGRADED");
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
-        renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire));
+        renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire), _langStormProduct);
 
         // Final applyAll — must be last. JS renders above can overwrite data-i18n elements
         // (e.g. signalDetailLabel overwritten at L2331 with KEEP_ENGLISH dynamic text).
