@@ -2521,7 +2521,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=92abb908"></script>
+  <script src="/i18n/kahuola-i18n.js?v=a0adb114"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -3057,7 +3057,9 @@
       // localStorage key for "what changed" delta
       const DELTA_KEY = "kahuola_last_state_v1";
 
-      function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind, storm, where) {
+      // P52: `fireCount` is the WILDLAND count. `volcanicCount` is appended
+      // last so no existing call site's positional arguments move.
+      function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind, storm, where, volcanicCount) {
         if (primaryEvent === "DEGRADED") {
           // Names the LAYER that failed, never an upstream agency.
           var _failed = (_lastFailedLayers && _lastFailedLayers.length)
@@ -3206,6 +3208,23 @@
             kicClass: sKey === "hurricane_warning" ? "fire" : (isWarn ? "flood" : "warn")
           };
         }
+        // P52 FIX 2 — volcanic heat with no wildland detection and no NWS fire
+        // weather product. The ladder guarantees this branch is only reached
+        // when nothing else ranked, so it never masks a warning. applyHero's
+        // `hv` override supplies the same three strings; this branch is what
+        // keeps bannerCopy and kicClass correct, and is the fail-safe if the
+        // split is ever missing.
+        if (primaryEvent === "VOLCANIC_HEAT") {
+          var _vn = Number(volcanicCount) || 0, _vs = _vn > 1 ? "s" : "";
+          return {
+            kicker:      _t("hero.kicker.volcanic_heat")     || "VOLCANIC HEAT SIGNAL",
+            title:       "Volcanic heat at Kīlauea.",
+            narrative:   _t("hero.narrative.volcanic_heat")  || "NASA FIRMS detected satellite heat inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire. Open the live map and check air quality (vog).",
+            bannerTitle: _tmpl("hero.banner.volcanic_heat", { n: _vn, s: _vs }) || `🌋 ${_vn} Heat Signal${_vs} \xb7 Kīlauea/Mauna Loa Volcanic Zone`,
+            bannerCopy:  _t("hero.banner_copy.nasa_firms")   || "Source: NASA FIRMS VIIRS/MODIS \xb7 verified this snapshot",
+            kicClass: "warn"
+          };
+        }
         if (highWind) {
           const isRedFlag = !!redFlag;
           return {
@@ -3232,6 +3251,10 @@
         };
       }
 
+      // P52: `fireCount` is the WILDLAND count, so "N new fire detections" and
+      // "Fire detections down from N" now track wildfire only. A stale
+      // localStorage baseline written before this change may produce one odd
+      // delta on a returning visitor's first load, then self-corrects.
       function buildDelta(primaryEvent, fireCount, floodWarning) {
         try {
           const last = JSON.parse(localStorage.getItem(DELTA_KEY) || "null");
@@ -3273,7 +3296,14 @@
         setText(statusId, _t("status.unavailable") || "\u2014");
       }
 
-      function renderSignalStrip(fireCount, floodPayload, fireWeatherPayload, alertsPayload, firePayload) {
+      // P52. Takes the SPLIT, not a count. The row used to be handed
+      // fireItems.length — every FIRMS pixel, volcanic ones included — so a
+      // single Kīlauea thermal signal read "1 detection detected · ELEVATED".
+      // Lava does not spread with wind; counting it as a wildfire invents a
+      // hazard nobody can act on. Wildfire wording and the wildfire badge now
+      // key off `wildland` only, and the volcanic points get their own row
+      // wording instead of disappearing (see the volcanic branch below).
+      function renderSignalStrip(fireSplit, floodPayload, fireWeatherPayload, alertsPayload, firePayload) {
         // P30: the alerts feed is the authority for flood products; the
         // flash-flood counts are OR-ed in so nothing that layer sees is lost.
         const floodTier    = floodTierFromAlerts(alertsPayload);
@@ -3288,16 +3318,35 @@
         const fireAns  = document.getElementById("fireStripAnswer");
         const fireStat = document.getElementById("fireStatus");
         if (fireAns && fireStat) {
+          const wild = fireSplit ? (Number(fireSplit.wildland) || 0) : 0;
+          const volc = fireSplit ? (Number(fireSplit.volcanic) || 0) : 0;
           if (firePayload === null) {
             markUnknown("fireStripAnswer", "fireStatus");
-          } else if (fireCount === 0) {
+          } else if (wild > 0 && volc > 0) {
+            // Mixed. Neither kind may be hidden: the badge ranks on the
+            // wildland half because that is the actionable one, but the
+            // volcanic half is still named.
+            fireAns.textContent  = _tmpl("signal.strip.fire_mixed", { w: wild, ws: wild > 1 ? "s" : "", v: volc, vs: volc > 1 ? "s" : "" })
+              || `${wild} wildfire detection${wild > 1 ? "s" : ""} · ${volc} volcanic heat signal${volc > 1 ? "s" : ""}`;
+            fireStat.className   = "signal-strip-status active";
+            fireStat.textContent = wild >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED");
+          } else if (wild > 0) {
+            fireAns.textContent  = _tmpl("signal.strip.fire_wildland", { n: wild, s: wild > 1 ? "s" : "" }) || `${wild} wildfire detection${wild > 1 ? "s" : ""}`;
+            fireStat.className   = "signal-strip-status active";
+            fireStat.textContent = wild >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED");
+          } else if (volc > 0) {
+            // P52 FIX 2. Volcanic-only. Dropping these from the wildfire count
+            // must not delete them from the page: "No fire detections" would be
+            // as false as "1 wildfire". Say what is actually there, and name
+            // the zone that makes it volcanic.
+            fireAns.textContent  = _tmpl("signal.strip.fire_volcanic", { n: volc, s: volc > 1 ? "s" : "" })
+              || `${volc} volcanic heat signal${volc > 1 ? "s" : ""} · Kīlauea/Mauna Loa (NASA FIRMS)`;
+            fireStat.className   = "signal-strip-status watch";
+            fireStat.textContent = _t("status.volcanic") || "VOLCANIC";
+          } else {
             fireAns.textContent  = _t("signal.strip.fire_clear") || "No fire detections";
             fireStat.className   = "signal-strip-status ok";
             fireStat.textContent = _t("status.clear") || "CLEAR";
-          } else {
-            fireAns.textContent  = _tmpl("signal.strip.fire_count", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `${fireCount} detection${fireCount > 1 ? "s" : ""} detected`;
-            fireStat.className   = "signal-strip-status active";
-            fireStat.textContent = fireCount >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED");
           }
         }
 
@@ -3353,7 +3402,9 @@
       }
 
       function applyHero(primaryEvent, counts, _freshStr, fireWeatherPayload, floodPayload, summaryPayload, alertsPayload) {
+        // P52: WILDLAND detections. Every use below is wildfire wording.
         const fireCount   = counts.fireCount || 0;
+        const volcCount   = counts.volcanicCount || 0;
         const floodWarn   = floodPayload?.summary?.warning_count > 0;
         const floodWatch  = floodPayload?.summary?.watch_count > 0;
         const redFlag     = fireWeatherPayload?.summary?.red_flag_active;
@@ -3365,13 +3416,15 @@
         // when every zone in that set resolved.
         const stormProduct = resolveStormProduct(alertsPayload, summaryPayload?.storm?.status);
         const stormWhere = stormProductIslands(alertsPayload, stormProduct);
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, stormProduct, stormWhere);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, stormProduct, stormWhere, volcCount);
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
         // 100%-volcanic wording override (text only; SAME shared classifier as the
-        // Kūpuna advisory). Colour/state unchanged — hero state machine is backlog.
-        const hv = (primaryEvent === "FIRE_ACTIVE" && !redFlag && counts.fireSplit &&
+        // Kūpuna advisory). P52 adds the VOLCANIC_HEAT state, which is where
+        // this now normally fires; the FIRE_ACTIVE arm is kept as a fail-safe
+        // in case any future path reaches FIRE_ACTIVE on an all-volcanic split.
+        const hv = ((primaryEvent === "VOLCANIC_HEAT" || (primaryEvent === "FIRE_ACTIVE" && !redFlag)) && counts.fireSplit &&
           classifyHeatSignals(counts.fireSplit.volcanic, counts.fireSplit.wildland) === "VOG")
-          ? heroVolcanicWording(counts.fireSplit.total || fireCount) : null;
+          ? heroVolcanicWording(counts.fireSplit.total || volcCount) : null;
 
         // Narrative — title with key word highlight
         // hero.title_html.* are developer-controlled static strings with span markup — innerHTML-safe
@@ -3382,6 +3435,12 @@
             STORM_WARNING: { html: stormTitleHtml(stormProduct, "warning"), cls: (stormProduct && stormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
             STORM_WATCH:   { html: stormTitleHtml(stormProduct, "watch"),   cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',          cls: 'fire'  },
+            // P52. A volcanic thermal signal is not a wildfire and not calm.
+            // Amber, not fire-orange \u2014 it carries an air-quality decision,
+            // not an evacuation one. MUST also exist in the language-change
+            // twin of this map below, or a locale switch reverts it to
+            // "Hawai\u02bfi is calm right now".
+            VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',              cls: 'warn'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
             FLOOD_ADVISORY:{ html: _t("hero.title_html.flood_advisory")|| 'Flood <span class="hero-title-key">advisory</span> in effect.',                  cls: 'flood' },
@@ -3434,8 +3493,12 @@
         // Signal detail toggle label
         const detailLabel = document.getElementById("signalDetailLabel");
         if (detailLabel) {
+          // P52: "fire signal" is wildfire wording, so it counts wildland.
+          // Volcanic-only gets its own label rather than reading "all clear".
           if (fireCount > 0) {
             detailLabel.textContent = _tmpl("signal.detail_fire_count", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `${fireCount} fire signal${fireCount > 1 ? "s" : ""} \u2014 see detail`;
+          } else if (volcCount > 0) {
+            detailLabel.textContent = _tmpl("signal.detail_volcanic", { n: volcCount, s: volcCount > 1 ? "s" : "" }) || `${volcCount} volcanic heat signal${volcCount > 1 ? "s" : ""} \u2014 see detail`;
           } else if (floodWarn || floodWatch) {
             detailLabel.textContent = _t("signal.detail_flood") || "Flood detail";
           } else {
@@ -3446,7 +3509,9 @@
         // System note
         setText("stateChip", primaryEvent);
         setText("contextPrimary", primaryEvent);
-        setText("contextFireCount", String(fireCount));
+        // Hidden debug readout (aria-hidden). Legitimately the all-pixel total
+        // \u2014 it is a raw payload probe, not a wildfire claim. P52 audit: kept.
+        setText("contextFireCount", String(counts.totalHeat != null ? counts.totalHeat : fireCount));
         setText("contextFloodCount", String(counts.floodCount || 0));
         setText("contextStormCount", "0");
 
@@ -3533,22 +3598,46 @@
         if (floodSource) floodSource.textContent = _t("context.nws_official") || "NWS Official";
       }
 
+      // P52. Two changes, both field selection.
+      //
+      // (a) This card speaks about WILDFIRE ("N wildfire signals detected"), so
+      //     it counts `wildland`, not every FIRMS pixel. Volcanic-only gets its
+      //     own title and copy rather than being renamed a wildfire.
+      // (b) It writes its own badge, #fireStatusDetail, and no longer
+      //     over-writes #fireStatus. #fireStatus is the SIGNAL STRIP badge
+      //     (line 1662); the detail card's badge is #fireStatusDetail (1725).
+      //     This function ran after renderSignalStrip and clobbered the strip
+      //     badge \u2014 text AND class, leaving `class="status active"` on an
+      //     element styled as `.signal-strip-status`. The null path already
+      //     targeted fireStatusDetail; only the live paths had drifted.
       function renderFireCard(payload) {
-        if (payload === null) { markUnknown("fireStripAnswer", "fireStatusDetail"); setText("fireStatus", _t("status.unavailable") || "\u2014"); return; }
-        const items = getItems(payload);
-        const count = items.length;
+        if (payload === null) { markUnknown("fireStripAnswer", "fireStatusDetail"); return; }
+        const split = fireZoneSplit(payload);
+        const wild = split.wildland;
+        const volc = split.volcanic;
         const freshness = timeAgo(getGeneratedAt(payload));
+        const badge = document.getElementById("fireStatusDetail");
 
-        if (count > 0) {
-          setText("fireTitle", _tmpl("signal.fire_title_active", { n: count }) || `\ud83d\udd25 Fire Signal \u2014 ${count} Active`);
-          setText("fireCopy",  _tmpl("signal.fire_copy_active_tmpl", { n: count, s: count > 1 ? "s" : "" }) || `${count} wildfire signal${count === 1 ? "" : "s"} detected in the current statewide Worker snapshot. Open the live map for island-level detail.`);
-          document.getElementById("fireStatus").className = "status active";
-          setText("fireStatus", count >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED"));
+        if (wild > 0) {
+          setText("fireTitle", _tmpl("signal.fire_title_active", { n: wild }) || `\ud83d\udd25 Fire Signal \u2014 ${wild} Active`);
+          setText("fireCopy", volc > 0
+            ? (_tmpl("signal.fire_copy_mixed_tmpl", { w: wild, ws: wild > 1 ? "s" : "", v: volc, vs: volc > 1 ? "s" : "" })
+               || `${wild} wildfire signal${wild === 1 ? "" : "s"} outside the volcanic zones, plus ${volc} volcanic heat signal${volc === 1 ? "" : "s"} at K\u012blauea/Mauna Loa. Open the live map for island-level detail.`)
+            : (_tmpl("signal.fire_copy_active_tmpl", { n: wild, s: wild > 1 ? "s" : "" })
+               || `${wild} wildfire signal${wild === 1 ? "" : "s"} detected in the current statewide Worker snapshot. Open the live map for island-level detail.`));
+          if (badge) badge.className = "status active";
+          setText("fireStatusDetail", wild >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED"));
+        } else if (volc > 0) {
+          setText("fireTitle", _tmpl("signal.fire_title_volcanic", { n: volc, s: volc > 1 ? "s" : "" }) || `\ud83c\udf0b Volcanic Heat \u2014 ${volc} Signal${volc > 1 ? "s" : ""}`);
+          setText("fireCopy",  _tmpl("signal.fire_copy_volcanic_tmpl", { n: volc, s: volc > 1 ? "s" : "" })
+            || `${volc} satellite heat signal${volc > 1 ? "s" : ""} inside the K\u012blauea/Mauna Loa volcanic zone \u2014 likely volcanic activity, not a wildfire. Source: NASA FIRMS. Open the live map and check air quality (vog).`);
+          if (badge) badge.className = "status watch";
+          setText("fireStatusDetail", _t("status.volcanic") || "VOLCANIC");
         } else {
           setText("fireTitle", _t("signal.fire_monitoring") || "\ud83d\udd25 Fire Signal \u2014 Monitoring");
           setText("fireCopy",  _t("signal.fire_copy_monitoring_long") || "Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.");
-          document.getElementById("fireStatus").className = "status ok";
-          setText("fireStatus", _t("status.clear") || "CLEAR");
+          if (badge) badge.className = "status ok";
+          setText("fireStatusDetail", _t("status.clear") || "CLEAR");
         }
 
         setText("fireSourceChip", _t("source.nasa_firms") || "NASA FIRMS");
@@ -3665,7 +3754,11 @@
         // alerts tier with the flash-flood counts), so gating on it is strictly
         // more coverage than the counts gave, never less.
 
-        if (primaryEvent === "FIRE_ACTIVE" || redFlag) {
+        // P52: VOLCANIC_HEAT is added here. Volcanic pixels no longer set
+        // FIRE_ACTIVE, and without this the vog advisory — the one paragraph
+        // on the page written for the readers whose lungs it concerns — would
+        // silently fall through to the generic monitoring note.
+        if (primaryEvent === "FIRE_ACTIVE" || primaryEvent === "VOLCANIC_HEAT" || redFlag) {
           // Advisory switching via the SHARED classifier (same decision as the
           // hero). Red Flag always \u2192 FIRE. Otherwise classify the raw split:
           // all-volcanic (zero wildland) \u2192 VOG; any wildland / missing field /
@@ -3843,6 +3936,16 @@
         // Derive primary event from live data
         const fireItems  = getItems(firePayload);
         const redFlag    = fireWeatherPayload?.summary?.red_flag_active;
+        // P52. The ladder's fire branches rank WILDFIRE, so they count the
+        // wildland subset. `fireZoneSplit` reads properties.volcanic_zone off
+        // each FIRMS feature and fails closed (missing flag → wildland), so a
+        // payload without the field ranks exactly as it did before.
+        const fireSplit      = fireZoneSplit(firePayload);
+        const wildlandCount  = fireSplit.wildland;
+        const volcanicCount  = fireSplit.volcanic;
+        // Mirrors renderSignalStrip's own definition — any NWS fire-weather
+        // product outranks a volcanic thermal note.
+        const fireWxActive   = redFlag || (fireWeatherPayload?.summary?.red_flag_count > 0) || (fireWeatherPayload?.summary?.watch_count > 0);
 
         // ── FIX 4 — flood truth comes from the ALERTS feed ────────────────
         // The flash-flood endpoint is scoped to flash-flood products, so a plain
@@ -3906,17 +4009,29 @@
         // promoting one to warning level would cry wolf on the layer this
         // platform exists for. Three clustered detections, or an NWS Red Flag
         // Warning, are warning-grade.
-        else if (fireItems.length >= 3 || redFlag) primaryEvent = "FIRE_ACTIVE";
+        //
+        // P52: the threshold is unchanged, the INPUT is. It counted every FIRMS
+        // pixel, so three Kīlauea thermal signals reached Tier 1 as a wildfire
+        // warning. It now counts wildland detections only.
+        else if (wildlandCount >= 3 || redFlag)    primaryEvent = "FIRE_ACTIVE";
         else if (floodWarning)                     primaryEvent = "FLOOD_WARNING";
         else if (stormStatus === "warning")        primaryEvent = "STORM_WARNING";
         // Tier 2 — WATCH: flood, then storm. (No fire product sits here: a
         // Fire Weather Watch is folded into redFlag upstream.)
         else if (floodWatch)                       primaryEvent = "FLOOD_WATCH";
         else if (stormStatus === "watch")          primaryEvent = "STORM_WATCH";
-        // Tier 3 — ADVISORY. One or two fire detections keep the precedence
+        // Tier 3 — ADVISORY. One or two WILDLAND detections keep the precedence
         // they have always had: below every watch, above MONITORING.
-        else if (fireItems.length > 0)             primaryEvent = "FIRE_ACTIVE";
+        else if (wildlandCount > 0)                primaryEvent = "FIRE_ACTIVE";
         else if (floodAdvisory)                    primaryEvent = "FLOOD_ADVISORY";
+        // P52 FIX 2 — volcanic heat is its own state, and it is NOT a fire
+        // branch. Excluding volcanic pixels from the wildfire branches above
+        // would otherwise drop them out of the ladder entirely and the page
+        // would say "Hawaiʻi is calm right now" with lava on the satellite.
+        // It sits at the bottom of Tier 3 so every NWS product — including a
+        // Fire Weather Watch, which sets no primaryEvent of its own — outranks
+        // it. It can therefore only ever replace MONITORING.
+        else if (volcanicCount > 0 && !fireWxActive) primaryEvent = "VOLCANIC_HEAT";
         // Tier 4 — MONITORING (the initialiser above).
         _lastFailedLayers = failedLayers;
 
@@ -3927,21 +4042,27 @@
           mrmsPayload?.generated_at ||
           firePayload?.generated_at;
         _lastGeneratedAt = generatedAt || null;
-        _lastPayloads = { fire: firePayload, flood: floodPayload, fireWeather: fireWeatherPayload, mrms: mrmsPayload, summary: summaryPayload, alerts: alertsPayload, primaryEvent, counts: { fireCount: fireItems.length, floodCount: floodPayload?.summary?.count || 0, stormCount: summaryPayload?.storm?.count || 0 } };
+        // P52: `fireCount` is the WILDLAND count everywhere downstream — every
+        // consumer of it (hero narrative, delta line, detail label) speaks
+        // about wildfire. `totalHeat` keeps the all-pixel total for the one
+        // readout that legitimately wants it.
+        _lastPayloads = { fire: firePayload, flood: floodPayload, fireWeather: fireWeatherPayload, mrms: mrmsPayload, summary: summaryPayload, alerts: alertsPayload, primaryEvent, counts: { fireCount: wildlandCount, volcanicCount: volcanicCount, totalHeat: fireItems.length, floodCount: floodPayload?.summary?.count || 0, stormCount: summaryPayload?.storm?.count || 0 } };
         const freshnessStr = generatedAt ? timeAgo(generatedAt) : (_t("freshness.updated_just_now") || "Updated just now");
 
         applyHero(primaryEvent, {
-          fireCount:  fireItems.length,
+          fireCount:  wildlandCount,
+          volcanicCount: volcanicCount,
+          totalHeat:  fireItems.length,
           floodCount: floodPayload?.summary?.count || 0,
           stormCount: summaryPayload?.storm?.count || 0,
-          fireSplit:  fireZoneSplit(firePayload)
+          fireSplit:  fireSplit
         }, freshnessStr, fireWeatherPayload, floodPayload, summaryPayload, alertsPayload);
 
         renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload);
-        renderSignalStrip(fireItems.length, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
+        renderSignalStrip(fireSplit, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
         renderFireCard(firePayload);
         renderFloodCard(floodPayload, alertsPayload);
-        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireZoneSplit(firePayload), resolveStormProduct(alertsPayload, summaryPayload?.storm?.status), floodWarning);
+        renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit, resolveStormProduct(alertsPayload, summaryPayload?.storm?.status), floodWarning);
 
         // Re-apply locale translations after all JS renders — ensures data-i18n elements
         // that were overwritten by render functions (e.g. signalDetailLabel) get the
@@ -4005,7 +4126,9 @@
         // active — the exact bug this increment exists to remove, reintroduced
         // by a stale destructure.
         const { fire, flood, fireWeather, mrms, summary, alerts, primaryEvent, counts } = _lastPayloads;
+        // P52: WILDLAND count (see the _lastPayloads write in loadHomepage).
         const fireCount  = counts.fireCount || 0;
+        const volcCount  = counts.volcanicCount || 0;
         const _langFloodTier = floodTierFromAlerts(alerts);
         // P46: re-resolve on a language switch, or the hero reverts to whatever
         // the titleMap default says instead of the product NWS issued.
@@ -4016,10 +4139,12 @@
         const redFlag    = fireWeather?.summary?.red_flag_active;
         const highWind   = redFlag || (fireWeather?.summary?.red_flag_count > 0) || (fireWeather?.summary?.watch_count > 0);
         // 100%-volcanic wording override (text only; SAME shared classifier).
+        // P52: must match applyHero's gate exactly, VOLCANIC_HEAT included, or
+        // a locale switch drops the volcanic hero.
         const heroSplit = fireZoneSplit(fire);
-        const hv = (primaryEvent === "FIRE_ACTIVE" && !redFlag &&
+        const hv = ((primaryEvent === "VOLCANIC_HEAT" || (primaryEvent === "FIRE_ACTIVE" && !redFlag)) &&
           classifyHeatSignals(heroSplit.volcanic, heroSplit.wildland) === "VOG")
-          ? heroVolcanicWording(heroSplit.total || fireCount) : null;
+          ? heroVolcanicWording(heroSplit.total || volcCount) : null;
 
         // Re-render hero title (innerHTML — developer-controlled strings only)
         const titleEl = document.getElementById("heroTitle");
@@ -4029,6 +4154,8 @@
             STORM_WARNING: { html: stormTitleHtml(_langStormProduct, "warning"), cls: (_langStormProduct && _langStormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
             STORM_WATCH:   { html: stormTitleHtml(_langStormProduct, "watch"),   cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
+            // P52 \u2014 twin of the VOLCANIC_HEAT entry in applyHero's map.
+            VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',            cls: 'warn'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
             // P36: this map is the language-change twin of the one in applyHero.
@@ -4045,7 +4172,7 @@
 
         // Re-render hero narrative / kicker / banner
         // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere, volcCount);
         setText("heroNarrative", hv ? hv.narrative : n.narrative);
         setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
@@ -4055,8 +4182,12 @@
         // Signal detail toggle label
         const detailLabel = document.getElementById("signalDetailLabel");
         if (detailLabel) {
+          // P52: "fire signal" is wildfire wording, so it counts wildland.
+          // Volcanic-only gets its own label rather than reading "all clear".
           if (fireCount > 0) {
             detailLabel.textContent = _tmpl("signal.detail_fire_count", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `${fireCount} fire signal${fireCount > 1 ? "s" : ""} \u2014 see detail`;
+          } else if (volcCount > 0) {
+            detailLabel.textContent = _tmpl("signal.detail_volcanic", { n: volcCount, s: volcCount > 1 ? "s" : "" }) || `${volcCount} volcanic heat signal${volcCount > 1 ? "s" : ""} \u2014 see detail`;
           } else if (floodWarn || floodWatch) {
             detailLabel.textContent = _t("signal.detail_flood") || "Flood detail";
           } else {
@@ -4075,8 +4206,8 @@
         // Re-render the remaining JS-driven sections (verified signatures)
         // renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload)
         renderContextMetrics(fireWeather, mrms, flood, alerts);
-        // renderSignalStrip(fireCount, floodPayload, fireWeatherPayload, alertsPayload, firePayload)
-        renderSignalStrip(fireCount, flood, fireWeather, alerts, fire);
+        // renderSignalStrip(fireSplit, floodPayload, fireWeatherPayload, alertsPayload, firePayload)
+        renderSignalStrip(heroSplit, flood, fireWeather, alerts, fire);
         // renderFireCard(payload)
         renderFireCard(fire);
         // renderFloodCard(payload, alertsPayload)
@@ -4085,7 +4216,7 @@
         // switch untouched. The unmatched-zone line is a sentence and does not.
         renderUnmatchedZones(primaryEvent === "DEGRADED");
         // renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload)
-        renderKupunaNote(primaryEvent, flood, fireWeather, fireZoneSplit(fire), _langStormProduct, floodWarn);
+        renderKupunaNote(primaryEvent, flood, fireWeather, heroSplit, _langStormProduct, floodWarn);
 
         // Final applyAll — must be last. JS renders above can overwrite data-i18n elements
         // (e.g. signalDetailLabel overwritten at L2331 with KEEP_ENGLISH dynamic text).

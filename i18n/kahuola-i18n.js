@@ -778,6 +778,19 @@
 
       // ── Signal strip labels (Class A) ─────────────────────────
       "signal.strip.fire_clear": "No fire detections",
+      // ── P52 — wildfire surfaces count wildland_count, never the total ──
+      // The fire row used to print "{n} detection{s} detected" from every FIRMS
+      // pixel, so a Kīlauea thermal signal read as a wildfire. These are the
+      // wildland-only and volcanic-only replacements. signal.strip.fire_count
+      // is retained (unused by index.html) so no cached page breaks.
+      "signal.strip.fire_wildland": "{n} wildfire detection{s}",
+      "signal.strip.fire_volcanic": "{n} volcanic heat signal{s} · Kīlauea/Mauna Loa (NASA FIRMS)",
+      "signal.strip.fire_mixed": "{w} wildfire detection{ws} · {v} volcanic heat signal{vs}",
+      "status.volcanic": "VOLCANIC",
+      "signal.fire_title_volcanic": "🌋 Volcanic Heat — {n} Signal{s}",
+      "signal.fire_copy_volcanic_tmpl": "{n} satellite heat signal{s} inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire. Source: NASA FIRMS. Open the live map and check air quality (vog).",
+      "signal.fire_copy_mixed_tmpl": "{w} wildfire signal{ws} outside the volcanic zones, plus {v} volcanic heat signal{vs} at Kīlauea/Mauna Loa. Open the live map for island-level detail.",
+      "signal.detail_volcanic": "{n} volcanic heat signal{s} — see detail",
       "signal.strip.fire_count": "{n} detection{s} detected",
       "signal.strip.flood_clear": "No flood watches or warnings",
       "signal.strip.flood_warning_active": "Flood warning active",
@@ -1812,6 +1825,15 @@
 
       // ── Signal strip ──────────────────────────────────────────
       "signal.strip.fire_clear": "Kh\xf4ng ph\u00e1t hi\u1ec7n ch\u00e1y",
+      // ── P52 ──
+      "signal.strip.fire_wildland": "Phát hiện {n} điểm cháy rừng",
+      "signal.strip.fire_volcanic": "{n} tín hiệu nhiệt núi lửa · Kīlauea/Mauna Loa (NASA FIRMS)",
+      "signal.strip.fire_mixed": "{w} điểm cháy rừng · {v} tín hiệu nhiệt núi lửa",
+      "status.volcanic": "NÚI LỬA",
+      "signal.fire_title_volcanic": "🌋 Nhiệt núi lửa — {n} tín hiệu",
+      "signal.fire_copy_volcanic_tmpl": "{n} tín hiệu nhiệt vệ tinh nằm trong vùng núi lửa Kīlauea/Mauna Loa — có thể là hoạt động núi lửa, không phải cháy rừng. Nguồn: NASA FIRMS. Mở bản đồ trực tiếp và kiểm tra chất lượng không khí (vog).",
+      "signal.fire_copy_mixed_tmpl": "{w} tín hiệu cháy rừng ngoài vùng núi lửa, cùng {v} tín hiệu nhiệt núi lửa tại Kīlauea/Mauna Loa. Mở bản đồ trực tiếp để biết chi tiết từng hòn đảo.",
+      "signal.detail_volcanic": "{n} tín hiệu nhiệt núi lửa — xem chi tiết",
       "signal.strip.fire_count": "Ph\u00e1t hi\u1ec7n {n} \u0111i\u1ec3m",
       "signal.strip.flood_clear": "Kh\xf4ng c\xf3 theo d\xf5i ho\u1eb7c c\u1ea3nh b\u00e1o l\u0169",
       "signal.strip.flood_warning_active": "C\u1ea3nh b\u00e1o l\u0169 \u0111ang ho\u1ea1t \u0111\u1ed9ng",
@@ -2633,6 +2655,11 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": "ʻAʻohe ahi i loaʻa",
+      // ── P52 ── (Layer A English fallback)
+      "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
+      "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
+      "signal.fire_title_volcanic": KEEP_ENGLISH, "signal.fire_copy_volcanic_tmpl": KEEP_ENGLISH,
+      "signal.fire_copy_mixed_tmpl": KEEP_ENGLISH, "signal.detail_volcanic": KEEP_ENGLISH,
       "signal.strip.fire_count": KEEP_ENGLISH,
       "signal.strip.flood_clear": "ʻAʻohe maka a me aʻoaia wai",
       "signal.strip.flood_warning_active": KEEP_ENGLISH,
@@ -3281,6 +3308,11 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P52 ── (Layer A English fallback)
+      "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
+      "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
+      "signal.fire_title_volcanic": KEEP_ENGLISH, "signal.fire_copy_volcanic_tmpl": KEEP_ENGLISH,
+      "signal.fire_copy_mixed_tmpl": KEEP_ENGLISH, "signal.detail_volcanic": KEEP_ENGLISH,
       "signal.strip.flood_clear": KEEP_ENGLISH,
       "signal.strip.flood_warning_active": KEEP_ENGLISH,
       "signal.strip.flood_watch_active": KEEP_ENGLISH,
@@ -3810,6 +3842,11 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P52 ── (Layer A English fallback)
+      "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
+      "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
+      "signal.fire_title_volcanic": KEEP_ENGLISH, "signal.fire_copy_volcanic_tmpl": KEEP_ENGLISH,
+      "signal.fire_copy_mixed_tmpl": KEEP_ENGLISH, "signal.detail_volcanic": KEEP_ENGLISH,
       "signal.strip.flood_clear": KEEP_ENGLISH,
       "signal.strip.flood_warning_active": KEEP_ENGLISH,
       "signal.strip.flood_watch_active": KEEP_ENGLISH,
@@ -4339,6 +4376,11 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P52 ── (Layer A English fallback)
+      "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
+      "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
+      "signal.fire_title_volcanic": KEEP_ENGLISH, "signal.fire_copy_volcanic_tmpl": KEEP_ENGLISH,
+      "signal.fire_copy_mixed_tmpl": KEEP_ENGLISH, "signal.detail_volcanic": KEEP_ENGLISH,
       "signal.strip.flood_clear": KEEP_ENGLISH,
       "signal.strip.flood_warning_active": KEEP_ENGLISH,
       "signal.strip.flood_watch_active": KEEP_ENGLISH,
