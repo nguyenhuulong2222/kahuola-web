@@ -28,6 +28,13 @@
  *     advice; the validator lets that through.
  *   - Missing information is fine. Extra information is dangerous. The
  *     validator is intentionally asymmetric about that.
+ *   - P57 CORRECTION: that asymmetry had a hole. It blocked ESCALATION but
+ *     permitted DENIAL, and for a hazard platform the false negative is the
+ *     dangerous direction. A brief asserting "no official alerts to report"
+ *     shipped for Kailua-Kona while an NWS Flood Watch covered HIZ023 —
+ *     because the zone→alert join fails for 29 of 31 zones and handed the
+ *     model an empty array. ABSENCE_PATTERNS below closes that hole: Kahu Ola
+ *     may report what it sees and must never report what it did not find.
  */
 
 import type { RiskLevel } from "./zones";
@@ -68,6 +75,31 @@ const TIMELINE_PATTERNS: RegExp[] = [
   /\btonight\b/i,
   /\bat \d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)\b/i,
   /\bexpected (?:at|by|within)\b/i,
+];
+
+// P57. Absence claims. An empty `nws_alerts` means Kahu Ola matched no alert
+// to the zone — never that no alert is active. Nothing in this pipeline can
+// establish absence, so no output may assert it, whatever the context holds.
+//
+// SCOPE, stated plainly: these are English patterns, matching the scope of
+// every other rule in this file (CLOSURE, TIMELINE, CERTAINTY, EVAC are all
+// English-only). Briefs are generated in six languages, so this rule is the
+// third line of defence for en and the second for vi/tl/ilo/haw/ja, where the
+// prompt (gemma.ts) and the deterministic template (zone-brief.ts) carry it.
+// Extending these patterns per locale is follow-up work, deliberately not
+// attempted here rather than shipped half-verified.
+const ABSENCE_PATTERNS: RegExp[] = [
+  // The qualifier list matters: "no other warnings" and "no further alerts"
+  // are denials too, and a naive /no (alerts|warnings)/ misses both.
+  /\bno\s+(?:official\s+|active\s+|current\s+|new\s+|other\s+|further\s+|additional\s+|more\s+)*(?:alerts?|warnings?|watch(?:es)?|advisor(?:y|ies))\b/i,
+  /\bnot(?:hing)?\s+to\s+report\b/i,
+  /\bthere\s+(?:are|is)\s+(?:currently\s+)?no\s+(?:official\s+|other\s+|further\s+|additional\s+)*(?:alerts?|warnings?|watch(?:es)?|advisor(?:y|ies))\b/i,
+  /\b(?:without|free\s+of)\s+(?:any\s+)?(?:official\s+)?(?:alerts?|warnings?)\b/i,
+  /\bno\s+(?:elevated\s+|active\s+)?hazards?\b/i,
+  /\b(?:alerts?|warnings?)\s+(?:are|is)\s+(?:currently\s+)?(?:not\s+active|inactive|clear)\b/i,
+  /\bpeaceful\s+day\b/i,
+  /\bconditions?\s+(?:are|is|remain(?:s)?)\s+(?:calm|quiet|clear)\b/i,
+  /\b(?:all\s+clear|everything\s+is\s+(?:calm|quiet|fine))\b/i,
 ];
 
 // Overstatement: words that claim certainty the system cannot support.
@@ -168,6 +200,19 @@ export function validateBrief(
   }
   if (text.includes(FALLBACK_MARKER)) {
     return { ok: false, reason: "contains fallback marker" };
+  }
+
+  // P57. Checked before every other content rule: a denial is the one failure
+  // that reads as reassurance, so it must never survive to the surface. This
+  // is unconditional by design — it does NOT relax when ctx.knownAlerts is
+  // populated, because a matched alert still licenses no claim about the ones
+  // that were not matched.
+  const absenceHit = anyMatches(text, ABSENCE_PATTERNS);
+  if (absenceHit) {
+    return {
+      ok: false,
+      reason: `asserts absence Kahu Ola cannot verify (pattern: ${absenceHit.source})`,
+    };
   }
 
   const closureHit = anyMatches(text, CLOSURE_PATTERNS);

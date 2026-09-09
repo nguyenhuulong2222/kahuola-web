@@ -102,13 +102,20 @@ const STRINGS: Record<string, BriefStrings> = {
     floodExtreme: (z) => `${z}: Flash flood risk is high — act on alerts immediately.`,
     floodHigh: (z) => `${z}: Elevated flood risk today.`,
     combined: (z) => `${z}: Flood and fire risks are both elevated today.`,
-    quiet: (z) => `${z}: No elevated hazards right now.`,
+    // P57. This string used to read "No elevated hazards right now." That is a
+    // claim about NWS alert status, and the zone pipeline cannot make it: the
+    // zone→alert join matches our zone names against NWS areaDesc text and
+    // fails for 29 of the 31 zones (every Maui zone, Lahaina included), so
+    // state.nws_alerts is empty whether or not an alert covers the reader.
+    // It now speaks only to what the pipeline actually checked — the zone-level
+    // fire and flood signal — and hands alert status to a surface that works.
+    quiet: (z) => `${z}: no zone-level hazard signal.`,
 
     fireExtremeMeans: (z, w, h, r) => `Dry conditions, ${w}, and ${h} mean any ignition in ${z} could spread quickly. The zone's baseline fire risk is ${r} and today's weather matches that pattern.`,
     fireHighMeans: (z, w, h) => `Fire weather is unfavorable in ${z} today. ${w.charAt(0).toUpperCase() + w.slice(1)} and ${h} allow small ignitions to grow faster than usual.`,
     floodExtremeMeans: (z, d) => `Heavy rainfall is possible in or above ${z}. ${d}`,
     floodHighMeans: (z, d) => `Elevated rainfall may produce stream rise and localized flooding in ${z}. ${d}`,
-    quietMeans: (z, f, fl) => `Current conditions in ${z} are within normal range. The zone's baseline fire risk is ${f} and flood risk is ${fl}.`,
+    quietMeans: (z, f, fl) => `Kahu Ola's zone check found no fire or flood signal for ${z} — baseline fire risk ${f}, flood risk ${fl}. This check does not include NWS alerts, and Kahu Ola cannot confirm alert status for this zone. Open the Live Map or NWS Honolulu to see which official alerts cover your area.`,
     combinedJoin: "At the same time, ",
 
     fireAction: (route, choke) =>
@@ -124,8 +131,8 @@ const STRINGS: Record<string, BriefStrings> = {
     combinedFloodFirst: "Flood first: ",
     combinedFireNext: " Fire next: ",
     quietAction: (route) =>
-      `Keep your go-bag current and confirm your primary evacuation route: ${route}. ` +
-      `Review your household emergency plan while conditions are calm.`,
+      `Check the Live Map or NWS Honolulu at weather.gov/hfo for official alerts covering your area — this brief does not include them. ` +
+      `Keep your go-bag current and confirm your primary evacuation route: ${route}.`,
 
     kupunaNote: "For kupuna in the household: confirm medications are accessible and that someone can reach them by phone if conditions change.",
     keikiSchoolNote: (school, route) => `For keiki: check ${school} for early-dismissal announcements and plan pickup before ${route} becomes congested.`,
@@ -150,13 +157,13 @@ const STRINGS: Record<string, BriefStrings> = {
     floodExtreme: (z) => `${z}: Nguy cơ lũ quét cao — hành động theo cảnh báo ngay.`,
     floodHigh: (z) => `${z}: Nguy cơ lũ lụt cao hôm nay.`,
     combined: (z) => `${z}: Nguy cơ lũ lụt và cháy đều cao hôm nay.`,
-    quiet: (z) => `${z}: Không có nguy hiểm nào lúc này.`,
+    quiet: (z) => `${z}: không có tín hiệu nguy hiểm ở cấp vùng.`,
 
     fireExtremeMeans: (z, w, h, r) => `Điều kiện khô, ${w}, và ${h} nghĩa là bất kỳ đám cháy nào ở ${z} có thể lan nhanh. Nguy cơ cháy cơ bản của khu vực là ${r} và thời tiết hôm nay phù hợp với mô hình đó.`,
     fireHighMeans: (z, w, h) => `Thời tiết cháy bất lợi ở ${z} hôm nay. ${w.charAt(0).toUpperCase() + w.slice(1)} và ${h} cho phép đám cháy nhỏ phát triển nhanh hơn bình thường.`,
     floodExtremeMeans: (z, d) => `Mưa lớn có thể xảy ra ở hoặc trên ${z}. ${d}`,
     floodHighMeans: (z, d) => `Mưa lớn có thể gây dâng nước suối và ngập cục bộ ở ${z}. ${d}`,
-    quietMeans: (z, f, fl) => `Điều kiện hiện tại ở ${z} trong phạm vi bình thường. Nguy cơ cháy cơ bản là ${f} và nguy cơ lũ lụt là ${fl}.`,
+    quietMeans: (z, f, fl) => `Kiểm tra cấp vùng của Kahu Ola không thấy tín hiệu cháy hoặc lũ cho ${z} — nguy cơ cháy cơ bản ${f}, nguy cơ lũ ${fl}. Phần kiểm tra này không bao gồm cảnh báo NWS, và Kahu Ola không thể xác nhận tình trạng cảnh báo cho vùng này. Hãy mở Bản đồ trực tiếp hoặc NWS Honolulu để xem cảnh báo chính thức nào áp dụng cho khu vực của bạn.`,
     combinedJoin: "Đồng thời, ",
 
     fireAction: (route, choke) =>
@@ -172,8 +179,8 @@ const STRINGS: Record<string, BriefStrings> = {
     combinedFloodFirst: "Lũ trước: ",
     combinedFireNext: " Cháy tiếp: ",
     quietAction: (route) =>
-      `Chuẩn bị túi khẩn cấp và xác nhận tuyến đường sơ tán chính: ${route}. ` +
-      `Kiểm tra kế hoạch khẩn cấp gia đình trong khi điều kiện đang bình yên.`,
+      `Hãy xem Bản đồ trực tiếp hoặc NWS Honolulu tại weather.gov/hfo để biết cảnh báo chính thức cho khu vực của bạn — bản tin này không bao gồm chúng. ` +
+      `Chuẩn bị túi khẩn cấp và xác nhận tuyến đường sơ tán chính: ${route}.`,
 
     kupunaNote: "Với kūpuna trong gia đình: xác nhận thuốc đang trong tầm tay và ai đó có thể liên lạc qua điện thoại nếu tình hình thay đổi.",
     keikiSchoolNote: (school, route) => `Với keiki: kiểm tra ${school} về thông báo tan học sớm và lên kế hoạch đón trước khi ${route} bị tắc nghẽn.`,
@@ -198,13 +205,13 @@ const STRINGS: Record<string, BriefStrings> = {
     floodExtreme: (z) => `${z}: Mataas ang panganib ng flash flood — sundin agad ang mga alerto.`,
     floodHigh: (z) => `${z}: Mataas na panganib ng baha ngayon.`,
     combined: (z) => `${z}: Parehong mataas ang panganib ng baha at sunog ngayon.`,
-    quiet: (z) => `${z}: Walang mataas na panganib sa ngayon.`,
+    quiet: (z) => `${z}: walang senyales ng panganib sa antas ng zone.`,
 
     fireExtremeMeans: (z, w, h, r) => `Tuyong kondisyon, ${w}, at ${h} ang ibig sabihin ay mabilis kumalat ang anumang sunog sa ${z}. Ang baseline na panganib ng sunog ay ${r} at tugma ang panahon ngayon.`,
     fireHighMeans: (z, w, h) => `Hindi paborable ang panahon para sa sunog sa ${z} ngayon. ${w.charAt(0).toUpperCase() + w.slice(1)} at ${h} ay nagpapabilis ng pagkalat ng apoy.`,
     floodExtremeMeans: (z, d) => `Posible ang malakas na ulan sa o malapit sa ${z}. ${d}`,
     floodHighMeans: (z, d) => `Maaaring tumaas ang tubig sa ilog at magkaroon ng lokal na pagbaha sa ${z}. ${d}`,
-    quietMeans: (z, f, fl) => `Ang kasalukuyang kondisyon sa ${z} ay nasa normal na range. Baseline na panganib ng sunog ay ${f} at panganib ng baha ay ${fl}.`,
+    quietMeans: (z, f, fl) => `Walang nakitang senyales ng sunog o baha ang zone check ng Kahu Ola para sa ${z} — baseline na panganib ng sunog ${f}, panganib ng baha ${fl}. Hindi kasama sa check na ito ang mga alerto ng NWS, at hindi makumpirma ng Kahu Ola ang katayuan ng alerto para sa zone na ito. Buksan ang Live Map o NWS Honolulu upang makita kung aling mga opisyal na alerto ang sumasaklaw sa inyong lugar.`,
     combinedJoin: "Kasabay nito, ",
 
     fireAction: (route, choke) =>
@@ -220,8 +227,8 @@ const STRINGS: Record<string, BriefStrings> = {
     combinedFloodFirst: "Baha muna: ",
     combinedFireNext: " Sunog pagkatapos: ",
     quietAction: (route) =>
-      `Panatilihing handa ang go-bag at kumpirmahin ang pangunahing ruta ng paglikas: ${route}. ` +
-      `Suriin ang plano ng emergency ng sambahayan habang mahinahon ang kondisyon.`,
+      `Tingnan ang Live Map o ang NWS Honolulu sa weather.gov/hfo para sa mga opisyal na alerto sa inyong lugar — hindi ito kasama sa brief na ito. ` +
+      `Panatilihing handa ang go-bag at kumpirmahin ang pangunahing ruta ng paglikas: ${route}.`,
 
     kupunaNote: "Para sa kūpuna: tiyakin na naa-access ang mga gamot at may makakausap sa telepono kung magbago ang kondisyon.",
     keikiSchoolNote: (school, route) => `Para sa keiki: tingnan ang ${school} para sa maagang pagpapalabas at mag-plano ng sundo bago mabara ang ${route}.`,
@@ -246,13 +253,13 @@ const STRINGS: Record<string, BriefStrings> = {
     floodExtreme: (z) => `${z}: Nangato ti peligro ti flash flood — suroten dagiti alerto a dagus.`,
     floodHigh: (z) => `${z}: Nangato a peligro ti layus ita nga aldaw.`,
     combined: (z) => `${z}: Agpada a nangato ti peligro ti layus ken sunog ita nga aldaw.`,
-    quiet: (z) => `${z}: Awan nangato a peligro ita.`,
+    quiet: (z) => `${z}: awan ti senyales ti peligro iti tukad ti zone.`,
 
     fireExtremeMeans: (z, w, h, r) => `Naangin a kondisyon, ${w}, ken ${h} ti kayatna a saoen ket mapardas ti panagrang-ay ti sunog idiay ${z}. Ti baseline a peligro ti sunog ket ${r} ken maitutop ti tiempo ita.`,
     fireHighMeans: (z, w, h) => `Saan a paborable ti tiempo para iti sunog idiay ${z} ita. ${w.charAt(0).toUpperCase() + w.slice(1)} ken ${h} ti mangpapardas iti panagrang-ay ti apoy.`,
     floodExtremeMeans: (z, d) => `Posible ti napigsa a tudo idiay wenno iti ngato ti ${z}. ${d}`,
     floodHighMeans: (z, d) => `Mabalin a tumaas ti danum ti karayan ken agkaroon iti lokal a layus idiay ${z}. ${d}`,
-    quietMeans: (z, f, fl) => `Ti agdama a kondisyon idiay ${z} ket normal. Baseline a peligro ti sunog ket ${f} ken peligro ti layus ket ${fl}.`,
+    quietMeans: (z, f, fl) => `Awan ti nasarakan a senyales ti sunog wenno layus ti zone check ti Kahu Ola para iti ${z} — baseline a peligro ti sunog ${f}, peligro ti layus ${fl}. Saan a nairaman iti daytoy a check dagiti alerto ti NWS, ken saan a mapasingkedan ti Kahu Ola ti kasasaad ti alerto para iti daytoy a zone. Luktan ti Live Map wenno ti NWS Honolulu tapno makita no ania dagiti opisyal nga alerto ti sumaklaw iti lugaryo.`,
     combinedJoin: "Iti isu met laeng a tiempo, ",
 
     fireAction: (route, choke) =>
@@ -268,8 +275,8 @@ const STRINGS: Record<string, BriefStrings> = {
     combinedFloodFirst: "Layus nga umuna: ",
     combinedFireNext: " Sunog kalpasan: ",
     quietAction: (route) =>
-      `Ikuyog ti go-bag ken ikumpirma ti kangrunaan a ruta ti panagikkat: ${route}. ` +
-      `Rebisaen ti plano ti emergency ti pamilya bayat nga naininan dagiti kondisyon.`,
+      `Kitaen ti Live Map wenno ti NWS Honolulu iti weather.gov/hfo para kadagiti opisyal nga alerto iti lugaryo — saan a nairaman dagitoy iti daytoy a brief. ` +
+      `Ikuyog ti go-bag ken ikumpirma ti kangrunaan a ruta ti panagikkat: ${route}.`,
 
     kupunaNote: "Para iti kūpuna: ikumpirma nga naragsak dagiti agas ken adda makatawag iti telepono no agbaliw ti kasasaad.",
     keikiSchoolNote: (school, route) => `Para iti keiki: kitaen ti ${school} para iti nasakbay a pannakaiwaras ken planuen ti pannakairugi sakbay nga mabara ti ${route}.`,
@@ -294,13 +301,13 @@ const STRINGS: Record<string, BriefStrings> = {
     floodExtreme: (z) => `${z}: Nui ka pilikia wai kahe — e hana ma muli o nā ʻōlelo aʻo.`,
     floodHigh: (z) => `${z}: Nui ka pilikia wai i kēia lā.`,
     combined: (z) => `${z}: Nui ka pilikia wai a me ke ahi i kēia lā.`,
-    quiet: (z) => `${z}: ʻAʻohe pilikia nui i kēia manawa.`,
+    quiet: (z) => `${z}: ʻaʻohe hōʻailona pilikia ma ka pae ʻāpana.`,
 
     fireExtremeMeans: (z, w, h, r) => `ʻO nā kūlana maloʻo, ${w}, a me ${h} ka manaʻo he wikiwiki ka laha ʻana o ke ahi ma ${z}. ʻO ka pilikia ahi maʻamau he ${r} a kū like ke anilā o kēia lā.`,
     fireHighMeans: (z, w, h) => `ʻAʻole maikaʻi ke anilā no ke ahi ma ${z} i kēia lā. ${w.charAt(0).toUpperCase() + w.slice(1)} a me ${h} e hiki ai ke ulu wikiwiki nā ahi liʻiliʻi.`,
     floodExtremeMeans: (z, d) => `Hiki mai ka ua nui ma luna o ${z}. ${d}`,
     floodHighMeans: (z, d) => `Hiki ke piʻi ka wai kahawai a me ka wai kahe ma ${z}. ${d}`,
-    quietMeans: (z, f, fl) => `Maʻamau nā kūlana ma ${z} i kēia manawa. ʻO ka pilikia ahi maʻamau he ${f} a ʻo ka pilikia wai he ${fl}.`,
+    quietMeans: (z, f, fl) => `ʻAʻole i loaʻa i ka nānā ʻāpana a Kahu Ola he hōʻailona ahi a wai paha no ${z} — pilikia ahi maʻamau ${f}, pilikia wai ${fl}. ʻAʻole komo nā ʻōlelo aʻo NWS i kēia nānā ʻana, a ʻaʻole hiki iā Kahu Ola ke hōʻoia i ke kūlana ʻōlelo aʻo no kēia ʻāpana. E wehe i ka Palapala ʻĀina Ola a i ʻole i ka NWS Honolulu e ʻike ai i nā ʻōlelo aʻo mana e uhi ana i kou wahi.`,
     combinedJoin: "I ka manawa like, ",
 
     fireAction: (route, choke) =>
@@ -316,8 +323,8 @@ const STRINGS: Record<string, BriefStrings> = {
     combinedFloodFirst: "Ka wai mua: ",
     combinedFireNext: " Ke ahi ma hope: ",
     quietAction: (route) =>
-      `E mākaukau i kāu ʻeke hoʻomākaukau a e hōʻoia i ke ala huakaʻi koʻikoʻi: ${route}. ` +
-      `E nānā i ka papahana pilikia o ko kākou hale i kēia manawa maluhia.`,
+      `E nānā i ka Palapala ʻĀina Ola a i ʻole i ka NWS Honolulu ma weather.gov/hfo no nā ʻōlelo aʻo mana e uhi ana i kou wahi — ʻaʻole i komo lākou i kēia hōʻuluʻulu. ` +
+      `E mākaukau i kāu ʻeke hoʻomākaukau a e hōʻoia i ke ala huakaʻi koʻikoʻi: ${route}.`,
 
     kupunaNote: "No nā kūpuna: e hōʻoia i ka loaʻa o nā lāʻau lapaʻau a me ka mea e kelepona ai inā hoʻololi nā kūlana.",
     keikiSchoolNote: (school, route) => `No nā keiki: e nānā iā ${school} no ka hoʻokuʻu mua a e hoʻolālā i ka lawe ʻana ma mua o ka piʻi ʻana o ${route}.`,
@@ -342,13 +349,13 @@ const STRINGS: Record<string, BriefStrings> = {
     floodExtreme: (z) => `${z}: 鉄砲水のリスクが高い — アラートに従ってください。`,
     floodHigh: (z) => `${z}: 本日、洪水リスクが高まっています。`,
     combined: (z) => `${z}: 本日、洪水と火災の両方のリスクが高まっています。`,
-    quiet: (z) => `${z}: 現在、高い危険はありません。`,
+    quiet: (z) => `${z}: ゾーンレベルの危険シグナルは検出されていません。`,
 
     fireExtremeMeans: (z, w, h, r) => `乾燥した状況、${w}、${h}により、${z}での火災は急速に広がる可能性があります。基本的な火災リスクは${r}で、本日の天候はそのパターンに一致しています。`,
     fireHighMeans: (z, w, h) => `${z}では本日、火災に不利な天候です。${w}と${h}により、小さな火災がより早く拡大する可能性があります。`,
     floodExtremeMeans: (z, d) => `${z}またはその上流で大雨の可能性があります。${d}`,
     floodHighMeans: (z, d) => `${z}で河川の増水や局地的な洪水が発生する可能性があります。${d}`,
-    quietMeans: (z, f, fl) => `${z}の現在の状況は正常範囲内です。基本的な火災リスクは${f}、洪水リスクは${fl}です。`,
+    quietMeans: (z, f, fl) => `Kahu Olaのゾーン確認では${z}の火災・洪水シグナルは検出されませんでした（基準: 火災リスク${f}、洪水リスク${fl}）。この確認にNWSアラートは含まれず、Kahu Olaはこのゾーンのアラート状況を確認できません。お住まいの地域を対象とする公式アラートは、ライブマップまたはNWS Honoluluでご確認ください。`,
     combinedJoin: "同時に、",
 
     fireAction: (route, choke) =>
@@ -364,8 +371,8 @@ const STRINGS: Record<string, BriefStrings> = {
     combinedFloodFirst: "洪水優先: ",
     combinedFireNext: " 次に火災: ",
     quietAction: (route) =>
-      `非常用持ち出し袋を確認し、主要避難経路を確認: ${route}。` +
-      `状況が穏やかな今、世帯の緊急計画を見直してください。`,
+      `お住まいの地域を対象とする公式アラートは、ライブマップまたはNWS Honolulu（weather.gov/hfo）でご確認ください — このブリーフには含まれていません。` +
+      `非常用持ち出し袋を確認し、主要避難経路を確認: ${route}。`,
 
     kupunaNote: "高齢者の方へ: 薬が手の届く場所にあり、状況が変わった場合に電話で連絡できる人がいることを確認してください。",
     keikiSchoolNote: (school, route) => `子どもたちへ: ${school}の早期下校のお知らせを確認し、${route}が混雑する前にお迎えを計画してください。`,

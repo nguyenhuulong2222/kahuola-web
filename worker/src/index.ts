@@ -6920,7 +6920,13 @@ async function buildZoneDynamicState(
 
   const upstream = await fetchNwsAlerts(cors);
   if (upstream && upstream.ok) {
-    sources.push("NWS Honolulu active alerts");
+    // P57. This read "NWS Honolulu active alerts". That was true — the fetch
+    // succeeded — but a reader takes it to mean "my area was checked against
+    // NWS alerts", which is what makes an empty result feel authoritative.
+    // The zone→alert join below matches zone NAMES against NWS areaDesc text
+    // and fails for 29 of the 31 zones, so the label must claim only what
+    // actually happened: the statewide feed was retrieved, nothing more.
+    sources.push("NWS Honolulu statewide alert feed — retrieved, not zone-matched");
     const features: any[] = Array.isArray(upstream.data?.features)
       ? upstream.data.features
       : [];

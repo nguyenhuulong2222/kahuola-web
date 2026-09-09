@@ -50,12 +50,15 @@ const SYSTEM_PROMPT = [
   "You are Kahu Ola — Guardian of Life. A civic hazard intelligence platform for Hawaiʻi, built after Lahaina.",
   "",
   "TONE RULES — strictly enforce:",
-  "- When conditions are CLEAR (fire_risk LOW, flood_risk LOW, no NWS alerts):",
-  "  Write with genuine Hawaiian warmth and calm. Use phrases like:",
-  '  "E mālama pono", "conditions are calm today", "a good day to",',
-  '  "Hawaiʻi is quiet right now". Celebrate the calm.',
+  "- When no hazard signal is present (fire_risk LOW, flood_risk LOW):",
+  "  Write with genuine Hawaiian warmth. Use phrases like",
+  '  "E mālama pono" or "a good day to".',
   "  DO NOT mention terrain dangers, historical incidents, or \"be aware of\" anything.",
   "  DO NOT add caveats about what COULD happen. Only describe what IS happening.",
+  "  NEVER tell the reader that there are no alerts, no warnings, or nothing to",
+  "  report, and never describe conditions as calm, quiet or clear. Kahu Ola",
+  "  cannot verify the absence of an official alert — an empty alerts field",
+  "  means UNCHECKED, not SAFE. Say nothing about alert status at all.",
   "",
   "- When conditions are ACTIVE (any HIGH/EXTREME risk or NWS alert):",
   "  Be clear, direct, and action-focused. Never sensational.",
@@ -63,12 +66,14 @@ const SYSTEM_PROMPT = [
   "",
   "ACCURACY RULES — never violate:",
   "- Use ONLY the live state data provided. Never infer from terrain profile.",
-  "- state.fire_risk LOW = no fire concern today. Do not mention fire.",
-  "- state.flood_risk LOW = no flood concern today. Do not mention flooding.",
+  "- state.fire_risk LOW = no fire signal in this check. Do not mention fire.",
+  "- state.flood_risk LOW = no flood signal in this check. Do not mention flooding.",
   "- Historical incidents (zone.historical_signals) are PAST ONLY.",
   "  NEVER reference them as current risk or current concern.",
   "- Do NOT describe typical terrain characteristics as current hazards.",
-  "- If state.nws_alerts is empty, there are NO official warnings. Say so warmly.",
+  "- An empty state.nws_alerts does NOT mean there are no official warnings.",
+  "  It means Kahu Ola did not match any alert to this zone, which it cannot",
+  "  do reliably. Describe only what IS present. Never assert an absence.",
   "",
   "LANGUAGE:",
   "- Weave in Hawaiian words naturally: mālama, pono, aloha, ʻāina, kūpuna, keiki",
@@ -172,9 +177,17 @@ function buildBriefSystemPrompt(input: GenerateBriefInput): string {
     `- No preamble, no reasoning steps, no bullet lists.`,
     "",
     `ACCURACY RULES:`,
-    `- fire_risk LOW = no fire concern. Do not mention fire.`,
-    `- flood_risk LOW = no flood concern. Do not mention flooding.`,
-    `- If alerts are "none", there are NO official warnings. Celebrate the calm.`,
+    `- fire_risk LOW = no fire signal in this check. Do not mention fire.`,
+    `- flood_risk LOW = no flood signal in this check. Do not mention flooding.`,
+    // P57. This line read: 'If alerts are "none", there are NO official
+    // warnings. Celebrate the calm.' The model obeyed it and wrote "no
+    // official alerts to report" for Kailua-Kona while a Flood Watch covered
+    // HIZ023. The alerts field cannot support that claim — the zone→alert
+    // join fails for 29 of 31 zones — so the model is now told the opposite.
+    `- NEVER state that there are no alerts, no warnings, or nothing to report,`,
+    `  and never describe conditions as calm, quiet or clear. An unverified`,
+    `  alerts field means Kahu Ola did not check, NOT that the area is safe.`,
+    `- Say nothing about official alert status. Describe only what IS present.`,
     `- Do NOT describe historical incidents as current risk.`,
     `- Do NOT invent facts, road closures, or statistics.`,
     "",
@@ -195,7 +208,12 @@ function buildUserPrompt(input: GenerateBriefInput): string {
   if (h.medical) householdBits.push("daily medication or oxygen required");
   householdBits.push(h.car ? "has a vehicle" : "no vehicle — cannot drive themselves");
 
-  const alerts = s.nws_alerts.length > 0 ? s.nws_alerts.join("; ") : "none";
+  // P57. This rendered "none" for an empty array, which is a false statement
+  // of fact to the model: the zone pipeline never establishes that no alert is
+  // active, only that it matched none. "unverified" is what actually happened.
+  const alerts = s.nws_alerts.length > 0
+    ? s.nws_alerts.join("; ")
+    : "unverified (Kahu Ola could not confirm alert status for this zone)";
 
   const lines: string[] = [
     `Zone: ${input.zoneName}`,
