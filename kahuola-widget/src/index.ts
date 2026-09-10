@@ -57,6 +57,14 @@
 
 export interface Env {
   KAHUOLA_API_BASE?: string;
+  /**
+   * Service binding to the main hazard Worker (kahuola-tiles-broker).
+   * Present in production; absent under `wrangler dev`, where the plain
+   * outbound fetch to KAHUOLA_API_BASE works because the request leaves the
+   * developer's machine rather than the zone. See wrangler.toml for why the
+   * binding is required on the edge.
+   */
+  KAHUOLA_API?: Fetcher;
 }
 
 /**
@@ -240,8 +248,8 @@ async function handleStatus(location: string, env: Env): Promise<Response> {
   let airData: unknown = null;
   try {
     const [sRes, aRes] = await Promise.allSettled([
-      fetchJson(`${base}/hazards/summary`, ctrl.signal),
-      fetchJson(`${base}/hazards/air?region=hawaii`, ctrl.signal),
+      fetchJson(`${base}/hazards/summary`, ctrl.signal, env.KAHUOLA_API),
+      fetchJson(`${base}/hazards/air?region=hawaii`, ctrl.signal, env.KAHUOLA_API),
     ]);
     summaryData = sRes.status === 'fulfilled' ? sRes.value : null;
     airData = aRes.status === 'fulfilled' ? aRes.value : null;
@@ -284,11 +292,26 @@ async function handleStatus(location: string, env: Env): Promise<Response> {
   return resp;
 }
 
-/** Resolves to parsed JSON, or null on any non-200 / bad body. Never throws. */
-async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
+/**
+ * Resolves to parsed JSON, or null on any non-200 / bad body. Never throws.
+ *
+ * Prefers the service binding, which reaches the hazard Worker script directly
+ * and skips zone routing entirely. Falls back to a normal outbound fetch when
+ * the binding is absent (local dev). Neither path sends an Origin header, so
+ * neither is subject to the main Worker's ALLOWED_ORIGINS check.
+ *
+ * A non-200 is logged with its STATUS — the first deploy of this Worker
+ * returned a degraded card and the log said only "unusable", which was true
+ * and useless. The status is what distinguishes a loopback from an outage.
+ */
+async function fetchJson(url: string, signal: AbortSignal, svc?: Fetcher): Promise<unknown> {
   try {
-    const r = await fetch(url, { signal, headers: { Accept: 'application/json' } });
-    if (!r.ok) return null;
+    const req = new Request(url, { headers: { Accept: 'application/json' } });
+    const r = svc ? await svc.fetch(req) : await fetch(req, { signal });
+    if (!r.ok) {
+      logEvent('widget.upstream.http_error', `${new URL(url).pathname} → ${r.status}`);
+      return null;
+    }
     return await r.json();
   } catch {
     return null;   // network, abort, timeout, malformed JSON — all the same here

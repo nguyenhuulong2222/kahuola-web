@@ -31,3 +31,22 @@ KAHUOLA_API_BASE = "https://kahuola.org/api"
 
 # No secrets in the widget. The main Kahu Ola Worker owns all upstream
 # credentials; the widget only reads its cached public hazard summary.
+
+# ── Service binding to the main hazard Worker (P58) ─────────────────────────
+# widget.kahuola.org and kahuola.org are the SAME Cloudflare zone, so a plain
+# fetch("https://kahuola.org/api/...") from inside this Worker is a same-zone
+# loopback: it re-enters zone routing instead of reaching the hazard Worker,
+# and fails in ~80ms. The main Worker documents the same constraint for its
+# own self-calls (worker/src/index.ts:1450, "Cloudflare Workers cannot
+# reliably self-fetch their own route").
+#
+# A service binding addresses the target SCRIPT directly — no DNS, no zone
+# routing, no TLS hop, and no CORS: the main Worker's ALLOWED_ORIGINS does not
+# list widget.kahuola.org, so a browser-side call would be 403'd anyway.
+# Binding-only config: it does NOT require redeploying kahuola-tiles-broker.
+#
+# KAHUOLA_API_BASE above stays as the URL used for local `wrangler dev`, where
+# the binding is absent and a normal outbound fetch works.
+[[services]]
+binding = "KAHUOLA_API"
+service = "kahuola-tiles-broker"
