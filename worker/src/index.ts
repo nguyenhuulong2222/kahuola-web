@@ -6950,7 +6950,13 @@ async function buildZoneDynamicState(
       if ((zoneMatch || islandWideFire) && /flash flood/i.test(event)) {
         flood_risk = "EXTREME";
       }
-      if ((zoneMatch || /flood warning/i.test(event)) && /flood warning/i.test(event)) {
+      // P59 hotfix. This read:
+      //   (zoneMatch || /flood warning/i.test(event)) && /flood warning/i.test(event)
+      // which reduces to the right operand alone, so ANY flood warning anywhere
+      // in the state set flood_risk = HIGH for all 31 zones. One Flash Flood
+      // Warning had Kona, Hilo, Honolulu and Lahaina — four zones on three
+      // islands — all reading "Elevated flood risk today".
+      if (zoneMatch && /flood warning/i.test(event)) {
         if (flood_risk !== "EXTREME") flood_risk = "HIGH";
       }
       if (islandWideFire) {
