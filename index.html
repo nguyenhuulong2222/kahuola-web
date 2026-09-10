@@ -2470,6 +2470,54 @@
       </div>
     </section>
 
+    <!-- ── EMBEDDABLE WIDGET (P58) ──────────────────────────────
+         Additive only. This block introduces no new data-i18n keys and no
+         new CSS rules, so the locked homepage <style> block and the i18n
+         bundle (and its ?v token) are untouched. Styling is inline and uses
+         existing CSS variables.
+
+         The widget is a Shadow-DOM custom element served by a SEPARATE
+         Worker (widget.kahuola.org). It cannot reach into this page, and
+         this page does not style it. If widget.kahuola.org is unreachable
+         the custom element simply never upgrades and the <kahuola-safety-widget>
+         tag renders as nothing — the homepage is unaffected either way.
+
+         KNOWN GAP: the caption below is English-only. Translating it needs a
+         key in i18n/kahuola-i18n.js plus a ?v token bump per P47, which is a
+         change to locked structure and is deliberately not made here. The
+         widget itself supports lang="vi" if this section is ever localized.
+    -->
+    <section class="new-section" id="embed-widget">
+      <div class="inner">
+        <p class="ns-label">For Partners</p>
+        <h2 class="ns-title">Put Hawai&#699;i hazard status on your site</h2>
+        <p class="ns-lead">
+          A single line of HTML shows live air quality and satellite wildfire detections
+          for your area. It reads from the same Kahu Ola data as this page, labels its own
+          scope and freshness, and says so plainly when a source is unavailable.
+        </p>
+
+        <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin-top:22px">
+          <kahuola-safety-widget location="wailuku" theme="light"></kahuola-safety-widget>
+
+          <div style="flex:1 1 280px;min-width:260px">
+            <pre style="margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.18);overflow-x:auto;font-size:11.5px;line-height:1.6;color:var(--text-dim)"><code>&lt;script src="https://widget.kahuola.org/v1/embed.js" defer&gt;&lt;/script&gt;
+&lt;kahuola-safety-widget location="wailuku" theme="light"&gt;
+&lt;/kahuola-safety-widget&gt;</code></pre>
+            <p style="margin:10px 0 0;font-size:12.5px;color:var(--text-dim)">
+              <a href="/guide#embed" style="color:var(--accent);font-weight:700;text-decoration:none">Embed this widget on your site &rarr;</a>
+              <span style="opacity:.8">&nbsp;&middot; free, no account, no tracking</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Widget loader. `defer` keeps it off the critical path; the custom
+         element upgrades whenever the script lands. Third-party origin by
+         design — the widget Worker is deployed and versioned separately. -->
+    <script src="https://widget.kahuola.org/v1/embed.js" defer></script>
+
     <!-- ── Footer ── -->
     <footer style="margin-top:40px;padding:20px 0 0;border-top:1px solid var(--line)">
       <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:12px">
