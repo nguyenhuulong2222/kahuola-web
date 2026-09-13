@@ -9,6 +9,14 @@
  */
 
 import { getZoneById, type ZoneDynamicState, type RiskLevel } from "./zones";
+// P23 — Ocean Intelligence context overlays. Additive: three new GET routes,
+// no change to any existing route, parser or cache key.
+import {
+  handleOceanSurf,
+  handleOceanRipCurrent,
+  handleOceanTropicalOutlook,
+  type OceanDeps,
+} from "./ocean";
 import {
   generateZoneBrief,
   generateFallbackBrief,
@@ -368,6 +376,17 @@ async function cachedTextFetch(url: string, ttl: number): Promise<string> {
     clearTimeout(timer);
   }
 }
+
+// P23 — helper bundle handed to the ocean module. Injected rather than
+// imported so ocean.ts never imports index.ts (which would be circular), and
+// so the ocean routes inherit the SAME 8 s AbortController budget, the same
+// NWS User-Agent and the same caches.default discipline as every other route.
+const OCEAN_DEPS: OceanDeps = {
+  cachedJsonFetch,
+  cachedTextFetch,
+  fetchNwsAlerts,
+  jsonResp,
+};
 
 // `useCache: false` skips the stored entry in BOTH directions — no read, no
 // write — while still allowing the caller to join an in-flight request. That
@@ -1237,6 +1256,13 @@ export default {
       // 200 + valid JSON, degrades deterministically on cache miss / parse fail.
       if (path === '/api/hazards/air' || path === '/hazards/air') return handleAirQuality(url, env, cors);
       if (path === '/api/hazards/summary' || path === '/hazards/summary') return handleHazardsSummary(url, env, cors);
+
+      // ── P23 · Ocean Intelligence (context overlays) ────────────────────
+      // layer_class: "context" per V4.7 doctrine §III — situational awareness
+      // that must never enter the canonical Event Priority ladder.
+      if (path === '/api/ocean/surf') return handleOceanSurf(url, cors, OCEAN_DEPS);
+      if (path === '/api/ocean/rip-current') return handleOceanRipCurrent(url, cors, OCEAN_DEPS);
+      if (path === '/api/ocean/tropical-outlook') return handleOceanTropicalOutlook(url, cors, OCEAN_DEPS);
       if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
       if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
       if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
