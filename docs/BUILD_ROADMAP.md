@@ -22,9 +22,21 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 - [ ] **P01 · Safari iOS black screen — deploy the ready fix** — `FIX-READY`
   Fix exists for `live-map.html`, not yet deployed. Multi-browser test + cache purge
   (4h TTL) required. Touches production-locked file → careful.
-- [ ] **P02 · AirNow JSON API deprecation** — `NOT-STARTED` — ⏰ deadline **2026-09-30**
-  Grep `worker/src/` to confirm which AirNow endpoints are in use (likely XYZ raster
-  tiles = unaffected; risk = AQI data card + `generate_insights.js`). Migrate if needed.
+- [x] **P02 · AirNow JSON API deprecation** — `DONE` 2026-09-12
+  Closed as a no-op: **nothing we use is retiring.** EPA's official notice
+  (`docs.airnowapi.org/docs/AirNowAPIUpdates2026June.pdf`) retires six services on
+  2026-09-30 — `/aq/forecast/{zipCode,latLong}/`, `/aq/observation/{zipCode,latLong}/current/`,
+  `/aq/observation/{zipCode,latLong}/historical/`. Repo-wide grep: **zero references to
+  any of the six.** Our three AirNow-adjacent surfaces are all clear:
+  · `/api/hazards/air` -> `/aq/data/` (index.ts:4021), listed **"Remain"** in the notice's
+    own table ("Hourly Observations by Monitoring Site - Bounding Box"). Verified live:
+    15 monitors, freshness FRESH.
+  · `/api/tiles/xyz/airnow/*` -> proxies `tiles.aqicn.org`, not an AirNow API endpoint at
+    all (the route name is historical; `tiles.airnowtech.org` is long defunct).
+  · `scripts/insights/generate_insights.js` -> **no AirNow reference**; the 2026-08-02 note
+    flagging it was wrong.
+  Do NOT "migrate" `/aq/data/` to the new `/aq/dailydata/`: that sibling service is DAILY
+  observations, and the AQI card needs HOURLY. Switching would degrade the data.
 - [x] **P03 · NREL API migration verify** — `DONE` 2026-09-12
   Closed 2026-09-12: repo-wide grep for nrel returns zero references. No migration needed.
 
@@ -140,3 +152,8 @@ surface → then everything that renders on the map, in order.
   P04/P08/P16 → DONE, P17/P21 → IN-PROGRESS, P03 closed (zero nrel refs).
   P02 re-ranked #1 — airnowapi.org/aq/data (index.ts:4021) is the deprecated
   JSON API and powers /api/hazards/air.
+- 2026-09-12 — P02 closed as a no-op after reading EPA's official retirement notice.
+  `/aq/data/` is marked "Remain", not retiring; the six retiring services are the
+  zipCode/latLong forecast + observation endpoints, none of which this repo calls.
+  Corrects the previous log line, which assumed /aq/data was the deprecated API.
+  No Worker change shipped.
