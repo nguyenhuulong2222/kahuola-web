@@ -25,24 +25,26 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 - [ ] **P02 · AirNow JSON API deprecation** — `NOT-STARTED` — ⏰ deadline **2026-09-30**
   Grep `worker/src/` to confirm which AirNow endpoints are in use (likely XYZ raster
   tiles = unaffected; risk = AQI data card + `generate_insights.js`). Migrate if needed.
-- [ ] **P03 · NREL API migration verify** — `NOT-STARTED` — ⏰ deadline **2026-04-30 (PASSED)**
-  `developer.nrel.gov` → `developer.nlr.gov`. Verify urgently whether repo still calls it.
+- [x] **P03 · NREL API migration verify** — `DONE` 2026-09-12
+  Closed 2026-09-12: repo-wide grep for nrel returns zero references. No migration needed.
 
 > Done in this track (reference): "Data format error" on live-map — **RESOLVED**.
 > Worker W4–W8 routes — **LIVE** (2026-03-19, ver 160d1fe8).
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
 
-- [ ] **P04 · Stage 0 + Stage 1 — Fire-spread danger layer (backend)** — `PROMPT-READY`
+- [x] **P04 · Stage 0 + Stage 1 — Fire-spread danger layer (backend)** — `DONE`
   Worker-only. FIRMS ingest (NOAA-20/21 + SNPP fallback) + heuristic + new endpoint
   `/api/hazards/fire-danger`. **CORE VALUE.** Prompt written 2026-08-02.
+  Shipped: /api/hazards/fire-danger live (worker/src/index.ts).
 - [ ] **P05 · Stage 1 overlay → live-map.html** — `NOT-STARTED`
   Blocked until map is bug-clean (do P01 first). Heat overlay + on-device per-address LOC.
 - [ ] **P06 · Stage 2 — Smoke/AQI layer (backend)** — `NOT-STARTED`
   AirNow + PurpleAir + NASA aerosol; upwind-cluster respiratory advisory.
 - [ ] **P07 · Stage 2 overlay → live-map.html** — `NOT-STARTED`
-- [ ] **P08 · Stage 3 — Satellite-verified citizen reports (backend + D1)** — `NOT-STARTED`
+- [x] **P08 · Stage 3 — Satellite-verified citizen reports (backend + D1)** — `DONE`
   Photo + geo, FIRMS cross-check, `satellite-confirmed` vs `unverified`.
+  Shipped: POST/GET /api/reports, D1 REPORTS_DB, cron cleanup.
 - [ ] **P09 · Stage 3 — citizen report submit UI** — `NOT-STARTED`
 - [ ] **P10 · Stage 4 — Conversational front-end** — `NOT-STARTED`
   LLM over our own hazard JSON ("is it safe at my address?"). No PII.
@@ -62,10 +64,12 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 
 - [ ] **P15 · Feature A — Automated Data Insights (daily Maui summary .md)** — `NOT-STARTED`
   Reuses Morning Brief pipeline infra.
-- [ ] **P16 · Feature B — Embeddable safety widget** — `NOT-STARTED`
+- [x] **P16 · Feature B — Embeddable safety widget** — `DONE`
   `<kahuola-safety-widget>`, Shadow DOM, backlink. Cloudflare Worker.
-- [ ] **P17 · Hawaiian voice — Phase 1 (EN + VI audio)** — `NOT-STARTED`
+  Shipped: kahuola-widget/, widget.kahuola.org live, embedded on homepage (P58).
+- [ ] **P17 · Hawaiian voice — Phase 1 (EN + VI audio)** — `IN-PROGRESS`
   Via existing n8n-ffmpeg. "🔊 Listen" on Morning Brief card.
+  voice.ts + /api/voice + R2 cache exist; UI surfacing unverified.
 - [ ] **P18 · Hawaiian voice — Phase 2 (ʻŌlelo Hawaiʻi)** — `NOT-STARTED`
   After cultural/pronunciation review (Kahele Dukelow — outreach not yet initiated).
 
@@ -77,8 +81,9 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   5-phase engineering prompt already generated. (iOS already on App Store.)
 - [ ] **P20 · i18n — live-map popup/modal deep coverage** — `IN-PROGRESS`
   Remaining untranslated modal/popup/detail strings (EN/VI). Non-destructive patches only.
-- [ ] **P21 · i18n — expand 4 remaining locales** — `NOT-STARTED`
+- [ ] **P21 · i18n — expand 4 remaining locales** — `IN-PROGRESS`
   ʻŌlelo Hawaiʻi, Tagalog, Ilocano, 日本語 (EN/VI already locked).
+  haw/tl/ilo/ja scaffolded in bundle, each ~181–194 keys short of EN.
 - [ ] **P22 · Apple Watch companion — watchOS Phase 1** — `BLOCKED`
   React Native + WatchConnectivity. Blocked on Xcode watchOS target (xcodegen path exploring).
 
@@ -114,19 +119,16 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 
 ## RECOMMENDED EXECUTION ORDER
 
-1. **P03** (deadline passed — verify now)
+1. **P02** (AirNow — deadline 2026-09-30, live production dependency: /api/hazards/air JSON API powers homepage AQI + ocean card)
 2. **P01** (Safari fix — unblocks all future map overlays)
-3. **P04** (Fire-danger backend — prompt ready, isolated/safe)
-4. **P02** (AirNow — before 2026-09-30)
-5. **P05** (Stage 1 overlay — only after P01 clears the map)
-6. **P06 → P07** (Stage 2 Smoke/AQI — the "quick win" pair)
-7. **P19** (Android release — prompt ready, parallelizable)
-8. **P15 / P16** (growth: insights + widget)
-9. Then P08–P10 (Stage 3–4), NWS P12–P14, i18n P20–P21, remainder.
+3. **P05** (Stage 1 overlay — only after P01 clears the map)
+4. **P06 → P07** (Stage 2 Smoke/AQI pair)
+5. **P19** (Android release — prompt ready, parallelizable)
+6. **P15** (insights), then P09–P10, NWS P12–P14, i18n P20–P21, P25, remainder.
 
-Rationale: clear urgent/expired deadlines → fix the map (bug + Safari) so overlays have
-a clean surface → ship the isolated backend core value → then everything that renders on
-the map, in order.
+Rationale: P03 closed as a no-op (zero nrel references) and P04 already shipped, so the
+only hard deadline left leads → then fix the map (bug + Safari) so overlays have a clean
+surface → then everything that renders on the map, in order.
 
 ## UPDATE LOG
 
@@ -134,3 +136,7 @@ the map, in order.
   Worker W4–W8 LIVE (both removed from pending). Stage 0+1 fire-danger prompt written.
 - 2026-09-12 — TRACK F opened. P23 + P24 shipped same day (backend ver d763df3d,
   PRs #27/#28). Ocean card moved to always-visible in follow-up.
+- 2026-09-12 — Reconciled roadmap vs repo reality (file was 6 weeks stale):
+  P04/P08/P16 → DONE, P17/P21 → IN-PROGRESS, P03 closed (zero nrel refs).
+  P02 re-ranked #1 — airnowapi.org/aq/data (index.ts:4021) is the deprecated
+  JSON API and powers /api/hazards/air.
