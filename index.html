@@ -1804,57 +1804,65 @@
               </div>
             </section>
 
-            <!-- ── P24 · Surf & Ocean Safety ────────────────────────────────
-                 ADDITIVE. Placed LAST in the signal stack, after fire and
-                 flood: ocean is a context overlay (layer_class "context" on
-                 all three /api/ocean/* envelopes) and fire-first doctrine
-                 means it must never sit above a canonical hazard card.
-
-                 Every string is either data-i18n (static) or written by
-                 renderOceanCard() through _t()/_tmpl() — the same split the
-                 rest of this page uses. No existing selector, key or section
-                 is touched.
-
-                 Sub-blocks render independently: /api/ocean/surf failing must
-                 not blank the surf-zone table (Invariant 3 / Invariant 9).
-            -->
-            <section class="signal-card ocean" id="oceanCard" aria-labelledby="oceanTitle">
-              <div class="signal-top">
-                <div>
-                  <div class="signal-label" data-i18n="ocean.label">Ocean · NDBC / NWS / PacIOOS</div>
-                  <h3 class="signal-title" id="oceanTitle" data-i18n="ocean.title">🌊 Surf &amp; Ocean Safety</h3>
-                </div>
-                <div class="status" id="oceanStatus">—</div>
-              </div>
-
-              <!-- A — surf by shore -->
-              <div class="ocean-block">
-                <h4 class="ocean-block-label" data-i18n="ocean.surf_heading">Surf by shore</h4>
-                <div id="oceanSurfBody" class="ocean-rows" aria-live="polite"></div>
-              </div>
-
-              <!-- B — NWS surf zone forecast -->
-              <div class="ocean-block">
-                <h4 class="ocean-block-label" data-i18n="ocean.zone_heading">Today's surf zone forecast</h4>
-                <div id="oceanZoneBody" class="ocean-rows" aria-live="polite"></div>
-                <p class="ocean-safety" id="oceanSafetyText"></p>
-              </div>
-
-              <!-- C — outlook lines (hidden until there is something to say) -->
-              <div class="ocean-block" id="oceanOutlookBlock" hidden>
-                <div id="oceanOutlookBody" class="ocean-rows"></div>
-              </div>
-
-              <div class="meta-row">
-                <span class="chip" id="oceanSourceChip">NDBC · NWS · PacIOOS · NHC/CPHC</span>
-                <span class="chip" id="oceanFreshnessChip">—</span>
-                <a class="chip chip-action ocean-official" id="oceanOfficialLink"
-                   href="https://www.weather.gov/hfo/" target="_blank" rel="noopener noreferrer"
-                   data-i18n="ocean.nws_link">NWS Honolulu →</a>
-              </div>
-            </section>
           </div>
         </details>
+
+        <!-- ── P24 · Surf & Ocean Safety ────────────────────────────────
+             Always visible: a direct child of .hero-card, immediately AFTER
+             the "Signal detail" disclosure that holds the fire and flood
+             cards. Reading order is therefore hero → fire → flood → ocean,
+             which keeps fire-first doctrine intact — ocean is a context
+             overlay (layer_class "context" on all three /api/ocean/*
+             envelopes) and must never sit above a canonical hazard card.
+
+             It sits BELOW the hero and the signal strip, so the 5-second
+             zone (Invariant 6) is unchanged by promoting it out of the
+             disclosure. .hero-card is a flex column with gap:18px, so the
+             new position needs no new CSS.
+
+             Every string is either data-i18n (static) or written by
+             renderOceanCard() through _t()/_tmpl() — the same split the
+             rest of this page uses. No existing selector, key or section
+             is touched.
+
+             Sub-blocks render independently: /api/ocean/surf failing must
+             not blank the surf-zone table (Invariant 3 / Invariant 9).
+        -->
+        <section class="signal-card ocean" id="oceanCard" aria-labelledby="oceanTitle">
+          <div class="signal-top">
+            <div>
+              <div class="signal-label" data-i18n="ocean.label">Ocean · NDBC / NWS / PacIOOS</div>
+              <h3 class="signal-title" id="oceanTitle" data-i18n="ocean.title">🌊 Surf &amp; Ocean Safety</h3>
+            </div>
+            <div class="status" id="oceanStatus">—</div>
+          </div>
+
+          <!-- A — surf by shore -->
+          <div class="ocean-block">
+            <h4 class="ocean-block-label" data-i18n="ocean.surf_heading">Surf by shore</h4>
+            <div id="oceanSurfBody" class="ocean-rows" aria-live="polite"></div>
+          </div>
+
+          <!-- B — NWS surf zone forecast -->
+          <div class="ocean-block">
+            <h4 class="ocean-block-label" data-i18n="ocean.zone_heading">Today's surf zone forecast</h4>
+            <div id="oceanZoneBody" class="ocean-rows" aria-live="polite"></div>
+            <p class="ocean-safety" id="oceanSafetyText"></p>
+          </div>
+
+          <!-- C — outlook lines (hidden until there is something to say) -->
+          <div class="ocean-block" id="oceanOutlookBlock" hidden>
+            <div id="oceanOutlookBody" class="ocean-rows"></div>
+          </div>
+
+          <div class="meta-row">
+            <span class="chip" id="oceanSourceChip">NDBC · NWS · PacIOOS · NHC/CPHC</span>
+            <span class="chip" id="oceanFreshnessChip">—</span>
+            <a class="chip chip-action ocean-official" id="oceanOfficialLink"
+               href="https://www.weather.gov/hfo/" target="_blank" rel="noopener noreferrer"
+               data-i18n="ocean.nws_link">NWS Honolulu →</a>
+          </div>
+        </section>
 
         <div class="cultural-note" id="kupunaNote">
           <strong id="kupunaTitle">Kūpuna &amp; Keiki Safety</strong>
