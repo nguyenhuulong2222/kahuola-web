@@ -131,16 +131,16 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 
 ## RECOMMENDED EXECUTION ORDER
 
-1. **P02** (AirNow — deadline 2026-09-30, live production dependency: /api/hazards/air JSON API powers homepage AQI + ocean card)
-2. **P01** (Safari fix — unblocks all future map overlays)
-3. **P05** (Stage 1 overlay — only after P01 clears the map)
-4. **P06 → P07** (Stage 2 Smoke/AQI pair)
-5. **P19** (Android release — prompt ready, parallelizable)
-6. **P15** (insights), then P09–P10, NWS P12–P14, i18n P20–P21, P25, remainder.
+1. **P01** (Safari fix — unblocks all future map overlays)
+2. **P05** (Stage 1 overlay — only after P01 clears the map)
+3. **P06 → P07** (Stage 2 Smoke/AQI pair)
+4. **P19** (Android release — prompt ready, parallelizable)
+5. **P15** (insights), then P09–P10, NWS P12–P14, i18n P20–P21, P25, remainder.
 
-Rationale: P03 closed as a no-op (zero nrel references) and P04 already shipped, so the
-only hard deadline left leads → then fix the map (bug + Safari) so overlays have a clean
-surface → then everything that renders on the map, in order.
+Rationale: P02 and P03 both closed as no-ops (no retiring AirNow endpoint in use; zero
+nrel references) and P04 already shipped, so **no hard deadline remains**. The map bug
+(Safari) now leads, because every remaining overlay renders on it → then the overlays in
+dependency order → then the parallelizable and growth work.
 
 ## UPDATE LOG
 
