@@ -778,6 +778,25 @@
 
       // ── Signal strip labels (Class A) ─────────────────────────
       "signal.strip.fire_clear": "No fire detections",
+      // ── P24 — Surf & Ocean Safety card (context overlay) ──────────────
+      "ocean.label": "Ocean · NDBC / NWS / PacIOOS",
+      "ocean.title": "\ud83c\udf0a Surf & Ocean Safety",
+      "ocean.aria_card": "Surf and ocean safety",
+      "ocean.surf_heading": "Surf by shore",
+      "ocean.zone_heading": "Today's surf zone forecast",
+      "ocean.am_pm": "AM / PM",
+      "ocean.nws_link": "NWS Honolulu \u2192",
+      "ocean.unavailable": "Ocean data temporarily unavailable",
+      "ocean.stale": "Data may be outdated",
+      "ocean.shore.north": "North shore",
+      "ocean.shore.south": "South shore",
+      "ocean.shore.east": "East shore",
+      "ocean.shore.west": "West shore",
+      "ocean.buoy_label": "Buoy \u00b7 {name}",
+      "ocean.forecast_label": "Forecast \u00b7 {place}",
+      "ocean.advisory_aria": "National Weather Service advisory in effect",
+      "ocean.swell_outlook": "Large NW swell arriving within 12\u201324 hours",
+      "ocean.formation_line": "{area}: {pct}% formation chance (7-day) \u2014 NHC/CPHC",
       // ── P52 — wildfire surfaces count wildland_count, never the total ──
       // The fire row used to print "{n} detection{s} detected" from every FIRMS
       // pixel, so a Kīlauea thermal signal read as a wildfire. These are the
@@ -1825,6 +1844,25 @@
 
       // ── Signal strip ──────────────────────────────────────────
       "signal.strip.fire_clear": "Kh\xf4ng ph\u00e1t hi\u1ec7n ch\u00e1y",
+      // ── P24 ──
+      "ocean.label": "\u0110\u1ea1i d\u01b0\u01a1ng \u00b7 NDBC / NWS / PacIOOS",
+      "ocean.title": "\ud83c\udf0a An to\u00e0n s\u00f3ng & \u0111\u1ea1i d\u01b0\u01a1ng",
+      "ocean.aria_card": "An to\u00e0n s\u00f3ng v\u00e0 \u0111\u1ea1i d\u01b0\u01a1ng",
+      "ocean.surf_heading": "S\u00f3ng theo b\u1edd",
+      "ocean.zone_heading": "D\u1ef1 b\u00e1o v\u00f9ng s\u00f3ng h\u00f4m nay",
+      "ocean.am_pm": "S\u00e1ng / Chi\u1ec1u",
+      "ocean.nws_link": "NWS Honolulu \u2192",
+      "ocean.unavailable": "D\u1eef li\u1ec7u \u0111\u1ea1i d\u01b0\u01a1ng t\u1ea1m th\u1eddi kh\u00f4ng kh\u1ea3 d\u1ee5ng",
+      "ocean.stale": "D\u1eef li\u1ec7u c\u00f3 th\u1ec3 \u0111\u00e3 c\u0169",
+      "ocean.shore.north": "B\u1edd B\u1eafc",
+      "ocean.shore.south": "B\u1edd Nam",
+      "ocean.shore.east": "B\u1edd \u0110\u00f4ng",
+      "ocean.shore.west": "B\u1edd T\u00e2y",
+      "ocean.buoy_label": "Phao \u00b7 {name}",
+      "ocean.forecast_label": "D\u1ef1 b\u00e1o \u00b7 {place}",
+      "ocean.advisory_aria": "\u0110ang c\u00f3 c\u1ea3nh b\u00e1o c\u1ee7a NWS",
+      "ocean.swell_outlook": "S\u00f3ng l\u1eebng l\u1edbn t\u1eeb T\u00e2y B\u1eafc s\u1ebd \u0111\u1ebfn trong 12\u201324 gi\u1edd",
+      "ocean.formation_line": "{area}: {pct}% kh\u1ea3 n\u0103ng h\u00ecnh th\u00e0nh (7 ng\u00e0y) \u2014 NHC/CPHC",
       // ── P52 ──
       "signal.strip.fire_wildland": "Phát hiện {n} điểm cháy rừng",
       "signal.strip.fire_volcanic": "{n} tín hiệu nhiệt núi lửa · Kīlauea/Mauna Loa (NASA FIRMS)",
@@ -2655,6 +2693,16 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": "ʻAʻohe ahi i loaʻa",
+      // ── P24 ── (Layer A English fallback)
+      "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
+      "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
+      "ocean.zone_heading": KEEP_ENGLISH, "ocean.am_pm": KEEP_ENGLISH,
+      "ocean.nws_link": KEEP_ENGLISH, "ocean.unavailable": KEEP_ENGLISH,
+      "ocean.stale": KEEP_ENGLISH, "ocean.shore.north": KEEP_ENGLISH,
+      "ocean.shore.south": KEEP_ENGLISH, "ocean.shore.east": KEEP_ENGLISH,
+      "ocean.shore.west": KEEP_ENGLISH, "ocean.buoy_label": KEEP_ENGLISH,
+      "ocean.forecast_label": KEEP_ENGLISH, "ocean.advisory_aria": KEEP_ENGLISH,
+      "ocean.swell_outlook": KEEP_ENGLISH, "ocean.formation_line": KEEP_ENGLISH,
       // ── P52 ── (Layer A English fallback)
       "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
       "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
@@ -3308,6 +3356,16 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P24 ── (Layer A English fallback)
+      "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
+      "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
+      "ocean.zone_heading": KEEP_ENGLISH, "ocean.am_pm": KEEP_ENGLISH,
+      "ocean.nws_link": KEEP_ENGLISH, "ocean.unavailable": KEEP_ENGLISH,
+      "ocean.stale": KEEP_ENGLISH, "ocean.shore.north": KEEP_ENGLISH,
+      "ocean.shore.south": KEEP_ENGLISH, "ocean.shore.east": KEEP_ENGLISH,
+      "ocean.shore.west": KEEP_ENGLISH, "ocean.buoy_label": KEEP_ENGLISH,
+      "ocean.forecast_label": KEEP_ENGLISH, "ocean.advisory_aria": KEEP_ENGLISH,
+      "ocean.swell_outlook": KEEP_ENGLISH, "ocean.formation_line": KEEP_ENGLISH,
       // ── P52 ── (Layer A English fallback)
       "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
       "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
@@ -3842,6 +3900,16 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P24 ── (Layer A English fallback)
+      "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
+      "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
+      "ocean.zone_heading": KEEP_ENGLISH, "ocean.am_pm": KEEP_ENGLISH,
+      "ocean.nws_link": KEEP_ENGLISH, "ocean.unavailable": KEEP_ENGLISH,
+      "ocean.stale": KEEP_ENGLISH, "ocean.shore.north": KEEP_ENGLISH,
+      "ocean.shore.south": KEEP_ENGLISH, "ocean.shore.east": KEEP_ENGLISH,
+      "ocean.shore.west": KEEP_ENGLISH, "ocean.buoy_label": KEEP_ENGLISH,
+      "ocean.forecast_label": KEEP_ENGLISH, "ocean.advisory_aria": KEEP_ENGLISH,
+      "ocean.swell_outlook": KEEP_ENGLISH, "ocean.formation_line": KEEP_ENGLISH,
       // ── P52 ── (Layer A English fallback)
       "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
       "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
@@ -4376,6 +4444,16 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P24 ── (Layer A English fallback)
+      "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
+      "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
+      "ocean.zone_heading": KEEP_ENGLISH, "ocean.am_pm": KEEP_ENGLISH,
+      "ocean.nws_link": KEEP_ENGLISH, "ocean.unavailable": KEEP_ENGLISH,
+      "ocean.stale": KEEP_ENGLISH, "ocean.shore.north": KEEP_ENGLISH,
+      "ocean.shore.south": KEEP_ENGLISH, "ocean.shore.east": KEEP_ENGLISH,
+      "ocean.shore.west": KEEP_ENGLISH, "ocean.buoy_label": KEEP_ENGLISH,
+      "ocean.forecast_label": KEEP_ENGLISH, "ocean.advisory_aria": KEEP_ENGLISH,
+      "ocean.swell_outlook": KEEP_ENGLISH, "ocean.formation_line": KEEP_ENGLISH,
       // ── P52 ── (Layer A English fallback)
       "signal.strip.fire_wildland": KEEP_ENGLISH, "signal.strip.fire_volcanic": KEEP_ENGLISH,
       "signal.strip.fire_mixed": KEEP_ENGLISH, "status.volcanic": KEEP_ENGLISH,
