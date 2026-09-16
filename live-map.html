@@ -2160,6 +2160,23 @@
        Where is it now / where is it going / what are the odds for my
        island. 18px between groups against a 4px rhythm inside them: the
        step is the separation. */
+    /* P25 · ocean chips. Teal family for readings, amber for advisories —
+       never red, and never the orange reserved for fire and storm. Each chip
+       carries an icon or a number beside its colour, so colour alone never
+       carries the state. */
+    .ocean-chip{
+      display:inline-flex; align-items:center; gap:4px; margin-left:8px;
+      padding:1px 8px; border-radius:999px; font-size:11px; font-weight:700;
+      white-space:nowrap; vertical-align:middle;
+    }
+    .ocean-chip--adv{ color:#ffcc66; background:rgba(255,204,102,.12); border:1px solid rgba(255,204,102,.32) }
+    .ocean-chip--doh{ color:#ffcc66; background:rgba(255,204,102,.12); border:1px solid rgba(255,204,102,.32) }
+    .ocean-chip--runoff{ color:#d6c9a8; background:rgba(214,201,168,.08); border:1px solid rgba(214,201,168,.22) }
+    /* Tropical outlook: yellow-ish under 40, amber 40-60, deep amber above. */
+    .ocean-chip--lo { color:#e8d98a; background:rgba(232,217,138,.10); border:1px solid rgba(232,217,138,.26) }
+    .ocean-chip--mid{ color:#ffcc66; background:rgba(255,204,102,.12); border:1px solid rgba(255,204,102,.32) }
+    .ocean-chip--hi { color:#f0a938; background:rgba(240,169,56,.14);  border:1px solid rgba(240,169,56,.38) }
+
     .hur-group { margin-top: 18px; }
     .hur-group:first-child { margin-top: 10px; }
 
@@ -2910,8 +2927,16 @@
             </div>
             <div class="status-badge status-none" id="coastal-badge">·</div>
           </div>
-          <div class="priority-note" id="coastal-note" data-i18n="map.coastal_tap_note">High Surf · Coastal Flood ·
-            Beach Hazards — tap to load live status.</div>
+          <div class="priority-note" id="coastal-note" data-i18n="map.oc_tap_note">High Surf · Coastal Flood ·
+            Beach Hazards · Surf · Water quality — tap to load live status.</div>
+          <!-- P25 · Ocean Intelligence lives INSIDE this module rather than in a
+               card of its own: "Coastal & Surf" already owns the ocean slot, and
+               a second ocean-ish card beside it would make a reader choose
+               between two entries that answer the same question. NWS alerts stay
+               the module's headline; these four sub-blocks are observations and
+               context beneath it. Same rich-content pattern as #hurricane-detail
+               (innerHTML written by a render fn, cloned to -desktop/-mobile). -->
+          <div class="hur-detail" id="ocean-detail"></div>
         </div>
 
         <div class="blueprint-footnote" data-i18n="map.blueprint_footnote">Official sources are shown for each hazard.
@@ -3104,7 +3129,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=ba310e50"></script>
+  <script src="/i18n/kahuola-i18n.js?v=41f98222"></script>
 
   <script>
     "use strict";
@@ -7576,7 +7601,14 @@
           note: _t("map.hd_landslide_note") || "Source: Kahu Ola terrain + NWS alerts (contextual).",
           body: _t("map.hd_landslide_body") || "Landslide context from terrain slope, runoff, and NWS heavy rain alerts. Contextual only."
         })));
-        document.getElementById(`coastal-card-${sfx}`)?.addEventListener("click", () => lazyLoadModule("coastal", (st) => {
+        document.getElementById(`coastal-card-${sfx}`)?.addEventListener("click", () => {
+          // P25. The ocean sub-blocks load alongside the module's own NWS
+          // fetch, not instead of it: lazyLoadModule still owns the badge, the
+          // "Fetching…" sheet and the coastal payload. This is fire-and-forget
+          // and cannot reject into the click handler — loadOceanData swallows
+          // per-endpoint failure and each sub-block renders from its own data.
+          loadOceanData();
+          lazyLoadModule("coastal", (st) => {
           const feats = Array.isArray(st.features) ? st.features : [];
           const n = feats.length;
           const hasHigh = feats.some(f => ["Extreme", "Severe"].includes(f?.properties?.severity));
@@ -7593,11 +7625,216 @@
             note: _t("map.hd_coastal_note") || "Source: National Weather Service (NWS) \u2014 High Surf, Coastal Flood, Beach Hazards.",
             body: bodyDetail || (_t("map.hd_coastal_body") || "Coastal alerts from NWS cover High Surf, Coastal Flood, and Beach Hazards statements across all Hawaiian islands.")
           };
-        }));
+          });
+        });
       });
     }
 
     // ── lazyLoadModule — enable + fetch on first click ────────────
+    /* ══════════════════════════════════════════════════════════════════
+       P25 · OCEAN INTELLIGENCE — folded into the Coastal & Surf module
+       ══════════════════════════════════════════════════════════════════
+       Four read-only context endpoints, all layer_class "context":
+         /api/ocean/surf · /api/ocean/rip-current
+         /api/ocean/tropical-outlook · /api/ocean/water-quality
+
+       WHY THIS IS NOT A HAZARD_REGISTRY ENTRY
+       refreshHazard() fetches exactly one model.endpoint and hands the JSON to
+       a synchronous parsePayload(). A four-endpoint module does not fit that
+       contract, and live-map.html is production-locked — refactoring
+       refreshHazard to take several would be the opposite of additive. So this
+       is a bespoke loader that copies lazyLoadModule's UX contract (badge →
+       "Loading…", immediate "Fetching…" sheet, re-render on settle) without
+       touching the registry or any existing module.
+
+       Fail-soft per endpoint: Promise.allSettled, and each sub-block renders
+       from its own payload. Surf failing must not blank the water-quality list
+       (Invariant 3 / 9). All four are fetched through our own /api/* — the
+       browser never reaches NDBC, PacIOOS, NWS or DOH directly (Invariant 1).
+       ══════════════════════════════════════════════════════════════════ */
+    const OCEAN_ENDPOINTS = {
+      surf:  IS_LOCAL ? "./ocean-surf-test.json"  : "https://kahuola.org/api/ocean/surf",
+      rip:   IS_LOCAL ? "./ocean-rip-test.json"   : "https://kahuola.org/api/ocean/rip-current",
+      two:   IS_LOCAL ? "./ocean-two-test.json"   : "https://kahuola.org/api/ocean/tropical-outlook",
+      water: IS_LOCAL ? "./ocean-water-test.json" : "https://kahuola.org/api/ocean/water-quality",
+    };
+    const oceanData = { surf: null, rip: null, two: null, water: null, loaded: false, loading: false };
+
+    // Island keys → Hawaiian orthography. A local map, not i18n keys: proper
+    // nouns that read the same in every locale the site ships.
+    const OCEAN_ISLAND_LABEL = {
+      kauai: "Kauaʻi", niihau: "Niʻihau", oahu: "Oʻahu", molokai: "Molokaʻi",
+      lanai: "Lānaʻi", kahoolawe: "Kahoʻolawe", maui: "Maui", hawaii: "Hawaiʻi Island",
+      offshore_nw: "Offshore NW",
+    };
+    // NWS section labels arrive without ʻokina. Only unambiguous single islands
+    // are corrected; NWS's compound zone-group names pass through verbatim.
+    const OCEAN_NWS_ISLAND_FIX = { Kauai: "Kauaʻi", Oahu: "Oʻahu", Molokai: "Molokaʻi", Lanai: "Lānaʻi" };
+
+    function oceanIslandLabel(k) { return OCEAN_ISLAND_LABEL[String(k || "").toLowerCase()] || k || ""; }
+    function oceanShoreLabel(sh) { return _t("ocean.shore." + sh) || String(sh || ""); }
+    // Feet first, metres second — residents think in feet, the buoys report
+    // metres, and showing both keeps the conversion visible rather than implied.
+    function oceanFeet(m) {
+      if (typeof m !== "number" || !isFinite(m)) return null;
+      return Math.round(m * 3.28084 * 10) / 10;
+    }
+    function oceanHeightText(m) {
+      const ft = oceanFeet(m);
+      return ft === null ? "—" : `${ft} ft (${m} m)`;
+    }
+    // STALE_DROP is never rendered (Invariant 4) — same treatment as an
+    // unreachable endpoint.
+    function oceanUsable(env) { return !!env && env.freshness !== "STALE_DROP"; }
+
+    async function loadOceanData() {
+      if (oceanData.loading) return;
+      oceanData.loading = true;
+      const [surf, rip, two, water] = await Promise.allSettled([
+        fetchJson(OCEAN_ENDPOINTS.surf),
+        fetchJson(OCEAN_ENDPOINTS.rip),
+        fetchJson(OCEAN_ENDPOINTS.two),
+        fetchJson(OCEAN_ENDPOINTS.water),
+      ]);
+      const val = (r) => (r.status === "fulfilled" ? r.value : null);
+      oceanData.surf = val(surf); oceanData.rip = val(rip);
+      oceanData.two = val(two);   oceanData.water = val(water);
+      oceanData.loaded = true; oceanData.loading = false;
+      try { renderOceanDetail(); } catch (e) { /* card must never break the module */ }
+      if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
+    }
+
+    /* ── Surf MARKERS: deferred to P25b, deliberately not shipped ───────
+       Sub-block A was specified as map markers. /api/ocean/surf carries no
+       coordinates — its signals are {island, shore, station_id, station_name,
+       place, wave_height_m, …} with no lat/lon on any of the seven.
+
+       The obvious workaround is to keep an NDBC/SWAN coordinate table here.
+       This file already forbids exactly that, a few hundred lines down:
+       "READ from the payload — never re-derived by matching the name string,
+       which would put a second, drifting copy of the Worker's allowlist here".
+       The Worker already holds verified positions for all four buoys and all
+       four SWAN points; emitting lat/lon on each surf signal is a small
+       backend change, and this PR may not touch the backend.
+
+       So surf ships as a CARD LIST below and no marker layer is registered.
+       Nothing dead is left on the map: no source, no layer, no click-chain
+       entry. When the surf payload carries coordinates, P25b adds them. ── */
+
+    /* ── Card sub-blocks. Rich HTML goes in the CARD, not the detail sheet:
+       openHazardDetail() writes its body with textContent, so chips and lists
+       are impossible there by construction. ─────────────────────────────── */
+    function oceanRow(place, value, sub, chipHtml) {
+      return `<div class="hur-line"><b>${escapeHtml(place)}</b>${value ? " — " + escapeHtml(value) : ""}` +
+        (chipHtml || "") + (sub ? `<div class="hur-note">${escapeHtml(sub)}</div>` : "") + `</div>`;
+    }
+    function oceanGroup(labelKey, fallback, inner) {
+      return `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t(labelKey) || fallback)}</div>${inner}</div>`;
+    }
+    function oceanUnavailableLine() {
+      return `<div class="hur-line">${escapeHtml(_t("map.oc_unavailable") || "Ocean data temporarily unavailable")}</div>`;
+    }
+
+    function renderOceanDetail() {
+      if (!oceanData.loaded) return;
+      let html = "";
+
+      // A — surf by shore (sentinels excluded; they are the outlook's input)
+      const surfEnv = oceanData.surf;
+      const surfSigs = (oceanUsable(surfEnv) && Array.isArray(surfEnv.signals))
+        ? surfEnv.signals.filter((x) => x && x.observation_type !== "open_ocean_sentinel") : [];
+      html += oceanGroup("map.oc_heading_surf", "Surf by shore", surfSigs.length
+        ? surfSigs.map((sg) => {
+            const sub = sg.observation_type === "nearshore_buoy"
+              ? (_tmpl("map.oc_buoy", { name: sg.station_name || "" }) || `Buoy · ${sg.station_name || ""}`)
+              : (_tmpl("map.oc_forecast", { place: sg.place || "" }) || `Forecast · ${sg.place || ""}`);
+            const chip = sg.advisory
+              ? `<span class="ocean-chip ocean-chip--adv">⚠ ${escapeHtml(sg.advisory)}</span>` : "";
+            return oceanRow(`${oceanIslandLabel(sg.island)} · ${oceanShoreLabel(sg.shore)}`,
+              oceanHeightText(sg.wave_height_m), sub + (sg.dominant_period_s != null ? ` · ${sg.dominant_period_s}s` : ""), chip);
+          }).join("")
+        : oceanUnavailableLine());
+
+      // B — tropical outlook. Non-geometric: NHC publishes GTWO as KMZ/shapefile
+      // only, so there is nothing to draw and nothing is approximated into a
+      // shape. Chips never go red — this is an outlook, not a warning.
+      const twoEnv = oceanData.two;
+      const areas = (oceanUsable(twoEnv) && twoEnv.status !== "no_activity" && Array.isArray(twoEnv.signals)) ? twoEnv.signals : [];
+      if (areas.length) {
+        html += oceanGroup("map.oc_heading_outlook", "Tropical outlook", areas.map((a) => {
+          const p7 = typeof a.formation_chance_7d === "number" ? a.formation_chance_7d : null;
+          const cls = p7 === null ? "lo" : p7 > 60 ? "hi" : p7 >= 40 ? "mid" : "lo";
+          // The chip carries the 7-day figure, so the row value carries only
+          // the 48-hour one. Printing both in both places read "0% / 40%40%".
+          const chip = `<span class="ocean-chip ocean-chip--${cls}">${p7 === null ? "—" : "7d " + p7 + "%"}</span>`;
+          const p48 = a.formation_chance_48h;
+          return oceanRow(a.area || "—",
+            `48h ${typeof p48 === "number" ? p48 + "%" : "—"}`,
+            a.source || "NHC/CPHC", chip);
+        }).join(""));
+      }
+
+      // C — surf zone forecast. Card-only, and no risk badge: NWS Honolulu
+      // publishes no rip-current risk level, so none is shown and none is
+      // derived from surf height.
+      const ripEnv = oceanData.rip;
+      const ripSigs = (oceanUsable(ripEnv) && Array.isArray(ripEnv.signals)) ? ripEnv.signals : [];
+      if (ripSigs.length) {
+        const order = ["north", "east", "south", "west"];
+        const byIsland = {};
+        ripSigs.forEach((x) => { (byIsland[x.island] = byIsland[x.island] || []).push(x); });
+        let inner = Object.keys(byIsland).map((isl) => {
+          const parts = byIsland[isl].sort((a, b) => order.indexOf(a.shore) - order.indexOf(b.shore))
+            .map((x) => `${(oceanShoreLabel(x.shore) || x.shore).replace(/\s*shore$/i, "")} ${x.surf_height_ft_today_am || "—"}/${x.surf_height_ft_today_pm || "—"}`);
+          return oceanRow(OCEAN_NWS_ISLAND_FIX[isl] || isl, "",
+            `${parts.join(" · ")} ft (${_t("map.oc_am_pm") || "AM / PM"})`, "");
+        }).join("");
+        if (ripEnv.safety_text) inner += `<div class="hur-note">${escapeHtml(ripEnv.safety_text)}</div>`;
+        html += oceanGroup("map.oc_heading_zone", "Today's surf zone forecast", inner);
+      } else if (ripEnv !== null) {
+        html += oceanGroup("map.oc_heading_zone", "Today's surf zone forecast", oceanUnavailableLine());
+      }
+
+      // D — water quality (P27, restored here). DOH titles ship verbatim —
+      // translating an official advisory would misquote it. The derived runoff
+      // caution is our own copy and localizes, and says so on its own line.
+      const wEnv = oceanData.water;
+      const wSigs = (oceanUsable(wEnv) && Array.isArray(wEnv.signals)) ? wEnv.signals : [];
+      let wInner;
+      if (!oceanUsable(wEnv)) wInner = oceanUnavailableLine();
+      else if (!wSigs.length) wInner = `<div class="hur-line">${escapeHtml(_t("map.oc_wq_clear") || "No active water quality advisories")}</div>`;
+      else wInner = wSigs.map((sg) => {
+        const isDoh = sg.kind === "doh_advisory";
+        const chip = `<span class="ocean-chip ${isDoh ? "ocean-chip--doh" : "ocean-chip--runoff"}">` +
+          `${isDoh ? "⚠ " : "◦ "}${escapeHtml(isDoh ? (sg.advisory_type || _t("ocean.wq_doh") || "DOH advisory") : (_t("ocean.wq_runoff") || "Runoff caution"))}</span>`;
+        const detail = isDoh ? (sg.detail || "") : (_t("ocean.wq_runoff_detail") || sg.detail || "");
+        const when = sg.started_at ? timeAgoMap(sg.started_at) : "";
+        return oceanRow(sg.island_label || _t("ocean.wq_statewide") || "Statewide", "",
+          `${detail} — ${sg.source}${when ? " · " + when : ""}`, chip);
+      }).join("") + (wEnv.official_source_url
+        ? `<div class="hur-note"><a href="${escapeHtml(wEnv.official_source_url)}" target="_blank" rel="noopener">Hawaiʻi DOH →</a></div>` : "");
+      html += oceanGroup("map.oc_heading_water", "Water quality", wInner);
+
+      ["desktop", "mobile", ""].forEach((sfx) => {
+        const el = document.getElementById(sfx ? `ocean-detail-${sfx}` : "ocean-detail");
+        if (el) el.innerHTML = html;
+      });
+    }
+
+    // "Updated N days ago", localized, with the P27b plural fix.
+    function timeAgoMap(iso) {
+      const d = parseDateMaybe(iso);
+      if (!d) return "";
+      const mins = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+      if (mins < 1) return _t("freshness.updated_just_now") || "Updated just now";
+      if (mins < 60) return _tmpl("freshness.updated_min", { n: mins }) || `Updated ${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return _tmpl("freshness.updated_hr", { n: hrs }) || `Updated ${hrs} hr ago`;
+      const days = Math.round(hrs / 24);
+      return _tmpl("freshness.updated_day", { n: days, s: days > 1 ? "s" : "" })
+        || `Updated ${days} day${days > 1 ? "s" : ""} ago`;
+    }
+
     function lazyLoadModule(key, detailConfig) {
       const model = HAZARD_REGISTRY[key];
       if (!model) return;
@@ -7626,6 +7863,13 @@
     function toggleSheet() { setSheetOpen(!mobileSheet.classList.contains("open")); }
 
     bindButtons();
+    // P25: same reason as the hurricane card below — the ocean sub-blocks are
+    // JS-rendered innerHTML, which applyAll() cannot reach. Guarded on
+    // `loaded` so a locale switch before the module is opened does nothing.
+    window.addEventListener("kahuola:langchange", () => {
+      if (oceanData.loaded) { try { renderOceanDetail(); } catch (e) { /* keep last paint */ } }
+    });
+
     // Language changes re-run applyAll(), which only knows about data-i18n
     // attributes. The hurricane card is rendered in JS, so it has to be asked to
     // redraw itself — otherwise it keeps the previous locale until the next poll.
