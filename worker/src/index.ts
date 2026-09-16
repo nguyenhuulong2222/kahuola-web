@@ -15,6 +15,7 @@ import {
   handleOceanSurf,
   handleOceanRipCurrent,
   handleOceanTropicalOutlook,
+  handleOceanWaterQuality,
   type OceanDeps,
 } from "./ocean";
 import {
@@ -1263,6 +1264,8 @@ export default {
       if (path === '/api/ocean/surf') return handleOceanSurf(url, cors, OCEAN_DEPS);
       if (path === '/api/ocean/rip-current') return handleOceanRipCurrent(url, cors, OCEAN_DEPS);
       if (path === '/api/ocean/tropical-outlook') return handleOceanTropicalOutlook(url, cors, OCEAN_DEPS);
+      // P27 — water quality: DOH advisories (official) + our derived runoff caution.
+      if (path === '/api/ocean/water-quality') return handleOceanWaterQuality(url, cors, OCEAN_DEPS);
       if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
       if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
       if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);

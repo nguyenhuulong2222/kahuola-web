@@ -121,10 +121,23 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   grids. Answers "when could storm winds reach my island" — extends the
   existing Hurricane module/NHC handler, not a new module. Best built/verified
   while a real storm is active.
-- [ ] **P27 · Brown Water Advisory** — `NOT-STARTED`
-  Post-flash-flood "avoid swimming 48–72h" flag. Links existing Flood Context
-  to ocean surfaces + Hawaiʻi DOH beach advisories. Near-zero new upstream —
-  mostly cross-module logic. Quick win before Kona storm season.
+- [x] **P27 · Brown Water Advisory** — `DONE` 2026-09-15
+  New route `/api/ocean/water-quality` + a "Water quality" block on the existing
+  Surf & Ocean Safety card. **Two sources, never blended.**
+  (a) OFFICIAL — a machine-readable DOH feed DOES exist and is primary:
+  `eha-cloud.doh.hawaii.gov/cwb/api/events?expand=locations&status=Open` (JSON,
+  no key — the endpoint DOH's own public viewer calls). Verified live: 8 open
+  events, 6 of them Brown Water Advisories.
+  ⚠ Parsing trap: the `hasBwa` boolean does NOT mean "is a Brown Water
+  Advisory" — it was true on a Sewage Spill and a Beach Advisory and false on
+  all six real BWAs. Key on `type`.
+  (b) DERIVED — `runoff_caution` from NWS Flash Flood Warnings in the past 72 h,
+  joined to islands by UGC COUNTY code (HIC001 etc.), never by areaDesc name
+  matching. `/api/hazards/flash-flood` is a current snapshot with no history, so
+  the lookback uses the same NWS origin over a time range. Labelled "Derived
+  from NWS flash flood warnings · Kahu Ola", never as a DOH advisory; an island
+  with a DOH advisory does not also get one.
+  Quiet ocean = block hidden, status "clear", HTTP 200.
 - [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
   NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
   Hilo stations, free JSON). Coastal flood context when king tide coincides
@@ -181,3 +194,6 @@ dependency order → then the parallelizable and growth work.
 - 2026-09-15 — Queued P26–P29 (ocean Tier 2: wind arrival, brown water,
   tides, vog) after TRACK F P23/P24 shipped. Deferred remaining ocean ideas
   (tsunami travel time, marine zones, run-up, SST) — revisit after P26–P29.
+- 2026-09-15 — P27 shipped. /api/ocean/water-quality (DOH advisories + derived
+  runoff caution) and the Water quality block on the homepage ocean card. DOH
+  publishes a usable JSON API, so this is a+b, not b-only.

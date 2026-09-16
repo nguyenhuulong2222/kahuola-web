@@ -1629,6 +1629,22 @@
     }
     .ocean-note{ font-size:13px; color:var(--text-dim); margin:0 }
     .ocean-official{ min-height:44px; padding:0 14px }
+    /* P27 · water quality chips. Amber for a DOH advisory, muted amber for a
+       derived runoff caution — distinct enough to separate at a glance, and
+       neither red: a context overlay must not out-shout a hazard card. Both
+       carry an icon and a word, so colour is never the only signal. */
+    .ocean-wq-chip{
+      display:inline-flex; align-items:center; gap:5px;
+      min-height:24px; padding:1px 9px; border-radius:999px;
+      font-size:16px; font-weight:700; line-height:1.3; margin-left:auto;
+    }
+    .ocean-wq-chip--doh{
+      color:var(--warn); background:rgba(255,204,102,.12); border:1px solid rgba(255,204,102,.32);
+    }
+    .ocean-wq-chip--runoff{
+      color:#d6c9a8; background:rgba(214,201,168,.08); border:1px solid rgba(214,201,168,.22);
+    }
+    .ocean-wq-src{ opacity:.8; font-size:11px }
     @media (max-width:420px){
       .ocean-value{ margin-left:0 }
       .ocean-row{ gap:4px 8px }
@@ -1853,6 +1869,13 @@
           <!-- C — outlook lines (hidden until there is something to say) -->
           <div class="ocean-block" id="oceanOutlookBlock" hidden>
             <div id="oceanOutlookBody" class="ocean-rows"></div>
+          </div>
+
+          <!-- D — P27 · water quality. Hidden when the coast is clear: a clean
+               ocean is the normal state and does not need a row saying so. -->
+          <div class="ocean-block" id="oceanWaterBlock" hidden>
+            <h4 class="ocean-block-label" data-i18n="ocean.water_heading">Water quality</h4>
+            <div id="oceanWaterBody" class="ocean-rows" aria-live="polite"></div>
           </div>
 
           <div class="meta-row">
@@ -2636,7 +2659,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=2f8140de"></script>
+  <script src="/i18n/kahuola-i18n.js?v=ab228e58"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -2663,7 +2686,9 @@
         // never be able to push primaryEvent to DEGRADED (Invariant 8).
         oceanSurf:   "/api/ocean/surf",
         oceanRip:    "/api/ocean/rip-current",
-        oceanTwo:    "/api/ocean/tropical-outlook"
+        oceanTwo:    "/api/ocean/tropical-outlook",
+        // P27 — DOH advisories + our derived runoff caution.
+        oceanWater:  "/api/ocean/water-quality"
       };
 
       // ── P30 · NWS flood products ──────────────────────────────────────────
@@ -4451,14 +4476,82 @@
         });
       }
 
+      /* P27 · water quality. Two kinds, kept visually and textually distinct:
+         a DOH advisory is an official act by the Department of Health; a runoff
+         caution is Kahu Ola's own inference from NWS flash flood warnings. The
+         chip colour differs, and every line carries its source, so the two can
+         never be read as the same thing. Amber for both — neither is red, and
+         neither is a directive (Invariant 7). */
+      function renderOceanWater(env) {
+        const block = document.getElementById("oceanWaterBlock");
+        const host = document.getElementById("oceanWaterBody");
+        if (!block || !host) return;
+        host.textContent = "";
+
+        const sigs = (oceanUsable(env) && Array.isArray(env.signals)) ? env.signals : [];
+        // Clear ocean, or a source we could not read: no row either way. An
+        // "unavailable" line here would be about us, not the water, and this
+        // block is not the card's health indicator — oceanStatus is.
+        if (!sigs.length) { block.hidden = true; return; }
+        block.hidden = false;
+
+        sigs.forEach((sig) => {
+          const row = document.createElement("div");
+          row.className = "ocean-row";
+
+          const chip = document.createElement("span");
+          const isDoh = sig.kind === "doh_advisory";
+          chip.className = isDoh ? "ocean-wq-chip ocean-wq-chip--doh" : "ocean-wq-chip ocean-wq-chip--runoff";
+          const icon = document.createElement("span");
+          icon.setAttribute("aria-hidden", "true");
+          icon.textContent = isDoh ? "⚠" : "◦";
+          chip.appendChild(icon);
+          chip.appendChild(document.createTextNode(
+            isDoh ? (sig.advisory_type || _t("ocean.wq_doh") || "DOH advisory")
+                  : (_t("ocean.wq_runoff") || "Runoff caution")));
+          // Never colour alone: the chip is icon + text, and the source line
+          // below repeats the distinction in words.
+          chip.setAttribute("aria-label",
+            (isDoh ? (_t("ocean.wq_doh") || "DOH advisory") : (_t("ocean.wq_runoff") || "Runoff caution"))
+            + (sig.island_label ? " \u2014 " + sig.island_label : ""));
+
+          const place = document.createElement("span");
+          place.className = "ocean-place";
+          place.textContent = sig.island_label || _t("ocean.wq_statewide") || "Statewide";
+
+          row.appendChild(place);
+          row.appendChild(chip);
+
+          const sub = document.createElement("span");
+          sub.className = "ocean-sub";
+          // A DOH advisory's detail is the agency's OWN title and ships
+          // verbatim — translating an official advisory would misquote it.
+          // The runoff caution is Kahu Ola's own fixed copy, so it localizes;
+          // the Worker's string stays the canonical API value and the fallback.
+          sub.textContent = isDoh
+            ? (sig.detail || "")
+            : (_t("ocean.wq_runoff_detail") || sig.detail || "");
+          row.appendChild(sub);
+
+          const src = document.createElement("span");
+          src.className = "ocean-sub ocean-wq-src";
+          const when = sig.started_at ? timeAgo(sig.started_at) : "";
+          src.textContent = sig.source + (when ? " \u00b7 " + when : "");
+          row.appendChild(src);
+
+          host.appendChild(row);
+        });
+      }
+
       function renderOceanCard(payloads) {
         if (!payloads) return;
-        const { surf, rip, two } = payloads;
+        const { surf, rip, two, water } = payloads;
         renderOceanSurf(surf);
         renderOceanZone(rip);
         renderOceanOutlook(surf, two);
+        renderOceanWater(water);
 
-        const envs = [surf, rip, two].filter(Boolean);
+        const envs = [surf, rip, two, water].filter(Boolean);
         const usable = envs.filter(oceanUsable);
         const statusEl = document.getElementById("oceanStatus");
         if (statusEl) {
@@ -4486,18 +4579,19 @@
 
       async function loadOceanCard() {
         try {
-          const [surf, rip, two] = await Promise.allSettled([
+          const [surf, rip, two, water] = await Promise.allSettled([
             safeFetchJson(ENDPOINTS.oceanSurf),
             safeFetchJson(ENDPOINTS.oceanRip),
             safeFetchJson(ENDPOINTS.oceanTwo),
+            safeFetchJson(ENDPOINTS.oceanWater),
           ]);
           const val = (r) => (r.status === "fulfilled" ? r.value : null);
-          _oceanPayloads = { surf: val(surf), rip: val(rip), two: val(two) };
+          _oceanPayloads = { surf: val(surf), rip: val(rip), two: val(two), water: val(water) };
           renderOceanCard(_oceanPayloads);
           if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
         } catch (e) {
           // Never blank: paint the unavailable state and keep the card.
-          _oceanPayloads = { surf: null, rip: null, two: null };
+          _oceanPayloads = { surf: null, rip: null, two: null, water: null };
           try { renderOceanCard(_oceanPayloads); } catch (e2) { /* card keeps its markup */ }
         }
       }

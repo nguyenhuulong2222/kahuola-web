@@ -50,6 +50,7 @@ const SCHEMA_VERSION = 'v1';
 const SURF_TTL = 1800;   // buoys report ~hourly (51001) to ~30 min (waveriders)
 const RIP_TTL = 3600;    // SRF is issued about twice a day
 const TWO_TTL = 7200;    // tropical outlook is issued every 6 h
+const WQ_TTL = 1800;     // DOH posts on business hours; NWS history is hourly-rounded
 
 /**
  * Last-good-envelope snapshot, used only when every upstream for a route
@@ -880,4 +881,254 @@ export const _internals = {
   waveTrend,
   classify,
   ageSeconds,
+  // P27
+  mapDohEvents,
+  mapRunoffIslands,
+  dohDateToIso,
 };
+
+/* ═══════════════════════════════════════════════════════════════════════
+   4) /api/ocean/water-quality — P27 Brown Water Advisory
+   ═══════════════════════════════════════════════════════════════════════
+   TWO SOURCES, NEVER BLENDED.
+
+   (a) OFFICIAL — Hawaiʻi DOH Clean Water Branch. A machine-readable JSON API
+       exists and IS used: the endpoint the agency's own public viewer calls,
+       found by watching that viewer's network traffic rather than guessing:
+
+         https://eha-cloud.doh.hawaii.gov/cwb/api/events?expand=locations&status=Open
+
+       Returns {page, totalResultsCount, list:[...]} — no key, no auth. Verified
+       2026-09-15: 8 open events, 6 of them Brown Water Advisories across Oʻahu,
+       Maui, Kauaʻi and Hawaiʻi. This is a JSON API, not HTML scraping; the host
+       serves no robots.txt (404).
+
+       ⚠ PARSING TRAP, verified against the live feed: the `hasBwa` boolean does
+       NOT mean "this is a Brown Water Advisory". It was true on a Sewage Spill
+       and a Beach Advisory and FALSE on all six actual Brown Water Advisories —
+       it flags brown-water conditions accompanying some OTHER event type. The
+       advisory kind is `type`. Keying on hasBwa would have inverted the feature.
+
+   (b) DERIVED — our own hazard layer. NWS Flash Flood Warnings in the past 72 h,
+       which is the window DOH's own guidance covers. Shipped as
+       kind "runoff_caution", NEVER as a DOH advisory, with a source string that
+       says out loud that Kahu Ola derived it.
+
+       /api/hazards/flash-flood is a CURRENT snapshot with no history, so a 72 h
+       lookback cannot come from it. It comes from the same NWS origin queried
+       over a time range (api.weather.gov/alerts?start=…), which is the only way
+       to see a warning that has already expired — and expired is exactly the
+       case this feature exists for. Verified the range parameter is honoured:
+       14 days returns 15 alerts including 2 Flash Flood Warnings; 72 h returns 0
+       today, which is the quiet state.
+
+       Islands come from the alert's UGC COUNTY code (HIC001 etc.), not from
+       matching island names in areaDesc. P57 measured that name join failing for
+       29 of 31 zones; the county code is unambiguous.
+
+   PRECEDENCE: an island carrying a DOH advisory does not also get a
+   runoff_caution. The official advisory supersedes our derived hint, and
+   printing both would double-count one event.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const DOH_EVENTS_URL =
+  'https://eha-cloud.doh.hawaii.gov/cwb/api/events?expand=locations&status=Open&statuses=Open';
+const DOH_PUBLIC_URL = 'https://eha-cloud.doh.hawaii.gov/cwb/#!/viewer';
+const NWS_ALERTS_HISTORY = 'https://api.weather.gov/alerts';
+const RUNOFF_LOOKBACK_HOURS = 72;
+
+/** NWS UGC county code → the islands that county covers. */
+const UGC_COUNTY_TO_ISLANDS: Record<string, string[]> = {
+  HIC001: ['hawaii'],                                  // Hawaiʻi County
+  HIC003: ['oahu'],                                    // Honolulu County
+  HIC005: ['molokai'],                                 // Kalawao (Kalaupapa, Molokaʻi)
+  HIC007: ['kauai', 'niihau'],                         // Kauaʻi County
+  HIC009: ['maui', 'molokai', 'lanai', 'kahoolawe'],   // Maui County
+};
+
+/** DOH island.cleanName → our island key. Absent name → signal still ships
+ *  with island null; an advisory is never dropped for want of a key. */
+const DOH_ISLAND_TO_KEY: Record<string, string> = {
+  Oahu: 'oahu', Maui: 'maui', Kauai: 'kauai', Hawaii: 'hawaii',
+  Molokai: 'molokai', Lanai: 'lanai', Niihau: 'niihau', Kahoolawe: 'kahoolawe',
+};
+
+const ISLAND_DISPLAY: Record<string, string> = {
+  oahu: 'Oʻahu', maui: 'Maui', kauai: 'Kauaʻi', hawaii: 'Hawaiʻi Island',
+  molokai: 'Molokaʻi', lanai: 'Lānaʻi', niihau: 'Niʻihau', kahoolawe: 'Kahoʻolawe',
+};
+
+/* Fixed copy, per spec. Calm and non-directive: it says what conditions are
+   likely and what a person might consider, and routes the decision to DOH
+   (Invariant 7). No exclamation mark, no imperative. */
+const RUNOFF_CAUTION_DETAIL =
+  'Recent flash flooding — coastal runoff possible. Consider avoiding ocean swimming ' +
+  'for 48–72 hours near affected shores.';
+
+type WaterQualitySignal = {
+  island: string | null;
+  island_label: string | null;
+  kind: 'doh_advisory' | 'runoff_caution';
+  detail: string;
+  advisory_type: string | null;   // DOH's own `type`, verbatim. Null when derived.
+  started_at: string | null;
+  source: string;
+  official_source_url: string;
+  fetched_at: string;
+};
+
+/** DOH posts local timestamps with no zone marker ("2026-09-08T20:34:03.337").
+ *  Treated as Hawaiʻi time (UTC-10) rather than silently read as UTC, which
+ *  would shift every advisory ten hours. Unparseable → null, never guessed. */
+function dohDateToIso(raw: unknown): string | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/.exec(raw.trim());
+  if (!m) return null;
+  const ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] + 10, +m[5], +m[6]);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+function mapDohEvents(data: unknown, fetchedAt: string): WaterQualitySignal[] | null {
+  if (!data || typeof data !== 'object') return null;
+  const list = (data as Record<string, unknown>)['list'];
+  if (!Array.isArray(list)) return null;
+
+  const out: WaterQualitySignal[] = [];
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object') continue;   // fail closed, per record
+    const e = raw as Record<string, any>;
+    const type = typeof e.type === 'string' ? e.type.trim() : '';
+    if (!type) continue;
+    const title = typeof e.title === 'string' ? e.title.trim() : '';
+    if (!title) continue;
+
+    const cleanName = e.island && typeof e.island.cleanName === 'string' ? e.island.cleanName : '';
+    const key = DOH_ISLAND_TO_KEY[cleanName] ?? null;
+
+    out.push({
+      island: key,
+      island_label: key ? ISLAND_DISPLAY[key] : (cleanName || null),
+      kind: 'doh_advisory',
+      // DOH's own title, verbatim. Their words on their advisory (Invariant 11).
+      detail: title,
+      advisory_type: type,
+      started_at: dohDateToIso(e.postedDate),
+      source: 'Hawaiʻi DOH',
+      official_source_url: DOH_PUBLIC_URL,
+      fetched_at: fetchedAt,
+    });
+  }
+  return out;
+}
+
+/** Islands with an NWS Flash Flood Warning inside the lookback window. */
+function mapRunoffIslands(data: unknown): Map<string, string> {
+  const hits = new Map<string, string>();   // island → earliest onset seen
+  if (!data || typeof data !== 'object') return hits;
+  const feats = (data as Record<string, unknown>)['features'];
+  if (!Array.isArray(feats)) return hits;
+
+  for (const f of feats) {
+    const p = (f as any)?.properties;
+    if (!p || String(p.event || '').trim() !== 'Flash Flood Warning') continue;
+    const ugc: unknown = p.geocode?.UGC;
+    if (!Array.isArray(ugc)) continue;
+    const onset = typeof p.onset === 'string' ? p.onset : (typeof p.sent === 'string' ? p.sent : null);
+    const iso = onset && Number.isFinite(Date.parse(onset)) ? new Date(onset).toISOString() : null;
+    for (const code of ugc) {
+      const islands = UGC_COUNTY_TO_ISLANDS[String(code).toUpperCase()];
+      if (!islands) continue;   // a zone code (HIZxxx) is not keyed — never guessed
+      for (const isl of islands) {
+        const prev = hits.get(isl);
+        if (iso && (!prev || iso < prev)) hits.set(isl, iso);
+        else if (!hits.has(isl)) hits.set(isl, iso ?? '');
+      }
+    }
+  }
+  return hits;
+}
+
+export async function handleOceanWaterQuality(
+  _url: URL,
+  cors: Record<string, string>,
+  deps: OceanDeps,
+): Promise<Response> {
+  const cached = await readRouteCache('water-quality', cors);
+  if (cached) return cached;
+
+  const fetched_at = new Date().toISOString();
+  const sourceHealth: Record<string, string> = {};
+
+  // Rounded to the hour so the URL — and therefore the cache key — is stable.
+  // An unrounded `start` would change every second and defeat caching entirely,
+  // turning a 30-minute route into an NWS hammer.
+  const since = new Date(Date.now() - RUNOFF_LOOKBACK_HOURS * 3600_000);
+  since.setUTCMinutes(0, 0, 0);
+  const historyUrl =
+    `${NWS_ALERTS_HISTORY}?area=HI&start=${encodeURIComponent(since.toISOString().replace(/\.\d{3}Z$/, 'Z'))}&limit=500`;
+
+  const [dohRes, nwsRes] = await Promise.allSettled([
+    deps.cachedJsonFetch(DOH_EVENTS_URL, WQ_TTL, 'application/json'),
+    deps.cachedJsonFetch(historyUrl, WQ_TTL, 'application/geo+json'),
+  ]);
+
+  const doh = dohRes.status === 'fulfilled' ? mapDohEvents(dohRes.value, fetched_at) : null;
+  sourceHealth.doh = doh === null ? 'unavailable' : 'ok';
+  if (doh === null) logEvent('ocean.wq.doh_unavailable', 'DOH events feed unusable');
+
+  const nwsOk = nwsRes.status === 'fulfilled' && !!nwsRes.value;
+  const runoff = nwsOk ? mapRunoffIslands(nwsRes.value) : new Map<string, string>();
+  sourceHealth.nws_flash_flood_history = nwsOk ? 'ok' : 'unavailable';
+  if (!nwsOk) logEvent('ocean.wq.nws_history_unavailable', 'alert history unusable');
+
+  // Both sources down is an outage, not a clean ocean.
+  if (doh === null && !nwsOk) {
+    return degradedResponse('water-quality', 'ocean_water_quality',
+      'Hawaiʻi DOH / NWS', WQ_TTL, cors, deps, 'unavailable');
+  }
+
+  const signals: WaterQualitySignal[] = doh ? [...doh] : [];
+  const dohIslands = new Set(signals.map((x) => x.island).filter(Boolean) as string[]);
+
+  for (const [island, onset] of runoff) {
+    if (dohIslands.has(island)) continue;   // official advisory supersedes
+    signals.push({
+      island,
+      island_label: ISLAND_DISPLAY[island] ?? island,
+      kind: 'runoff_caution',
+      detail: RUNOFF_CAUTION_DETAIL,
+      advisory_type: null,
+      started_at: onset || null,
+      // Says plainly that this is ours, not DOH's.
+      source: 'Derived from NWS flash flood warnings · Kahu Ola',
+      official_source_url: DOH_PUBLIC_URL,
+      fetched_at,
+    });
+  }
+
+  // DOH advisories first, then derived cautions; newest first within each.
+  signals.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'doh_advisory' ? -1 : 1;
+    return String(b.started_at || '').localeCompare(String(a.started_at || ''));
+  });
+
+  const body = envelope('ocean_water_quality', 'Hawaiʻi DOH Clean Water Branch / NWS', {
+    stale_after_seconds: WQ_TTL,
+    freshness: 'FRESH',
+    // A clean ocean is NORMAL and reports 200 with an empty list — never an
+    // error, never a blank (Invariant 3).
+    status: signals.length ? 'active' : 'clear',
+    signals,
+    doh_advisory_count: signals.filter((x) => x.kind === 'doh_advisory').length,
+    runoff_caution_count: signals.filter((x) => x.kind === 'runoff_caution').length,
+    runoff_lookback_hours: RUNOFF_LOOKBACK_HOURS,
+    source_health: sourceHealth,
+    official_source_url: DOH_PUBLIC_URL,
+    note: 'Brown water and beach advisories are issued by the Hawaiʻi Department of Health. ' +
+      'Runoff cautions are derived by Kahu Ola from NWS flash flood warnings and are not DOH advisories.',
+  });
+
+  await writeSnapshot('water-quality', body);
+  await writeRouteCache('water-quality', body, WQ_TTL);
+  return deps.jsonResp(body, 200, jsonHeaders(WQ_TTL, 'MISS', cors));
+}
