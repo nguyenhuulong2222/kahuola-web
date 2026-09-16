@@ -178,6 +178,6 @@ dependency order → then the parallelizable and growth work.
   zipCode/latLong forecast + observation endpoints, none of which this repo calls.
   Corrects the previous log line, which assumed /aq/data was the deprecated API.
   No Worker change shipped.
-- 2026-09-13 — Queued P26–P29 (ocean Tier 2: wind arrival, brown water,
+- 2026-09-15 — Queued P26–P29 (ocean Tier 2: wind arrival, brown water,
   tides, vog) after TRACK F P23/P24 shipped. Deferred remaining ocean ideas
   (tsunami travel time, marine zones, run-up, SST) — revisit after P26–P29.
