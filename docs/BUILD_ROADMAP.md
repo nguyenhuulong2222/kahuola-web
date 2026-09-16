@@ -116,6 +116,27 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 - [ ] **P25 · Ocean overlays on live-map** — `NOT-STARTED`
   Blocked on: map bug-clean (P01 Safari), KMZ-parse decision for outlook
   geometry (parse KMZ in Worker vs card-only, decide at implementation).
+- [ ] **P26 · Wind Arrival Timeline** — `NOT-STARTED`
+  NHC "earliest reasonable arrival of TS-force winds" + wind speed probability
+  grids. Answers "when could storm winds reach my island" — extends the
+  existing Hurricane module/NHC handler, not a new module. Best built/verified
+  while a real storm is active.
+- [ ] **P27 · Brown Water Advisory** — `NOT-STARTED`
+  Post-flash-flood "avoid swimming 48–72h" flag. Links existing Flood Context
+  to ocean surfaces + Hawaiʻi DOH beach advisories. Near-zero new upstream —
+  mostly cross-module logic. Quick win before Kona storm season.
+- [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
+  NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
+  Hilo stations, free JSON). Coastal flood context when king tide coincides
+  with large swell.
+- [ ] **P29 · Vog Forecast** — `NOT-STARTED`
+  UH Mānoa VMAP 60-hour vog dispersion. High value for Kona/Kaʻū residents;
+  complements AQI/SmokeSignal. Verify VMAP data access terms at
+  implementation time (academic model — confirm it's fetchable, not
+  scrape-only).
+
+P26–P29 are queued candidates, not commitments — none starts before P01 and
+P25 ship. Priority within the four: P26 if a storm is active, else P27.
 
 ## NON-PROMPT TASKS (manual — not Claude Code)
 
@@ -157,3 +178,6 @@ dependency order → then the parallelizable and growth work.
   zipCode/latLong forecast + observation endpoints, none of which this repo calls.
   Corrects the previous log line, which assumed /aq/data was the deprecated API.
   No Worker change shipped.
+- 2026-09-13 — Queued P26–P29 (ocean Tier 2: wind arrival, brown water,
+  tides, vog) after TRACK F P23/P24 shipped. Deferred remaining ocean ideas
+  (tsunami travel time, marine zones, run-up, SST) — revisit after P26–P29.
