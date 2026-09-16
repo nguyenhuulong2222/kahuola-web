@@ -2659,7 +2659,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=ab228e58"></script>
+  <script src="/i18n/kahuola-i18n.js?v=ba310e50"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -2885,7 +2885,11 @@
         const diffHr = Math.round(diffMin / 60);
         if (diffHr < 24) return _tmpl("freshness.updated_hr", { n: diffHr }) || `Updated ${diffHr} hr ago`;
         const diffDay = Math.round(diffHr / 24);
-        return _tmpl("freshness.updated_day", { n: diffDay }) || `Updated ${diffDay} day ago`;
+        // P27b. Read "Updated 2 day ago". The {s} convention is the one already
+        // used across this bundle; locales without a plural form (vi "ngày",
+        // haw "lā") simply carry no {s} token and are unaffected.
+        return _tmpl("freshness.updated_day", { n: diffDay, s: diffDay > 1 ? "s" : "" })
+          || `Updated ${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
       }
 
       function withTimeout(url, timeoutMs = 9000) {

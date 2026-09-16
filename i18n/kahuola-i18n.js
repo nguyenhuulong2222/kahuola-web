@@ -119,7 +119,7 @@
       "map.popup_volcanic_zone": "Inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire.",
       "freshness.updated_min": "Updated {n} min ago",
       "freshness.updated_hr": "Updated {n} hr ago",
-      "freshness.updated_day": "Updated {n} day ago",
+      "freshness.updated_day": "Updated {n} day{s} ago",
       "freshness.loading": "Loading\u2026",
       "freshness.data_may_be_stale": "Data may be stale",
       "freshness.delayed": "Delayed",
