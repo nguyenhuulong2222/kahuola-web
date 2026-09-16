@@ -137,7 +137,9 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   the lookback uses the same NWS origin over a time range. Labelled "Derived
   from NWS flash flood warnings · Kahu Ola", never as a DOH advisory; an island
   with a DOH advisory does not also get one.
-  Quiet ocean = block hidden, status "clear", HTTP 200.
+  Quiet ocean = signals [], status "clear", HTTP 200.
+  UI relocated: homepage block removed (P27b); resurfaces in live-map Ocean
+  module at P25/P27b. Backend route stays live.
 - [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
   NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
   Hilo stations, free JSON). Coastal flood context when king tide coincides
@@ -197,3 +199,7 @@ dependency order → then the parallelizable and growth work.
 - 2026-09-15 — P27 shipped. /api/ocean/water-quality (DOH advisories + derived
   runoff caution) and the Water quality block on the homepage ocean card. DOH
   publishes a usable JSON API, so this is a+b, not b-only.
+- 2026-09-16 — P27b: Water Quality block removed from the homepage (8 statewide
+  advisory rows against the 5-second rule). /api/ocean/water-quality stays live
+  and untouched; i18n keys retained for reuse. Returns in the live-map Ocean
+  module when P25 ships.
