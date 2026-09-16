@@ -19,9 +19,24 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 
 ## TRACK C — Reliability / production fixes (do first — affects current users)
 
-- [ ] **P01 · Safari iOS black screen — deploy the ready fix** — `FIX-READY`
-  Fix exists for `live-map.html`, not yet deployed. Multi-browser test + cache purge
-  (4h TTL) required. Touches production-locked file → careful.
+- [x] **P01 · Safari iOS black screen** — `DONE` (shipped 2026-03-08, verified 2026-09-16)
+  **No code change was needed — the fix was already live.** The "ready fix" is
+  `safeMapResize()` in live-map.html (multi-pass `map.resize()` behind two
+  nested `requestAnimationFrame`s plus 100/300/600 ms settle passes), wired to
+  `resize`, `orientationchange`, `pageshow` (bfcache), `visibilitychange` and
+  `focus`. It landed in commits 873a82d / 943512a / 1218a8b / fc1043f on
+  2026-03-08 (an earlier `safeResize` was renamed to `safeMapResize` in
+  fc1043f, which is why searching for the old name finds only history).
+  Production and `main` are byte-identical (438,521 bytes), so it had already
+  deployed; the entry was simply never closed.
+  Verified 2026-09-16 on the iOS 26 Simulator (iPhone 17, Mobile Safari): map
+  renders on cold load and again after a background→foreground app-switch, no
+  black screen. Desktop Chrome EN+VI: canvas non-zero through a resize cycle,
+  11 lazy modules open, 0 raw i18n keys, no console errors.
+  ⚠ The old note said "cache purge (4h TTL)". That is wrong: `_headers` sets
+  `/live-map` and `/live-map.html` to `max-age=30, must-revalidate` and
+  Cloudflare reports `cf-cache-status: DYNAMIC`, so a deploy reaches users in
+  about 30 s and no manual purge is required.
 - [x] **P02 · AirNow JSON API deprecation** — `DONE` 2026-09-12
   Closed as a no-op: **nothing we use is retiring.** EPA's official notice
   (`docs.airnowapi.org/docs/AirNowAPIUpdates2026June.pdf`) retires six services on
@@ -203,3 +218,8 @@ dependency order → then the parallelizable and growth work.
   advisory rows against the 5-second rule). /api/ocean/water-quality stays live
   and untouched; i18n keys retained for reuse. Returns in the live-map Ocean
   module when P25 ships.
+- 2026-09-16 — P01 closed with no code change: the Safari iOS fix
+  (safeMapResize + orientationchange/pageshow/visibilitychange/focus) shipped
+  2026-03-08 and production already matches main byte-for-byte. Re-verified on
+  the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
+  max-age=30, must-revalidate, cf-cache-status DYNAMIC.
