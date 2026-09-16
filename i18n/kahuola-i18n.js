@@ -778,6 +778,12 @@
 
       // ── Signal strip labels (Class A) ─────────────────────────
       "signal.strip.fire_clear": "No fire detections",
+      // ── P27 — water quality (Surf & Ocean Safety card) ────────────────
+      "ocean.water_heading": "Water quality",
+      "ocean.wq_doh": "DOH advisory",
+      "ocean.wq_runoff": "Runoff caution",
+      "ocean.wq_statewide": "Statewide",
+      "ocean.wq_runoff_detail": "Recent flash flooding \u2014 coastal runoff possible. Consider avoiding ocean swimming for 48\u201372 hours near affected shores.",
       // ── P24 — Surf & Ocean Safety card (context overlay) ──────────────
       "ocean.label": "Ocean · NDBC / NWS / PacIOOS",
       "ocean.title": "\ud83c\udf0a Surf & Ocean Safety",
@@ -1844,6 +1850,12 @@
 
       // ── Signal strip ──────────────────────────────────────────
       "signal.strip.fire_clear": "Kh\xf4ng ph\u00e1t hi\u1ec7n ch\u00e1y",
+      // ── P27 ──
+      "ocean.water_heading": "Ch\u1ea5t l\u01b0\u1ee3ng n\u01b0\u1edbc",
+      "ocean.wq_doh": "C\u1ea3nh b\u00e1o c\u1ee7a DOH",
+      "ocean.wq_runoff": "L\u01b0u \u00fd n\u01b0\u1edbc ch\u1ea3y tr\u00e0n",
+      "ocean.wq_statewide": "To\u00e0n ti\u1ec3u bang",
+      "ocean.wq_runoff_detail": "V\u1eeba c\u00f3 l\u0169 qu\u00e9t \u2014 n\u01b0\u1edbc ch\u1ea3y tr\u00e0n ra bi\u1ec3n l\u00e0 c\u00f3 th\u1ec3. H\u00e3y c\u00e2n nh\u1eafc tr\u00e1nh b\u01a1i bi\u1ec3n trong 48\u201372 gi\u1edd g\u1ea7n c\u00e1c b\u1edd b\u1ecb \u1ea3nh h\u01b0\u1edfng.",
       // ── P24 ──
       "ocean.label": "\u0110\u1ea1i d\u01b0\u01a1ng \u00b7 NDBC / NWS / PacIOOS",
       "ocean.title": "\ud83c\udf0a An to\u00e0n s\u00f3ng & \u0111\u1ea1i d\u01b0\u01a1ng",
@@ -2693,6 +2705,10 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": "ʻAʻohe ahi i loaʻa",
+      // ── P27 ── (Layer A English fallback)
+      "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
+      "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
+      "ocean.wq_runoff_detail": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -3356,6 +3372,10 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P27 ── (Layer A English fallback)
+      "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
+      "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
+      "ocean.wq_runoff_detail": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -3900,6 +3920,10 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P27 ── (Layer A English fallback)
+      "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
+      "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
+      "ocean.wq_runoff_detail": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -4444,6 +4468,10 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P27 ── (Layer A English fallback)
+      "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
+      "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
+      "ocean.wq_runoff_detail": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
