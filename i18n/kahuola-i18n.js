@@ -778,6 +778,14 @@
 
       // ── Signal strip labels (Class A) ─────────────────────────
       "signal.strip.fire_clear": "No fire detections",
+      // ── P26 — Wind Arrival Timeline (live-map hurricane panel) ────────
+      "map.hur_group_arrival": "Wind arrival",
+      "map.hur_arr_unavailable": "Arrival information could not be retrieved.",
+      "map.hur_arr_not_published": "NHC has not published arrival times for this storm \u2014 typically means low near-term risk to Hawai\u02bbi.",
+      "map.hur_arr_window": "onset possible {start} \u2013 {end} ({wpct}% in that window)",
+      "map.hur_arr_no_window": "no onset window reported",
+      "map.hur_arr_5day": "{pct}% within 5 days",
+      "map.hur_arr_caveat": "These are NHC onset-probability windows, not forecast arrival times. NHC publishes arrival times only in formats this service cannot read.",
       // ── P24 — Surf & Ocean Safety card (context overlay) ──────────────
       "ocean.label": "Ocean · NDBC / NWS / PacIOOS",
       "ocean.title": "\ud83c\udf0a Surf & Ocean Safety",
@@ -1844,6 +1852,14 @@
 
       // ── Signal strip ──────────────────────────────────────────
       "signal.strip.fire_clear": "Kh\xf4ng ph\u00e1t hi\u1ec7n ch\u00e1y",
+      // ── P26 ──
+      "map.hur_group_arrival": "Th\u1eddi \u0111i\u1ec3m gi\u00f3 \u0111\u1ebfn",
+      "map.hur_arr_unavailable": "Kh\u00f4ng l\u1ea5y \u0111\u01b0\u1ee3c th\u00f4ng tin th\u1eddi \u0111i\u1ec3m gi\u00f3 \u0111\u1ebfn.",
+      "map.hur_arr_not_published": "NHC ch\u01b0a c\u00f4ng b\u1ed1 th\u1eddi \u0111i\u1ec3m gi\u00f3 \u0111\u1ebfn cho c\u01a1n b\u00e3o n\u00e0y \u2014 th\u01b0\u1eddng ngh\u0129a l\u00e0 nguy c\u01a1 g\u1ea7n cho Hawai\u02bbi th\u1ea5p.",
+      "map.hur_arr_window": "gi\u00f3 c\u00f3 th\u1ec3 b\u1eaft \u0111\u1ea7u {start} \u2013 {end} ({wpct}% trong kho\u1ea3ng n\u00e0y)",
+      "map.hur_arr_no_window": "ch\u01b0a c\u00f3 kho\u1ea3ng th\u1eddi gian b\u1eaft \u0111\u1ea7u \u0111\u01b0\u1ee3c b\u00e1o",
+      "map.hur_arr_5day": "{pct}% trong 5 ng\u00e0y",
+      "map.hur_arr_caveat": "\u0110\u00e2y l\u00e0 kho\u1ea3ng x\u00e1c su\u1ea5t gi\u00f3 b\u1eaft \u0111\u1ea7u c\u1ee7a NHC, kh\u00f4ng ph\u1ea3i th\u1eddi \u0111i\u1ec3m gi\u00f3 \u0111\u1ebfn d\u1ef1 b\u00e1o. NHC ch\u1ec9 c\u00f4ng b\u1ed1 th\u1eddi \u0111i\u1ec3m \u0111\u1ebfn \u1edf \u0111\u1ecbnh d\u1ea1ng d\u1ecbch v\u1ee5 n\u00e0y kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c.",
       // ── P24 ──
       "ocean.label": "\u0110\u1ea1i d\u01b0\u01a1ng \u00b7 NDBC / NWS / PacIOOS",
       "ocean.title": "\ud83c\udf0a An to\u00e0n s\u00f3ng & \u0111\u1ea1i d\u01b0\u01a1ng",
@@ -2693,6 +2709,11 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": "ʻAʻohe ahi i loaʻa",
+      // ── P26 ── (Layer A English fallback)
+      "map.hur_group_arrival": KEEP_ENGLISH, "map.hur_arr_unavailable": KEEP_ENGLISH,
+      "map.hur_arr_not_published": KEEP_ENGLISH, "map.hur_arr_window": KEEP_ENGLISH,
+      "map.hur_arr_no_window": KEEP_ENGLISH, "map.hur_arr_5day": KEEP_ENGLISH,
+      "map.hur_arr_caveat": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -3356,6 +3377,11 @@
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH,
       "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P26 ── (Layer A English fallback)
+      "map.hur_group_arrival": KEEP_ENGLISH, "map.hur_arr_unavailable": KEEP_ENGLISH,
+      "map.hur_arr_not_published": KEEP_ENGLISH, "map.hur_arr_window": KEEP_ENGLISH,
+      "map.hur_arr_no_window": KEEP_ENGLISH, "map.hur_arr_5day": KEEP_ENGLISH,
+      "map.hur_arr_caveat": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -3900,6 +3926,11 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P26 ── (Layer A English fallback)
+      "map.hur_group_arrival": KEEP_ENGLISH, "map.hur_arr_unavailable": KEEP_ENGLISH,
+      "map.hur_arr_not_published": KEEP_ENGLISH, "map.hur_arr_window": KEEP_ENGLISH,
+      "map.hur_arr_no_window": KEEP_ENGLISH, "map.hur_arr_5day": KEEP_ENGLISH,
+      "map.hur_arr_caveat": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -4444,6 +4475,11 @@
       "signal.flood_copy_active_tmpl": KEEP_ENGLISH,
       "signal.flood_copy_monitoring_long": KEEP_ENGLISH, "signal.flood_title_active": KEEP_ENGLISH,
       "signal.strip.fire_clear": KEEP_ENGLISH, "signal.strip.fire_count": KEEP_ENGLISH,
+      // ── P26 ── (Layer A English fallback)
+      "map.hur_group_arrival": KEEP_ENGLISH, "map.hur_arr_unavailable": KEEP_ENGLISH,
+      "map.hur_arr_not_published": KEEP_ENGLISH, "map.hur_arr_window": KEEP_ENGLISH,
+      "map.hur_arr_no_window": KEEP_ENGLISH, "map.hur_arr_5day": KEEP_ENGLISH,
+      "map.hur_arr_caveat": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,

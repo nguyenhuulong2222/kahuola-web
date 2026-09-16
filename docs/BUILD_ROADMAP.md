@@ -116,11 +116,20 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 - [ ] **P25 · Ocean overlays on live-map** — `NOT-STARTED`
   Blocked on: map bug-clean (P01 Safari), KMZ-parse decision for outlook
   geometry (parse KMZ in Worker vs card-only, decide at implementation).
-- [ ] **P26 · Wind Arrival Timeline** — `NOT-STARTED`
-  NHC "earliest reasonable arrival of TS-force winds" + wind speed probability
-  grids. Answers "when could storm winds reach my island" — extends the
-  existing Hurricane module/NHC handler, not a new module. Best built/verified
-  while a real storm is active.
+- [x] **P26 · Wind Arrival Timeline** — `DONE` 2026-09-15
+  Extends the existing NHC handler; no new module. `/api/hazards/hurricane`
+  gains an additive per-storm `wind_arrival` block (islands[], status, source,
+  product_time, fetched_at); live-map storm card gains a "WIND ARRIVAL" section.
+  **Arrival times are NOT shipped, by design.** NHC publishes earliest-reasonable
+  and most-likely arrival only as KMZ (nhc.noaa.gov/gis) and GRIB2
+  (ftp.nhc.ncep.noaa.gov/toa/, `{STORM}_TOA_TOD_34kt_adv{NNN}.grib2`) — verified
+  present for both Pacific basins, but neither is decodable in a Worker. So
+  `earliest_arrival_iso`/`most_likely_arrival_iso` are structurally null with
+  `arrival_time_basis` naming why, and the shape is forward-compatible the day a
+  parseable form exists. What ships instead is NHC's own onset-probability
+  window from the PWS product we already parse — labelled as an onset window,
+  never as an arrival time, with a required caveat line on the card.
+  Unblocking the ISO fields shares P25's KMZ-parse decision.
 - [ ] **P27 · Brown Water Advisory** — `NOT-STARTED`
   Post-flash-flood "avoid swimming 48–72h" flag. Links existing Flood Context
   to ocean surfaces + Hawaiʻi DOH beach advisories. Near-zero new upstream —
@@ -181,3 +190,7 @@ dependency order → then the parallelizable and growth work.
 - 2026-09-15 — Queued P26–P29 (ocean Tier 2: wind arrival, brown water,
   tides, vog) after TRACK F P23/P24 shipped. Deferred remaining ocean ideas
   (tsunami travel time, marine zones, run-up, SST) — revisit after P26–P29.
+- 2026-09-15 — P26 shipped. Additive `wind_arrival` on /api/hazards/hurricane +
+  live-map WIND ARRIVAL section. NHC's arrival-time product is KMZ/GRIB2 only,
+  so arrival ISOs are structurally null; onset-probability windows ship in their
+  place under their own name. Blocked on the same KMZ decision as P25.

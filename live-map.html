@@ -3104,7 +3104,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=2f8140de"></script>
+  <script src="/i18n/kahuola-i18n.js?v=fb58a225"></script>
 
   <script>
     "use strict";
@@ -4228,6 +4228,9 @@
             forecast_closest_approach: props.forecast_closest_approach ?? null,
             wind_probabilities: props.wind_probabilities ?? null,
             wind_probabilities_status: props.wind_probabilities_status ?? null,
+            // P26. This normaliser is an ALLOW-LIST (see the note below) — a new
+            // payload field is invisible to every renderer until it is named here.
+            wind_arrival: props.wind_arrival ?? null,
             // P29c. This normaliser is an ALLOW-LIST: anything not named here is
             // dropped on the floor, which is exactly how P29b's twelve fields
             // went missing. New payload fields must be added here or they never
@@ -7110,6 +7113,81 @@
         return "lvl-low";
       }
 
+      /* ── P26 · WIND ARRIVAL ────────────────────────────────────────────
+         Renders NHC's onset-probability windows, and is careful never to call
+         them arrival times.
+
+         NHC publishes "earliest reasonable" and "most likely" arrival only as
+         GRIB2 and KMZ, so the Worker ships both ISO fields null with
+         arrival_time_basis saying why. What it CAN ship is the first tau window
+         in which NHC reports a non-zero chance of winds BEGINNING. That is a
+         different statistic, and the caption says so rather than letting the
+         reader supply the wrong one.
+
+         Calm tone throughout: no red, no urgency styling. A context section on
+         a storm card must not out-shout the warning products above it. */
+      // Island keys -> Hawaiian orthography. A local map, not i18n keys: these
+      // are proper nouns and read identically in every locale the site ships.
+      // (map.island.* is a COMBINED label — "Kauaʻi · Niʻihau" — and would be
+      // wrong on a per-island row.)
+      const HUR_ISLAND_LABEL = {
+        kauai: "Kauaʻi", niihau: "Niʻihau", oahu: "Oʻahu", molokai: "Molokaʻi",
+        lanai: "Lānaʻi", kahoolawe: "Kahoʻolawe", maui: "Maui", hawaii: "Hawaiʻi Island",
+      };
+
+      function hurWindArrivalHtml(p) {
+        const wa = p.wind_arrival;
+        const label = escapeHtml(_t("map.hur_group_arrival") || "Wind arrival");
+        const open = `<div class="hur-group"><div class="hur-group-label">${label}</div>`;
+
+        // Absent key = a Worker that predates P26. Render nothing at all rather
+        // than an "unavailable" line that would be about us, not the storm.
+        if (!wa || typeof wa !== "object") return "";
+
+        if (wa.status === "unavailable") {
+          return open + `<div class="hur-line hur-warn">${escapeHtml(_t("map.hur_arr_unavailable") || "Arrival information could not be retrieved.")}</div></div>`;
+        }
+        if (wa.status === "not_published" || !Array.isArray(wa.islands) || wa.islands.length === 0) {
+          return open + `<div class="hur-line">${escapeHtml(_t("map.hur_arr_not_published") || "NHC has not published arrival times for this storm \u2014 typically means low near-term risk to Hawai\u02bbi.")}</div></div>`;
+        }
+
+        const rows = wa.islands.map((i) => {
+          const island = escapeHtml(HUR_ISLAND_LABEL[i.island] || i.island);
+          const pct = (typeof i.ts_wind_prob_pct === "number") ? i.ts_wind_prob_pct : null;
+          const start = i.onset_window_start_iso ? hstFull(i.onset_window_start_iso) : "";
+          // A 12-hour NHC window routinely crosses local midnight, and a bare
+          // end time ("5:00 PM HST – 5:00 AM") hides which day that is. The
+          // weekday is carried on the end whenever the HST day differs.
+          let end = "";
+          if (i.onset_window_end_iso) {
+            const sDay = i.onset_window_start_iso ? hstTime(i.onset_window_start_iso, { weekday: "short" }) : "";
+            const eDay = hstTime(i.onset_window_end_iso, { weekday: "short" });
+            end = (sDay && eDay && sDay !== eDay)
+              ? hstTime(i.onset_window_end_iso, { weekday: "short", hour: "numeric", minute: "2-digit" })
+              : hstTime(i.onset_window_end_iso, { hour: "numeric", minute: "2-digit" });
+          }
+
+          let detail;
+          if (start && end) {
+            detail = _tmpl("map.hur_arr_window", { start: start, end: end, wpct: String(i.onset_window_pct ?? "\u2014") })
+              || `onset possible ${start} \u2013 ${end} (${i.onset_window_pct}% in that window)`;
+          } else {
+            // Probability without a window: NHC named the place but reported no
+            // non-zero onset period, or the product stamp did not parse.
+            detail = _t("map.hur_arr_no_window") || "no onset window reported";
+          }
+          const tail = pct === null ? "" :
+            " \u00b7 " + (_tmpl("map.hur_arr_5day", { pct: String(pct) }) || `${pct}% within 5 days`);
+          return `<div class="hur-line"><b>${island}</b> \u2014 ${escapeHtml(detail)}${escapeHtml(tail)}</div>`;
+        }).join("");
+
+        // The caveat is not optional decoration. Without it a reader takes an
+        // onset window for a forecast arrival time, which is the one
+        // misreading this whole section has to prevent.
+        const caveat = `<div class="hur-note">${escapeHtml(_t("map.hur_arr_caveat") || "These are NHC onset-probability windows, not forecast arrival times. NHC publishes arrival times only in formats this service cannot read.")}</div>`;
+        return open + rows + caveat + `</div>`;
+      }
+
       function hurricaneWindProbHtml(p) {
         const status = p.wind_probabilities_status;
         if (status === "unavailable") return `<div class="hur-group"><div class="hur-group-label">${escapeHtml(_t("map.hur_group_prob") || "Probability by location")}</div><div class="hur-line hur-warn">${escapeHtml(_t("map.hur_wp_unavailable") || "Wind probabilities could not be retrieved.")}</div></div>`;
@@ -7335,6 +7413,11 @@
 
         // ── (c) what are the odds for my island ─────────────────────────
         html += hurricaneWindProbHtml(p);
+
+        // ── (d) P26 · when could those winds begin ──────────────────────
+        // Last: it is the most qualified statement on the card, and it reads
+        // as a footnote to the probabilities above rather than a headline.
+        html += hurWindArrivalHtml(p);
 
         return html + `</div></details>`;
       }

@@ -6231,6 +6231,8 @@ type WindProbabilities = {
   status: WindProbStatus;
   advisory_number: string;
   advisory_age_cycles: number;
+  // P26 ADDITIVE. The product's own issuance stamp; null when unparseable.
+  product_time: string | null;
   locations: WindProbLocation[];
   // ── ROW COUNTS (compatibility) ──────────────────────────────────────
   // location_count and hawaii_location_count count ROWS, not locations: a
@@ -6300,6 +6302,11 @@ type PwsParsed = {
   stormName: string;
   advisoryNumber: number;
   advisoryNumberRaw: string;
+  // P26. The product's own issuance stamp ("0300 UTC WED SEP 16 2026"), needed
+  // to turn NHC's tau offsets into absolute times. Null when the header line is
+  // absent or unparseable — in which case no window gets a clock time at all,
+  // because a tau without an origin is not a time.
+  productTimeIso: string | null;
   locations: WindProbLocation[];
   // True when at least one row in THIS product mapped to an island key that
   // ISLAND_CENTROIDS no longer carries. Accumulated during the parse so it
@@ -6316,6 +6323,30 @@ type PwsParsed = {
 // Lead times are read from the product's own "FORECAST HOUR" line rather than
 // hardcoded, so a change to the window series is inherited instead of silently
 // mislabelled.
+// P26. "0300 UTC WED SEP 16 2026" — the line NHC prints under the advisory
+// header. Strict: the month must be one of the twelve tokens NHC uses and the
+// hour must be four digits. Anything else returns null and every downstream
+// window ships without a clock time, which is the honest outcome — a tau with
+// no origin cannot be turned into an hour on a calendar.
+const PWS_MONTHS: Record<string, number> = {
+  JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+  JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+};
+function parsePwsIssuanceTime(text: string): string | null {
+  const m = /^\s*(\d{4})\s+UTC\s+[A-Z]{3}\s+([A-Z]{3})\s+(\d{1,2})\s+(\d{4})\s*$/im.exec(text);
+  if (!m) return null;
+  const hh = parseInt(m[1].slice(0, 2), 10);
+  const mm = parseInt(m[1].slice(2), 10);
+  const mon = PWS_MONTHS[m[2].toUpperCase()];
+  const day = parseInt(m[3], 10);
+  const year = parseInt(m[4], 10);
+  if (mon === undefined || !Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (!Number.isFinite(day) || !Number.isFinite(year)) return null;
+  if (hh > 23 || mm > 59 || day < 1 || day > 31) return null;
+  const ms = Date.UTC(year, mon, day, hh, mm);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
 function parsePwsProduct(text: string): PwsParsed | null {
   const headerRe = /^(.*?)\s+WIND SPEED PROBABILITIES NUMBER\s+(\d+)\s*$/im;
   const h = headerRe.exec(text);
@@ -6329,6 +6360,7 @@ function parsePwsProduct(text: string): PwsParsed | null {
   const stormName = h[1].trim();
 
   const lines = text.split('\n');
+  const productTimeIso = parsePwsIssuanceTime(text);
   const fhLine = lines.find((l) => l.trim().startsWith('FORECAST HOUR'));
   if (!fhLine) return null;
   const taus = (fhLine.match(/\((\d+)\)/g) || []).map((m) => parseInt(m.slice(1, -1), 10));
@@ -6377,7 +6409,7 @@ function parsePwsProduct(text: string): PwsParsed | null {
     });
   }
 
-  return { stormName, advisoryNumber, advisoryNumberRaw, locations, islandKeyMapDegraded };
+  return { stormName, advisoryNumber, advisoryNumberRaw, productTimeIso, locations, islandKeyMapDegraded };
 }
 
 // Attribution, to the same standard as the forecast-track guard. The product
@@ -6485,6 +6517,7 @@ async function fetchWindProbabilities(
         status,
         advisory_number: parsed.advisoryNumberRaw,
         advisory_age_cycles: verdict.ageCycles,
+        product_time: parsed.productTimeIso,
         locations: parsed.locations,
         location_count: parsed.locations.length,
         hawaii_location_count: hawaiiCount,
@@ -6499,6 +6532,163 @@ async function fetchWindProbabilities(
   });
 
   return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   P26 · WIND ARRIVAL TIMELINE
+   ══════════════════════════════════════════════════════════════════════════
+   Answers "when could storm winds reach my island" from NHC's OWN published
+   numbers, and refuses to answer beyond them.
+
+   WHAT NHC PUBLISHES, VERIFIED 2026-09-15 (not from memory):
+
+   · "Arrival Time of Tropical Storm Force Winds — Earliest Reasonable / Most
+     Likely" exists for both Pacific basins. nhc.noaa.gov/gis lists it as KMZ
+     only; ftp.nhc.ncep.noaa.gov/toa/ carries it as GRIB2
+     ({STORM}_TOA_TOD_34kt_adv{NNN}.grib2). Files confirmed present for the
+     current storm (EP152026, adv 001-010) and for Central Pacific storms
+     (CP80/CP81 2026). There is NO GeoJSON, shapefile or text form.
+
+     GRIB2 is a binary gridded format a Worker cannot decode, and KMZ is a
+     zipped KML of time-banded polygons. Neither yields a per-island ISO time
+     here. So `earliest_arrival_iso` and `most_likely_arrival_iso` are
+     STRUCTURALLY NULL, with `arrival_time_basis` naming why. They are kept in
+     the shape because the day a parseable form exists — or the day the P25
+     KMZ-parse decision lands — they populate without a contract change.
+
+   · The Probabilistic Wind Speed product (PWSEP/PWSCP), which this Worker
+     ALREADY fetches and parses, carries per-location onset probabilities on
+     NHC's own tau grid: "OP IS THE PROBABILITY OF THE EVENT BEGINNING DURING
+     AN INDIVIDUAL TIME PERIOD (ONSET PROBABILITY)".
+
+   THE LINE THIS CODE WILL NOT CROSS
+   An onset-probability window is NOT an arrival time. NHC's "earliest
+   reasonable" is the 10th-percentile arrival from their wind-field Monte
+   Carlo; "most likely" is the 50th. Relabelling the first non-zero onset
+   window as either would invent a statistic NHC did not publish. So the window
+   ships under its own name, with its own probability, and the client is
+   required to caption it as an onset window — see WIND_ARRIVAL_BASIS_NOTE.
+
+   Everything below is SELECTION from published rows plus tau arithmetic on the
+   product's own issuance stamp. Nothing is modelled, interpolated or inferred.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+type WindArrivalStatus = 'published' | 'not_published' | 'unavailable';
+
+type WindArrivalIsland = {
+  island: IslandKey;
+  // Structurally null — see the block comment. Never computed locally.
+  earliest_arrival_iso: string | null;
+  most_likely_arrival_iso: string | null;
+  // NHC's 34 kt cumulative probability for this island's named location, i.e.
+  // the chance of tropical-storm-force winds at any point in the 5-day window.
+  ts_wind_prob_pct: number | null;
+  // NHC's FIRST tau window carrying a non-zero onset chance, as absolute times.
+  // Null when the product has no non-zero onset row, or when the issuance stamp
+  // did not parse (a tau with no origin is not a time).
+  onset_window_start_iso: string | null;
+  onset_window_end_iso: string | null;
+  onset_window_pct: number | null;
+  // The verbatim NHC label these numbers came from. Transparency: a reader can
+  // check the row (Invariant 11).
+  source_location: string;
+};
+
+const WIND_ARRIVAL_BASIS_NOTE =
+  'NHC publishes earliest-reasonable and most-likely arrival times only as GRIB2 and ' +
+  'KMZ, which this service cannot decode, so no arrival time is shown. The window below ' +
+  "is NHC's onset-probability window — the period in which winds may BEGIN — not a " +
+  'forecast arrival time.';
+
+const WIND_ARRIVAL_NOT_PUBLISHED_NOTE =
+  'NHC has not named a Hawaiʻi location in this storm\'s wind speed probability product. ' +
+  "Locations absent from that product are below NHC's reporting threshold (3% for 34 kt), " +
+  'not at zero probability.';
+
+/**
+ * Build the per-island arrival block for one storm.
+ *
+ * Fail-closed per ISLAND, not per storm: an island whose rows cannot be read
+ * is simply absent from `islands`, and the ones that parsed still ship.
+ */
+function buildWindArrival(wp: WindProbResult, fetchedAt: string) {
+  const base = {
+    islands: [] as WindArrivalIsland[],
+    status: 'unavailable' as WindArrivalStatus,
+    source: 'NHC/CPHC',
+    product_time: null as string | null,
+    fetched_at: fetchedAt,
+    arrival_time_basis: 'unavailable_upstream_grib2_and_kmz_only',
+    basis_note: WIND_ARRIVAL_BASIS_NOTE,
+  };
+
+  // No product, or one we refused (mismatch / stale) → unavailable. Absence of
+  // evidence, never evidence of absence.
+  if (!wp.probabilities) return base;
+  const probs = wp.probabilities;
+  const productTime = probs.product_time ?? null;
+
+  // Only the 34 kt threshold answers "tropical-storm-force winds", and only
+  // rows that resolved to a main-island key are usable. Everything else —
+  // buoys, ocean grid points, NWHI, unrecognised labels — is deliberately not
+  // mapped to an island by the existing parser and stays unmapped here.
+  const rows = probs.locations.filter(
+    (l) => l.threshold_kt === 34 && l.island_key !== null && l.location_class === 'named',
+  );
+  if (rows.length === 0) {
+    return { ...base, status: 'not_published' as WindArrivalStatus, product_time: productTime,
+      not_published_note: WIND_ARRIVAL_NOT_PUBLISHED_NOTE };
+  }
+
+  // One entry per island. When NHC names two places on the same island, the
+  // HIGHER cumulative probability wins — for a hazard surface the worse of two
+  // official readings is the one to show.
+  const byIsland = new Map<IslandKey, WindProbLocation>();
+  for (const r of rows) {
+    const k = r.island_key as IslandKey;
+    const prev = byIsland.get(k);
+    const cur = typeof r.peak_cumulative_pct === 'number' ? r.peak_cumulative_pct : -1;
+    const old = prev && typeof prev.peak_cumulative_pct === 'number' ? prev.peak_cumulative_pct : -1;
+    if (!prev || cur > old) byIsland.set(k, r);
+  }
+
+  const islands: WindArrivalIsland[] = [];
+  for (const [island, row] of byIsland) {
+    // First window with a non-zero onset chance. "X" (below threshold) and 0
+    // both fail this test, which is correct: neither is a reported onset.
+    let startIso: string | null = null;
+    let endIso: string | null = null;
+    let windowPct: number | null = null;
+    if (productTime) {
+      const originMs = Date.parse(productTime);
+      if (Number.isFinite(originMs)) {
+        for (let i = 0; i < row.windows.length; i++) {
+          const w = row.windows[i];
+          if (typeof w.incremental_pct !== 'number' || w.incremental_pct <= 0) continue;
+          // The window runs from the PREVIOUS tau to this one; for the opening
+          // row the product prints one bare number covering 0 → tau[0].
+          const prevTau = i === 0 ? 0 : row.windows[i - 1].tau;
+          startIso = new Date(originMs + prevTau * 3600_000).toISOString();
+          endIso = new Date(originMs + w.tau * 3600_000).toISOString();
+          windowPct = w.incremental_pct;
+          break;
+        }
+      }
+    }
+    islands.push({
+      island,
+      earliest_arrival_iso: null,
+      most_likely_arrival_iso: null,
+      ts_wind_prob_pct: typeof row.peak_cumulative_pct === 'number' ? row.peak_cumulative_pct : null,
+      onset_window_start_iso: startIso,
+      onset_window_end_iso: endIso,
+      onset_window_pct: windowPct,
+      source_location: row.name,
+    });
+  }
+  islands.sort((a, b) => (b.ts_wind_prob_pct ?? -1) - (a.ts_wind_prob_pct ?? -1));
+
+  return { ...base, islands, status: 'published' as WindArrivalStatus, product_time: productTime };
 }
 
 async function handleHurricane(cors: CorsHeaders): Promise<Response> {
@@ -6555,6 +6745,7 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
     windProbs = new Map();
   }
 
+  const fetchedAt = new Date().toISOString();
   const signals: Feature[] = res.storms.map((s): Feature => {
     const f = forecasts.get(s.id) ?? { status: 'unavailable' as ForecastStatus, forecast: null, closest: null, coneStatus: 'unavailable' as ConeStatus, cone: null };
     const wp = windProbs.get(s.id) ?? { status: 'unavailable' as WindProbStatus, probabilities: null };
@@ -6605,6 +6796,11 @@ async function handleHurricane(cors: CorsHeaders): Promise<Response> {
       // distance without these is implying an answer the distance cannot give.
       wind_probabilities_status: wp.status,
       wind_probabilities: wp.probabilities,
+      // ── ADDITIVE (P26) ──────────────────────────────────────────────
+      // Strictly appended: every field above is untouched, so the live-map
+      // panel and the mobile app parse exactly as before and simply ignore
+      // this key until they are taught about it.
+      wind_arrival: buildWindArrival(wp, fetchedAt),
     },
     };
   });
@@ -7925,3 +8121,12 @@ async function handleVoiceRequest(
     },
   });
 }
+
+/* ── Exported for tests / diagnostics only. Not part of any route contract.
+ *    Mirrors the `_internals` convention in ocean.ts and `_debugBuildPrompt`
+ *    in gemma.ts. Pure functions only — nothing here touches a binding. ── */
+export const _p26Internals = {
+  parsePwsProduct,
+  parsePwsIssuanceTime,
+  buildWindArrival,
+};
