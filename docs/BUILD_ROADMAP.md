@@ -128,9 +128,33 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   PR #28. Framing "Surf & Ocean Safety" (no risk badge). Feet-first display.
   40% threshold for tropical outlook lines. Isolated loader (Invariant 8).
   19 i18n keys EN/VI.
-- [ ] **P25 · Ocean overlays on live-map** — `NOT-STARTED`
-  Blocked on: map bug-clean (P01 Safari), KMZ-parse decision for outlook
-  geometry (parse KMZ in Worker vs card-only, decide at implementation).
+- [x] **P25 · Ocean intelligence on live-map** — `DONE` 2026-09-16
+  Folded into the EXISTING "Coastal & Surf" module rather than added as its own
+  card: that module already owns the ocean slot, and a second ocean-ish card
+  beside it would make a reader choose between two entries answering the same
+  question. NWS alerts stay the headline; four sub-blocks sit beneath —
+  surf by shore, tropical outlook, surf zone forecast, water quality.
+  Loads on the module's existing lazy click via a bespoke 4-endpoint
+  Promise.allSettled. NOT a HAZARD_REGISTRY entry: refreshHazard() fetches one
+  endpoint and parses synchronously, and refactoring it is off-limits on a
+  production-locked file.
+  ⚠ The brief called for the "LAZY_MODULES + event-delegation pattern". That
+  object is EMPTY and the pattern was deliberately abandoned — its own comment
+  records that leaving entries in it made the document-level bubble handler
+  overwrite translated content with hardcoded English. The live pattern is
+  lazyLoadModule() + per-element listeners in bindButtons(); that is what this
+  follows.
+  ⚠ Surf MARKERS deferred to P25b: /api/ocean/surf carries no lat/lon on any
+  signal, and keeping an NDBC/SWAN coordinate table in live-map.html is exactly
+  what that file forbids ("never re-derived... a second, drifting copy of the
+  Worker's allowlist"). The Worker already holds verified positions for all
+  four buoys and four SWAN points; emitting lat/lon per signal is a small
+  backend change. No dead layer, source or click-chain entry was shipped.
+  Tropical outlook is non-geometric by upstream constraint (NHC ships GTWO as
+  KMZ/shapefile only) — card list, no KMZ parser, matching P23's finding.
+- [ ] **P25b · Surf markers on live-map** — `NOT-STARTED`
+  Blocked on: /api/ocean/surf emitting lat/lon per signal (Worker-side, small).
+  Then a teal marker layer + popup, sentinels styled distinctly.
 - [ ] **P26 · Wind Arrival Timeline** — `NOT-STARTED`
   NHC "earliest reasonable arrival of TS-force winds" + wind speed probability
   grids. Answers "when could storm winds reach my island" — extends the
@@ -153,8 +177,14 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   from NWS flash flood warnings · Kahu Ola", never as a DOH advisory; an island
   with a DOH advisory does not also get one.
   Quiet ocean = signals [], status "clear", HTTP 200.
-  UI relocated: homepage block removed (P27b); resurfaces in live-map Ocean
-  module at P25/P27b. Backend route stays live.
+  UI relocated: homepage block removed (P27b); **restored on live-map** inside
+  the Coastal & Surf module (P25, 2026-09-16). Backend route unchanged
+  throughout.
+  **P27c candidate — DOH DOES ship geometry.** `locations[].geometry` carries
+  WKT POLYGON shoreline strings (686-3,855 chars) plus `centroid` POINT values;
+  Beach Advisories carry a POINT geometry. A real advisory map layer needs only
+  a small WKT→GeoJSON parser — far simpler than the KMZ/GRIB2 dead ends in
+  P23/P26. Not built in P25 (card-only, by decision).
 - [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
   NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
   Hilo stations, free JSON). Coastal flood context when king tide coincides
@@ -223,3 +253,7 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
+- 2026-09-16 — P25 shipped: ocean intelligence folded into the Coastal & Surf
+  module (surf / tropical outlook / surf zone / water quality), restoring the
+  P27 water-quality block on live-map. Surf markers deferred to P25b pending
+  coordinates in the surf payload. Recorded P27c: DOH ships WKT polygons.
