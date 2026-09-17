@@ -7804,7 +7804,7 @@
       two:   IS_LOCAL ? "./ocean-two-test.json"   : "https://kahuola.org/api/ocean/tropical-outlook",
       water: IS_LOCAL ? "./ocean-water-test.json" : "https://kahuola.org/api/ocean/water-quality",
     };
-    const oceanData = { surf: null, rip: null, two: null, water: null, loaded: false, loading: false };
+    const oceanData = { surf: null, rip: null, two: null, water: null, waterInflight: null, loaded: false, loading: false };
 
     // Island keys → Hawaiian orthography. A local map, not i18n keys: proper
     // nouns that read the same in every locale the site ships.
@@ -7833,6 +7833,43 @@
     // unreachable endpoint.
     function oceanUsable(env) { return !!env && env.freshness !== "STALE_DROP"; }
 
+    // P27d. An active DOH advisory is an in-effect health advisory, not
+    // on-demand info, so the layer loads at boot instead of waiting for a
+    // module click — the same reasoning as flash-flood auto-enabling the rain
+    // radar. Quiet ocean stays a quiet map: "clear" draws nothing.
+    function waterQualityActive(env) {
+      return oceanUsable(env)
+        && env.status === "active"
+        && Array.isArray(env.signals)
+        && env.signals.some((x) => x && (x.geometry || Array.isArray(x.centroid)));
+    }
+    // One decision point for both entry paths (boot and module open) so the two
+    // can never disagree about what is on the map.
+    function applyWaterQualityLayer(env) {
+      waterQualityVisible = waterQualityActive(env);
+      try { updateWaterQualitySource(); } catch (e) { /* the map must never break the page */ }
+    }
+    // Single-flight. Boot and a fast module click share one request; a click
+    // after the payload has landed reuses it rather than asking DOH again on
+    // the same load. A failed fetch leaves water null, so a later open retries.
+    function fetchOceanWaterOnce() {
+      if (oceanData.water) return Promise.resolve(oceanData.water);
+      if (oceanData.waterInflight) return oceanData.waterInflight;
+      oceanData.waterInflight = fetchJson(OCEAN_ENDPOINTS.water)
+        .then((json) => { oceanData.water = json; return json; })
+        .catch(() => null)
+        .finally(() => { oceanData.waterInflight = null; });
+      return oceanData.waterInflight;
+    }
+    // Advisory layer only. Deliberately does NOT touch surf, rip current or
+    // tropical outlook, and never opens the card — the map gains thin amber
+    // shoreline segments and small centroid dots, nothing else.
+    async function loadWaterQualityAdvisories() {
+      try {
+        applyWaterQualityLayer(await fetchOceanWaterOnce());
+      } catch (e) { /* fail-soft: layers stay hidden, nothing else affected */ }
+    }
+
     async function loadOceanData() {
       if (oceanData.loading) return;
       oceanData.loading = true;
@@ -7840,19 +7877,17 @@
         fetchJson(OCEAN_ENDPOINTS.surf),
         fetchJson(OCEAN_ENDPOINTS.rip),
         fetchJson(OCEAN_ENDPOINTS.two),
-        fetchJson(OCEAN_ENDPOINTS.water),
+        // P27d. Reuses whatever the boot fetch already got (or joins it while
+        // still in flight) — one water-quality request per page load.
+        fetchOceanWaterOnce(),
       ]);
       const val = (r) => (r.status === "fulfilled" ? r.value : null);
       oceanData.surf = val(surf); oceanData.rip = val(rip);
       oceanData.two = val(two);   oceanData.water = val(water);
       oceanData.loaded = true; oceanData.loading = false;
-      // P27c. The map layer rides the payload the card already fetched — one
-      // request, two surfaces. It turns on only once real geometry has landed,
-      // so an empty or failed load leaves nothing drawn and nothing clickable.
-      waterQualityVisible = oceanUsable(oceanData.water)
-        && Array.isArray(oceanData.water.signals)
-        && oceanData.water.signals.some((x) => x && (x.geometry || Array.isArray(x.centroid)));
-      try { updateWaterQualitySource(); } catch (e) { /* map must never break the card */ }
+      // P27c/P27d. The layer turns on only once real geometry has landed, so
+      // an empty or failed load leaves nothing drawn and nothing clickable.
+      applyWaterQualityLayer(oceanData.water);
       try { renderOceanDetail(); } catch (e) { /* card must never break the module */ }
       if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
     }
@@ -8182,6 +8217,10 @@
       }
       raiseFireLayersAboveOverlays();
       Object.keys(HAZARD_REGISTRY).forEach((key) => { HAZARD_REGISTRY[key].applyData(getState(key).features); });
+      // P27d. setStyle() wipes every source, and ocean is not in
+      // HAZARD_REGISTRY, so the advisory layer has to be re-populated here or a
+      // basemap toggle would silently drop an in-effect advisory off the map.
+      try { updateWaterQualitySource(); } catch (e) { /* basemap switch must not break */ }
       syncSatelliteButtons(); syncSmokeButtons(); syncAirnowButtons(); syncPerimeterButtons(); syncFlashFloodLayerVisibility(); syncFloodContextLayerVisibility(); syncMrmsLayerVisibility(); syncRainRadarLayerVisibility(); syncWindRiskLayerVisibility(); syncTsunamiLayerVisibility(); syncHurricaneLayerVisibility(); syncLandslideLayerVisibility();
       setText("basemap-mode", currentBasemap === "dark" ? (_t("map.basemap_dark") || "Dark") : (_t("map.satellite") || "Satellite"));
       if (userMarker && lastKnownUserCoord) updateUserMarker(lastKnownUserCoord);
@@ -8216,6 +8255,10 @@
       raiseFireLayersAboveOverlays();
       fitHawaii(false);
       if (window.innerWidth <= MOBILE_BREAKPOINT) setSheetOpen(false);
+      // P27d. Fire-and-forget alongside the hazard fetches: an in-effect DOH
+      // advisory should be on the first paint, but it must never delay or
+      // reject into the boot path.
+      loadWaterQualityAdvisories();
       await refreshEnabledHazards({ silent: false });
       // P30: first storm read at boot, so the Active Hazards card is correct on
       // the very first paint rather than only after the first poll interval.
