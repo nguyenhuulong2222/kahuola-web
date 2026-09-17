@@ -181,7 +181,7 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   the Coastal & Surf module (P25, 2026-09-16). Backend route unchanged
   throughout.
 - [x] **P27c · Water Quality map layer** — `DONE` (2026-09-16),
-  **auto-display on load (P27d, 2026-09-17)**
+  **auto-display on load (P27d, 2026-09-16)**
   DOH ships geometry, so the advisory is drawn where it actually applies.
   `locations[].geometry` carries WKT POLYGON shoreline strings (686-3,855
   chars) plus `centroid` POINT values; Beach Advisories carry a POINT geometry.
@@ -207,7 +207,7 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   ⚠ Pre-existing, NOT fixed here: that same list already stacks
   `flood-context-*` above `flash-flood-*`, so a terrain estimate draws over a
   Flash Flood Warning. Water-quality is under both. Worth a separate look.
-  **P27d (2026-09-17) — auto-display on load.** An active DOH advisory is an
+  **P27d (2026-09-16) — auto-display on load.** An active DOH advisory is an
   in-effect health advisory, not on-demand info, so it no longer hides behind a
   module click. Same rationale as flash-flood auto-enabling the rain radar.
   Boot fires `loadWaterQualityAdvisories()` alongside the hazard fetches
@@ -225,6 +225,19 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   No toggle wired: the auto-on precedent (rain radar) toggles from its own
   dedicated card, and there is no generic layer-toggle list for this class — no
   new UI in this PR, per scope.
+  **P27e (2026-09-16) — brown water explainer.** One collapsed line,
+  "ⓘ What is a Brown Water Advisory?", at the end of the Water Quality
+  sub-block, plus the "what to do" opening sentence on brown-water map popups.
+  Gated on `advisory_type === "Brown Water Advisory"` — a Beach Advisory is a
+  bacteria exceedance and a Sewage Spill is a discharge, so neither inherits
+  brown-water guidance (and `hasBwa` is still not the field to key on).
+  Copy: DOH's own advisory language, owner-approved 2026-09-16. The explainer
+  speaks in the issuing authority's words rather than ours (Invariant 7);
+  `ocean.wq_explainer_{title,body,short}`, EN+VI.
+  ⚠ Fixed in passing: the card's own click handler re-renders the sub-block
+  HTML, which discarded the `<details>` the instant it opened. The container
+  now stops `.wq-explainer` clicks in the bubble phase (stopPropagation does
+  not cancel a default action, so the native toggle still runs).
 - [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
   NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
   Hilo stations, free JSON). Coastal flood context when king tide coincides
@@ -293,7 +306,12 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
-- 2026-09-17 — P27d shipped: DOH water-quality advisories auto-display on map
+- 2026-09-16 — P27e shipped: brown water explainer (collapsed card line +
+  popup "what to do" sentence), gated to Brown Water Advisory only. Verified
+  desktop Chrome 1400px and 375px mobile; iOS Simulator confirmed render only —
+  simctl cannot script taps, so the iOS expand gesture is UNVERIFIED. Explainer
+  copy: DOH's own advisory language, owner-approved 2026-09-16.
+- 2026-09-16 — P27d shipped: DOH water-quality advisories auto-display on map
   load instead of waiting for a module click. Verified cold-load on desktop
   Chrome and the iOS 17 Pro Simulator (the P27c Xcode gate is cleared), plus
   blocked, stub-"clear", basemap-switch and EN/VI. Zero FIRMS detections in

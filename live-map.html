@@ -2342,6 +2342,24 @@
       color: var(--muted);
     }
 
+    /* P27e. Brown water explainer — a quiet info note, not a hazard element.
+       Deliberately shares .hur-note's muted colour and size so it never
+       competes with the advisory rows above it. */
+    .wq-explainer { margin-top: 8px; }
+    .wq-explainer > summary {
+      cursor: pointer; list-style: none;
+      font-size: 10px; line-height: 1.5; color: var(--muted);
+      padding: 2px 0;
+    }
+    .wq-explainer > summary::-webkit-details-marker { display: none; }
+    .wq-explainer > summary:hover { color: var(--fg, #e6edf3); }
+    .wq-explainer > summary:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+    .wq-explainer-body {
+      margin-top: 6px; padding-left: 10px;
+      border-left: 2px solid rgba(255, 204, 102, 0.35);
+      font-size: 10px; line-height: 1.6; color: var(--muted);
+    }
+
     @media (max-width: 460px) {
       .hur-prob-row { grid-template-columns: 78px 1fr; }
       .hur-prob-vals { gap: 3px 10px; }
@@ -3129,7 +3147,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=41f98222"></script>
+  <script src="/i18n/kahuola-i18n.js?v=c3e81197"></script>
 
   <script>
     "use strict";
@@ -6194,6 +6212,10 @@
         `<div class="popup-coords">${escapeHtml(p.island_label || "")}</div></div>` +
         `<div class="popup-severity normal">${escapeHtml(chipLabel)}</div></div>` +
         `<div class="popup-note">${escapeHtml(p.detail || "")}</div>` +
+        // P27e. The "what to do" opener, brown water only. A Beach Advisory or
+        // Sewage Spill carries different guidance and must not inherit this.
+        (isBrownWaterAdvisory(p) && (_t("ocean.wq_explainer_short") || "")
+          ? `<div class="popup-note">${escapeHtml(_t("ocean.wq_explainer_short"))}</div>` : "") +
         `<div class="popup-note">${escapeHtml(p.source || "")}${when ? " · " + escapeHtml(when) : ""}</div>` +
         link + `</div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
@@ -7999,14 +8021,49 @@
         const when = sg.started_at ? timeAgoMap(sg.started_at) : "";
         return oceanRow(sg.island_label || _t("ocean.wq_statewide") || "Statewide", "",
           `${detail} — ${sg.source}${when ? " · " + when : ""}`, chip);
-      }).join("") + (wEnv.official_source_url
+      }).join("") + waterQualityExplainerHtml(wSigs) + (wEnv.official_source_url
         ? `<div class="hur-note"><a href="${escapeHtml(wEnv.official_source_url)}" target="_blank" rel="noopener">Hawaiʻi DOH →</a></div>` : "");
       html += oceanGroup("map.oc_heading_water", "Water quality", wInner);
 
       ["desktop", "mobile", ""].forEach((sfx) => {
         const el = document.getElementById(sfx ? `ocean-detail-${sfx}` : "ocean-detail");
-        if (el) el.innerHTML = html;
+        if (!el) return;
+        el.innerHTML = html;
+        // P27e. The explainer sits inside the module card, and the card's own
+        // click handler re-renders this very HTML — which would throw away the
+        // <details> the moment it opened. Stop the click at the container, in
+        // the bubble phase, so the native toggle still runs (stopPropagation
+        // does not cancel a default action) but the card never sees it.
+        // Bound once per container: containers outlive every re-render.
+        if (!el.__wqExplainerBound) {
+          el.__wqExplainerBound = true;
+          el.addEventListener("click", (ev) => {
+            if (ev.target && ev.target.closest && ev.target.closest(".wq-explainer")) ev.stopPropagation();
+          });
+        }
       });
+    }
+
+    // P27e. DOH's `type`, verbatim — the same string the chip shows. Keyed on
+    // type because P27's hasBwa flag does NOT mean "is a Brown Water Advisory"
+    // (it was true on a Sewage Spill and a Beach Advisory and false on all six
+    // real BWAs). A Beach Advisory is a bacteria exceedance and a Sewage Spill
+    // is a discharge — different causes, different guidance — so neither gets
+    // brown-water copy.
+    const WQ_BROWN_WATER_TYPE = "Brown Water Advisory";
+    function isBrownWaterAdvisory(sg) {
+      return !!sg && sg.kind === "doh_advisory" && sg.advisory_type === WQ_BROWN_WATER_TYPE;
+    }
+    // One line for the whole sub-block, collapsed, so the advisory list stays
+    // scannable. Rendered only when a Brown Water Advisory is actually in
+    // effect — see the note above on why type, not count, is the gate.
+    function waterQualityExplainerHtml(signals) {
+      if (!Array.isArray(signals) || !signals.some(isBrownWaterAdvisory)) return "";
+      const title = _t("ocean.wq_explainer_title") || "What is a Brown Water Advisory?";
+      const body = _t("ocean.wq_explainer_body") || "";
+      if (!body) return "";
+      return `<details class="wq-explainer"><summary>\u24D8 ${escapeHtml(title)}</summary>` +
+        `<div class="wq-explainer-body">${escapeHtml(body)}</div></details>`;
     }
 
     // "Updated N days ago", localized, with the P27b plural fix.
