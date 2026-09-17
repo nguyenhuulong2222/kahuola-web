@@ -180,7 +180,8 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   UI relocated: homepage block removed (P27b); **restored on live-map** inside
   the Coastal & Surf module (P25, 2026-09-16). Backend route unchanged
   throughout.
-- [x] **P27c · Water Quality map layer** — `DONE` (2026-09-16)
+- [x] **P27c · Water Quality map layer** — `DONE` (2026-09-16),
+  **auto-display on load (P27d, 2026-09-17)**
   DOH ships geometry, so the advisory is drawn where it actually applies.
   `locations[].geometry` carries WKT POLYGON shoreline strings (686-3,855
   chars) plus `centroid` POINT values; Beach Advisories carry a POINT geometry.
@@ -206,6 +207,24 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   ⚠ Pre-existing, NOT fixed here: that same list already stacks
   `flood-context-*` above `flash-flood-*`, so a terrain estimate draws over a
   Flash Flood Warning. Water-quality is under both. Worth a separate look.
+  **P27d (2026-09-17) — auto-display on load.** An active DOH advisory is an
+  in-effect health advisory, not on-demand info, so it no longer hides behind a
+  module click. Same rationale as flash-flood auto-enabling the rain radar.
+  Boot fires `loadWaterQualityAdvisories()` alongside the hazard fetches
+  (fire-and-forget — it can never delay or reject into the boot path).
+  `status: "active"` + real geometry draws; `"clear"` draws nothing, because a
+  quiet ocean should be a quiet map. Advisory layer ONLY: surf, rip current and
+  tropical outlook are untouched and the card is never auto-opened.
+  One request per page load — `fetchOceanWaterOnce()` is single-flight, so a
+  module click joins the in-flight boot fetch or reuses the stored payload. A
+  *failed* boot fetch leaves it null so a later open retries; that is a retry,
+  not a double-fetch.
+  Also re-populates the source on `style.load`: `setStyle()` wipes every source
+  and ocean is not in `HAZARD_REGISTRY`, so without it a basemap toggle would
+  silently drop an in-effect advisory off the map.
+  No toggle wired: the auto-on precedent (rain radar) toggles from its own
+  dedicated card, and there is no generic layer-toggle list for this class — no
+  new UI in this PR, per scope.
 - [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
   NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
   Hilo stations, free JSON). Coastal flood context when king tide coincides
@@ -274,6 +293,12 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
+- 2026-09-17 — P27d shipped: DOH water-quality advisories auto-display on map
+  load instead of waiting for a module click. Verified cold-load on desktop
+  Chrome and the iOS 17 Pro Simulator (the P27c Xcode gate is cleared), plus
+  blocked, stub-"clear", basemap-switch and EN/VI. Zero FIRMS detections in
+  Hawaiʻi today, so fire-vs-advisory click precedence was proven with a
+  synthetic harness probe placed on an amber centroid, not with live fire data.
 - 2026-09-16 — P27c shipped: DOH water-quality advisories now render as an
   amber shoreline layer on live-map, with a server-side WKT→GeoJSON parser in
   worker/src/ocean.ts. Fail-closed per record; DOH's own centroid only. 36/36
