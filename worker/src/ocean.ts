@@ -885,6 +885,9 @@ export const _internals = {
   mapDohEvents,
   mapRunoffIslands,
   dohDateToIso,
+  // P27c
+  parseWkt,
+  dohCentroid,
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -965,6 +968,13 @@ const RUNOFF_CAUTION_DETAIL =
   'Recent flash flooding — coastal runoff possible. Consider avoiding ocean swimming ' +
   'for 48–72 hours near affected shores.';
 
+type GeoJsonGeometry =
+  | { type: 'Point'; coordinates: number[] }
+  | { type: 'LineString'; coordinates: number[][] }
+  | { type: 'MultiLineString'; coordinates: number[][][] }
+  | { type: 'Polygon'; coordinates: number[][][] }
+  | { type: 'MultiPolygon'; coordinates: number[][][][] };
+
 type WaterQualitySignal = {
   island: string | null;
   island_label: string | null;
@@ -975,6 +985,14 @@ type WaterQualitySignal = {
   source: string;
   official_source_url: string;
   fetched_at: string;
+  // ── P27c ADDITIVE ────────────────────────────────────────────────────
+  // DOH ships shoreline extents as WKT in locations[].geometry, parsed here
+  // rather than in the browser so every client gets the same geometry and no
+  // WKT parser has to exist twice. Null on a malformed or out-of-range shape —
+  // and the advisory still ships as text, because losing a real DOH advisory
+  // over a bad polygon would be the worse failure.
+  geometry: GeoJsonGeometry | null;
+  centroid: [number, number] | null;
 };
 
 /** DOH posts local timestamps with no zone marker ("2026-09-08T20:34:03.337").
@@ -986,6 +1004,153 @@ function dohDateToIso(raw: unknown): string | null {
   if (!m) return null;
   const ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] + 10, +m[5], +m[6]);
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   P27c · WKT → GeoJSON
+   ══════════════════════════════════════════════════════════════════════
+   DOH publishes advisory extents as Well-Known Text on locations[].geometry.
+   Observed live: POLYGON (686-3,855 chars of shoreline) and POINT (Beach
+   Advisories). LINESTRING, MULTIPOLYGON and MULTILINESTRING are handled too —
+   not because they have been seen, but because a geometry type we do not
+   recognise must produce null rather than a wrong shape.
+
+   Strict throughout. A coordinate that is not two finite numbers in range, a
+   ring with fewer than four positions, an unbalanced parenthesis — any of these
+   returns null for the whole geometry. Nothing is repaired, closed or guessed:
+   a half-parsed shoreline drawn on a hazard map is worse than no shoreline.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** One "lon lat" pair. Rejects NaN, Infinity, and out-of-range coordinates. */
+function wktPosition(token: string): number[] | null {
+  const parts = token.trim().split(/\s+/);
+  if (parts.length < 2) return null;
+  const lon = Number(parts[0]);
+  const lat = Number(parts[1]);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+  if (lon < -180 || lon > 180 || lat < -90 || lat > 90) return null;
+  return [lon, lat];
+}
+
+/** "a b, c d, …" → positions. Null if ANY position is bad (fail closed). */
+function wktPositionList(body: string): number[][] | null {
+  const out: number[][] = [];
+  for (const tok of body.split(',')) {
+    const pos = wktPosition(tok);
+    if (!pos) return null;
+    out.push(pos);
+  }
+  return out.length ? out : null;
+}
+
+/**
+ * Split "(…),(…),(…)" into its top-level groups, respecting nesting.
+ * A plain split(',') would tear rings apart at their own coordinate commas.
+ */
+function wktSplitGroups(body: string): string[] | null {
+  const groups: string[] = [];
+  let depth = 0, start = -1;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === '(') { if (depth === 0) start = i + 1; depth++; }
+    else if (c === ')') {
+      depth--;
+      if (depth === 0) { groups.push(body.slice(start, i)); start = -1; }
+      if (depth < 0) return null;            // unbalanced
+    }
+  }
+  return depth === 0 && groups.length ? groups : null;
+}
+
+/** A polygon ring: >= 4 positions and explicitly closed by the source. */
+function wktRing(body: string): number[][] | null {
+  const ring = wktPositionList(body);
+  if (!ring || ring.length < 4) return null;
+  const a = ring[0], b = ring[ring.length - 1];
+  // Not auto-closed: an unclosed ring means the source is not what we think it
+  // is, and silently closing it would invent an edge.
+  if (a[0] !== b[0] || a[1] !== b[1]) return null;
+  return ring;
+}
+
+function parseWkt(raw: unknown): GeoJsonGeometry | null {
+  if (typeof raw !== 'string') return null;
+  const wkt = raw.trim();
+  if (!wkt) return null;
+  const m = /^([A-Za-z]+)\s*\((.*)\)$/s.exec(wkt);
+  if (!m) return null;
+  const kind = m[1].toUpperCase();
+  const body = m[2];
+
+  try {
+    if (kind === 'POINT') {
+      const p = wktPosition(body);
+      return p ? { type: 'Point', coordinates: p } : null;
+    }
+    if (kind === 'LINESTRING') {
+      const line = wktPositionList(body);
+      return line && line.length >= 2 ? { type: 'LineString', coordinates: line } : null;
+    }
+    if (kind === 'POLYGON') {
+      const groups = wktSplitGroups(body);
+      if (!groups) return null;
+      const rings: number[][][] = [];
+      for (const g of groups) {
+        const r = wktRing(g);
+        if (!r) return null;
+        rings.push(r);
+      }
+      return { type: 'Polygon', coordinates: rings };
+    }
+    if (kind === 'MULTILINESTRING') {
+      const groups = wktSplitGroups(body);
+      if (!groups) return null;
+      const lines: number[][][] = [];
+      for (const g of groups) {
+        const l = wktPositionList(g);
+        if (!l || l.length < 2) return null;
+        lines.push(l);
+      }
+      return { type: 'MultiLineString', coordinates: lines };
+    }
+    if (kind === 'MULTIPOLYGON') {
+      const polys = wktSplitGroups(body);
+      if (!polys) return null;
+      const out: number[][][][] = [];
+      for (const poly of polys) {
+        const groups = wktSplitGroups(poly);
+        if (!groups) return null;
+        const rings: number[][][] = [];
+        for (const g of groups) {
+          const r = wktRing(g);
+          if (!r) return null;
+          rings.push(r);
+        }
+        out.push(rings);
+      }
+      return { type: 'MultiPolygon', coordinates: out };
+    }
+  } catch {
+    return null;   // a parser must never throw into the handler
+  }
+  return null;     // unrecognised geometry type — null, never a guess
+}
+
+/**
+ * Centroid. DOH publishes its own on locations[].centroid, and that is
+ * preferred: it is their placement of the marker, not our arithmetic. Falling
+ * back to a POINT geometry's own coordinate is the same value by definition.
+ * Anything else yields null — a computed "middle" of a concave shoreline can
+ * land in open ocean or on the wrong island, which is worse than no marker.
+ */
+function dohCentroid(loc: Record<string, any>, geom: GeoJsonGeometry | null): [number, number] | null {
+  const fromField = parseWkt(loc?.centroid);
+  if (fromField && fromField.type === 'Point') {
+    const c = fromField.coordinates;
+    return [c[0], c[1]];
+  }
+  if (geom && geom.type === 'Point') return [geom.coordinates[0], geom.coordinates[1]];
+  return null;
 }
 
 function mapDohEvents(data: unknown, fetchedAt: string): WaterQualitySignal[] | null {
@@ -1005,6 +1170,19 @@ function mapDohEvents(data: unknown, fetchedAt: string): WaterQualitySignal[] | 
     const cleanName = e.island && typeof e.island.cleanName === 'string' ? e.island.cleanName : '';
     const key = DOH_ISLAND_TO_KEY[cleanName] ?? null;
 
+    // P27c. First location with a usable geometry wins. DOH has published one
+    // per event so far; if that ever changes, taking the first is honest
+    // (the popup still names the advisory) where merging would invent a shape.
+    let geometry: GeoJsonGeometry | null = null;
+    let centroid: [number, number] | null = null;
+    const locs = Array.isArray(e.locations) ? e.locations : [];
+    for (const loc of locs) {
+      if (!loc || typeof loc !== 'object') continue;
+      const g = parseWkt((loc as any).geometry);
+      const c = dohCentroid(loc as any, g);
+      if (g || c) { geometry = g; centroid = c; break; }
+    }
+
     out.push({
       island: key,
       island_label: key ? ISLAND_DISPLAY[key] : (cleanName || null),
@@ -1016,6 +1194,8 @@ function mapDohEvents(data: unknown, fetchedAt: string): WaterQualitySignal[] | 
       source: 'Hawaiʻi DOH',
       official_source_url: DOH_PUBLIC_URL,
       fetched_at: fetchedAt,
+      geometry,
+      centroid,
     });
   }
   return out;
@@ -1103,6 +1283,11 @@ export async function handleOceanWaterQuality(
       source: 'Derived from NWS flash flood warnings · Kahu Ola',
       official_source_url: DOH_PUBLIC_URL,
       fetched_at,
+      // P27c. No geometry by design: a runoff caution is an island-level
+      // inference from a county-wide warning, not a mapped extent. Drawing a
+      // shape for it would give our own derivation the look of a DOH advisory.
+      geometry: null,
+      centroid: null,
     });
   }
 

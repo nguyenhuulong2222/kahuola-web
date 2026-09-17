@@ -180,11 +180,32 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   UI relocated: homepage block removed (P27b); **restored on live-map** inside
   the Coastal & Surf module (P25, 2026-09-16). Backend route unchanged
   throughout.
-  **P27c candidate — DOH DOES ship geometry.** `locations[].geometry` carries
-  WKT POLYGON shoreline strings (686-3,855 chars) plus `centroid` POINT values;
-  Beach Advisories carry a POINT geometry. A real advisory map layer needs only
-  a small WKT→GeoJSON parser — far simpler than the KMZ/GRIB2 dead ends in
-  P23/P26. Not built in P25 (card-only, by decision).
+- [x] **P27c · Water Quality map layer** — `DONE` (2026-09-16)
+  DOH ships geometry, so the advisory is drawn where it actually applies.
+  `locations[].geometry` carries WKT POLYGON shoreline strings (686-3,855
+  chars) plus `centroid` POINT values; Beach Advisories carry a POINT geometry.
+  Worker parses WKT→GeoJSON in-house (POINT / LINESTRING / POLYGON /
+  MULTILINESTRING / MULTIPOLYGON) — no dependency, far simpler than the
+  KMZ/GRIB2 dead ends in P23/P26. Every position is range-checked
+  (lon ∈ [-180,180], lat ∈ [-90,90], no NaN/Inf) and rings must be explicitly
+  closed — rings are never auto-closed.
+  **Fail-closed per record:** malformed WKT → `geometry: null`,
+  `centroid: null`, and the advisory still ships as text. A real advisory is
+  never dropped over bad geometry and coordinates are never guessed — the
+  centroid is DOH's own `centroid` field, never computed from the polygon.
+  A POINT advisory is its own centroid, so it emits one marker, not two.
+  `runoff_caution` is island-derived and carries no geometry by design.
+  Map: amber (`#ffcc66`) `water-quality-fill` / `-outline` / `-point` —
+  deliberately NOT red (flash flood warning / tsunami only) and NOT teal
+  (surf). `layer_class: "context"` — never enters the Event Priority ladder.
+  Verified 6/6 against the DOH viewer, 5 with geometry; the Kauaʻi island-wide
+  advisory has no `locations[]` and correctly ships text-only.
+  ⚠ Stacking is decided by `raiseFireLayersAboveOverlays()`, not by call order
+  in `ensureLayers()` — that pass re-stacks an explicit id list on every
+  `style.load`. Water-quality sits directly under `flash-flood-*` there.
+  ⚠ Pre-existing, NOT fixed here: that same list already stacks
+  `flood-context-*` above `flash-flood-*`, so a terrain estimate draws over a
+  Flash Flood Warning. Water-quality is under both. Worth a separate look.
 - [ ] **P28 · Tide + King Tide** — `NOT-STARTED`
   NOAA CO-OPS tide predictions + observed water level (Kahului, Honolulu,
   Hilo stations, free JSON). Coastal flood context when king tide coincides
@@ -253,6 +274,12 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
+- 2026-09-16 — P27c shipped: DOH water-quality advisories now render as an
+  amber shoreline layer on live-map, with a server-side WKT→GeoJSON parser in
+  worker/src/ocean.ts. Fail-closed per record; DOH's own centroid only. 36/36
+  unit tests on today's live DOH geometry; 6/6 parity with the DOH viewer.
+  iOS Safari verification NOT run this session — the Xcode license gate blocked
+  `xcrun simctl`; desktop Chrome only.
 - 2026-09-16 — P25 shipped: ocean intelligence folded into the Coastal & Surf
   module (surf / tropical outlook / surf zone / water quality), restoring the
   P27 water-quality block on live-map. Surf markers deferred to P25b pending
