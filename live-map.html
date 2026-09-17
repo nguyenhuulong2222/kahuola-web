@@ -3236,6 +3236,12 @@
     let hurricaneVisible = true;
     let landslideVisible = true;
     let coastalVisible = false;
+    // P27c. A flag of its own rather than reusing coastalVisible: that one is
+    // declared false and never assigned anywhere in this file, so the coastal
+    // module's own map layers are permanently hidden today. Reusing it would
+    // have made the DOH layer dead on arrival. Left alone — production-locked
+    // file, separate concern — and reported.
+    let waterQualityVisible = false;
     let localHazardsVisible = true;
     let airnowVisible = false;   // Default OFF — user toggles on
 
@@ -4464,6 +4470,11 @@
       ensureSmokeLayers();
       ensurePerimeterLayers();
       ensureFloodContextLayers();  // lowest — terrain context base
+      // P27c. Final stacking is decided by raiseFireLayersAboveOverlays(),
+      // not by this call order — water-quality sits just under flash flood
+      // there, because a Flash Flood Warning is life-safety and a brown-water
+      // advisory is not: the more urgent product has to draw over it.
+      ensureWaterQualityLayers();  // Hawaiʻi DOH advisories — amber shoreline
       ensureFlashFloodLayers();    // official NWS alerts
       ensureMrmsLayers();          // rainfall context — teal/cyan
       ensureLandslideLayers();     // landslide terrain context — brown
@@ -6059,6 +6070,135 @@
       const s = map.getSource("coastal");
       if (s) s.setData({ type: "FeatureCollection", features: geoFeatures });
     }
+    /* ══════════════════════════════════════════════════════════════════
+       P27c · Hawaiʻi DOH water-quality advisories on the map
+       ══════════════════════════════════════════════════════════════════
+       Geometry is parsed to GeoJSON in the Worker (ocean.ts), so no WKT parser
+       exists in the browser and every client draws the same shape.
+
+       COLOUR — amber, matching the advisory family already used for the
+       ocean chips and the High Surf outline. Deliberately NOT red: red is
+       reserved here for flash flood warnings and tsunami, and a brown-water
+       advisory is not in that class. DOH's own viewer draws these red; that is
+       their palette, not ours, and borrowing it would put an advisory at
+       warning weight. Deliberately NOT teal either — teal is surf.
+
+       SHAPE — thin outline, very low fill, per the light/outlined-polygon map
+       doctrine: these are long shoreline strips and a heavy fill at statewide
+       zoom would swamp everything beneath them.
+
+       A centroid dot rides on top because those strips are a few pixels wide
+       when zoomed out, which would leave the advisory effectively unclickable.
+       ══════════════════════════════════════════════════════════════════ */
+    const WQ_AMBER = "#ffcc66";
+
+    function ensureWaterQualityLayers() {
+      ensureSource("water-quality", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureLayer({
+        id: "water-quality-fill", type: "fill", source: "water-quality",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
+        layout: { visibility: waterQualityVisible ? "visible" : "none" },
+        paint: { "fill-color": WQ_AMBER, "fill-opacity": 0.10 },
+      });
+      ensureLayer({
+        id: "water-quality-outline", type: "line", source: "water-quality",
+        filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"],
+                 ["==", ["geometry-type"], "LineString"], ["==", ["geometry-type"], "MultiLineString"]],
+        layout: { visibility: waterQualityVisible ? "visible" : "none" },
+        paint: { "line-color": WQ_AMBER, "line-width": 1.8, "line-opacity": 0.80 },
+      });
+      ensureLayer({
+        id: "water-quality-point", type: "circle", source: "water-quality",
+        filter: ["==", ["geometry-type"], "Point"],
+        layout: { visibility: waterQualityVisible ? "visible" : "none" },
+        paint: {
+          "circle-radius": 6, "circle-color": WQ_AMBER, "circle-opacity": 0.9,
+          "circle-stroke-width": 1.5, "circle-stroke-color": "#4a3a10",
+        },
+      });
+      if (!map.__wqHoverBound) {
+        map.__wqHoverBound = true;
+        ["water-quality-fill", "water-quality-point"].forEach((id) => {
+          map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
+          map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+        });
+      }
+      syncWaterQualityLayerVisibility();
+    }
+
+    function syncWaterQualityLayerVisibility() {
+      // Hidden, never removed. A layer removed from the style but left in the
+      // click chain is the historical bug Invariant 10 names; setting
+      // visibility:none takes it out of queryRenderedFeatures too.
+      setLayerVisibility("water-quality-fill", waterQualityVisible);
+      setLayerVisibility("water-quality-outline", waterQualityVisible);
+      setLayerVisibility("water-quality-point", waterQualityVisible);
+    }
+
+    function waterQualityGeoJson() {
+      const env = oceanData.water;
+      const feats = [];
+      if (oceanUsable(env) && Array.isArray(env.signals)) {
+        env.signals.forEach((sg, i) => {
+          // runoff_caution carries no geometry by design (island-level
+          // derivation), and an advisory whose WKT failed to parse ships as
+          // text only — both simply contribute no feature.
+          const props = {
+            idx: i,
+            kind: sg.kind || "",
+            advisory_type: sg.advisory_type || "",
+            detail: sg.detail || "",
+            island_label: sg.island_label || "",
+            source: sg.source || "",
+            started_at: sg.started_at || "",
+            official_source_url: sg.official_source_url || "",
+          };
+          if (sg.geometry && typeof sg.geometry === "object") {
+            feats.push({ type: "Feature", geometry: sg.geometry, properties: props });
+          }
+          // A POINT advisory is its own centroid (see dohCentroid), so emitting
+          // both would stack two identical circles on the same coordinate.
+          const geomIsPoint = sg.geometry && sg.geometry.type === "Point";
+          if (!geomIsPoint && Array.isArray(sg.centroid) && sg.centroid.length === 2) {
+            feats.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [sg.centroid[0], sg.centroid[1]] },
+              properties: { ...props, centroid_marker: 1 },
+            });
+          }
+        });
+      }
+      return { type: "FeatureCollection", features: feats };
+    }
+
+    function updateWaterQualitySource() {
+      ensureWaterQualityLayers();
+      const src = map.getSource("water-quality");
+      if (src) src.setData(waterQualityGeoJson());
+      syncWaterQualityLayerVisibility();
+    }
+
+    function openWaterQualityPopup(feature, lngLat) {
+      const p = feature.properties || {};
+      if (activePopup) activePopup.remove();
+      const isDoh = p.kind === "doh_advisory";
+      const chipLabel = isDoh
+        ? (p.advisory_type || _t("ocean.wq_doh") || "DOH advisory")
+        : (_t("ocean.wq_runoff") || "Runoff caution");
+      const when = p.started_at ? timeAgoMap(p.started_at) : "";
+      const link = p.official_source_url
+        ? `<div class="popup-note"><a href="${escapeHtml(p.official_source_url)}" target="_blank" rel="noopener">Hawaiʻi DOH →</a></div>` : "";
+      const html =
+        `<div class="popup-card"><div class="popup-top"><div>` +
+        `<div class="popup-title">🌊 ${escapeHtml(_t("map.oc_heading_water") || "Water quality")}</div>` +
+        `<div class="popup-coords">${escapeHtml(p.island_label || "")}</div></div>` +
+        `<div class="popup-severity normal">${escapeHtml(chipLabel)}</div></div>` +
+        `<div class="popup-note">${escapeHtml(p.detail || "")}</div>` +
+        `<div class="popup-note">${escapeHtml(p.source || "")}${when ? " · " + escapeHtml(when) : ""}</div>` +
+        link + `</div>`;
+      activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
+    }
+
     function syncCoastalLayerVisibility() {
       setLayerVisibility("coastal-fill", coastalVisible);
       setLayerVisibility("coastal-outline", coastalVisible);
@@ -6875,7 +7015,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-cone-fill", "hurricane-cone-outline", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "water-quality-fill", "water-quality-outline", "water-quality-point", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-cone-fill", "hurricane-cone-outline", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
@@ -6901,6 +7041,12 @@
         // itself is not clickable — only the official points are.
         if (hurricaneVisible) { const fp = queryTopFeature(e.point, ["hurricane-forecast-point"]); if (fp) { openHurricaneForecastPopup(fp, e.lngLat); return; } }
         if (landslideVisible) { const land = queryTopFeature(e.point, ["landslide-fill"]); if (land) { openLandslidePopup(land, e.lngLat); return; } }
+        // P27c. Scoped to the three water-quality layer ids only (Invariant
+        // 10) and guarded on the module flag, so an un-loaded module has
+        // nothing in the chain. Placed here — below fire, flash flood and
+        // tsunami, above the estimate fills — to match the render order above:
+        // a DOH advisory never wins a contested click against a warning.
+        if (waterQualityVisible) { const wq = queryTopFeature(e.point, ["water-quality-point", "water-quality-fill"]); if (wq) { openWaterQualityPopup(wq, e.lngLat); return; } }
         if (alertsVisible) { const al = queryTopFeature(e.point, ["alerts-fill", "alerts-point"]); if (al) { openAlertsPopup(al, e.lngLat); return; } }
         // Official point measurements beat the fire-danger ESTIMATE fill below,
         // but never beat FIRMS detections or NWS alerts above.
@@ -7700,6 +7846,13 @@
       oceanData.surf = val(surf); oceanData.rip = val(rip);
       oceanData.two = val(two);   oceanData.water = val(water);
       oceanData.loaded = true; oceanData.loading = false;
+      // P27c. The map layer rides the payload the card already fetched — one
+      // request, two surfaces. It turns on only once real geometry has landed,
+      // so an empty or failed load leaves nothing drawn and nothing clickable.
+      waterQualityVisible = oceanUsable(oceanData.water)
+        && Array.isArray(oceanData.water.signals)
+        && oceanData.water.signals.some((x) => x && (x.geometry || Array.isArray(x.centroid)));
+      try { updateWaterQualitySource(); } catch (e) { /* map must never break the card */ }
       try { renderOceanDetail(); } catch (e) { /* card must never break the module */ }
       if (window.KAHUOLA_I18N) window.KAHUOLA_I18N.applyAll();
     }
@@ -7867,7 +8020,11 @@
     // JS-rendered innerHTML, which applyAll() cannot reach. Guarded on
     // `loaded` so a locale switch before the module is opened does nothing.
     window.addEventListener("kahuola:langchange", () => {
-      if (oceanData.loaded) { try { renderOceanDetail(); } catch (e) { /* keep last paint */ } }
+      if (oceanData.loaded) {
+        try { renderOceanDetail(); } catch (e) { /* keep last paint */ }
+        // Popups are built on click, so only the open one can be stale; the
+        // source itself carries no translated text.
+      }
     });
 
     // Language changes re-run applyAll(), which only knows about data-i18n
