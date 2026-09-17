@@ -803,6 +803,16 @@
       "ocean.wq_runoff": "Runoff caution",
       "ocean.wq_statewide": "Statewide",
       "ocean.wq_runoff_detail": "Recent flash flooding \u2014 coastal runoff possible. Consider avoiding ocean swimming for 48\u201372 hours near affected shores.",
+      // P27e. PENDING OWNER APPROVAL. The approved copy was not supplied with
+      // the task, so these three strings paraphrase the Hawaiʻi DOH advisory
+      // description verbatim-in-substance (stay out of brown/murky water,
+      // 48-72 h after rain, leptospirosis in fresh water, "if the water is
+      // brown, turn around"). DOH is the issuing authority, so their own
+      // wording is the defensible default - but swap these three keys (EN+VI)
+      // for the approved copy before this is treated as final.
+      "ocean.wq_explainer_title": "What is a Brown Water Advisory?",
+      "ocean.wq_explainer_body": "The Hawai\u02bbi Department of Health issues a Brown Water Advisory when storm runoff carries pollutants into coastal waters. Runoff can contain sewage, animal waste, pesticides, chemicals and debris. What to do: stay out of water that looks brown or murky, even where no advisory has been issued. DOH advises staying out of affected water for 48\u201372 hours after the rain stops. Avoid swimming, wading in, or drinking from freshwater streams and ponds, which can carry leptospirosis. If the water is brown, turn around.",
+      "ocean.wq_explainer_short": "Stay out of water that looks brown or murky, even where no advisory has been issued.",
       // ── P24 — Surf & Ocean Safety card (context overlay) ──────────────
       "ocean.label": "Ocean · NDBC / NWS / PacIOOS",
       "ocean.title": "\ud83c\udf0a Surf & Ocean Safety",
@@ -1894,6 +1904,9 @@
       "ocean.wq_runoff": "L\u01b0u \u00fd n\u01b0\u1edbc ch\u1ea3y tr\u00e0n",
       "ocean.wq_statewide": "To\u00e0n ti\u1ec3u bang",
       "ocean.wq_runoff_detail": "V\u1eeba c\u00f3 l\u0169 qu\u00e9t \u2014 n\u01b0\u1edbc ch\u1ea3y tr\u00e0n ra bi\u1ec3n l\u00e0 c\u00f3 th\u1ec3. H\u00e3y c\u00e2n nh\u1eafc tr\u00e1nh b\u01a1i bi\u1ec3n trong 48\u201372 gi\u1edd g\u1ea7n c\u00e1c b\u1edd b\u1ecb \u1ea3nh h\u01b0\u1edfng.",
+      "ocean.wq_explainer_title": "C\u1ea3nh b\u00e1o N\u01b0\u1edbc \u0110\u1ee5c (Brown Water Advisory) l\u00e0 g\u00ec?",
+      "ocean.wq_explainer_body": "S\u1edf Y t\u1ebf Hawai\u02bbi (DOH) ban h\u00e0nh Brown Water Advisory khi n\u01b0\u1edbc m\u01b0a ch\u1ea3y tr\u00e0n cu\u1ed1n ch\u1ea5t \u00f4 nhi\u1ec5m ra v\u00f9ng bi\u1ec3n ven b\u1edd. N\u01b0\u1edbc tr\u00e0n c\u00f3 th\u1ec3 ch\u1ee9a n\u01b0\u1edbc th\u1ea3i, ph\u00e2n \u0111\u1ed9ng v\u1eadt, thu\u1ed1c tr\u1eeb s\u00e2u, h\u00f3a ch\u1ea5t v\u00e0 r\u00e1c. N\u00ean l\u00e0m g\u00ec: tr\u00e1nh xu\u1ed1ng v\u00f9ng n\u01b0\u1edbc c\u00f3 m\u00e0u n\u00e2u ho\u1eb7c \u0111\u1ee5c, k\u1ec3 c\u1ea3 n\u01a1i ch\u01b0a c\u00f3 c\u1ea3nh b\u00e1o. DOH khuy\u00ean tr\u00e1nh v\u00f9ng n\u01b0\u1edbc b\u1ecb \u1ea3nh h\u01b0\u1edfng trong 48\u201372 gi\u1edd sau khi t\u1ea1nh m\u01b0a. Kh\u00f4ng b\u01a1i, l\u1ed9i ho\u1eb7c u\u1ed1ng n\u01b0\u1edbc t\u1eeb su\u1ed1i v\u00e0 ao n\u01b0\u1edbc ng\u1ecdt v\u00ec c\u00f3 th\u1ec3 l\u00e2y b\u1ec7nh leptospirosis. N\u1ebfu n\u01b0\u1edbc c\u00f3 m\u00e0u n\u00e2u, h\u00e3y quay l\u1ea1i.",
+      "ocean.wq_explainer_short": "Tr\u00e1nh xu\u1ed1ng v\u00f9ng n\u01b0\u1edbc c\u00f3 m\u00e0u n\u00e2u ho\u1eb7c \u0111\u1ee5c, k\u1ec3 c\u1ea3 n\u01a1i ch\u01b0a c\u00f3 c\u1ea3nh b\u00e1o.",
       // ── P24 ──
       "ocean.label": "\u0110\u1ea1i d\u01b0\u01a1ng \u00b7 NDBC / NWS / PacIOOS",
       "ocean.title": "\ud83c\udf0a An to\u00e0n s\u00f3ng & \u0111\u1ea1i d\u01b0\u01a1ng",
@@ -2758,6 +2771,9 @@
       "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
       "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
       "ocean.wq_runoff_detail": KEEP_ENGLISH,
+      "ocean.wq_explainer_title": KEEP_ENGLISH,
+      "ocean.wq_explainer_body": KEEP_ENGLISH,
+      "ocean.wq_explainer_short": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -3436,6 +3452,9 @@
       "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
       "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
       "ocean.wq_runoff_detail": KEEP_ENGLISH,
+      "ocean.wq_explainer_title": KEEP_ENGLISH,
+      "ocean.wq_explainer_body": KEEP_ENGLISH,
+      "ocean.wq_explainer_short": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -3995,6 +4014,9 @@
       "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
       "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
       "ocean.wq_runoff_detail": KEEP_ENGLISH,
+      "ocean.wq_explainer_title": KEEP_ENGLISH,
+      "ocean.wq_explainer_body": KEEP_ENGLISH,
+      "ocean.wq_explainer_short": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
@@ -4554,6 +4576,9 @@
       "ocean.water_heading": KEEP_ENGLISH, "ocean.wq_doh": KEEP_ENGLISH,
       "ocean.wq_runoff": KEEP_ENGLISH, "ocean.wq_statewide": KEEP_ENGLISH,
       "ocean.wq_runoff_detail": KEEP_ENGLISH,
+      "ocean.wq_explainer_title": KEEP_ENGLISH,
+      "ocean.wq_explainer_body": KEEP_ENGLISH,
+      "ocean.wq_explainer_short": KEEP_ENGLISH,
       // ── P24 ── (Layer A English fallback)
       "ocean.label": KEEP_ENGLISH, "ocean.title": KEEP_ENGLISH,
       "ocean.aria_card": KEEP_ENGLISH, "ocean.surf_heading": KEEP_ENGLISH,
