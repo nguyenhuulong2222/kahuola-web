@@ -803,13 +803,11 @@
       "ocean.wq_runoff": "Runoff caution",
       "ocean.wq_statewide": "Statewide",
       "ocean.wq_runoff_detail": "Recent flash flooding \u2014 coastal runoff possible. Consider avoiding ocean swimming for 48\u201372 hours near affected shores.",
-      // P27e. PENDING OWNER APPROVAL. The approved copy was not supplied with
-      // the task, so these three strings paraphrase the Hawaiʻi DOH advisory
-      // description verbatim-in-substance (stay out of brown/murky water,
-      // 48-72 h after rain, leptospirosis in fresh water, "if the water is
-      // brown, turn around"). DOH is the issuing authority, so their own
-      // wording is the defensible default - but swap these three keys (EN+VI)
-      // for the approved copy before this is treated as final.
+      // P27e. Copy: the Hawaiʻi DOH advisory description, verbatim in substance
+      // (stay out of brown/murky water, 48-72 h after rain, leptospirosis in
+      // fresh water, "if the water is brown, turn around"). DOH is the issuing
+      // authority, so the explainer speaks in their words, not ours.
+      // Owner-approved 2026-09-16 (Invariant 7).
       "ocean.wq_explainer_title": "What is a Brown Water Advisory?",
       "ocean.wq_explainer_body": "The Hawai\u02bbi Department of Health issues a Brown Water Advisory when storm runoff carries pollutants into coastal waters. Runoff can contain sewage, animal waste, pesticides, chemicals and debris. What to do: stay out of water that looks brown or murky, even where no advisory has been issued. DOH advises staying out of affected water for 48\u201372 hours after the rain stops. Avoid swimming, wading in, or drinking from freshwater streams and ponds, which can carry leptospirosis. If the water is brown, turn around.",
       "ocean.wq_explainer_short": "Stay out of water that looks brown or murky, even where no advisory has been issued.",
