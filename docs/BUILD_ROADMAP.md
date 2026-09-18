@@ -116,6 +116,16 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 
 > Done: Homepage i18n EN/VI (94e5fbb), live-map i18n Phase 1 EN/VI (a9956a8).
 
+- [ ] **Resources label for haw/tl/ilo/ja** — `PENDING NATIVE REVIEW`
+  `nav.resources` is `KEEP_ENGLISH` in these four locales, so the navbar reads
+  "Resources" there. Action-oriented candidates were drafted but are **NOT
+  shipped and must not be shipped unreviewed**:
+  haw `ʻImi Kōkua` · tl `Humanap ng Tulong` · ilo `Agbirok ti Tulong` ·
+  ja `支援を探す`.
+  "Resources" in a civic-safety navbar is exactly the kind of term that must
+  not be guessed. ʻŌlelo Hawaiʻi routes through the P18 cultural-review path
+  when that outreach opens; the other three need a native reviewer each.
+
 ## TRACK F — Ocean Intelligence
 
 - [x] **P23 · Ocean backend (/api/ocean/*)** — `DONE` 2026-09-12
@@ -320,6 +330,37 @@ Standing rulings:
   a one-hour window on emergency contact information — shorten it if a
   correction ever has to land fast.
 
+- [x] **P34b · Resources findability** — `DONE` (2026-09-18)
+  P34 shipped the page but left it reachable from one navbar on one page.
+  Three fixes, no `resources.html` logic change.
+  **Label collision.** VI `nav.resources` and `nav.support` were both
+  "Hỗ trợ" — two navbar items with identical text. VI is now "Tìm trợ giúp".
+  **Navbar rollout.** The link now exists on index, live-map (both the desktop
+  `menu-links` and the mobile sheet `action-btn` row — a phone user on the live
+  map during an event is the audience that matters most), about, privacy,
+  support and Maui.
+  ⚠ about/privacy/support/Maui do NOT load the i18n bundle, so their
+  `data-i18n="nav.resources"` attribute is inert and the label renders English
+  there permanently. Deliberate: the attribute costs nothing and activates for
+  free if the bundle ever lands on those pages. Adding the bundle to them is
+  its own increment.
+  **Hazard-state CTA** under the hero banner on index, linking to /resources.
+  Hidden only when `primaryEvent === "MONITORING"`, written as a NEGATION
+  rather than an allowlist of the eight active states, so a state added later
+  inherits the CTA instead of drifting out of a hardcoded list. Hooked into
+  `applyHero()` — the same code path that sets the hero — so there is no second
+  fetch, no timer and no duplicated state. If the hero JS never runs the CTA
+  stays hidden and the navbar link remains the path: one door instead of two,
+  not a broken promise. Calm styling (`--storm`/`--flood`), never `--fire`, no
+  pulse, no urgency language: a wayfinding aid, not another alarm competing
+  with the hazard banner directly above it.
+  ⚠ There is no tsunami or hurricane `primaryEvent` on the homepage. Hurricane
+  is folded into `STORM_WARNING`/`STORM_WATCH` via `stormProduct.key`; tsunami
+  is not a homepage state at all. The negation means both are covered the day
+  either becomes one.
+  **P35 tie-in upgraded:** the CTA now exists, so P35 wires auto-pin and
+  auto-tab behaviours onto it rather than having to introduce the entry point.
+
 - [ ] **P35 · HRPC path compiler** — `NOT-STARTED`
   Turns the filtered list into an ordered path. Edges derived at runtime from
   node `requires` (R1), never stored.
@@ -383,6 +424,12 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
+- 2026-09-18 — P34b: No Door findability. VI `nav.resources` was colliding with
+  `nav.support` (both "Hỗ trợ") — now "Tìm trợ giúp". Resources link rolled out
+  to all six pages (live-map in both desktop and mobile navs). Hazard-state CTA
+  added under the homepage hero, hidden only on MONITORING, hooked into
+  applyHero() with no new fetch or timer. Four locale labels drafted and held
+  for native review rather than shipped.
 - 2026-09-17 — P34 (No Door Proof 1) opened TRACK G: capability graph MVP
   (12 Maui nodes, schema capgraph-1.1), a fail-closed validator, and a static
   resource navigator at /resources. Zero network calls — the graph is embedded
