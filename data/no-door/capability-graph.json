@@ -1,0 +1,279 @@
+{
+  "schema_version": "capgraph-1.1",
+  "generated_at": "2026-09-17T00:00:00.000Z",
+  "nodes": [
+    {
+      "id": "cap-auw-211",
+      "name": "Aloha United Way 211",
+      "i18n_key": "res.auw_211",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "transportation",
+        "shelter",
+        "medication_continuity"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "official",
+      "max_age_hours": 2160,
+      "channels": {
+        "phone": "211",
+        "url": "https://auw211.org",
+        "sms": "877-275-6569",
+        "offline_note_i18n_key": "res.auw_211_offline"
+      },
+      "languages": [
+        "en",
+        "vi"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "Statewide health and human services referral line for Hawaiʻi. Text \"Help\" plus your ZIP to the SMS line. 180+ language interpretation is documented, which is why this is the only node carrying Vietnamese in P34."
+    },
+    {
+      "id": "cap-redcross-pacific",
+      "name": "American Red Cross · Pacific Islands Region",
+      "i18n_key": "res.redcross_pacific",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "shelter"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "partner",
+      "max_age_hours": 2160,
+      "channels": {
+        "phone": "1-800-733-2767",
+        "url": "https://www.redcross.org/local/hawaii"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "National 1-800-RED-CROSS line and the Hawaiʻi regional page."
+    },
+    {
+      "id": "cap-redcross-shelter-open",
+      "name": "American Red Cross · Open Shelter Locations",
+      "i18n_key": "res.redcross_shelter_open",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "shelter"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "disaster_activated",
+      "authority": "partner",
+      "max_age_hours": 168,
+      "channels": {
+        "phone": "1-800-733-2767",
+        "url": "https://www.redcross.org/get-help/disaster-relief-and-recovery-services/find-an-open-shelter.html"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "Official open-shelter map, updated from the National Shelter System; only populated while a disaster is activated, hence disaster_activated with a 168 h max age. Red Cross's own published instruction is to call the national line and select the disaster option, so the phone is carried here as well. The page also states that shelters assist with refilling lost prescriptions."
+    },
+    {
+      "id": "cap-maui-county-ema",
+      "name": "Maui Emergency Management Agency (MEMA)",
+      "i18n_key": "res.maui_county_ema",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "shelter"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "official",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://www.mauicounty.gov/70/Emergency-Management-Agency",
+        "phone": "808-270-7285"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "County agency that opens and announces Maui evacuation shelters."
+    },
+    {
+      "id": "cap-hiema",
+      "name": "Hawaiʻi Emergency Management Agency (HI-EMA)",
+      "i18n_key": "res.hiema",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "shelter"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "official",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://dod.hawaii.gov/hiema/"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "State emergency management authority, cited in the Kahu Ola static floor. No resident-facing phone is published, so the site is the contact path."
+    },
+    {
+      "id": "cap-maui-bus",
+      "name": "Maui Bus · County Public Transit",
+      "i18n_key": "res.maui_bus",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "transportation"
+      ],
+      "audience": [
+        "no_vehicle"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "official",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://www.mauicounty.gov/bus",
+        "phone": "808-270-7511"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "County fixed-route transit; the default option for a household without a vehicle. Phone is County DOT. Real-time service updates at mauibus.org; operated under contract by Roberts Hawaiʻi, 808-871-4838."
+    },
+    {
+      "id": "cap-meo-transportation",
+      "name": "MEO · Maui Economic Opportunity Transportation",
+      "i18n_key": "res.meo_transportation",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "transportation"
+      ],
+      "audience": [
+        "kupuna",
+        "no_vehicle",
+        "wheelchair_mobility"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "partner",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://www.meoinc.org",
+        "phone": "808-877-7651"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "Nonprofit human-services transportation: kupuna rides, paratransit and wheelchair-accessible vehicles. NOTE: wheelchair_mobility is a valid audience value but has no UI chip in P34 (constraint set frozen at five) — chip candidate for P35."
+    },
+    {
+      "id": "cap-maui-humane-society",
+      "name": "Maui Humane Society",
+      "i18n_key": "res.maui_humane_society",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "shelter"
+      ],
+      "audience": [
+        "pet"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "partner",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://www.mauihumanesociety.org"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "Animal sheltering and pet-owner guidance. Most evacuation shelters restrict animals, so a household with a pet needs this alongside a human shelter. No public phone carried; the site is the contact path."
+    },
+    {
+      "id": "cap-medquest",
+      "name": "Med-QUEST Division · Hawaiʻi Medicaid",
+      "i18n_key": "res.medquest",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "medication_continuity"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "official",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://medquest.hawaii.gov"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "State Medicaid agency; the coverage path for emergency prescription refills for QUEST members. No member-services phone carried; the site is the contact path."
+    },
+    {
+      "id": "cap-hi-doh",
+      "name": "Hawaiʻi State Department of Health",
+      "i18n_key": "res.hi_doh",
+      "islands": [
+        "maui"
+      ],
+      "capabilities": [
+        "medication_continuity"
+      ],
+      "audience": [
+        "*"
+      ],
+      "requires": [],
+      "availability": "standing",
+      "authority": "official",
+      "max_age_hours": 2160,
+      "channels": {
+        "url": "https://health.hawaii.gov"
+      },
+      "languages": [
+        "en"
+      ],
+      "last_verified": "2026-09-17",
+      "source_note": "State health authority; publishes emergency refill and continuity-of-care guidance during declared events. No public phone carried; the site is the contact path."
+    }
+  ]
+}

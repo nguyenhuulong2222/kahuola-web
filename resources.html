@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta http-equiv="content-language" content="en-US" />
+  <title data-i18n="nodoor.page_title">Find Help · Kahu Ola</title>
+  <meta name="description" content="Find transportation, shelter, and medication help on Maui. Every listing is a real organization with public contact information, verified by hand." />
+
+  <link rel="canonical" href="https://kahuola.org/resources" />
+  <link rel="alternate" hreflang="en-US" href="https://kahuola.org/resources" />
+  <link rel="alternate" hreflang="x-default" href="https://kahuola.org/resources" />
+  <meta name="robots" content="index,follow" />
+  <meta name="theme-color" content="#08111a" />
+  <meta name="geo.region" content="US-HI" />
+  <meta name="geo.placename" content="Maui, Hawaiʻi" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Kahu Ola" />
+  <meta property="og:title" content="Find Help · Kahu Ola" />
+  <meta property="og:description" content="Transportation, shelter, and medication help on Maui — real organizations, public contacts, hand-verified." />
+  <meta property="og:url" content="https://kahuola.org/resources" />
+
+  <style>
+    /* Content-page palette — matches about.html exactly (P34 ruling c).
+       The three GitHub-derived grey/blue tokens used by index.html are banned
+       here; this page uses the content-page tokens only. */
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#101b27;
+      --surface-2:#142232;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.14);
+      --text:#eef4fb;
+      --text-dim:#c4d2df;
+      --muted:#8ea3b7;
+      --ok:#67c27e;
+      --ok-soft:rgba(103,194,126,.10);
+      --warn:#ffcc66;
+      --warn-soft:rgba(255,204,102,.10);
+      --accent:#4da8ff;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      /* Kupuna a11y: never below 16px. */
+      font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      -webkit-text-size-adjust:100%;
+    }
+    .app{max-width:920px;margin:0 auto;padding:16px 16px 56px}
+
+    a{color:var(--accent)}
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+    /* ── Topbar — markup from index.html, palette from about.html ── */
+    .topbar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;padding:10px 0 18px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:inherit}
+    .brand-mark{font-size:26px;line-height:1}
+    .brand-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+    .brand-title{font-size:17px;margin:2px 0 0;font-weight:800}
+    .brand-sub{font-size:13px;color:var(--muted)}
+    .top-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .pill{display:inline-flex;align-items:center;min-height:48px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text-dim);text-decoration:none;font-size:14px}
+    .pill.active{border-color:var(--accent);color:var(--text);background:var(--surface-2)}
+    .lang-select{min-height:48px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-size:14px}
+
+    /* ── Page ── */
+    h1{font-size:26px;line-height:1.25;margin:26px 0 8px}
+    .purpose{color:var(--text-dim);margin:0 0 6px;max-width:62ch}
+    .island-line{color:var(--muted);font-size:14px;margin:0 0 22px}
+    .island-line strong{color:var(--text)}
+
+    fieldset{border:0;margin:0 0 20px;padding:0}
+    legend{padding:0;margin:0 0 10px;font-size:15px;font-weight:700;color:var(--text)}
+    .nd-chips{display:flex;flex-wrap:wrap;gap:10px}
+    /* Tap targets ≥48px in both directions. */
+    .nd-chip{
+      min-height:48px;min-width:48px;padding:0 16px;
+      display:inline-flex;align-items:center;gap:8px;
+      border:1px solid var(--line-strong);border-radius:12px;
+      background:var(--surface);color:var(--text-dim);
+      font-size:16px;font-family:inherit;cursor:pointer;
+    }
+    .nd-chip[aria-pressed="true"]{
+      background:var(--surface-2);border-color:var(--accent);color:var(--text);font-weight:700;
+    }
+    /* Selection is never colour alone — the check mark carries it too. */
+    .nd-chip[aria-pressed="true"]::before{content:"✓";color:var(--accent);font-weight:800}
+
+    h2{font-size:19px;margin:28px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+
+    .nd-card{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px;margin:0 0 12px}
+    .nd-card--pinned{border-color:var(--accent);background:var(--surface-2)}
+    .nd-card-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+    .nd-name{font-size:18px;margin:0;font-weight:750}
+    .nd-pinned-note{margin:6px 0 0;font-size:13px;color:var(--accent);font-weight:700}
+
+    .nd-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;white-space:nowrap}
+    .nd-badge-icon{font-size:13px;line-height:1}
+    .nd-badge--official{background:var(--accent);color:#06121e;font-weight:800}
+    .nd-badge--partner{background:transparent;border:1px solid var(--accent);color:var(--accent);font-weight:700}
+    .nd-badge--community{background:transparent;border:1px solid var(--line-strong);color:var(--muted)}
+
+    .nd-channels{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
+    /* Phone first, biggest, hardest to miss. */
+    .nd-call{
+      min-height:48px;padding:0 18px;display:inline-flex;align-items:center;
+      background:var(--accent);color:#06121e;font-weight:800;font-size:17px;
+      border-radius:12px;text-decoration:none;
+    }
+    .nd-link{
+      min-height:48px;padding:0 16px;display:inline-flex;align-items:center;
+      border:1px solid var(--line-strong);border-radius:12px;
+      color:var(--accent);text-decoration:none;font-size:16px;
+    }
+
+    .nd-avail{margin:12px 0 0;font-size:14px;color:var(--text-dim)}
+    .nd-offline{margin:6px 0 0;font-size:14px;color:var(--muted)}
+    .nd-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0 0}
+    .nd-verified{font-size:13px;color:var(--muted)}
+    /* STALE_OK badge uses --warn (P34 ruling c). */
+    .nd-stale{
+      font-size:13px;padding:4px 10px;border-radius:999px;
+      background:var(--warn-soft);border:1px solid var(--warn);color:var(--warn);
+    }
+
+    .nd-empty{
+      margin:0 0 14px;padding:14px 16px;font-size:17px;font-weight:700;
+      border:1px solid var(--warn);background:var(--warn-soft);border-radius:12px;color:var(--text);
+    }
+    .nd-counter{font-size:13px;color:var(--muted);margin:6px 0 0}
+    .nd-counter:empty{display:none}
+
+    /* ── Static floor — raw HTML, renders with JavaScript disabled ── */
+    .floor{margin:30px 0 0;padding:18px;border:1px solid var(--line-strong);border-radius:14px;background:var(--bg-2)}
+    .floor h2{margin:0 0 12px;padding:0;border:0;font-size:17px}
+    .floor ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+    .floor a{display:inline-flex;align-items:center;min-height:48px;font-size:17px;font-weight:700}
+    .floor .floor-note{color:var(--muted);font-size:14px}
+
+    .disclaimer{margin:24px 0 0;padding:14px 16px;border-left:3px solid var(--muted);color:var(--text-dim);font-size:14px;background:var(--surface)}
+
+    .footer{margin:36px 0 0;padding:18px 0 0;border-top:1px solid var(--line)}
+    .footer-inner{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+    .footer-brand{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+    .footer-brand strong{color:var(--text)}
+    .footer-links{display:flex;flex-wrap:wrap;gap:14px}
+    .footer-links a{font-size:13px;color:var(--muted)}
+    .footer-legal{margin:14px 0 0;font-size:12px;line-height:1.6;color:var(--muted)}
+
+    /* Invariant II — the chips are inert without JavaScript, so they are
+       hidden rather than left as dead buttons. The floor is unaffected. */
+    .nd-nojs-hide{display:none}
+
+    @media (max-width:520px){
+      h1{font-size:23px}
+      .nd-card-head{flex-direction:column;align-items:flex-start}
+      .nd-channels{flex-direction:column;align-items:stretch}
+      .nd-call,.nd-link{justify-content:center}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Topbar — markup pattern from index.html; in-page anchors point at
+         ./index so they still resolve from this page. ── -->
+    <header class="topbar">
+      <a class="brand" href="./index">
+        <div class="brand-mark">🌋</div>
+        <div>
+          <div class="brand-kicker" data-i18n="brand.kicker">Kahu Ola · Guardian of Life</div>
+          <div class="brand-title" data-i18n="brand.title">Hawaiʻi Hazard Signals</div>
+          <div class="brand-sub" data-i18n="nodoor.h1">Find help on Maui</div>
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="pill link" href="./index" data-i18n="nav.home">Home</a>
+        <a class="pill link" href="./live-map" data-i18n="nav.live_map">Live Map</a>
+        <a class="pill active" href="./resources" aria-current="page" data-i18n="nav.resources">Resources</a>
+        <a class="pill link" href="/guide" data-i18n="nav.guide" data-i18n-href="nav.guide_url">Guide</a>
+        <a class="pill link" href="./about" data-i18n="nav.about">About</a>
+        <a class="pill link" href="./privacy" data-i18n="nav.privacy">Privacy</a>
+        <a class="pill link" href="./support" data-i18n="nav.support">Support</a>
+        <select id="kahuola-lang-select" class="lang-select" data-i18n-aria="lang.select_aria" aria-label="Select language" onchange="if(window.KAHUOLA_I18N)window.KAHUOLA_I18N.setLang(this.value)">
+          <option value="en">EN · English</option>
+          <option value="vi">VI · Tiếng Việt</option>
+          <option value="haw">HAW · ʻŌlelo Hawaiʻi</option>
+          <option value="tl">TL · Tagalog</option>
+          <option value="ilo">ILO · Ilocano</option>
+          <option value="ja">JA · 日本語</option>
+        </select>
+      </div>
+    </header>
+
+    <main>
+      <h1 data-i18n="nodoor.h1">Find help on Maui</h1>
+      <p class="purpose" data-i18n="nodoor.purpose">Pick what you need and what applies to your household. Every listing is a real organization with a public contact.</p>
+      <p class="island-line"><span data-i18n="nodoor.island_label">Island</span>: <strong data-i18n="nodoor.island_maui">Maui</strong></p>
+
+      <fieldset>
+        <legend data-i18n="nodoor.needs_legend">What do you need?</legend>
+        <div class="nd-chips">
+          <button type="button" class="nd-chip" data-group="need" data-value="transportation" aria-pressed="false"><span data-i18n="nodoor.need_transportation">A ride</span></button>
+          <button type="button" class="nd-chip" data-group="need" data-value="shelter" aria-pressed="false"><span data-i18n="nodoor.need_shelter">A place to stay</span></button>
+          <button type="button" class="nd-chip" data-group="need" data-value="medication_continuity" aria-pressed="false"><span data-i18n="nodoor.need_medication_continuity">Medication</span></button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend data-i18n="nodoor.constraints_legend">Anything that applies to your household?</legend>
+        <div class="nd-chips">
+          <button type="button" class="nd-chip" data-group="constraint" data-value="child" aria-pressed="false"><span data-i18n="nodoor.c_child">Child</span></button>
+          <button type="button" class="nd-chip" data-group="constraint" data-value="kupuna" aria-pressed="false"><span data-i18n="nodoor.c_kupuna">Kupuna</span></button>
+          <button type="button" class="nd-chip" data-group="constraint" data-value="pet" aria-pressed="false"><span data-i18n="nodoor.c_pet">Pet</span></button>
+          <button type="button" class="nd-chip" data-group="constraint" data-value="no_vehicle" aria-pressed="false"><span data-i18n="nodoor.c_no_vehicle">No vehicle</span></button>
+          <button type="button" class="nd-chip" data-group="constraint" data-value="limited_english" aria-pressed="false"><span data-i18n="nodoor.c_limited_english">Limited English</span></button>
+        </div>
+      </fieldset>
+
+      <noscript>
+        <style>fieldset{display:none}</style>
+        <p class="nd-empty" data-i18n="nodoor.nojs">Filtering needs JavaScript. Every emergency contact is listed below.</p>
+      </noscript>
+
+      <h2 data-i18n="nodoor.results_heading">Where to start</h2>
+      <div id="nd-results" aria-live="polite"></div>
+      <p class="nd-counter" id="nd-stale-count"></p>
+      <p class="nd-counter" id="nd-invalid-count"></p>
+
+      <!-- ── STATIC FLOOR (Invariant II) ──────────────────────────────────
+           Plain HTML with no JavaScript dependency. If the bundle fails to
+           load, the script throws, or JS is disabled entirely, everything
+           below this comment still renders. -->
+      <section class="floor">
+        <h2 data-i18n="nodoor.floor_heading">If nothing above works</h2>
+        <ul>
+          <li><a href="tel:911" data-i18n="nodoor.floor_911">Life-threatening emergency — call 911</a></li>
+          <li><a href="tel:211" data-i18n="nodoor.floor_211">Any other need — call 211</a></li>
+          <li><a href="tel:18007332767" data-i18n="nodoor.floor_redcross">American Red Cross — 1-800-733-2767</a></li>
+          <li><a href="https://www.mauicounty.gov/70/Emergency-Management-Agency" target="_blank" rel="noopener noreferrer" data-i18n="nodoor.floor_mema">Maui Emergency Management Agency</a></li>
+          <li><a href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener noreferrer" data-i18n="nodoor.floor_hiema">Hawaiʻi Emergency Management Agency</a></li>
+        </ul>
+      </section>
+
+      <p class="disclaimer" data-i18n="nodoor.disclaimer">Kahu Ola provides situational awareness and does not replace official emergency directives.</p>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <strong>Kahu Ola</strong>
+          <span data-i18n="brand.guardian">Guardian of Life</span>
+        </div>
+        <div class="footer-links">
+          <a href="./index" data-i18n="nav.home">Home</a>
+          <a href="./live-map" data-i18n="nav.live_map">Live Map</a>
+          <a href="./resources" aria-current="page" data-i18n="nav.resources">Resources</a>
+          <a href="./about" data-i18n="nav.about">About</a>
+          <a href="./privacy" data-i18n="nav.privacy">Privacy</a>
+          <a href="./support" data-i18n="nav.support">Support</a>
+        </div>
+      </div>
+      <p class="footer-legal">Kahu Ola is an independent civic technology platform. Not affiliated with NASA, NOAA, USGS, FEMA, EPA, HIEMA, or any U.S. government agency. For official emergency directives, contact HIEMA, your county emergency management agency, or the National Weather Service.</p>
+    </footer>
+
+  </div>
+
+  <!-- ── Capability graph, embedded (Invariant I: zero network calls) ─────
+       This is a verbatim copy of data/no-door/capability-graph.json. The two
+       are hash-compared by scripts/validate-graph.mjs, which fails the build
+       if they ever drift apart. -->
+  <script type="application/json" id="capability-graph-embed">
+  {
+    "schema_version": "capgraph-1.1",
+    "generated_at": "2026-09-17T00:00:00.000Z",
+    "nodes": [
+      {
+        "id": "cap-auw-211",
+        "name": "Aloha United Way 211",
+        "i18n_key": "res.auw_211",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "transportation",
+          "shelter",
+          "medication_continuity"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "official",
+        "max_age_hours": 2160,
+        "channels": {
+          "phone": "211",
+          "url": "https://auw211.org",
+          "sms": "877-275-6569",
+          "offline_note_i18n_key": "res.auw_211_offline"
+        },
+        "languages": [
+          "en",
+          "vi"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "Statewide health and human services referral line for Hawaiʻi. Text \"Help\" plus your ZIP to the SMS line. 180+ language interpretation is documented, which is why this is the only node carrying Vietnamese in P34."
+      },
+      {
+        "id": "cap-redcross-pacific",
+        "name": "American Red Cross · Pacific Islands Region",
+        "i18n_key": "res.redcross_pacific",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "shelter"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "partner",
+        "max_age_hours": 2160,
+        "channels": {
+          "phone": "1-800-733-2767",
+          "url": "https://www.redcross.org/local/hawaii"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "National 1-800-RED-CROSS line and the Hawaiʻi regional page."
+      },
+      {
+        "id": "cap-redcross-shelter-open",
+        "name": "American Red Cross · Open Shelter Locations",
+        "i18n_key": "res.redcross_shelter_open",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "shelter"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "disaster_activated",
+        "authority": "partner",
+        "max_age_hours": 168,
+        "channels": {
+          "phone": "1-800-733-2767",
+          "url": "https://www.redcross.org/get-help/disaster-relief-and-recovery-services/find-an-open-shelter.html"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "Official open-shelter map, updated from the National Shelter System; only populated while a disaster is activated, hence disaster_activated with a 168 h max age. Red Cross's own published instruction is to call the national line and select the disaster option, so the phone is carried here as well. The page also states that shelters assist with refilling lost prescriptions."
+      },
+      {
+        "id": "cap-maui-county-ema",
+        "name": "Maui Emergency Management Agency (MEMA)",
+        "i18n_key": "res.maui_county_ema",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "shelter"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "official",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://www.mauicounty.gov/70/Emergency-Management-Agency",
+          "phone": "808-270-7285"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "County agency that opens and announces Maui evacuation shelters."
+      },
+      {
+        "id": "cap-hiema",
+        "name": "Hawaiʻi Emergency Management Agency (HI-EMA)",
+        "i18n_key": "res.hiema",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "shelter"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "official",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://dod.hawaii.gov/hiema/"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "State emergency management authority, cited in the Kahu Ola static floor. No resident-facing phone is published, so the site is the contact path."
+      },
+      {
+        "id": "cap-maui-bus",
+        "name": "Maui Bus · County Public Transit",
+        "i18n_key": "res.maui_bus",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "transportation"
+        ],
+        "audience": [
+          "no_vehicle"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "official",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://www.mauicounty.gov/bus",
+          "phone": "808-270-7511"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "County fixed-route transit; the default option for a household without a vehicle. Phone is County DOT. Real-time service updates at mauibus.org; operated under contract by Roberts Hawaiʻi, 808-871-4838."
+      },
+      {
+        "id": "cap-meo-transportation",
+        "name": "MEO · Maui Economic Opportunity Transportation",
+        "i18n_key": "res.meo_transportation",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "transportation"
+        ],
+        "audience": [
+          "kupuna",
+          "no_vehicle",
+          "wheelchair_mobility"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "partner",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://www.meoinc.org",
+          "phone": "808-877-7651"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "Nonprofit human-services transportation: kupuna rides, paratransit and wheelchair-accessible vehicles. NOTE: wheelchair_mobility is a valid audience value but has no UI chip in P34 (constraint set frozen at five) — chip candidate for P35."
+      },
+      {
+        "id": "cap-maui-humane-society",
+        "name": "Maui Humane Society",
+        "i18n_key": "res.maui_humane_society",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "shelter"
+        ],
+        "audience": [
+          "pet"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "partner",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://www.mauihumanesociety.org"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "Animal sheltering and pet-owner guidance. Most evacuation shelters restrict animals, so a household with a pet needs this alongside a human shelter. No public phone carried; the site is the contact path."
+      },
+      {
+        "id": "cap-medquest",
+        "name": "Med-QUEST Division · Hawaiʻi Medicaid",
+        "i18n_key": "res.medquest",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "medication_continuity"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "official",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://medquest.hawaii.gov"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "State Medicaid agency; the coverage path for emergency prescription refills for QUEST members. No member-services phone carried; the site is the contact path."
+      },
+      {
+        "id": "cap-hi-doh",
+        "name": "Hawaiʻi State Department of Health",
+        "i18n_key": "res.hi_doh",
+        "islands": [
+          "maui"
+        ],
+        "capabilities": [
+          "medication_continuity"
+        ],
+        "audience": [
+          "*"
+        ],
+        "requires": [],
+        "availability": "standing",
+        "authority": "official",
+        "max_age_hours": 2160,
+        "channels": {
+          "url": "https://health.hawaii.gov"
+        },
+        "languages": [
+          "en"
+        ],
+        "last_verified": "2026-09-17",
+        "source_note": "State health authority; publishes emergency refill and continuity-of-care guidance during declared events. No public phone carried; the site is the contact path."
+      }
+    ]
+  }
+  </script>
+
+  <script src="/i18n/kahuola-i18n.js?v=6bc33233"></script>
+  <script src="/js/no-door/navigator.js"></script>
+</body>
+</html>
