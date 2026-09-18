@@ -32,6 +32,15 @@
 /storm
   Cache-Control: public, max-age=3600
 
+# P34. Resource navigator — matches the sibling content pages. The registry is
+# hand-curated and changes rarely, but note this is a one-hour window on
+# emergency contact info: shorten it if a correction ever needs to land fast.
+/resources
+  Cache-Control: public, max-age=3600
+
+/resources.html
+  Cache-Control: public, max-age=3600
+
 /storm.html
   Cache-Control: public, max-age=3600
 

@@ -251,6 +251,83 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 P26–P29 are queued candidates, not commitments — none starts before P01 and
 P25 ship. Priority within the four: P26 if a storm is active, else P27.
 
+## TRACK G — No Door (RHSCG resource graph)
+
+A resident in a disaster does not know which agency owns their problem. "No
+Door" removes the need to know: pick what you need, get a real place to start.
+Spec authority: `docs/no-door/KAHUOLA_NO_DOOR_ENGINEERING_SPEC_V2.md` (R1–R3)
+and `docs/no-door/KAHUOLA_NO_DOOR_DRAFT_3.md`.
+
+Standing rulings:
+- **R1 Node-stored, edge-derived** — the registry stores CapabilityNodes only.
+  There is no edge database; `requires` stays empty until P35 derives edges at
+  runtime.
+- **R2 Freshness is 3-tier, computed client-side at render** — FRESH (no
+  badge) / STALE_OK (amber, "call to confirm") / STALE_DROP (hidden from
+  results, counted in a muted footer line). A stale node is never shown as if
+  it were current.
+- **R3 No `foster_kinship`** anywhere in taxonomy, UI or data. Routing uses
+  child + caregiver_support only. The validator treats the string as a hard
+  error.
+- **No commercial or retailer nodes, ever** — matching 211's own database
+  policy. `medication_continuity` is covered by 211 + Med-QUEST + DOH.
+
+- [x] **P34 · RHSCG graph MVP + navigator (Proof 1)** — `IN-PROGRESS`
+  Static-only. Maui, wildfire context, three needs (transportation · shelter ·
+  medication_continuity), five constraint chips, EN/VI.
+  `data/no-door/capability-graph.json` (schema capgraph-1.1, 10 hand-verified
+  nodes) · `scripts/validate-graph.mjs` · `resources.html` ·
+  `js/no-door/navigator.js`.
+  Graph ships as an inline `<script type="application/json">` embed, not a
+  fetch: Invariant I means zero network calls, and a same-origin fetch is
+  still a network call. Two copies of the truth now exist, so the validator
+  hash-compares the embed against the JSON file and fails on drift.
+  The page shows a FILTERED LIST, not a path — the HRPC path compiler is P35.
+  ⚠ `wheelchair_mobility` is a valid `audience` value with no UI chip: the
+  P34 constraint set is frozen at five.
+  **P35 — add `wheelchair_mobility` as a 6th constraint chip (enum already
+  accepted).**
+  **Re-add candidates — three nodes were dropped for capability mismatch, not
+  for being wrong.** A node must not be listed under a need it does not
+  actually serve: mislabelling sends a real person to the wrong door.
+  - **P35 — re-add Hawaiʻi CARES 988 when `mental_health` enters the need
+    taxonomy (first re-add candidate).** Dropped from P34 because 988 is a
+    mental-health crisis line, not `medication_continuity`; routing a
+    prescription need to a crisis counsellor helps neither.
+  - **P35 — re-add Salvation Army as a `food_water` node:**
+    hawaii.salvationarmy.org/hawaii/maui, division phone 808-988-2136.
+    Verified Maui disaster role is food/meals/support *at* shelters, not
+    shelter operation, and `food_water` is not a P34 need.
+  - **Catholic Charities Hawaiʻi** — re-add when `housing_recovery` enters the
+    taxonomy. Maui office services (housing assistance, financial aid, case
+    management, SSVF) fall outside the three scoped needs.
+  Their `res.*` i18n keys were removed with them rather than left as dead
+  weight in the bundle — re-adding a node means re-adding its key.
+
+  **Conditional capability — ruled out of P34, queued for P35.**
+  `cap-redcross-shelter-open` stays `capabilities: ["shelter"]`. The Red Cross
+  shelter page does state that shelters assist with refilling lost
+  prescriptions, and that claim is true — but it is CONDITIONAL: the service
+  exists only while shelters are active. P34's flat filter cannot express
+  conditionality, so tagging the node `medication_continuity` would surface a
+  `disaster_activated` node as a medication route on a calm day — a dead end
+  presented as help. `source_note` provenance is the correct home in P34.
+  **P35 — first conditional-edge test case for HRPC: `medication_continuity`
+  via open shelter, valid only when the shelter step is active in the compiled
+  path; render as an in-path annotation, never a standalone medication
+  result.**
+  ⚠ `/resources` caches for 3600 s to match the sibling content pages. That is
+  a one-hour window on emergency contact information — shorten it if a
+  correction ever has to land fast.
+
+- [ ] **P35 · HRPC path compiler** — `NOT-STARTED`
+  Turns the filtered list into an ordered path. Edges derived at runtime from
+  node `requires` (R1), never stored.
+- [ ] **P36 · Service Worker / offline** — `NOT-STARTED`
+  The registry has to survive the loss of connectivity that makes it matter.
+- [ ] **P37 · HPRS simulator** — `NOT-STARTED`
+- [ ] **P38 · NCC capsule / QR** — `NOT-STARTED`
+
 ## NON-PROMPT TASKS (manual — not Claude Code)
 
 - [ ] MapTiler key domain restriction @ cloud.maptiler.com (P2)
@@ -306,6 +383,12 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
+- 2026-09-17 — P34 (No Door Proof 1) opened TRACK G: capability graph MVP
+  (12 Maui nodes, schema capgraph-1.1), a fail-closed validator, and a static
+  resource navigator at /resources. Zero network calls — the graph is embedded
+  and hash-compared against its JSON source. Registry entries are hand-verified
+  by Long at Gate 1; the validator refuses to pass while any node reads
+  PENDING. Catholic Charities dropped as out-of-scope; no commercial nodes.
 - 2026-09-16 — P27e shipped: brown water explainer (collapsed card line +
   popup "what to do" sentence), gated to Brown Water Advisory only. Verified
   desktop Chrome 1400px and 375px mobile; iOS Simulator confirmed render only —
