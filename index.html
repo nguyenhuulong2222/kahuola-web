@@ -970,6 +970,30 @@
     .map-badge.flood { animation: radar-pulse 2s infinite; }
     .map-badge.fire { animation: radar-pulse-fire 2s infinite; }
 
+    /* P34b — Find Help CTA. Deliberately calm: --storm/--flood family, never
+       --fire, no pulse, no animation. This is a wayfinding aid offered during
+       an event, not another alarm competing with the hazard banner above it. */
+    .findhelp-cta{
+      display:flex;align-items:center;gap:14px;
+      margin:12px 0 0;padding:14px 16px;
+      background:var(--storm-soft);
+      border:1px solid var(--line-strong);
+      border-left:3px solid var(--storm);
+      border-radius:12px;
+      text-decoration:none;color:inherit;
+    }
+    .findhelp-cta:hover{background:var(--flood-soft);border-left-color:var(--flood)}
+    .findhelp-cta:focus-visible{outline:3px solid var(--storm);outline-offset:2px}
+    .findhelp-cta[hidden]{display:none}
+    .findhelp-cta-body{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+    .findhelp-cta-title{font-size:15px;font-weight:750;color:var(--text)}
+    .findhelp-cta-sub{font-size:13px;line-height:1.5;color:var(--text-dim)}
+    .findhelp-cta-arrow{font-size:19px;color:var(--storm);flex:none}
+    @media (max-width:520px){
+      .findhelp-cta{padding:13px 14px;gap:10px}
+      .findhelp-cta-title{font-size:14px}
+    }
+
     @media (max-width:1120px){
       .hero-grid,.section-grid{grid-template-columns:1fr}
       .map-box{min-height:300px}
@@ -1710,6 +1734,20 @@
           <div id="heroBannerTitle">⏳ Checking official sources…</div>
           <div class="primary-banner-source" id="heroBannerCopy">NASA FIRMS · NWS · NEXRAD</div>
         </div>
+
+        <!-- ── P34b: FIND HELP — wayfinding, never a directive ──────────────
+             Hidden by default in raw HTML and revealed only by applyHero(),
+             the same code path that sets the hero state. If the hero JS never
+             runs, this stays hidden and the navbar link remains the path to
+             /resources — the page degrades to one door instead of two, not to
+             a broken promise. -->
+        <a class="findhelp-cta" id="findHelpCta" href="./resources" hidden>
+          <span class="findhelp-cta-body">
+            <span class="findhelp-cta-title" data-i18n="nodoor.cta_title">Find help on your island</span>
+            <span class="findhelp-cta-sub" data-i18n="nodoor.cta_body">Shelter, transportation, medication — real organizations with public contact info.</span>
+          </span>
+          <span class="findhelp-cta-arrow" aria-hidden="true">→</span>
+        </a>
 
         <!-- ── SIGNAL STRIP — 3 answers, not 3 data points ── -->
         <div class="signal-strip">
@@ -2638,7 +2676,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=6bc33233"></script>
+  <script src="/i18n/kahuola-i18n.js?v=d2e8af20"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -3554,6 +3592,14 @@
           ? heroVolcanicWording(counts.fireSplit.total || volcCount) : null;
 
         // Narrative — title with key word highlight
+        // P34b. Find Help rides the hero state rather than keeping its own:
+        // no second fetch, no timer, no duplicated state to drift. Written as
+        // a NEGATION of MONITORING, not an allowlist of the eight active
+        // states — any state added later (a tsunami primaryEvent, say)
+        // inherits the CTA instead of silently missing from a hardcoded list.
+        const findHelpCta = document.getElementById("findHelpCta");
+        if (findHelpCta) findHelpCta.hidden = (primaryEvent === "MONITORING");
+
         // hero.title_html.* are developer-controlled static strings with span markup — innerHTML-safe
         const titleEl = document.getElementById("heroTitle");
         if (titleEl) {

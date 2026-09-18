@@ -43,6 +43,8 @@
 
     // ── ENGLISH (Phase 1 — canonical base) ────────────────────
     en: {
+      "nodoor.cta_title": "Find help on your island",
+      "nodoor.cta_body": "Shelter, transportation, medication \u2014 real organizations with public contact info.",
       // ── P34 No Door — resource navigator (nodoor.*) and registry
       //    node names (res.*). Organisation names are proper nouns and stay
       //    English in every locale via KEEP_ENGLISH.
@@ -1189,10 +1191,12 @@
     // All hazard terms use glossary-locked translations from TRANSLATION_GLOSSARY_SEED.md
     // Agency acronyms (NWS, NOAA, NASA FIRMS, EPA, USGS, HIEMA) are preserved
     vi: {
+      "nodoor.cta_title": "T\u00ecm tr\u1ee3 gi\u00fap tr\u00ean \u0111\u1ea3o c\u1ee7a b\u1ea1n",
+      "nodoor.cta_body": "Ch\u1ed7 \u1edf t\u1ea1m, ph\u01b0\u01a1ng ti\u1ec7n \u0111i l\u1ea1i, thu\u1ed1c men \u2014 c\u00e1c t\u1ed5 ch\u1ee9c c\u00f3 th\u1eadt v\u1edbi th\u00f4ng tin li\u00ean h\u1ec7 c\u00f4ng khai.",
       // ── P34 No Door — resource navigator (nodoor.*) and registry
       //    node names (res.*). Organisation names are proper nouns and stay
       //    English in every locale via KEEP_ENGLISH.
-      "nav.resources": "H\u1ed7 tr\u1ee3",
+      "nav.resources": "T\u00ecm tr\u1ee3 gi\u00fap",
       "nodoor.nojs": "B\u1ed9 l\u1ecdc c\u1ea7n JavaScript. M\u1ecdi s\u1ed1 li\u00ean h\u1ec7 kh\u1ea9n c\u1ea5p \u0111\u1ec1u c\u00f3 b\u00ean d\u01b0\u1edbi.",
       "nodoor.page_title": "T\u00ecm tr\u1ee3 gi\u00fap \u00b7 Kahu Ola",
       "nodoor.h1": "T\u00ecm tr\u1ee3 gi\u00fap tr\u00ean \u0111\u1ea3o Maui",
@@ -2329,6 +2333,8 @@
     // Where no approved translation exists: KEEP ENGLISH (use KEEP_ENGLISH sentinel).
     // Do NOT translate hazard severity, official warnings, freshness timing, or source attribution.
     haw: {
+      "nodoor.cta_title": KEEP_ENGLISH,
+      "nodoor.cta_body": KEEP_ENGLISH,
       // ── P34 No Door — resource navigator (nodoor.*) and registry
       //    node names (res.*). Organisation names are proper nouns and stay
       //    English in every locale via KEEP_ENGLISH.
@@ -3095,6 +3101,8 @@
     // ── TAGALOG (Phase 3 — framework, controlled coverage) ────
     // Safe UI chrome translated. All hazard terms KEEP ENGLISH pending review.
     tl: {
+      "nodoor.cta_title": KEEP_ENGLISH,
+      "nodoor.cta_body": KEEP_ENGLISH,
       // ── P34 No Door — resource navigator (nodoor.*) and registry
       //    node names (res.*). Organisation names are proper nouns and stay
       //    English in every locale via KEEP_ENGLISH.
@@ -3801,6 +3809,8 @@
     // ── ILOCANO (Phase 3 — framework, controlled coverage) ────
     // Ilocano spoken across Hawaii. Safe UI chrome only. Hazard terms KEEP ENGLISH.
     ilo: {
+      "nodoor.cta_title": KEEP_ENGLISH,
+      "nodoor.cta_body": KEEP_ENGLISH,
       // ── P34 No Door — resource navigator (nodoor.*) and registry
       //    node names (res.*). Organisation names are proper nouns and stay
       //    English in every locale via KEEP_ENGLISH.
@@ -4416,6 +4426,8 @@
     // ── JAPANESE (Phase 3 — framework, controlled coverage) ────
     // Safe UI chrome translated. All hazard terms KEEP ENGLISH pending review.
     ja: {
+      "nodoor.cta_title": KEEP_ENGLISH,
+      "nodoor.cta_body": KEEP_ENGLISH,
       // ── P34 No Door — resource navigator (nodoor.*) and registry
       //    node names (res.*). Organisation names are proper nouns and stay
       //    English in every locale via KEEP_ENGLISH.
