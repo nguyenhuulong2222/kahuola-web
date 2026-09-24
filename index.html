@@ -623,6 +623,13 @@
       line-height:1.58;
     }
 
+    .signal-caveat{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+
     .status{
       min-height:30px;
       padding:0 10px;
@@ -640,6 +647,12 @@
       background:var(--ok-soft);
       border-color:rgba(103,194,126,.18);
       color:#ddf4e3;
+    }
+
+    .status.neutral{
+      background:rgba(142,163,183,.10);
+      border-color:rgba(142,163,183,.20);
+      color:var(--text-dim);
     }
 
     .status.watch{
@@ -1821,6 +1834,7 @@
               <p class="signal-copy" id="fireCopy">
                 No satellite wildfire detections in the current statewide snapshot.
               </p>
+              <p class="signal-caveat" id="fireCaveat" hidden></p>
               <div class="meta-row">
                 <span class="chip" id="fireSourceChip">NASA FIRMS</span>
                 <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
@@ -3783,7 +3797,24 @@
       //     badge \u2014 text AND class, leaving `class="status active"` on an
       //     element styled as `.signal-strip-status`. The null path already
       //     targeted fireStatusDetail; only the live paths had drifted.
-      function renderFireCard(payload) {
+      // stormStatus: summary.storm.status — "none" | "watch" | "warning" |
+      // "unavailable", or null/undefined when the summary never arrived. Passed
+      // in rather than refetched; the caller already holds the summary payload.
+      function renderFireCaveat(isZero, stormStatus) {
+        const el = document.getElementById("fireCaveat");
+        if (!el) return;
+        if (!isZero) { el.hidden = true; el.textContent = ""; return; }
+        // Anything that is not an explicit calm reading gets the stronger line.
+        // Not knowing whether a storm is overhead is not the same as knowing
+        // there is none, so null/missing takes the storm wording too.
+        const calm = stormStatus === "none";
+        el.textContent = calm
+          ? (_t("status.fire_caveat_cloud") || "Satellites can't see through thick cloud.")
+          : (_t("status.fire_caveat_storm") || "Weather watches or warnings are in effect. Thick cloud can hide fire from satellites \u2014 a zero here is not an all-clear.");
+        el.hidden = false;
+      }
+
+      function renderFireCard(payload, stormStatus) {
         if (payload === null) { markUnknown("fireStripAnswer", "fireStatusDetail"); return; }
         const split = fireZoneSplit(payload);
         const wild = split.wildland;
@@ -3809,9 +3840,14 @@
         } else {
           setText("fireTitle", _t("signal.fire_monitoring") || "\ud83d\udd25 Fire Signal \u2014 Monitoring");
           setText("fireCopy",  _t("signal.fire_copy_monitoring_long") || "Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.");
-          if (badge) badge.className = "status ok";
-          setText("fireStatusDetail", _t("status.clear") || "CLEAR");
+          if (badge) badge.className = "status neutral";
+          setText("fireStatusDetail", _t("status.none_detected") || "NONE DETECTED");
         }
+        // A zero here means "nothing was SEEN", never "nothing is burning":
+        // VIIRS cannot see through thick cloud. The caveat is always on when
+        // the count is zero — a caveat that appears only sometimes teaches
+        // people to read its absence as a guarantee.
+        renderFireCaveat(wild === 0 && volc === 0, stormStatus);
 
         setText("fireSourceChip", _t("source.nasa_firms") || "NASA FIRMS");
         setText("fireFreshnessChip", freshness);
@@ -4233,7 +4269,7 @@
 
         renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload);
         renderSignalStrip(fireSplit, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
-        renderFireCard(firePayload);
+        renderFireCard(firePayload, summaryPayload?.storm?.status ?? null);
         renderFloodCard(floodPayload, alertsPayload);
         renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit, resolveStormProduct(alertsPayload, summaryPayload?.storm?.status), floodWarning);
 
@@ -4670,7 +4706,7 @@
         // renderSignalStrip(fireSplit, floodPayload, fireWeatherPayload, alertsPayload, firePayload)
         renderSignalStrip(heroSplit, flood, fireWeather, alerts, fire);
         // renderFireCard(payload)
-        renderFireCard(fire);
+        renderFireCard(fire, summary?.storm?.status ?? null);
         // renderFloodCard(payload, alertsPayload)
         renderFloodCard(flood, alerts);
         // P31: the island dots are colour, not text, so they survive a locale

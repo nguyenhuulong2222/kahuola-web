@@ -696,6 +696,10 @@
       color: var(--green)
     }
 
+    .v-neutral {
+      color: var(--muted)
+    }
+
     .v-warn {
       color: var(--amber)
     }
@@ -2739,6 +2743,7 @@
       <span class="metric-value v-fire" id="fire-count"><span class="spinner"></span></span>
     </div>
     <div class="metric-subnote" id="fire-volcanic-note"></div>
+    <div class="metric-subnote" id="fire-cloud-caveat"></div>
 
     <div class="metric">
       <span class="metric-label" data-i18n="map.metric_nearest">Nearest</span>
@@ -6580,7 +6585,7 @@
           // status="loading", and painting a spinner for those made the count
           // flicker — or stick — with no user action behind it (D3).
           if (fire.status === "loading" && fireUserRefreshInFlight) { fireCountEl.className = "metric-value v-fire"; fireCountEl.innerHTML = '<span class="spinner"></span>'; }
-          else { fireCountEl.textContent = String(fireFeatures.length); fireCountEl.className = "metric-value " + (fireFeatures.length > 0 ? "v-fire" : "v-good"); }
+          else { fireCountEl.textContent = String(fireFeatures.length); fireCountEl.className = "metric-value " + (fireFeatures.length > 0 ? "v-fire" : "v-neutral"); }
         }
         // D4 — this panel counts ALL thermal detections; the fire-danger card
         // counts wildland only. Naming the volcanic share explains the gap
@@ -6593,6 +6598,23 @@
             ? (_tmpl("map.metric_detections_volcanic", { n: volc }) ||
               `${volc} of these are volcanic (Kīlauea / Mauna Loa), not wildfire.`)
             : "";
+        }
+        // A zero here means "nothing was SEEN", never "nothing is burning":
+        // VIIRS cannot see through thick cloud. Always on at zero — a caveat
+        // that appears only sometimes teaches people to read its absence as a
+        // guarantee. summaryStorm is already in scope (set by the summary
+        // poll), so this costs no extra request; anything that is not an
+        // explicit calm reading gets the stronger storm wording, because not
+        // knowing whether a storm is overhead is not knowing there is none.
+        const cloudEl = document.getElementById(`fire-cloud-caveat-${suffix}`);
+        if (cloudEl) {
+          if (fireFeatures.length > 0) cloudEl.textContent = "";
+          else {
+            const calm = String(summaryStorm?.status || "") === "none";
+            cloudEl.textContent = calm
+              ? (_t("status.fire_caveat_cloud") || "Satellites can't see through thick cloud.")
+              : (_t("status.fire_caveat_storm") || "Weather watches or warnings are in effect. Thick cloud can hide fire from satellites \u2014 a zero here is not an all-clear.");
+          }
         }
         const nearestEl = document.getElementById(`nearest-fire-${suffix}`);
         if (nearestEl) {

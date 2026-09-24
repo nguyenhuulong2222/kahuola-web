@@ -136,6 +136,9 @@
 
       // Status badges (Class A — glossary-locked)
       "status.clear": "CLEAR",
+      "status.none_detected": "NONE DETECTED",
+      "status.fire_caveat_cloud": "Satellites can't see through thick cloud.",
+      "status.fire_caveat_storm": "Weather watches or warnings are in effect. Thick cloud can hide fire from satellites — a zero here is not an all-clear.",
       "status.active": "ACTIVE",
       "status.monitoring": "MONITORING",
       "status.normal": "NORMAL",
@@ -485,8 +488,8 @@
       "map.fire_summary_critical": "NASA FIRMS indicates critical wildfire detections in {region}. The nearest signal is about {dist} miles from {loc}.",
       "map.fire_summary_n_nearest": "NASA FIRMS returned {n} wildfire detection{s} across {region}. The nearest signal is about {dist} miles from {loc}.",
       "map.fire_summary_n": "NASA FIRMS returned {n} wildfire detection{s} across {region}.",
-      "map.fire_summary_flood_active": "Flash flood watch geometry is active in {n} area{s}, while NASA FIRMS returned no current wildfire detections.",
-      "map.fire_summary_smoke_active": "NOAA HMS is showing {n} smoke region{s}, while NASA FIRMS returned no current wildfire detections.",
+      "map.fire_summary_flood_active": "Flash flood watch geometry is active in {n} area{s}. NASA FIRMS detected no fire in this snapshot — storm cloud can hide fire from satellites.",
+      "map.fire_summary_smoke_active": "NOAA HMS is showing {n} smoke region{s}. NASA FIRMS detected no fire in this snapshot — smoke and cloud can hide fire from satellites.",
       "map.ref_label_you": "your device location",
       "map.ref_label_view": "the reference view",
       "map.updated_colon": "Updated: {time}",
@@ -1285,6 +1288,9 @@
 
       // Status — glossary-locked
       "status.clear": "B\xccNH TH\u01af\u1edcNG",
+      "status.none_detected": "CHƯA PHÁT HIỆN",
+      "status.fire_caveat_cloud": "Vệ tinh không nhìn xuyên qua được mây dày.",
+      "status.fire_caveat_storm": "Đang có cảnh báo thời tiết. Mây dày có thể che khuất tầm nhìn của vệ tinh — số 0 ở đây không có nghĩa là an toàn.",
       // state.active (LOCKED) = "\u0110ang ho\u1ea1t \u0111\u1ed9ng"
       "status.active": "\u0110ang ho\u1ea1t \u0111\u1ed9ng",
       // state.monitoring (LOCKED) = "\u0110ang theo d\xf5i"
@@ -1640,8 +1646,8 @@
       "map.fire_summary_critical": "NASA FIRMS phát hiện cháy nghiêm trọng tại {region}. Tín hiệu gần nhất cách {loc} khoảng {dist} dặm.",
       "map.fire_summary_n_nearest": "NASA FIRMS trả về {n} tín hiệu phát hiện cháy trên {region}. Tín hiệu gần nhất cách {loc} khoảng {dist} dặm.",
       "map.fire_summary_n": "NASA FIRMS trả về {n} tín hiệu phát hiện cháy trên {region}.",
-      "map.fire_summary_flood_active": "Theo dõi lũ quét đang hoạt động ở {n} khu vực, trong khi NASA FIRMS không phát hiện cháy rừng hiện tại.",
-      "map.fire_summary_smoke_active": "NOAA HMS hiển thị {n} vùng khói, trong khi NASA FIRMS không phát hiện cháy rừng hiện tại.",
+      "map.fire_summary_flood_active": "Theo dõi lũ quét đang hoạt động ở {n} khu vực. NASA FIRMS không phát hiện cháy trong ảnh chụp này — mây bão có thể che khuất tầm nhìn của vệ tinh.",
+      "map.fire_summary_smoke_active": "NOAA HMS hiển thị {n} vùng khói. NASA FIRMS không phát hiện cháy trong ảnh chụp này — khói và mây có thể che khuất tầm nhìn của vệ tinh.",
       "map.ref_label_you": "vị trí thiết bị của bạn",
       "map.ref_label_view": "góc nhìn tham chiếu",
       "map.updated_colon": "Cập nhật: {time}",
