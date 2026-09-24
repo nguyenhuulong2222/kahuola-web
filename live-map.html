@@ -6618,11 +6618,15 @@
         }
         const nearestEl = document.getElementById(`nearest-fire-${suffix}`);
         if (nearestEl) {
-          if (!fireFeatures.length || !Number.isFinite(nearest)) { nearestEl.textContent = _t("map.s_none") || "None"; nearestEl.className = "metric-value v-good"; }
+          // "None" in green read as "no fire near you". It means no fire was
+          // DETECTED — same satellite blind spot as the count above it.
+          if (!fireFeatures.length || !Number.isFinite(nearest)) { nearestEl.textContent = _t("signal.fire_no_detections") || "No fire detections"; nearestEl.className = "metric-value v-neutral"; }
           else { nearestEl.textContent = `${nearest.toFixed(1)} mi`; nearestEl.className = "metric-value " + (nearest < 5 ? "v-crit" : nearest < 20 ? "v-warn" : "v-fire"); }
         }
         const criticalEl = document.getElementById(`critical-count-${suffix}`);
-        if (criticalEl) { criticalEl.textContent = criticalCount > 0 ? String(criticalCount) : (_t("map.s_none") || "None"); criticalEl.className = "metric-value " + (criticalCount > 0 ? "v-crit" : "v-good"); }
+        // Sweep: a zero critical count sat green beside a now-neutral zero
+        // count and its cloud caveat. Same fire-context zero, same treatment.
+        if (criticalEl) { criticalEl.textContent = criticalCount > 0 ? String(criticalCount) : (_t("map.s_none") || "None"); criticalEl.className = "metric-value " + (criticalCount > 0 ? "v-crit" : "v-neutral"); }
         // D1 — two separate clocks. "Latest detection" is when a satellite last
         // saw something (fire.sourceTime); "Updated" is when we last polled
         // successfully (fire.fetchAt, set on every fetch and previously unused).
@@ -7007,7 +7011,10 @@
           // to clear. Falls back to a dash only if the module has never fetched.
           const st = getState("fire");
           const n = Array.isArray(st?.features) ? st.features.length : null;
-          fireCount.className = "metric-value " + (n === null ? "v-dim" : n > 0 ? "v-fire" : "v-good");
+          // Sweep: this path re-paints the count after every refresh and was
+          // restoring v-good on zero, clobbering renderUnifiedPanels()' neutral
+          // token. A fix that one refresh undoes is not a fix.
+          fireCount.className = "metric-value " + (n === null ? "v-dim" : n > 0 ? "v-fire" : "v-neutral");
           fireCount.textContent = n === null ? "\u2014" : String(n);
         }
       });

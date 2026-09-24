@@ -307,6 +307,9 @@
     .signal-strip-status.ok{
       background:var(--ok-soft);border-color:rgba(103,194,126,.18);color:#ddf4e3;
     }
+    .signal-strip-status.neutral{
+      background:rgba(142,163,183,.10);border-color:rgba(142,163,183,.20);color:var(--text-dim);
+    }
     .signal-strip-status.watch{
       background:var(--warn-soft);border-color:rgba(255,204,102,.22);color:#ffe9b5;
     }
@@ -3524,8 +3527,10 @@
             fireStat.textContent = _t("status.volcanic") || "VOLCANIC";
           } else {
             fireAns.textContent  = _t("signal.strip.fire_clear") || "No fire detections";
-            fireStat.className   = "signal-strip-status ok";
-            fireStat.textContent = _t("status.clear") || "CLEAR";
+            // Same rule as the fire card: a zero means nothing was SEEN, so
+            // the strip must not paint it green or call it CLEAR either.
+            fireStat.className   = "signal-strip-status neutral";
+            fireStat.textContent = _t("status.none_detected") || "NONE DETECTED";
           }
         }
 
