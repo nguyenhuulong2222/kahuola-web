@@ -2877,7 +2877,7 @@
             context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.</div>
           <div class="summary-meta" style="margin-top:10px">
             <span class="chip v-blue" id="flood-official-chip" data-i18n="map.chip_flood_official">Official: NWS</span>
-            <span class="chip v-blue" id="flood-context-chip" data-i18n="map.chip_flood_context">Context: PacIOOS</span>
+            <span class="chip v-blue" id="flood-context-chip" data-i18n="map.chip_flood_context">Context: terrain</span>
             <span class="chip v-dim" id="flood-radar-chip" data-i18n="map.chip_flood_radar">Radar: NOAA</span>
           </div>
         </div>
@@ -3831,7 +3831,7 @@
     }
     function normalizeFloodContextFeatures(rawSignals) {
       return safeArray(rawSignals).map((raw, index) => {
-        const signal = normalizeBasePolygonSignal(raw, index, { type: "FloodRiskSignal", idPrefix: "flood-context", provider: "PACIOOS", product: "RAINFALL_WATERSHED_CONTEXT", official: false, fallbackSeverity: "LOW", ttlSeconds: 1800 });
+        const signal = normalizeBasePolygonSignal(raw, index, { type: "FloodRiskSignal", idPrefix: "flood-context", provider: "KAHUOLA_TERRAIN", product: "TERRAIN_RUNOFF_CONTEXT", official: false, fallbackSeverity: "LOW", ttlSeconds: 1800 });
         if (!signal) return null;
         const props = signal.properties || {};
         const riskIndex = typeof props.risk_index === "string" && props.risk_index.trim() ? props.risk_index.trim().toUpperCase() : signal.severity.level;
@@ -3866,8 +3866,8 @@
           properties: {
             id: signal.id, band, severity: level,
             qpe_mm: Number.isFinite(props.qpe_mm) ? props.qpe_mm : null,
-            source: props.source_provider || props.source || signal.source.provider || "NOAA MRMS",
-            source_label: props.source_label || "NOAA MRMS",
+            source: props.source_provider || props.source || signal.source.provider || "NEXRAD (derived)",
+            source_label: props.source_label || "NEXRAD (derived)",
             island: typeof props.island === "string" ? props.island : null,
             zone: typeof props.zone === "string" ? props.zone : null,
             advisory: "MRMS rainfall layer is situational context only.",
@@ -6635,7 +6635,7 @@
           else summaryText.textContent = _tmpl("map.fire_summary_n", { n: fireFeatures.length, s: fireFeatures.length === 1 ? "" : "s", region: fireScopeRegion }) || `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}.`;
         }
         const summarySource = document.getElementById(`summary-source-${suffix}`);
-        if (summarySource) summarySource.textContent = `${_t("map.source_colon") || "Source:"} ${(fire.sourceLabel || "NASA FIRMS \xb7 Kahu Ola Worker")} \xb7 Delivered by Kahu Ola civic aggregator \xb7 Flood official: ${flashFlood.sourceLabel || "NWS"} \xb7 Local context: ${floodContext.sourceLabel || "PacIOOS"} \xb7 MRMS: ${mrms.sourceLabel || "MRMS"} \xb7 Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} \xb7 Radar: NOAA`;
+        if (summarySource) summarySource.textContent = `${_t("map.source_colon") || "Source:"} ${(fire.sourceLabel || "NASA FIRMS \xb7 Kahu Ola Worker")} \xb7 Delivered by Kahu Ola civic aggregator \xb7 Flood official: ${flashFlood.sourceLabel || "NWS"} \xb7 Local context: ${floodContext.sourceLabel || "terrain"} \xb7 MRMS: ${mrms.sourceLabel || "MRMS"} \xb7 Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} \xb7 Radar: NOAA`;
         const summaryUpdated = document.getElementById(`summary-updated-${suffix}`);
         if (summaryUpdated) summaryUpdated.textContent = _tmpl("map.updated_colon", { time: fire.sourceTime ? hstTime(fire.sourceTime) : "—" }) || `Updated: ${fire.sourceTime ? hstTime(fire.sourceTime) : "—"}`;
         const summaryPrivacy = document.getElementById(`summary-privacy-${suffix}`);
@@ -6667,7 +6667,7 @@
       const wind = getState("windRisk");
       if (kind === "flood") return openHazardDetail({ title: _t("map.hd_flood_title") || "Flash Flood", status: flood.sourceStatus === "detected" ? (_t("map.hd_flood_st_active") || "Official flood status active") : flood.sourceStatus === "none" ? (_t("map.hd_flood_st_none") || "No active flash flood watch") : (_t("map.hd_flood_st_unavail") || "Official flood status unavailable"), note: _t("map.hd_flood_note") || "Official source: National Weather Service.", body: _t("map.hd_flood_body") || "Official flood polygons come from the National Weather Service. PacIOOS, MRMS, and NOAA radar remain supporting context layers." });
       if (kind === "context") return openHazardDetail({ title: _t("map.hd_ctx_title") || "Flood Context", status: context.sourceStatus === "detected" ? (_t("map.hd_ctx_st_active") || "Estimated local flood context available") : context.sourceStatus === "none" ? (_t("map.hd_ctx_st_none") || "No local flood context returned") : (_t("map.hd_ctx_st_unavail") || "Local flood context unavailable"), note: _t("map.hd_ctx_note") || "Source: NWS alerts + Kahu Ola terrain logic. Context only, not official flood geometry.", body: _t("map.hd_ctx_body") || "This layer is estimated local context only." });
-      if (kind === "mrms") return openHazardDetail({ title: _t("map.hd_mrms_title") || "MRMS Rainfall", status: mrms.sourceStatus === "detected" ? (_t("map.hd_mrms_st_active") || "MRMS rainfall context available") : mrms.sourceStatus === "none" ? (_t("map.hd_mrms_st_none") || "No MRMS polygons returned") : (_t("map.hd_mrms_st_unavail") || "MRMS rainfall unavailable"), note: _t("map.hd_mrms_note") || "Source: NOAA MRMS rainfall accumulation products.", body: _t("map.hd_mrms_body") || "MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
+      if (kind === "mrms") return openHazardDetail({ title: _t("map.hd_mrms_title") || "MRMS Rainfall", status: mrms.sourceStatus === "detected" ? (_t("map.hd_mrms_st_active") || "MRMS rainfall context available") : mrms.sourceStatus === "none" ? (_t("map.hd_mrms_st_none") || "No MRMS polygons returned") : (_t("map.hd_mrms_st_unavail") || "MRMS rainfall unavailable"), note: _t("map.hd_mrms_note") || "Source: NEXRAD reflectivity, converted to a rainfall estimate. Not an official NOAA MRMS product.", body: _t("map.hd_mrms_body") || "MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative." });
       if (kind === "radar") return openHazardDetail({ title: _t("map.hd_radar_title") || "Rain Radar", status: rainRadarVisible ? (_t("map.hd_radar_st_active") || "Live NOAA radar visible") : (_t("map.hd_radar_st_off") || "Radar is off"), note: _t("map.hd_radar_note") || "Source: NOAA NEXRAD via Iowa Mesonet \xb7 Proxied by Kahu Ola (USA + territories).", body: _t("map.hd_radar_body") || "NEXRAD shows real-time precipitation radar for Hawai\u02bfi and other US territories. Transparent areas mean no radar echo \u2014 no significant rain. Data refreshes every 2\u20135 minutes." });
       return openHazardDetail({ title: _t("map.hd_wind_title") || "Fire Weather", status: wind.sourceStatus === "detected" ? (_t("map.hd_wind_st_active") || "Fire weather spread context active") : wind.sourceStatus === "none" ? (_t("map.hd_wind_st_none") || "No elevated fire weather cells returned") : (_t("map.hd_wind_st_unavail") || "Fire weather context unavailable"), note: _t("map.hd_wind_note") || "Source: NWS + RAWS wind and humidity context.", body: _t("map.hd_wind_body") || "Fire Weather combines wind gust, sustained wind, humidity, and dry exposure into a civic spread-risk context layer. It is contextual, not an evacuation order." });
     }
@@ -6756,7 +6756,7 @@
     function openMrmsPopup(feature, lngLat) {
       const p = feature.properties || {};
       if (activePopup) activePopup.remove();
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔵 ${_L("map.popup_title_mrms", "MRMS Rainfall")}</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NOAA MRMS")}</div></div><div class="popup-severity normal">${escapeHtml(p.severity || p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone", "Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_window", "Window")}</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_accumulation", "Accumulation")}</div><div class="popup-metric-value">${p.qpe_mm != null ? p.qpe_mm + " mm" : "—"}${p.qpe_in != null ? " (" + p.qpe_in + " in)" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_risk_level", "Risk Level")}</div><div class="popup-metric-value">${escapeHtml(p.risk_index || "—")}</div></div></div><div class="popup-note">${_L("map.popup_mrms_note", "MRMS rainfall is contextual. Pair with official NWS alerts.")}</div></div>`;
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🔵 ${_L("map.popup_title_mrms", "Rainfall estimate (NEXRAD)")}</div><div class="popup-coords">${escapeHtml(p.source_label || p.source || "NEXRAD (derived)")}</div></div><div class="popup-severity normal">${escapeHtml(p.severity || p.risk_index || "Context")}</div></div><div class="popup-grid">${p.island ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_island_zone", "Island \xb7 Zone")}</div><div class="popup-metric-value">${escapeHtml(p.island)}${p.zone ? " \xb7 " + escapeHtml(p.zone) : ""}</div></div>` : ""}<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_window", "Window")}</div><div class="popup-metric-value">${escapeHtml(p.band || "—")}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_accumulation", "Accumulation")}</div><div class="popup-metric-value">${p.qpe_mm != null ? p.qpe_mm + " mm" : "—"}${p.qpe_in != null ? " (" + p.qpe_in + " in)" : ""}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_risk_level", "Risk Level")}</div><div class="popup-metric-value">${escapeHtml(p.risk_index || "—")}</div></div></div><div class="popup-note">${_L("map.popup_mrms_note", "MRMS rainfall is contextual. Pair with official NWS alerts.")}</div></div>`;
       activePopup = new maplibregl.Popup({ offset: 14, closeButton: true }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openWindRiskPopup(feature, lngLat) {

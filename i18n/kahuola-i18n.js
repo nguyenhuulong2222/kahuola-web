@@ -290,7 +290,7 @@
       "map.layer_smoke": "Smoke",
       "map.layer_perimeters": "Perimeters",
       "map.layer_rain_radar": "Rain Radar",
-      "map.layer_mrms": "MRMS Rainfall",
+      "map.layer_mrms": "Rainfall estimate (NEXRAD)",
       "map.layer_fire_weather": "Fire Weather",
       "map.kicker_aqi": "Official \xb7 Hawai\u02bbi DOH via EPA AirNow",
       "map.hazard_aqi": "Air Quality",
@@ -516,7 +516,7 @@
       "map.mrms_note_init": "NEXRAD QPE \xb7 Live when available",
       "map.radar_note_init": "NEXRAD \xb7 USA + territories",
       "map.wind_note_init": "Wind + humidity spread context",
-      "map.flood_ctx_note_init": "Statewide Hawai\u02bfi terrain + runoff context",
+      "map.flood_ctx_note_init": "Terrain and runoff context — not a rainfall observation",
       "map.local_note_init": "NWS Honolulu local storm reports",
 
       // Accordion preview labels and fallbacks
@@ -552,7 +552,7 @@
       "map.hd_mrms_st_active": "MRMS rainfall context available",
       "map.hd_mrms_st_none": "No MRMS polygons returned",
       "map.hd_mrms_st_unavail": "MRMS rainfall unavailable",
-      "map.hd_mrms_note": "Source: NOAA MRMS rainfall accumulation products.",
+      "map.hd_mrms_note": "Source: NEXRAD reflectivity, converted to a rainfall estimate. Not an official NOAA MRMS product.",
       "map.hd_mrms_body": "MRMS supports 1h / 3h / 24h rainfall context and should remain advisory, not authoritative.",
       // Hazard module detail: Rain Radar
       "map.hd_radar_title": "Rain Radar",
@@ -720,7 +720,7 @@
       // Popup titles
       "map.popup_title_fire": "Wildfire Detection Signal",
       "map.popup_title_fire_weather": "Fire Weather",
-      "map.popup_title_mrms": "MRMS Rainfall",
+      "map.popup_title_mrms": "Rainfall estimate (NEXRAD)",
       "map.popup_title_smoke": "Smoke Presence",
       "map.popup_title_perimeter": "Fire Perimeter",
       "map.popup_title_flood_ctx": "Flood Context",
@@ -1183,7 +1183,7 @@
 
       // ── Flood source chips (live-map.html tier-1 panel) ──────
       "map.chip_flood_official": "Official: NWS",
-      "map.chip_flood_context": "Context: PacIOOS",
+      "map.chip_flood_context": "Context: terrain",
       "map.chip_flood_radar": "Radar: NOAA"
     },
 
@@ -1449,7 +1449,7 @@
       "map.layer_smoke": "Kh\xf3i",
       "map.layer_perimeters": "Ranh gi\u1edbi ch\xe1y",
       "map.layer_rain_radar": "Radar m\u01b0a",
-      "map.layer_mrms": "L\u01b0\u1ee3ng m\u01b0a MRMS",
+      "map.layer_mrms": "Ước tính lượng mưa (NEXRAD)",
       "map.layer_fire_weather": "Th\u1eddi ti\u1ebft ch\xe1y",
       "map.kicker_aqi": "Ch\xednh th\u1ee9c \xb7 S\u1edf Y t\u1ebf Hawai\u02bbi qua EPA AirNow",
       "map.hazard_aqi": "Ch\u1ea5t l\u01b0\u1ee3ng kh\xf4ng kh\xed",
@@ -1671,7 +1671,7 @@
       "map.mrms_note_init": "NEXRAD QPE \xb7 Trực tiếp khi có sẵn",
       "map.radar_note_init": "NEXRAD \xb7 Hoa Kỳ + vùng lãnh thổ",
       "map.wind_note_init": "Bối cảnh gió + độ ẩm",
-      "map.flood_ctx_note_init": "Địa hình + thoát nước toàn tiểu bang Hawaiʻi",
+      "map.flood_ctx_note_init": "Bối cảnh địa hình và thoát nước — không phải số liệu quan trắc lượng mưa",
       "map.local_note_init": "Báo cáo bão địa phương NWS Honolulu",
 
       // Accordion preview labels and fallbacks
@@ -1707,7 +1707,7 @@
       "map.hd_mrms_st_active": "Bối cảnh lượng mưa MRMS có sẵn",
       "map.hd_mrms_st_none": "Không có vùng MRMS nào được trả về",
       "map.hd_mrms_st_unavail": "MRMS không khả dụng",
-      "map.hd_mrms_note": "Nguồn: sản phẩm tích lũy lượng mưa NOAA MRMS.",
+      "map.hd_mrms_note": "Nguồn: độ phản xạ radar NEXRAD, quy đổi thành ước tính lượng mưa. Không phải sản phẩm NOAA MRMS chính thức.",
       "map.hd_mrms_body": "MRMS hỗ trợ bối cảnh lượng mưa 1h / 3h / 24h và chỉ mang tính tham khảo.",
       // Hazard module detail: Rain Radar
       "map.hd_radar_title": "Radar mưa",
@@ -1869,7 +1869,7 @@
       // Popup titles
       "map.popup_title_fire": "Tín hiệu phát hiện cháy rừng",
       "map.popup_title_fire_weather": "Thời tiết cháy rừng",
-      "map.popup_title_mrms": "Lượng mưa MRMS",
+      "map.popup_title_mrms": "Ước tính lượng mưa (NEXRAD)",
       "map.popup_title_smoke": "Hiện diện khói",
       "map.popup_title_perimeter": "Vành đai lửa",
       "map.popup_title_flood_ctx": "Bối cảnh lũ",
@@ -2324,7 +2324,7 @@
 
       // Flood source chips
       "map.chip_flood_official": "Ch\xednh th\u1ee9c: NWS",
-      "map.chip_flood_context": "Ng\u1eef c\u1ea3nh: PacIOOS",
+      "map.chip_flood_context": "Bối cảnh: địa hình",
       "map.chip_flood_radar": "Radar: NOAA"
     },
 

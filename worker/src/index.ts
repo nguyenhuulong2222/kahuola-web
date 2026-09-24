@@ -696,7 +696,7 @@ function buildRadarSignals(region: string): Feature[] {
           id: `radar-${cell.id}`,
           island: cell.island,
           zone: cell.zone,
-          source: 'NOAA',
+          source: 'KAHU_OLA_TERRAIN',
           intensity,
           mm_per_hr_est: mmPerHr,
           confidence: 'LOW',
@@ -4790,7 +4790,7 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
 }
 
 // Fire Weather Context — NWS Red Flag + RAWS wind/humidity derived scoring
-// Uses same SMART_HAWAII_CELLS terrain logic as flood context
+// NWS alert passthrough only — no SMART_HAWAII_CELLS, no terrain scoring.
 async function handleFireWeather(url: URL, cors: CorsHeaders): Promise<Response> {
   const corsHeaders = cors;
 
