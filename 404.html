@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Page not found — Kahu Ola</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0c6fbf" />
+
+  <!-- Deliberately static. This page states no hazard condition of any kind and
+       makes no request: a 404 is served on paths we know nothing about, and the
+       one thing it must never do is imply a state of the world. Both languages
+       are rendered at once rather than switched, so the i18n bundle is not a
+       dependency and neither reader waits on script. -->
+  <style>
+    :root{
+      --bg:#08111a;
+      --bg-2:#0b1620;
+      --surface:#101b27;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.14);
+      --text:#eef4fb;
+      --text-dim:#c4d2df;
+      --muted:#8ea3b7;
+      --accent:#4da8ff;
+      --accent-soft:rgba(77,168,255,.12);
+      --radius-lg:22px;
+      --radius-sm:14px;
+      --shadow:0 18px 46px rgba(0,0,0,.28);
+      --font:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%) fixed;
+      color:var(--text);
+      font-family:var(--font);
+      -webkit-text-size-adjust:100%;
+    }
+    .wrap{
+      min-height:100dvh;
+      display:flex;align-items:center;justify-content:center;
+      padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));
+    }
+    .card{
+      width:100%;max-width:560px;
+      background:var(--surface);
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      box-shadow:var(--shadow);
+      padding:30px 26px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:10px;
+      font-weight:800;font-size:15px;letter-spacing:-.01em;
+      margin:0 0 20px;
+    }
+    .brand span{color:var(--muted);font-weight:600}
+    h1{
+      margin:0 0 6px;
+      font-size:clamp(22px,5vw,28px);
+      font-weight:900;letter-spacing:-.02em;
+      line-height:1.25;
+    }
+    p{margin:0;color:var(--text-dim);font-size:15px;line-height:1.6}
+    .vi{
+      margin-top:18px;padding-top:18px;
+      border-top:1px solid var(--line);
+    }
+    .vi h2{
+      margin:0 0 6px;
+      font-size:clamp(18px,4vw,21px);
+      font-weight:800;letter-spacing:-.01em;line-height:1.3;
+      color:var(--text);
+    }
+    .actions{
+      display:flex;flex-wrap:wrap;gap:10px;
+      margin-top:24px;
+    }
+    .btn{
+      flex:1 1 auto;text-align:center;
+      display:inline-block;text-decoration:none;
+      padding:12px 18px;border-radius:var(--radius-sm);
+      font-weight:700;font-size:14px;
+      border:1px solid var(--line-strong);
+      color:var(--text);
+      background:transparent;
+    }
+    .btn.primary{
+      background:var(--accent-soft);
+      border-color:rgba(77,168,255,.34);
+      color:#dbeeff;
+    }
+    .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    @media (hover:hover){ .btn:hover{border-color:var(--accent)} }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <p class="brand">🔥 Kahu Ola <span>· Guardian of Life</span></p>
+
+      <h1 lang="en">Page not found</h1>
+      <p lang="en">For current hazard conditions, see the Live Map.</p>
+
+      <div class="vi">
+        <h2 lang="vi">Không tìm thấy trang</h2>
+        <p lang="vi">Xem tình hình hiểm họa hiện tại trên Bản đồ trực tiếp.</p>
+      </div>
+
+      <div class="actions">
+        <a class="btn primary" href="/live-map">Live Map · Bản đồ trực tiếp</a>
+        <a class="btn" href="/">Home · Trang chủ</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
