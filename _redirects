@@ -13,3 +13,32 @@
 # kept so the destination does not depend on that built-in behaviour.
 /storm       /live-map  301
 /storm.html  /live-map  301
+
+# Invariant 2. /Maui and the statewide wireframe served hazard STATES that were
+# typed into the HTML and fetched from nothing: "Flood Watch is in effect for
+# Maui County", "AQI 67 — Moderate", "Storm Watch · Active", "Updated just now".
+# The wireframe had not been touched since 2026-03-11. Both were indexable, and
+# a resident searching "maui flood watch" could land on an NWS product claim
+# that no feed ever issued. Deleted; these send that traffic to the live map,
+# which answers the same question from real data.
+#
+# Measured on the live host 2026-09-24, BEFORE deletion:
+#   /Maui                                              200  the fabricated page
+#   /Maui.html                                         308 -> /Maui
+#   /Hawai%CA%BBi%20statewide%20page%20wireframe       200  the fabricated page
+#   /Hawai...wireframe.html                            308 -> extensionless form
+#   /maui  /maui.html  /hawaii-statewide.html          200  index.html fallback
+# Pages matches file paths case-SENSITIVELY and falls back to index.html with
+# 200 for anything unmatched, so the lowercase and hyphenated spellings never
+# served the fabricated content. They are listed anyway: after deletion they
+# would otherwise fall through to that silent 200 homepage, and a stale link or
+# bookmark is better answered by the live map than by a page that looks like it
+# worked. The percent-encoded source is the only writable form — _redirects is
+# whitespace-delimited, so the literal space cannot be expressed.
+/Maui.html                                        /live-map  301
+/Maui                                             /live-map  301
+/maui.html                                        /live-map  301
+/maui                                             /live-map  301
+/hawaii-statewide.html                            /live-map  301
+/Hawai%CA%BBi%20statewide%20page%20wireframe.html /live-map  301
+/Hawai%CA%BBi%20statewide%20page%20wireframe      /live-map  301
