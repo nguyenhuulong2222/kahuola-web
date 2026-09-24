@@ -1,0 +1,15 @@
+# Cloudflare Pages redirects.
+#
+# /storm was a placeholder that never described an event: its copy read "when a
+# storm event is active ... Kahu Ola will surface context here", under a title
+# of "Active Storm Tracker". Nothing on the site linked to it, so the only way
+# in was organic search — which is exactly the arrival that matters, because a
+# resident searching mid-event landed on a page that read as "nothing is
+# happening" while a real watch was posted. The live map is what that reader
+# wanted, and the page's own text already said so.
+#
+# Cloudflare Pages already 308s /storm.html -> /storm, so that request now
+# chains 308 -> 301 and still ends at the live map. The explicit .html rule is
+# kept so the destination does not depend on that built-in behaviour.
+/storm       /live-map  301
+/storm.html  /live-map  301
