@@ -23,3 +23,14 @@ scripts/insights/brief-latest.json
 *cf-analytics-token*
 *cf-account-id*
 CF_ANALYTICS_TOKEN*
+# any n8n export whose name advertises a token — one `git add -A` away from
+# being published otherwise
+*WITH-TOKEN*
+
+# Untracked 2026-09-24. Cloudflare Pages serves the repo root verbatim, so a
+# tracked file is a published file. These are build junk, scratch copies and a
+# local AI workspace — none of them site assets. They stay on disk.
+tmp_compare/
+_to_wire_into_worker/
+KahuOla_AI_Ready for Gemma 4 workspae/
+*.zip

@@ -73,7 +73,7 @@ export async function handleContext(request: Request, env: Env): Promise<Respons
     try {
       const nwsResponse = await fetch(nwsUrl, {
         headers: {
-          "User-Agent": "(kahuola.org, frankynguyen8@gmail.com)",
+          "User-Agent": "(kahuola.org, <redacted>)",
           "Accept": "application/geo+json",
         },
       });

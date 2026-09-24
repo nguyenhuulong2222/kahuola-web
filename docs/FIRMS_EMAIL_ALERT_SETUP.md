@@ -33,7 +33,7 @@ Create one AOI per island (or a single bounding box covering all main islands):
 **Alert settings:**
 - Satellite: VIIRS (375 m) — preferred over MODIS for small fires
 - Alert trigger: **Any detection within AOI** (not just new fires)
-- Email: `kahuola.alerts@gmail.com` (or whichever Gmail is connected to n8n)
+- Email: `<your-email>` (or whichever Gmail is connected to n8n)
 - Frequency: Real-time (sent within ~15 min of satellite overpass)
 
 ---

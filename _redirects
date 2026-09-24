@@ -42,3 +42,49 @@
 /hawaii-statewide.html                            /live-map  301
 /Hawai%CA%BBi%20statewide%20page%20wireframe.html /live-map  301
 /Hawai%CA%BBi%20statewide%20page%20wireframe      /live-map  301
+
+# ── EXPOSURE STOPGAP ────────────────────────────────────────────────────────
+# TEMPORARY. Cloudflare Pages' build output directory is the repo ROOT with no
+# build step (CLOUDFLARE_PAGES_DEPLOY.md:29 — "Build output dir | / (root)"),
+# so every tracked file ships publicly by default. Audited 2026-09-24: the full
+# Worker source, wrangler.toml, 76 docs, an AI workspace, build scripts and a
+# setup doc containing a bearer token were all returning 200.
+#
+# This is a BLOCKLIST, which is the wrong shape — it fails the day someone adds
+# a directory nobody remembers to list here. It buys time for the real fix: a
+# public/ output directory, so serving becomes opt-in instead of automatic.
+# Delete this whole section when that lands.
+#
+# Order matters: first match wins, so these sit AFTER the specific page
+# redirects above and never shadow them.
+#
+# Deliberately NOT blocked: i18n/, assets/, js/, data/, .well-known/, every
+# *.html page, styles.css, layers.config.js, logo, image*.png, sitemap.xml,
+# robots.txt, _headers, _redirects — and LICENSE, which is served on purpose.
+/docs/*                                             /404  301
+/worker/*                                           /404  301
+/scripts/*                                          /404  301
+/infrastructure/*                                   /404  301
+/mobile/*                                           /404  301
+/tmp_compare/*                                      /404  301
+/_to_wire_into_worker/*                             /404  301
+/KahuOla_AI_Ready%20for%20Gemma%204%20workspae/*    /404  301
+
+# Source of the embeddable widget. The widget itself is a SEPARATE Worker on
+# widget.kahuola.org/v1/* (verified live, 200) and partner embeds load it from
+# there, never from this origin — so blocking the Pages copy costs nothing.
+/kahuola-widget/*                                   /404  301
+
+# Root-level non-site files.
+/README.md                                          /404  301
+/CONTRIBUTING.MD                                    /404  301
+/CLOUDFLARE_PAGES_DEPLOY.md                         /404  301
+/KAHU_OLA_V4_SEO_DOCTRINE.md                        /404  301
+/KAHUOLA_SEO_IMPLEMENTATION_CHECKLIST.md            /404  301
+/extract_kahuola_ai_ready.py                        /404  301
+/filter_kahuola.py                                  /404  301
+/update_fire.py                                     /404  301
+/kahuola_brand_package.zip                          /404  301
+/kahuola_n8n_workflow.json                          /404  301
+/.gitignore                                         /404  301
+/CNAME                                              /404  301
