@@ -682,33 +682,16 @@ function computeRadarScore(cell: IslandCell): number {
   return terrainWeight(cell.terrain) + runoffWeight(cell.runoff) + coastalWeight(cell.coastalExposure);
 }
 
-function buildRadarSignals(region: string): Feature[] {
-  return SMART_HAWAII_CELLS
-    .filter((cell) => regionAllowsIsland(region, cell.island))
-    .map((cell) => {
-      const score = computeRadarScore(cell);
-      const intensity = intensityFromScore(score);
-      const mmPerHr = intensity === 'HEAVY' ? 18 : intensity === 'MODERATE' ? 8 : 3;
-      return {
-        type: 'Feature',
-        geometry: polygonFromRing(cell.ring),
-        properties: {
-          id: `radar-${cell.id}`,
-          island: cell.island,
-          zone: cell.zone,
-          source: 'KAHU_OLA_TERRAIN',
-          intensity,
-          mm_per_hr_est: mmPerHr,
-          confidence: 'LOW',
-          derived: true,
-          terrain: cell.terrain,
-          runoff: cell.runoff,
-          coastal_exposure: cell.coastalExposure,
-          note: 'Smart statewide Hawaiʻi radar context cell derived by Kahu Ola civic logic.',
-        },
-      };
-    });
-}
+// buildRadarSignals() lived here. It manufactured one "rainfall" cell per
+// island from a TERRAIN score — mm_per_hr_est of 18 / 8 / 3 — and returned it
+// whenever NEXRAD was unreachable. The labels around it were honest, but a
+// consumer reading mm_per_hr_est still got a number that described no
+// observation anywhere, and Invariant III says drop the data rather than infer
+// it. Removed together with its only caller, handleRainRadar's catch path.
+//
+// computeRadarScore / intensityFromScore stay: flood-context and landslide
+// still use the terrain score, where it is labelled terrain context and
+// carries no observational units.
 
 // Hawaii NEXRAD station IDs covered by Iowa State Mesonet
 // PHMO = Molokai, PHKM = Kamuela (Big Island), PHWA = Waimea, PHKI = Kauai
@@ -723,10 +706,25 @@ function dbzToIntensity(dbz: number): 'NONE' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 
   return 'INTENSE';
 }
 
-// dBZ → estimated mm/hr (Marshall-Palmer approximation)
+// dBZ → estimated mm/h via the Marshall-Palmer stratiform relation Z = a·R^b.
+//
+// Marshall-Palmer stratiform relation; tends to underestimate heavy tropical/
+// orographic rain — the regime Hawaiʻi actually gets, so treat the high end as
+// a floor rather than a measurement.
+//
+// Written as the relation itself rather than a pre-solved exponent. The old
+// form was `10^((dBZ - 23.0) / 16.6)`, which reads like Marshall-Palmer but is
+// not: for Z = a·R^b the denominator is 10b and the offset is 10·log10(a), so
+// 16.6 encodes b = 1.66, giving Z = 199.5·R^1.66. It ran ~13% low at 50 dBZ and
+// ~15% low at 55 dBZ against the relation the comment claimed. Naming MP_A and
+// MP_B keeps the constants auditable instead of hidden inside arithmetic.
+const MP_A = 200;    // Marshall-Palmer a (dimensionless), Z = a·R^b
+const MP_B = 1.6;    // Marshall-Palmer b (dimensionless)
+
 function dbzToMmHr(dbz: number): number {
   if (dbz <= 0) return 0;
-  return Math.round(Math.pow(10, (dbz - 23.0) / 16.6) * 10) / 10;
+  const z = Math.pow(10, dbz / 10);            // dBZ → Z (mm^6/m^3)
+  return Math.round(Math.pow(z / MP_A, 1 / MP_B) * 10) / 10;   // Z → R (mm/h)
 }
 
 async function handleRainRadar(url: URL, cors: CorsHeaders): Promise<Response> {
@@ -829,27 +827,28 @@ async function handleRainRadar(url: URL, cors: CorsHeaders): Promise<Response> {
     return response;
 
   } catch (e: unknown) {
-    // Fallback: terrain scoring clearly labeled as FALLBACK, not real data
+    // NEXRAD is unreachable, so we do not know the rain rate. Say that.
+    //
+    // This path used to answer with buildRadarSignals(): one cell per island,
+    // each carrying mm_per_hr_est of 18 / 8 / 3 picked by a TERRAIN score.
+    // Those numbers described no observation anywhere — a radar outage rendered
+    // as rainfall totals. The labels around them were honest ("Terrain Context
+    // (NEXRAD unavailable)", confidence LOW, source KAHU_OLA_TERRAIN), but a
+    // consumer reading mm_per_hr_est got a fabricated number regardless, and
+    // Invariant III says drop the data rather than infer it.
+    //
+    // Empty signals + status 'unavailable' is the same shape handleMrmsQpe
+    // already returns on failure, so a reader needs one contract, not two.
     const msg = e instanceof Error ? e.message : 'unknown';
-    const fallbackSignals = buildRadarSignals(region).map((f) => ({
-      ...f,
-      properties: {
-        ...f.properties,
-        source_provider: 'NEXRAD_TERRAIN_FALLBACK',
-        source_label: 'Terrain Context (NEXRAD unavailable)',
-        confidence: 'LOW',
-        note: `Live NEXRAD unavailable (${msg}). Showing terrain-based context only.`,
-      },
-    }));
     return jsonResp(
-      buildHazardEnvelope('rain-radar', 'NEXRAD_FALLBACK', region, fallbackSignals,
+      buildHazardEnvelope('rain-radar', 'NEXRAD_UNAVAILABLE', region, [],
         {
-          status: fallbackSignals.length ? 'degraded' : 'none',
-          count: fallbackSignals.length,
-          data_source: 'NEXRAD_TERRAIN_FALLBACK',
-          message: 'Live NEXRAD unavailable. Showing terrain-based rainfall context.',
+          status: 'unavailable',
+          count: 0,
+          data_source: 'UNAVAILABLE',
+          message: 'Live NEXRAD rainfall data is temporarily unavailable.',
         },
-        { authority: 'contextual', note: `Fallback reason: ${msg}` },
+        { authority: 'contextual', note: `Upstream unavailable: ${msg}` },
       ),
       200, cors,
     );
