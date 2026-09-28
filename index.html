@@ -1765,6 +1765,11 @@
         <div class="primary-banner" id="primaryBanner">
           <div id="heroBannerTitle">⏳ Checking official sources…</div>
           <div class="primary-banner-source" id="heroBannerCopy">NASA FIRMS · NWS · NEXRAD</div>
+          <!-- P36a-4. Secondary line and county link, both hidden by default.
+               Text via textContent, href from the fixed COUNTY_LINKS table. -->
+          <div class="primary-banner-source" id="heroSecondary" hidden></div>
+          <a class="primary-banner-source" id="heroCountyLink" href="https://dod.hawaii.gov/hiema/"
+             target="_blank" rel="noopener noreferrer" hidden></a>
         </div>
 
         <!-- ── P34b: FIND HELP — wayfinding, never a directive ──────────────
@@ -3286,7 +3291,47 @@
 
       // P52: `fireCount` is the WILDLAND count. `volcanicCount` is appended
       // last so no existing call site's positional arguments move.
-      function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind, storm, where, volcanicCount) {
+      // P36a-4. One descriptor, built from the split, used by BOTH render paths
+      // so the hero cannot disagree with itself across a locale switch.
+      // P36a-4. The hero's secondary line and county link. Both reset on every
+      // render — a stale link left visible would point a reader at a county that
+      // no longer has a detection. textContent and a fixed href table only.
+      function applyHeroRecentWildfireExtras(n, rw) {
+        const sec = document.getElementById("heroSecondary");
+        if (sec) {
+          const t = n && n.secondary;
+          sec.textContent = t || "";
+          sec.hidden = !t;
+        }
+        const lk = document.getElementById("heroCountyLink");
+        if (lk) {
+          if (rw && n && n.secondary !== undefined) {
+            const key = rw.countyKey;
+            lk.href = (key && COUNTY_LINKS[key]) || "https://dod.hawaii.gov/hiema/";
+            lk.textContent = key
+              ? (_tmpl("signal.fire_county_link", { where: countyName(key) || "" }) || `${countyName(key)} Emergency Management`)
+              : (_t("signal.fire_county_link_state") || "Hawaiʻi Emergency Management");
+            lk.hidden = false;
+          } else {
+            lk.hidden = true;
+          }
+        }
+      }
+
+      function recentWildfireInfo(split) {
+        const n = (split && split.wildlandOlder) || 0;
+        if (!n) return null;
+        const keys = (split && Array.isArray(split.olderCounties)) ? split.olderCounties : [];
+        const names = keys.map(countyName).filter(Boolean);
+        return {
+          n: n,
+          h: Math.max(1, Math.round(((split && split.olderAgeSeconds) || 0) / 3600)),
+          where: names.length ? names.join(" \u00b7 ") : "",
+          countyKey: keys.length ? keys[0] : null,
+        };
+      }
+
+      function buildNarrative(primaryEvent, fireCount, floodWarning, floodWatch, redFlag, highWind, storm, where, volcanicCount, recentWildfire) {
         if (primaryEvent === "DEGRADED") {
           // Names the LAYER that failed, never an upstream agency.
           var _failed = (_lastFailedLayers && _lastFailedLayers.length)
@@ -3441,6 +3486,33 @@
         // `hv` override supplies the same three strings; this branch is what
         // keeps bannerCopy and kicClass correct, and is the fail-safe if the
         // split is ever missing.
+        if (primaryEvent === "RECENT_WILDFIRE") {
+          const _rn = Number(recentWildfire && recentWildfire.n) || 0;
+          const _rh = Number(recentWildfire && recentWildfire.h) || 0;
+          const _rw = (recentWildfire && recentWildfire.where) || "";
+          const _rv = Number(volcanicCount) || 0;
+          return {
+            kicker:      _t("hero.kicker.recent_wildfire") || "RECENT WILDFIRE HEAT",
+            title:       _rw
+              ? (_tmpl("hero.title.recent_wildfire_where", { where: _rw }) || `Recent wildfire heat in ${_rw}.`)
+              : (_t("hero.title.recent_wildfire") || "Recent wildfire heat detected."),
+            narrative:   _rw
+              ? (_tmpl("hero.narrative.recent_wildfire_where", { h: _rh, where: _rw })
+                 || `Satellites detected wildfire heat here about ${_rh} h ago and have not seen it since. Satellites can miss smoldering fires. Check ${_rw} Emergency Management for current status.`)
+              : (_tmpl("hero.narrative.recent_wildfire", { h: _rh })
+                 || `Satellites detected wildfire heat here about ${_rh} h ago and have not seen it since. Satellites can miss smoldering fires. Check your county emergency agency for current status.`),
+            bannerTitle: _tmpl("hero.banner.recent_wildfire", { n: _rn, s: _rn > 1 ? "s" : "", where: _rw })
+              || `\ud83d\udd25 ${_rn} older wildfire detection${_rn > 1 ? "s" : ""}${_rw ? " \u00b7 " + _rw : ""}`,
+            bannerCopy:  _tmpl("hero.banner_copy.recent_wildfire", { h: _rh })
+              || `SOURCE: NASA FIRMS VIIRS \u00b7 LAST SEEN ~${_rh} H AGO`,
+            // Amber, never fire-red: this is a record of heat that was seen, not
+            // a claim that something is burning now.
+            kicClass: "warn",
+            secondary: _rv > 0
+              ? (_tmpl("hero.secondary.volcanic_also", { v: _rv }) || `Also: ${_rv} volcanic heat signals at Kīlauea`)
+              : null,
+          };
+        }
         if (primaryEvent === "VOLCANIC_HEAT") {
           var _vn = Number(volcanicCount) || 0, _vs = _vn > 1 ? "s" : "";
           return {
@@ -3645,7 +3717,8 @@
         // when every zone in that set resolved.
         const stormProduct = resolveStormProduct(alertsPayload, summaryPayload?.storm?.status);
         const stormWhere = stormProductIslands(alertsPayload, stormProduct);
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, stormProduct, stormWhere, volcCount);
+        const _rw = recentWildfireInfo(counts.fireSplit);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, stormProduct, stormWhere, volcCount, _rw);
         const d = buildDelta(primaryEvent, fireCount, floodWarn);
         // 100%-volcanic wording override (text only; SAME shared classifier as the
         // Kūpuna advisory). P52 adds the VOLCANIC_HEAT state, which is where
@@ -3682,6 +3755,10 @@
             // not an evacuation one. MUST also exist in the language-change
             // twin of this map below, or a locale switch reverts it to
             // "Hawai\u02bfi is calm right now".
+            // P36a-4 twin — must exist in BOTH maps or a locale switch drops the
+            // state back to "calm". Plain text, no span markup: the county name
+            // comes from data and must never reach innerHTML.
+            RECENT_WILDFIRE: { html: null, cls: 'warn' },
             VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',              cls: 'warn'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
@@ -3689,12 +3766,17 @@
             DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',           cls: 'warn'  },
           };
           const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
-          titleEl.innerHTML = hv ? hv.titleHtml : titleData.html;
+          // html === null means the title carries DATA (a county name), so it is
+          // set as text. innerHTML is reserved for the developer-controlled
+          // static strings above it.
+          if (!hv && titleData.html === null) { titleEl.textContent = n.title || ""; }
+          else { titleEl.innerHTML = hv ? hv.titleHtml : titleData.html; }
           titleEl.className = `hero-title ${titleData.cls}`;
         }
         setText("heroNarrative", hv ? hv.narrative : n.narrative);
         setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
+        applyHeroRecentWildfireExtras(n, _rw);
         const kicker = document.getElementById("heroKicker");
         if (kicker) { kicker.textContent = hv ? hv.kicker : n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
 
@@ -4440,6 +4522,7 @@
         // payload without the field ranks exactly as it did before.
         const fireSplit      = fireZoneSplit(firePayload);
         const wildlandCount  = fireSplit.wildland;
+        const olderWildlandCount = fireSplit.wildlandOlder || 0;
         const volcanicCount  = fireSplit.volcanic;
         // Mirrors renderSignalStrip's own definition — any NWS fire-weather
         // product outranks a volcanic thermal note.
@@ -4529,6 +4612,14 @@
         // It sits at the bottom of Tier 3 so every NWS product — including a
         // Fire Weather Watch, which sets no primaryEvent of its own — outranks
         // it. It can therefore only ever replace MONITORING.
+        // P36a-4. RECENT_WILDFIRE sits directly below the last official-alert
+        // state and directly above VOLCANIC_HEAT. Wildfire-first: volcanic heat
+        // at Kīlauea is a continuous, expected condition, and letting it outrank
+        // the only signal the page carries about a real fire is how the homepage
+        // led with "Volcanic heat at Kīlauea" while the Olowalu fire was under
+        // an evacuation order. It never claims an ACTIVE fire — that is
+        // FIRE_ACTIVE's job and requires a current detection.
+        else if (olderWildlandCount > 0)             primaryEvent = "RECENT_WILDFIRE";
         else if (volcanicCount > 0 && !fireWxActive) primaryEvent = "VOLCANIC_HEAT";
         // Tier 4 — MONITORING (the initialiser above).
         _lastFailedLayers = failedLayers;
@@ -4946,6 +5037,10 @@
             STORM_WATCH:   { html: stormTitleHtml(_langStormProduct, "watch"),   cls: 'warn'  },
             FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
             // P52 \u2014 twin of the VOLCANIC_HEAT entry in applyHero's map.
+            // P36a-4 twin — must exist in BOTH maps or a locale switch drops the
+            // state back to "calm". Plain text, no span markup: the county name
+            // comes from data and must never reach innerHTML.
+            RECENT_WILDFIRE: { html: null, cls: 'warn' },
             VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',            cls: 'warn'  },
             FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
             FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
@@ -4957,16 +5052,21 @@
             DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',         cls: 'warn'  },
           };
           const td = titleMap[primaryEvent] || titleMap.MONITORING;
-          titleEl.innerHTML = hv ? hv.titleHtml : td.html;
+          // P36a-4 twin of applyHero's text-path: html === null means the title
+          // carries data (a county name) and must be set as text, never HTML.
+          if (!hv && td.html === null) { titleEl.textContent = n.title || ""; }
+          else { titleEl.innerHTML = hv ? hv.titleHtml : td.html; }
           titleEl.className = `hero-title ${td.cls}`;
         }
 
         // Re-render hero narrative / kicker / banner
         // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere, volcCount);
+        const _rw = recentWildfireInfo(heroSplit);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere, volcCount, _rw);
         setText("heroNarrative", hv ? hv.narrative : n.narrative);
         setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
+        applyHeroRecentWildfireExtras(n, _rw);
         const kicker = document.getElementById("heroKicker");
         if (kicker) { kicker.textContent = hv ? hv.kicker : n.kicker; kicker.className = "hero-state-kicker " + n.kicClass; }
 
