@@ -1268,6 +1268,9 @@ export default {
       if (path === '/api/media/morning-brief' || path === '/media/morning-brief') return handleMorningBrief(url, env, cors);
       if (path === '/api/media/push-now' || path === '/media/push-now') return handlePushNow(url, env, cors);
       if (path === '/api/hazards/local-hazards' || path === '/hazards/local-hazards') return handleLocalHazards(url, cors);
+      // P37a. Verbatim official county news. Separate handler; touches no FIRMS
+      // or summary code path.
+      if (path === '/api/official/county-news') return handleOfficialCountyNews(url, cors);
       if (path === '/api/firms/hotspots') return handleFirmsHotspots(url, env, cors);
 
       const wmsMatch = path.match(/^\/api\/tiles\/wms\/([a-z_]+)$/);
@@ -4695,6 +4698,166 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
     { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'X-Kahuola-Cache': 'MISS', ...cors } },
   );
   await cache.put(new Request(cacheKey), response.clone());
+  return response;
+}
+
+// ── OFFICIAL COUNTY NEWS — VERBATIM PASSTHROUGH (P37a) ─────────────────────
+// Satellite silence must never end a fire that officials still call active.
+// The Olowalu brush fire (Maui, reported 2026-09-26 13:57 HST, evacuation
+// order, ~300 acres) appears in NO machine-readable official source we can
+// reach: WFIGS Incident Locations carries 391 incidents nationally and ZERO in
+// Hawaiʻi, because county fire departments do not report local brush fires
+// into the federal interagency system. NWS carries no fire product for it.
+// What DOES exist is the county's own news feed, in prose.
+//
+// So this endpoint QUOTES officials; it never interprets them. No keyword
+// filtering, no status inference, no coordinates, no summarisation. A reader
+// gets the county's own headline and a link to the county's own page. Layer A
+// owns truth, and on this surface the county IS Layer A.
+const OFFICIAL_NEWS_SOURCES: Record<string, { url: string; linkPrefix: string; label: string }> = {
+  maui: {
+    url: 'https://www.mauicounty.gov/RSSFeed.aspx?ModID=1&CID=All-newsflash.xml',
+    linkPrefix: 'https://www.mauicounty.gov/',
+    label: 'Maui County News Flash',
+  },
+  hiema: {
+    url: 'https://dod.hawaii.gov/hiema/feed/',
+    linkPrefix: 'https://dod.hawaii.gov/',
+    label: 'Hawaiʻi Emergency Management Agency',
+  },
+};
+
+const OFFICIAL_NEWS_TTL = 300;
+const OFFICIAL_NEWS_MAX_ITEMS = 5;
+
+// Honest identification. If a county blocks this UA we report it rather than
+// spoofing a browser: a civic aggregator that disguises itself to a government
+// server has no standing to complain when the data is wrong.
+const OFFICIAL_NEWS_UA = 'KahuOla/4.8 (+https://kahuola.org)';
+
+// XML decoding, not editing: the five predefined entities plus numeric
+// character references. A county writing "Honoapi&#699;ilani" means the ʻokina,
+// and leaving the escape intact would display mangled text, not faithful text.
+// This expands what the markup encodes; it never rewrites what the agency said.
+//
+// Rejected references are DROPPED, never substituted and never allowed to drop
+// the whole item: an unrepresentable character must not delete a headline that
+// may carry an evacuation order.
+function decodeXmlEntities(v: string): string {
+  return v
+    .replace(/&#(?:x([0-9A-Fa-f]{1,6})|([0-9]{1,7}));/g, (_m, hex, dec) => {
+      const cp = hex ? parseInt(hex, 16) : parseInt(dec, 10);
+      if (!Number.isFinite(cp)) return '';
+      if (cp > 0x10FFFF) return '';                       // outside Unicode
+      if (cp >= 0xD800 && cp <= 0xDFFF) return '';        // lone surrogate
+      if (cp < 0x20 && cp !== 0x09 && cp !== 0x0A && cp !== 0x0D) return '';  // control
+      try { return String.fromCodePoint(cp); } catch { return ''; }
+    })
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');   // last, so &amp;lt; does not become '<'
+}
+
+// Pull one tag's text out of an <item> block. CDATA is unwrapped; anything else
+// is taken as-is. Pure, never throws.
+function rssTagText(itemXml: string, tag: string): string | null {
+  const m = itemXml.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'i'));
+  if (!m) return null;
+  let v = m[1];
+  const cdata = v.match(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/);
+  if (cdata) v = cdata[1];
+  v = decodeXmlEntities(v).trim();
+  return v.length ? v : null;
+}
+
+type OfficialNewsItem = { title: string; url: string; published_at: string; description: string | null };
+
+// Strict and fail-closed (Invariant III). An item missing a title, a link or a
+// parseable pubDate is DROPPED, and a link outside the source's own domain is
+// DROPPED — a feed that has been tampered with must not be able to point a
+// resident at an arbitrary host during an emergency.
+function parseRssItems(xml: string, linkPrefix: string, max: number): OfficialNewsItem[] {
+  const out: OfficialNewsItem[] = [];
+  const blocks = xml.match(/<item\b[\s\S]*?<\/item>/gi);
+  if (!blocks) return out;
+  for (const b of blocks) {
+    const title = rssTagText(b, 'title');
+    const link = rssTagText(b, 'link');
+    const pub = rssTagText(b, 'pubDate');
+    if (!title || !link || !pub) continue;
+    if (!link.startsWith(linkPrefix)) continue;
+    const ms = Date.parse(pub);
+    if (!Number.isFinite(ms)) continue;
+    out.push({
+      title,
+      url: link,
+      published_at: new Date(ms).toISOString(),
+      description: rssTagText(b, 'description'),
+    });
+  }
+  // Newest first, then capped. Sorting before the cap matters: a feed that is
+  // not already in date order would otherwise drop its most recent item.
+  out.sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at));
+  return out.slice(0, max);
+}
+
+async function handleOfficialCountyNews(url: URL, cors: CorsHeaders): Promise<Response> {
+  const county = (url.searchParams.get('county') || 'maui').toLowerCase();
+  const src = OFFICIAL_NEWS_SOURCES[county];
+  if (!src) return err(400, 'county must be one of: ' + Object.keys(OFFICIAL_NEWS_SOURCES).join(', '), cors);
+
+  const cacheKey = `https://kahuola.org/cache/official-news/${county}`;
+  const cache = caches.default;
+  const cacheReq = new Request(cacheKey);
+  const cached = await cache.match(cacheReq);
+  const cachedJson = cachedJsonResponse(cached, cors, 200);
+  if (cachedJson) return cachedJson;
+
+  const base = {
+    source: src.label,
+    source_url: src.url,
+    county,
+    fetched_at: new Date().toISOString(),
+  };
+
+  let xml = '';
+  let health: 'ok' | 'degraded' | 'down' = 'ok';
+  let note: string | null = null;
+  try {
+    const res = await fetch(src.url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT),
+      headers: { 'User-Agent': OFFICIAL_NEWS_UA, Accept: 'application/rss+xml, application/xml, text/xml' },
+    });
+    if (!res.ok) {
+      health = 'down';
+      note = `upstream HTTP ${res.status}`;
+    } else {
+      xml = await res.text();
+    }
+  } catch (e: unknown) {
+    health = 'down';
+    note = `upstream unreachable: ${e instanceof Error ? e.message : 'unknown'}`;
+  }
+
+  const items = health === 'ok' ? parseRssItems(xml, src.linkPrefix, OFFICIAL_NEWS_MAX_ITEMS) : [];
+  // Reached the feed but recovered nothing usable: that is degraded, not ok.
+  // "No news" and "we could not read the news" must never render the same.
+  if (health === 'ok' && items.length === 0) {
+    health = 'degraded';
+    note = 'feed reachable but no item passed validation';
+  }
+
+  const body = { ...base, health, note, count: items.length, items };
+  const response = jsonResp(body, 200, {
+    ...cors,
+    'Cache-Control': health === 'ok' ? `public, max-age=${OFFICIAL_NEWS_TTL}` : 'no-store',
+  });
+
+  // Only a genuinely good answer is cached. Caching a failure would serve the
+  // outage for 5 minutes and, during an event, silence the county for as long.
+  if (health === 'ok') await cache.put(cacheReq, response.clone());
   return response;
 }
 
