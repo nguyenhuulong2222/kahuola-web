@@ -722,6 +722,11 @@
       "map.popup_landslide_est": "Estimated susceptibility. Not an official landslide forecast.",
       // Popup titles
       "map.popup_title_fire": "Wildfire Detection Signal",
+      "map.popup_title_volcanic": "Volcanic heat signal",
+      "map.legend_detections_title": "Satellite detections",
+      "map.legend_det_wildfire": "Wildfire detection",
+      "map.legend_det_older": "Seen more than 12 hours ago",
+      "map.legend_det_volcanic": "Volcanic heat (Kīlauea/Mauna Loa) — not wildfire",
       "map.popup_title_fire_weather": "Fire Weather",
       "map.popup_title_mrms": "Rainfall estimate (NEXRAD)",
       "map.popup_title_smoke": "Smoke Presence",
@@ -1891,6 +1896,11 @@
       "map.popup_landslide_est": "Khả năng dễ bị ảnh hưởng ước tính. Không phải dự báo sạt lở chính thức.",
       // Popup titles
       "map.popup_title_fire": "Tín hiệu phát hiện cháy rừng",
+      "map.popup_title_volcanic": "Tín hiệu nhiệt núi lửa",
+      "map.legend_detections_title": "Phát hiện qua vệ tinh",
+      "map.legend_det_wildfire": "Phát hiện cháy rừng",
+      "map.legend_det_older": "Ghi nhận hơn 12 giờ trước",
+      "map.legend_det_volcanic": "Nhiệt núi lửa (Kīlauea/Mauna Loa) — không phải cháy rừng",
       "map.popup_title_fire_weather": "Thời tiết cháy rừng",
       "map.popup_title_mrms": "Ước tính lượng mưa (NEXRAD)",
       "map.popup_title_smoke": "Hiện diện khói",

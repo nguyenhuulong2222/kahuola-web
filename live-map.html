@@ -1837,6 +1837,69 @@
       }
     }
 
+    /* P36a-2b. Marker legend. Three marker styles now share the map — wildfire,
+       older wildfire, volcanic heat — and without a key the violet dots are just
+       an unexplained colour. Stacked below the perimeter legend in the same left
+       column, clear of the top-left zoom controls and the bottom-left scale bar.
+       pointer-events:none so it can never eat a marker click (Invariant 10). */
+    .det-legend {
+      position: absolute;
+      top: calc(344px + var(--safe-top));
+      left: 12px;
+      z-index: 20;
+      max-width: 190px;
+      padding: 7px 9px;
+      background: rgba(20, 20, 20, .90);
+      border: 1px solid var(--border-hi);
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .26);
+      pointer-events: none;
+    }
+
+    .det-legend[hidden] {
+      display: none;
+    }
+
+    .det-legend-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .det-legend-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.35;
+      margin-bottom: 3px;
+    }
+
+    .det-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    @media (max-width:980px) {
+      .det-legend {
+        top: calc(322px + var(--safe-top));
+        left: 10px;
+        max-width: 168px;
+        padding: 6px 8px;
+      }
+
+      .det-legend-row {
+        font-size: 9px;
+        margin-bottom: 2px;
+      }
+    }
+
     .maplibregl-ctrl-attrib a {
       color: var(--text-dim) !important;
     }
@@ -2609,6 +2672,25 @@
            read as an official fire line. Shown only when perimeter polygons are
            present AND the layer is on. Not inside #panel-template, so its id is
            NOT cloned — plain getElementById works. -->
+      <!-- P36a-2b. Marker key. Shown whenever the fire module is on, which it
+           always is, so no toggle wiring — but it carries the same hidden
+           attribute as its siblings so a future module toggle can drive it. -->
+      <div id="detection-map-legend" class="det-legend" aria-hidden="true">
+        <div class="det-legend-title" data-i18n="map.legend_detections_title">Satellite detections</div>
+        <div class="det-legend-row">
+          <span class="det-legend-dot" style="background:#ff8a00" aria-hidden="true"></span>
+          <span data-i18n="map.legend_det_wildfire">Wildfire detection</span>
+        </div>
+        <div class="det-legend-row">
+          <span class="det-legend-dot" style="background:#8ea3b7;opacity:.55" aria-hidden="true"></span>
+          <span data-i18n="map.legend_det_older">Seen more than 12 hours ago</span>
+        </div>
+        <div class="det-legend-row">
+          <span class="det-legend-dot" style="background:#9b8cff;border:1px solid #c4b8ff" aria-hidden="true"></span>
+          <span data-i18n="map.legend_det_volcanic">Volcanic heat (Kīlauea/Mauna Loa) — not wildfire</span>
+        </div>
+      </div>
+
       <div id="perimeter-map-legend" class="perim-legend" hidden aria-hidden="true">
         <div class="fd-legend-title" data-i18n="map.perim_legend_title">Fire perimeter</div>
         <div class="perim-legend-row">
@@ -5217,10 +5299,22 @@
       // 13-hour-old pixel into the same bubble as a live one, which is exactly
       // the conflation this increment removes.
       ensureSource("fires-older", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // P36a-2b. Volcanic heat gets its OWN source, un-clustered. It shared the
+      // wildfire source until 2026-09-27, so Kīlauea's 20 detections merged into
+      // one cluster bubble — and the cluster ramp turns red at exactly 20, so
+      // lava rendered as the most alarming wildfire on the map. Presence read as
+      // danger, the mirror of absence reading as safety. Un-clustered because a
+      // cluster bubble is a count, and volcanic detections are excluded from
+      // every wildfire count already.
+      ensureSource("fires-volcanic", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       // P36a-2 / D2. Added BEFORE the current-fire layers so it renders BELOW
       // them: an older detection must never sit on top of a live one. Grey, low
       // opacity, no pulse — visibly present, visibly not current. Still
       // clickable, to the same popup, which names its age.
+      // Muted violet, deliberately outside the fire palette and distinct from the
+      // pink fire-spread shading. Violet reads as "a different phenomenon", not
+      // "a milder fire" — this is real heat, just not wildfire. No pulse.
+      ensureLayer({ id: "fires-volcanic-layer", type: "circle", source: "fires-volcanic", paint: { "circle-color": "#9b8cff", "circle-opacity": 0.55, "circle-radius": 6, "circle-stroke-width": 1, "circle-stroke-color": "#c4b8ff" } });
       ensureLayer({ id: "fires-older-layer", type: "circle", source: "fires-older", paint: { "circle-color": "#8ea3b7", "circle-opacity": 0.35, "circle-radius": 5, "circle-stroke-width": 1, "circle-stroke-color": "rgba(142,163,183,0.55)" } });
       ensureLayer({ id: "clusters", type: "circle", source: "fires", filter: ["has", "point_count"], paint: { "circle-color": ["step", ["get", "point_count"], "#ff8a00", 8, "#ff6a00", 20, "#ff3d00"], "circle-radius": ["step", ["get", "point_count"], 16, 8, 22, 20, 28], "circle-opacity": 0.95, "circle-stroke-width": 2, "circle-stroke-color": "rgba(255,140,0,0.26)" } });
       ensureLayer({ id: "cluster-count", type: "symbol", source: "fires", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Open Sans Bold"], "text-size": 12 }, paint: { "text-color": "#ffffff" } });
@@ -5239,10 +5333,14 @@
       // de-emphasised with the older ones — styling it as current would be the
       // same guess the counts already refuse to make. Volcanic detections stay
       // current-styled; they are excluded from counts and severity, not hidden.
-      const current = all.filter((f) => fireIsCurrent(f) || fireIsVolcanic(f));
-      const older = all.filter((f) => !fireIsCurrent(f) && !fireIsVolcanic(f));
+      // P36a-2b. Three ways now. Volcanic leaves the clustered source entirely,
+      // so point_count — and therefore the cluster colour — is wildfire-only.
+      const volcanic = all.filter(fireIsVolcanic);
+      const current = all.filter((f) => !fireIsVolcanic(f) && fireIsCurrent(f));
+      const older = all.filter((f) => !fireIsVolcanic(f) && !fireIsCurrent(f));
       const s = map.getSource("fires"); if (s) s.setData({ type: "FeatureCollection", features: current });
       const o = map.getSource("fires-older"); if (o) o.setData({ type: "FeatureCollection", features: older });
+      const v = map.getSource("fires-volcanic"); if (v) v.setData({ type: "FeatureCollection", features: volcanic });
     }
     function updateSmokeSource(features) { const s = map.getSource("smoke"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updatePerimeterSource(features) { const s = map.getSource("perimeters"); if (s) s.setData({ type: "FeatureCollection", features }); }
@@ -7077,7 +7175,14 @@
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
       if (activePopup) activePopup.remove();
       const observedRow = observedTime ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_observed_at", "Observed at (UTC)")}</div><div class="popup-metric-value">${escapeHtml(observedTime)}</div></div>` : "";
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">\ud83d\udd25 ${_L("map.popup_title_fire", "Wildfire Detection Signal")}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type", "Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf", "Detection confidence")}</div><div class="popup-metric-value">${confDisplay}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired", "Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you", "Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness", "Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state", "Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp", "FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite", "Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}${nightBadge}</div></div>${distCommunityRow}${observedRow}</div>${p.volcanic_zone === true ? `<div class="popup-note" style="border-color:rgba(255,204,102,.45);background:rgba(255,204,102,.10)">🌋 ${_L("map.popup_volcanic_zone", "Inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire.")}</div>` : ""}<div class="popup-note">${_L("map.popup_fire_disclaimer", "\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions", "Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view", "Satellite View")}</a></div></div>`;
+      // P36a-2b. A volcanic detection headed "Wildfire Detection Signal" tells
+      // the reader the wrong thing before they reach the note that corrects it.
+      const isVolcanicDetection = p.volcanic_zone === true;
+      const popupGlyph = isVolcanicDetection ? "\ud83c\udf0b" : "\ud83d\udd25";
+      const popupTitle = isVolcanicDetection
+        ? _L("map.popup_title_volcanic", "Volcanic heat signal")
+        : _L("map.popup_title_fire", "Wildfire Detection Signal");
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">${popupGlyph} ${popupTitle}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type", "Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf", "Detection confidence")}</div><div class="popup-metric-value">${confDisplay}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired", "Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you", "Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness", "Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state", "Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp", "FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite", "Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}${nightBadge}</div></div>${distCommunityRow}${observedRow}</div>${p.volcanic_zone === true ? `<div class="popup-note" style="border-color:rgba(255,204,102,.45);background:rgba(255,204,102,.10)">🌋 ${_L("map.popup_volcanic_zone", "Inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire.")}</div>` : ""}<div class="popup-note">${_L("map.popup_fire_disclaimer", "\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions", "Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view", "Satellite View")}</a></div></div>`;
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "360px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
     }
 
@@ -7295,7 +7400,7 @@
       });
       // "fires-older-layer" is FIRST so it is re-stacked lowest of the fire
       // group — older detections stay beneath every current marker.
-      ["fires-older-layer", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fires-volcanic-layer", "fires-older-layer", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
     }
@@ -7314,6 +7419,9 @@
         // skips layers at visibility:none, so this stays Invariant-10 safe.
         const olderFire = queryTopFeature(e.point, ["fires-older-layer"]);
         if (olderFire) { openFirePopup(olderFire, e.lngLat); return; }
+        // Tested last, so a wildfire marker always wins an overlap.
+        const volcanicHit = queryTopFeature(e.point, ["fires-volcanic-layer"]);
+        if (volcanicHit) { openFirePopup(volcanicHit, e.lngLat); return; }
         if (flashFloodVisible) { const flash = queryTopFeature(e.point, ["flash-flood-point", "flash-flood-fill"]); if (flash) { openFlashFloodPopup(flash, e.lngLat); return; } }
         if (floodContextVisible) { const flood = queryTopFeature(e.point, ["flood-context-fill"]); if (flood) { openFloodContextPopup(flood, e.lngLat); return; } }
         if (mrmsVisible) { const mrms = queryTopFeature(e.point, ["mrms-rain-fill"]); if (mrms) { openMrmsPopup(mrms, e.lngLat); return; } }
