@@ -626,6 +626,22 @@
       line-height:1.58;
     }
 
+    .official-posts{ margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line) }
+    .official-posts-kicker{ margin:0 0 10px; color:var(--muted); font-size:12px; line-height:1.5 }
+    .official-group{ margin-bottom:10px }
+    .official-group:last-child{ margin-bottom:0 }
+    .official-group-head{
+      display:inline-block; color:var(--text-dim); font-size:12px; font-weight:700;
+      letter-spacing:.01em; text-decoration:none; margin-bottom:5px;
+    }
+    .official-group-head:hover{ color:var(--accent) }
+    .official-list{ list-style:none; margin:0; padding:0 }
+    .official-list li{ margin:0 0 6px }
+    .official-item{ display:block; color:var(--text-dim); font-size:13px; line-height:1.45; text-decoration:none }
+    .official-item:hover{ color:var(--text) }
+    .official-time{ display:block; color:var(--muted); font-size:11px; margin-top:1px }
+    .official-fallback{ margin:0; color:var(--muted); font-size:12px; line-height:1.5 }
+
     .signal-caveat{
       margin:8px 0 0;
       color:var(--muted);
@@ -1846,6 +1862,30 @@
                 <a class="chip chip-action" id="fireCountyLink" href="https://dod.hawaii.gov/hiema/"
                    target="_blank" rel="noopener noreferrer" hidden></a>
                 <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
+              </div>
+
+              <!-- P37b. Official posts, verbatim. Built entirely from DOM
+                   elements + textContent in JS — no innerHTML, no string
+                   concatenation into markup — so a county headline can never
+                   become executable. Hidden until the first render. The group
+                   boxes stay in the DOM even when a source fails, because a
+                   silently missing group reads as "no news". -->
+              <div class="official-posts" id="officialPosts" hidden>
+                <p class="official-posts-kicker" id="officialPostsKicker"
+                   data-i18n="official.kicker">Official posts, shown word-for-word. Kahu Ola does not edit or summarise them.</p>
+                <div class="official-group" id="officialGroup-maui">
+                  <a class="official-group-head" id="officialHead-maui"
+                     href="https://www.mauicounty.gov/CivicAlerts.aspx"
+                     target="_blank" rel="noopener noreferrer"></a>
+                  <ul class="official-list" id="officialList-maui"></ul>
+                  <p class="official-fallback" id="officialFallback-maui" hidden></p>
+                </div>
+                <div class="official-group" id="officialGroup-hiema">
+                  <a class="official-group-head" id="officialHead-hiema"
+                     href="https://dod.hawaii.gov/hiema/" target="_blank" rel="noopener noreferrer"></a>
+                  <ul class="official-list" id="officialList-hiema"></ul>
+                  <p class="official-fallback" id="officialFallback-hiema" hidden></p>
+                </div>
               </div>
             </section>
             <section class="signal-card flood">
@@ -3829,6 +3869,122 @@
         el.hidden = false;
       }
 
+      // ── P37b: OFFICIAL POSTS, VERBATIM ───────────────────────────────────
+      // The county's own words, linked to the county's own page. Kahu Ola does
+      // not edit, summarise, translate or reorder them, and titles stay in the
+      // original English even in Vietnamese — translating an official notice
+      // would make us the author of it.
+      //
+      // Built with createElement + textContent throughout. No innerHTML and no
+      // string concatenation into markup anywhere in this path, so a headline
+      // from an upstream feed can never become executable on this page.
+      const OFFICIAL_SOURCES = [
+        { county: "maui",  max: 3, prefix: "https://www.mauicounty.gov/", page: "https://www.mauicounty.gov/CivicAlerts.aspx" },
+        { county: "hiema", max: 2, prefix: "https://dod.hawaii.gov/",     page: "https://dod.hawaii.gov/hiema/" },
+      ];
+      let _officialData = {};   // county -> last good payload, for the locale switch
+
+      function officialRelTime(iso) {
+        const t = Date.parse(iso);
+        if (!isFinite(t)) return null;
+        const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+        if (mins < 60) return _tmpl("official.posted_min", { n: mins }) || `posted ${mins} min ago`;
+        const hrs = Math.round(mins / 60);
+        if (hrs < 48) return _tmpl("official.posted_hr", { n: hrs }) || `posted ${hrs} h ago`;
+        return _tmpl("official.posted_day", { n: Math.round(hrs / 24) }) || `posted ${Math.round(hrs / 24)} days ago`;
+      }
+      function officialAbsTime(iso) {
+        const t = Date.parse(iso);
+        if (!isFinite(t)) return "";
+        try {
+          return new Date(t).toLocaleString("en-US", {
+            timeZone: "Pacific/Honolulu", month: "short", day: "numeric",
+            hour: "numeric", minute: "2-digit"
+          }) + " HST";
+        } catch (e) { return ""; }
+      }
+
+      function renderOfficialPosts() {
+        const wrap = document.getElementById("officialPosts");
+        if (!wrap) return;
+        let anyRendered = false;
+
+        for (const src of OFFICIAL_SOURCES) {
+          const head = document.getElementById("officialHead-" + src.county);
+          const list = document.getElementById("officialList-" + src.county);
+          const fb   = document.getElementById("officialFallback-" + src.county);
+          if (!head || !list || !fb) continue;
+
+          const data = _officialData[src.county] || null;
+          const label = _t("official.source." + src.county)
+            || (src.county === "maui" ? "Maui County" : "Hawaiʻi Emergency Management Agency");
+          setText("officialHead-" + src.county, label);
+          head.href = src.page;
+
+          while (list.firstChild) list.removeChild(list.firstChild);
+
+          const items = (data && Array.isArray(data.items)) ? data.items : [];
+          const healthy = !!data && data.health === "ok" && items.length > 0;
+
+          if (!healthy) {
+            // Never hide the group. A group that vanishes on failure reads as
+            // "this agency has posted nothing", which is a claim we cannot make.
+            fb.textContent = _tmpl("official.unavailable", { source: label })
+              || `Could not load official posts — open ${label}`;
+            fb.hidden = false;
+            list.hidden = true;
+            anyRendered = true;
+            continue;
+          }
+
+          fb.hidden = true;
+          list.hidden = false;
+          for (const it of items.slice(0, src.max)) {
+            const title = typeof it.title === "string" ? it.title : "";
+            const href  = typeof it.url === "string" ? it.url : "";
+            // Re-check the domain client-side. The Worker already enforces it;
+            // doing it again here means a future change to either side cannot
+            // quietly start pointing residents off-domain.
+            if (!title || !href.startsWith(src.prefix)) continue;
+
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.className = "official-item";
+            a.href = href;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = title;                       // verbatim, never parsed
+
+            const when = document.createElement("span");
+            when.className = "official-time";
+            when.textContent = officialRelTime(it.published_at) || "";
+            const abs = officialAbsTime(it.published_at);
+            if (abs) when.title = abs;
+
+            a.appendChild(when);
+            li.appendChild(a);
+            list.appendChild(li);
+            anyRendered = true;
+          }
+        }
+        wrap.hidden = !anyRendered;
+      }
+
+      async function loadOfficialPosts() {
+        await Promise.all(OFFICIAL_SOURCES.map(async (src) => {
+          try {
+            const r = await fetch(`/api/official/county-news?county=${src.county}`, { headers: { Accept: "application/json" } });
+            if (!r.ok) throw new Error("http " + r.status);
+            _officialData[src.county] = await r.json();
+          } catch (e) {
+            // Down is a state, not a silence. renderOfficialPosts shows the
+            // fallback line with a link to the source.
+            _officialData[src.county] = { health: "down", items: [] };
+          }
+        }));
+        renderOfficialPosts();
+      }
+
       function renderFireCard(payload, stormStatus) {
         if (payload === null) { markUnknown("fireStripAnswer", "fireStatusDetail"); return; }
         const split = fireZoneSplit(payload);
@@ -4403,6 +4559,9 @@
         renderContextMetrics(fireWeatherPayload, mrmsPayload, floodPayload, alertsPayload);
         renderSignalStrip(fireSplit, floodPayload, fireWeatherPayload, alertsPayload, firePayload);
         renderFireCard(firePayload, summaryPayload?.storm?.status ?? null);
+        // P37b. Independent of the hazard fetches: the county feed must not be
+        // able to fail the page, and the page must not delay the county feed.
+        loadOfficialPosts();
         renderFloodCard(floodPayload, alertsPayload);
         renderKupunaNote(primaryEvent, floodPayload, fireWeatherPayload, fireSplit, resolveStormProduct(alertsPayload, summaryPayload?.storm?.status), floodWarning);
 
@@ -4842,6 +5001,9 @@
         renderSignalStrip(heroSplit, flood, fireWeather, alerts, fire);
         // renderFireCard(payload)
         renderFireCard(fire, summary?.storm?.status ?? null);
+        // P37b twin. Re-render from the LAST GOOD payload rather than refetching:
+        // a locale switch changes our labels and relative times, never theirs.
+        renderOfficialPosts();
         // renderFloodCard(payload, alertsPayload)
         renderFloodCard(flood, alerts);
         // P31: the island dots are colour, not text, so they survive a locale
