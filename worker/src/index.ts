@@ -1950,6 +1950,32 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
 
   const [west, south, east, north] = bbox;
 
+  // ── P36a-0: ROLLING WINDOW vs FIRMS CALENDAR DAYS ────────────────────────
+  // FIRMS /area/csv with a DAY_RANGE and no DATE returns whole UTC CALENDAR
+  // days: "today back to today-(N-1)". At 00:00 UTC — 14:00 HST — everything
+  // from the previous UTC day vanishes, so the ~23:30 UTC afternoon VIIRS pass
+  // is wiped on arrival. Measured 2026-09-28 00:26 UTC: days=1 returned
+  // returnedRecords 0 / health "ok" for Hawaiʻi while days=2 returned 15. The
+  // product reported no fires through the afternoon peak fire window, daily.
+  //
+  // Fix: ask upstream for one EXTRA calendar day, then keep only what is
+  // actually inside the caller's rolling window. `days` keeps its meaning to
+  // the caller — "the last N×24 h" — so NO cache key changes: firmsCacheKey,
+  // SUMMARY_FIRMS_KEY and the client's days=1 all stay exactly as they are.
+  // That matters more than it looks: writer and reader build the same key via
+  // firmsCacheKey(), and a drift there would leave the summary reading a key
+  // nobody writes, reporting count 0 forever.
+  //
+  // Hawaiʻi scope only this increment. scope=usa already truncates at 1000
+  // records on a 2-day query and needs the CONUS sub-bbox split first
+  // (P36a-0b), so widening it here would trade a visible zero for a silent
+  // truncation. Matching on the bbox rather than the query string catches the
+  // morning-brief self-call too, which passes the Hawaiʻi bbox explicitly.
+  const HW = REGION_BBOXES.hawaii;
+  const isHawaiiScope = bbox[0] === HW[0] && bbox[1] === HW[1] && bbox[2] === HW[2] && bbox[3] === HW[3];
+  const rollingWindowS = isHawaiiScope ? days * 86400 : null;
+  const upstreamDays = isHawaiiScope ? days + 1 : days;
+
   const cacheUrl = firmsCacheKey(keyToken, bbox, days, limit);   // shared builder, limit included (no drift)
   const cache = caches.default;
   const cacheReq = new Request(cacheUrl);
@@ -1965,7 +1991,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   // would never read 'high' again — with no error anywhere.
   const modisXrefUrl = datasetParam
     ? null
-    : `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/MODIS_NRT/${west},${south},${east},${north}/${days}`;
+    : `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}/MODIS_NRT/${west},${south},${east},${north}/${upstreamDays}`;
 
   // One AbortSignal.timeout PER fetch, not one shared AbortController. A shared
   // controller lets the first dataset to time out abort its healthy sibling —
@@ -1978,7 +2004,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
         // never in a log line, never in the response envelope.
         const upstream =
           `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}` +
-          `/${ds}/${west},${south},${east},${north}/${days}`;
+          `/${ds}/${west},${south},${east},${north}/${upstreamDays}`;
         const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
         if (!res.ok) throw new Error(`upstream ${res.status}`);
         return res.text();
@@ -2007,7 +2033,25 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
     merged.push(...firmsCsvToGeojson(r.value, limit, modisCsv, ds).features);
   });
 
-  const features = dedupeFirmsFeatures(merged).slice(0, limit);
+  // Trim the extra calendar day back to the caller's rolling window. Runs
+  // BEFORE dedupe so the counts describe rows as they arrived, and so a stale
+  // row cannot win a dedupe race against the fresh one it duplicates.
+  //
+  // A row whose acquisition time will not parse is DROPPED, not kept: it cannot
+  // be placed inside or outside the window, and a detection that might be two
+  // days old must not sit in a 24 h layer (Invariant III — drop, never infer).
+  // Both drop reasons are counted and reported; a row that vanishes without a
+  // number beside it is how a silent window bug survives a second time.
+  let dropped_outside_window = 0;
+  let dropped_unparseable_time = 0;
+  const inWindow = rollingWindowS === null ? merged : merged.filter((f) => {
+    const age = (f as { properties?: { observation_age_s?: unknown } })?.properties?.observation_age_s;
+    if (typeof age !== 'number' || !Number.isFinite(age)) { dropped_unparseable_time++; return false; }
+    if (age < FIRE_DETECTION_MAX_SKEW_S || age > rollingWindowS) { dropped_outside_window++; return false; }
+    return true;
+  });
+
+  const features = dedupeFirmsFeatures(inWindow).slice(0, limit);
 
   const body = {
     type: 'FeatureCollection',
@@ -2037,6 +2081,17 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
         fresh_max_s: FIRE_DETECTION_FRESH_MAX_S,
         stale_ok_max_s: FIRE_DETECTION_STALE_OK_MAX_S,
       },
+      // P36a-0. `seconds` is what the caller asked for; `day_range_upstream` is
+      // what we asked FIRMS for. They differ by one calendar day on purpose —
+      // see the rolling-window note in this handler. null when the rolling
+      // filter does not apply (any scope other than Hawaiʻi, this increment).
+      window: rollingWindowS === null ? null : {
+        type: 'rolling',
+        seconds: rollingWindowS,
+        day_range_upstream: upstreamDays,
+      },
+      dropped_outside_window,
+      dropped_unparseable_time,
     },
   };
 
@@ -2278,6 +2333,11 @@ type FirmsHotspot = {
   satellite: string;
   version: string;
   sensor: string;
+  // P36a-0. Seconds since the satellite observed this pixel, or null when the
+  // timestamp will not parse. Computed with firmsAcqToIso — the SAME parser
+  // handleFirmsHotspots uses, deliberately, so the two paths cannot disagree
+  // about what "24 hours old" means.
+  observation_age_s: number | null;
   // Layer A geometry test — see the volcanic exclusion note on FirmsIngest.
   volcanic: boolean;
 };
@@ -2323,7 +2383,7 @@ function fireDangerFirmsCacheKey(sensor: string, bbox: readonly number[], days: 
 
 // Parse one FIRMS CSV payload. Invariant III: any row that fails validation is
 // DROPPED — never coerced, never defaulted, never inferred. Pure, never throws.
-function parseFirmsCsv(csv: string, sensor: string): FirmsHotspot[] {
+function parseFirmsCsv(csv: string, sensor: string, nowMs: number = Date.now()): FirmsHotspot[] {
   const out: FirmsHotspot[] = [];
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return out;
@@ -2360,12 +2420,19 @@ function parseFirmsCsv(csv: string, sensor: string): FirmsHotspot[] {
     const frp = parseFloat(rawPower ?? '');
     if (!isFinite(frp)) continue;                         // → drop
 
+    const acqDate = iDate >= 0 ? v[iDate] ?? '' : '';
+    const acqTime = iTime >= 0 ? v[iTime] ?? '' : '';
+    const acqIso = firmsAcqToIso(acqDate, acqTime);
+    const acqMs = acqIso ? Date.parse(acqIso) : NaN;
+    const observation_age_s = Number.isFinite(acqMs) ? Math.round((nowMs - acqMs) / 1000) : null;
+
     out.push({
       lat,
       lon,
       frp,
-      acq_date: iDate >= 0 ? v[iDate] ?? '' : '',
-      acq_time: iTime >= 0 ? v[iTime] ?? '' : '',
+      acq_date: acqDate,
+      acq_time: acqTime,
+      observation_age_s,
       confidence: iConf >= 0 ? v[iConf] ?? '' : '',
       satellite: iSat >= 0 ? v[iSat] ?? '' : '',
       version: iVer >= 0 ? v[iVer] ?? '' : '',            // carries the RT/URT/NRT tag
@@ -2413,6 +2480,17 @@ async function fetchFirmsMultiSensor(
   const [west, south, east, north] = bbox;
   const cache = caches.default;
 
+  // P36a-0. Same rolling-window rule as handleFirmsHotspots, and deliberately
+  // the same shape: ask FIRMS for one extra CALENDAR day, then keep only what
+  // is inside the caller's rolling window. Without it this path goes blind at
+  // 00:00 UTC (14:00 HST) exactly as the map did — the fire-danger layer would
+  // report no anchors through the afternoon peak fire window.
+  //
+  // `days` still keys the cache, so fireDangerFirmsCacheKey is untouched.
+  const upstreamDays = days + 1;
+  const rollingWindowS = days * 86400;
+  const nowMs = Date.now();
+
   // One request per sensor, in parallel. Trivial against the 5000/10-min
   // budget, and allSettled means a dead sensor never blocks a live one — the
   // whole point of running more than one satellite.
@@ -2426,7 +2504,7 @@ async function fetchFirmsMultiSensor(
       // never in a log line, never in the response envelope.
       const upstream =
         `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${env.NASA_FIRMS_MAP_KEY}` +
-        `/${sensor}/${west},${south},${east},${north}/${days}`;
+        `/${sensor}/${west},${south},${east},${north}/${upstreamDays}`;
       const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
       if (!res.ok) throw new Error(`upstream ${res.status}`);
       const csv = await res.text();
@@ -2454,7 +2532,14 @@ async function fetchFirmsMultiSensor(
       return;
     }
     sensorsUsed.push(sensor);
-    merged.push(...parseFirmsCsv(r.value.csv, sensor));
+    // One clock for the batch, and drop anything outside the rolling window or
+    // without a parseable acquisition time (Invariant III — drop, never infer).
+    for (const h of parseFirmsCsv(r.value.csv, sensor, nowMs)) {
+      const age = h.observation_age_s;
+      if (age === null) continue;
+      if (age < FIRE_DETECTION_MAX_SKEW_S || age > rollingWindowS) continue;
+      merged.push(h);
+    }
   });
 
   // Every sensor failed → degraded. This is NOT the same as "zero hotspots".
@@ -3402,7 +3487,21 @@ async function handleFireDanger(url: URL, env: Env, cors: CorsHeaders): Promise<
 // heat (Gary/E. Chicago steel, Pittsburgh, Cleveland, Sarnia refineries, Port
 // Arthur flares, a Gulf oil platform), FRP ceiling 38 MW.
 // days=2 surfaces the real fire signal: FRP up to 1580 MW in the west.
-// Hence FIRE_DANGER_CONUS_DAYS = 2. This is NOT a copy of Hawaiʻi's days=1.
+// Hence FIRE_DANGER_CONUS_DAYS = 2.
+//
+// CORRECTED 2026-09-28 (P36a-0). The original note ended "This is NOT a copy of
+// Hawaiʻi's days=1", reading the emptiness as a CONUS property. It is not. The
+// cause is FIRMS calendar-day semantics — /area/csv with a DAY_RANGE and no
+// DATE returns whole UTC days, so at 00:00 UTC every detection from the
+// previous UTC day disappears everywhere at once. Hawaiʻi had the identical
+// hole, measured 2026-09-28 00:26 UTC: days=1 returned 0 records while days=2
+// returned 15, through the 14:00 HST afternoon peak fire window, daily. Reading
+// this as CONUS-specific is why the same bug shipped twice.
+//
+// Hawaiʻi now asks upstream for days+1 and filters to a rolling 24 h on the
+// acquisition clock. This CONUS path still has no rolling filter, so it carries
+// up to 48 h of detections — tracked as P36a-0b alongside the scope=usa
+// 1000-record truncation.
 const FIRE_DANGER_CONUS_DAYS = 2;
 
 // CONUS is split into quadrants because a single bbox query blows past the
