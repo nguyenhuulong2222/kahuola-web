@@ -1830,6 +1830,36 @@ const FIRMS_PRIMARY_TOKEN = FIRMS_PRIMARY_DATASETS.join('+');
 // outside this shape is rejected rather than forwarded.
 const FIRMS_DATASET_RE = /^[A-Za-z0-9_]{1,64}$/;
 
+// P36a-3a. Which requests get the rolling-window rule, by CONTAINMENT rather
+// than equality.
+//
+// P36a-0 tested `bbox === REGION_BBOXES.hawaii` exactly. That covered the live
+// map and the morning brief, both of which send -161.2,18.5,-154.5,22.5 — and
+// silently missed index.html, which sends -161.5,18.5,-154.5,22.8. The homepage
+// therefore stayed inside the 14:00 HST blind window and said "Hawaiʻi is calm
+// right now" with 25 detections live on the map. Measured 2026-09-28 05:15 UTC:
+// the homepage bbox returned 0 records while scope=hawaii returned 25.
+//
+// Equality is the wrong shape for this: it has to enumerate every caller's
+// bbox, and it fails closed-to-broken for any caller nobody remembered.
+// Containment asks the question that actually matters — is this request about
+// Hawaiʻi — so a new caller with a slightly different framing is covered by
+// default.
+//
+// Deliberately GENEROUS: it reaches past Niʻihau to the west and north of
+// Kauaʻi, so a caller framing a little wide still qualifies. It stops well
+// short of anything that could swallow a CONUS or basin-wide request, which
+// keeps scope=usa on its existing behaviour (P36a-0b owns that path).
+const HAWAII_ROLLING_ENVELOPE: readonly [number, number, number, number] =
+  [-162.0, 18.0, -154.0, 23.0];
+
+// True when the whole requested bbox sits inside the envelope. Pure.
+function bboxWithinHawaiiEnvelope(bbox: readonly number[]): boolean {
+  const [w, s, e, n] = HAWAII_ROLLING_ENVELOPE;
+  return bbox.length === 4
+    && bbox[0] >= w && bbox[1] >= s && bbox[2] <= e && bbox[3] <= n;
+}
+
 // ── DETECTION AGE — THE ACQUISITION CLOCK ──────────────────────────────────
 // P36a-1. A detection's freshness is the age of the SATELLITE OBSERVATION, never
 // the age of our fetch. The live map conflated the two: its badge measured fetch
@@ -1966,13 +1996,14 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   // firmsCacheKey(), and a drift there would leave the summary reading a key
   // nobody writes, reporting count 0 forever.
   //
-  // Hawaiʻi scope only this increment. scope=usa already truncates at 1000
-  // records on a 2-day query and needs the CONUS sub-bbox split first
-  // (P36a-0b), so widening it here would trade a visible zero for a silent
-  // truncation. Matching on the bbox rather than the query string catches the
-  // morning-brief self-call too, which passes the Hawaiʻi bbox explicitly.
-  const HW = REGION_BBOXES.hawaii;
-  const isHawaiiScope = bbox[0] === HW[0] && bbox[1] === HW[1] && bbox[2] === HW[2] && bbox[3] === HW[3];
+  // Hawaiʻi only this increment. scope=usa already truncates at 1000 records on
+  // a 2-day query and needs the CONUS sub-bbox split first (P36a-0b), so
+  // widening it here would trade a visible zero for a silent truncation.
+  // Matching on the bbox rather than the query string covers callers that pass
+  // an explicit bbox — the morning brief and index.html both do — and
+  // containment rather than equality is what stops the next caller with a
+  // slightly different framing from being missed. See HAWAII_ROLLING_ENVELOPE.
+  const isHawaiiScope = bboxWithinHawaiiEnvelope(bbox);
   const rollingWindowS = isHawaiiScope ? days * 86400 : null;
   const upstreamDays = isHawaiiScope ? days + 1 : days;
 
