@@ -4714,18 +4714,41 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
 // filtering, no status inference, no coordinates, no summarisation. A reader
 // gets the county's own headline and a link to the county's own page. Layer A
 // owns truth, and on this surface the county IS Layer A.
-const OFFICIAL_NEWS_SOURCES: Record<string, { url: string; linkPrefix: string; label: string }> = {
+// P37c. `urls` is an ordered list, tried in order, and ONLY advanced past on a
+// 5xx — a 404 or a parse failure is an answer about the feed, not a reason to
+// go looking elsewhere. Maui is served from Cloudflare and returned HTTP 530
+// (origin unreachable) to Worker subrequests while resolving fine from some
+// consumer resolvers, so the apex is worth one retry before we declare it down.
+//
+// `linkPrefixes` is a list for the same reason: the apex and www are the same
+// publisher, and an item must be accepted whichever host the feed names.
+const OFFICIAL_NEWS_SOURCES: Record<string, { urls: string[]; linkPrefixes: string[]; label: string }> = {
   maui: {
-    url: 'https://www.mauicounty.gov/RSSFeed.aspx?ModID=1&CID=All-newsflash.xml',
-    linkPrefix: 'https://www.mauicounty.gov/',
+    urls: [
+      'https://www.mauicounty.gov/RSSFeed.aspx?ModID=1&CID=All-newsflash.xml',
+      'https://mauicounty.gov/RSSFeed.aspx?ModID=1&CID=All-newsflash.xml',
+    ],
+    linkPrefixes: ['https://www.mauicounty.gov/', 'https://mauicounty.gov/'],
     label: 'Maui County News Flash',
   },
   hiema: {
-    url: 'https://dod.hawaii.gov/hiema/feed/',
-    linkPrefix: 'https://dod.hawaii.gov/',
+    urls: ['https://dod.hawaii.gov/hiema/feed/'],
+    linkPrefixes: ['https://dod.hawaii.gov/'],
     label: 'Hawaiʻi Emergency Management Agency',
   },
 };
+
+// Cloudflare puts its own error code in the body of a 5xx it generated itself
+// ("error code: 530"). Surfacing it turns "upstream HTTP 530" into something an
+// operator can act on — 530 means origin unreachable, which is the publisher's
+// DNS or origin, not our request. Pure, never throws, bounded output.
+function upstreamErrorDetail(body: string): string | null {
+  if (!body) return null;
+  const cf = body.match(/error code:\s*(\d{3,4})/i);
+  if (cf) return `cloudflare error code ${cf[1]}`;
+  const text = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text ? text.slice(0, 120) : null;
+}
 
 const OFFICIAL_NEWS_TTL = 300;
 const OFFICIAL_NEWS_MAX_ITEMS = 5;
@@ -4778,7 +4801,7 @@ type OfficialNewsItem = { title: string; url: string; published_at: string; desc
 // parseable pubDate is DROPPED, and a link outside the source's own domain is
 // DROPPED — a feed that has been tampered with must not be able to point a
 // resident at an arbitrary host during an emergency.
-function parseRssItems(xml: string, linkPrefix: string, max: number): OfficialNewsItem[] {
+function parseRssItems(xml: string, linkPrefixes: readonly string[], max: number): OfficialNewsItem[] {
   const out: OfficialNewsItem[] = [];
   const blocks = xml.match(/<item\b[\s\S]*?<\/item>/gi);
   if (!blocks) return out;
@@ -4787,7 +4810,10 @@ function parseRssItems(xml: string, linkPrefix: string, max: number): OfficialNe
     const link = rssTagText(b, 'link');
     const pub = rssTagText(b, 'pubDate');
     if (!title || !link || !pub) continue;
-    if (!link.startsWith(linkPrefix)) continue;
+    // The TRAILING SLASH in each prefix is load-bearing: without it
+    // "https://mauicounty.gov" would also match https://mauicounty.gov.evil.com/
+    // and a tampered feed could point a resident at a lookalike host.
+    if (!linkPrefixes.some((pfx) => link.startsWith(pfx))) continue;
     const ms = Date.parse(pub);
     if (!Number.isFinite(ms)) continue;
     out.push({
@@ -4815,33 +4841,49 @@ async function handleOfficialCountyNews(url: URL, cors: CorsHeaders): Promise<Re
   const cachedJson = cachedJsonResponse(cached, cors, 200);
   if (cachedJson) return cachedJson;
 
+  let xml = '';
+  let health: 'ok' | 'degraded' | 'down' = 'ok';
+  let note: string | null = null;
+  let usedUrl = src.urls[0];
+
+  // Try each URL in order; advance ONLY past a 5xx. A 404 or a bad body is an
+  // answer about this feed, not a reason to try another host. The UA is never
+  // varied between attempts: if a publisher blocks us we want to see that
+  // plainly, not work around it.
+  for (let i = 0; i < src.urls.length; i++) {
+    const candidate = src.urls[i];
+    try {
+      const res = await fetch(candidate, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT),
+        headers: { 'User-Agent': OFFICIAL_NEWS_UA, Accept: 'application/rss+xml, application/xml, text/xml' },
+      });
+      if (res.ok) {
+        xml = await res.text();
+        usedUrl = candidate;
+        health = 'ok';
+        note = i > 0 ? `primary URL failed; served from ${candidate}` : null;
+        break;
+      }
+      const detail = res.status >= 500 ? upstreamErrorDetail(await res.text().catch(() => '')) : null;
+      health = 'down';
+      usedUrl = candidate;
+      note = `upstream HTTP ${res.status}${detail ? ` (${detail})` : ''}`;
+      if (res.status < 500) break;                 // not a 5xx — do not try another host
+    } catch (e: unknown) {
+      health = 'down';
+      usedUrl = candidate;
+      note = `upstream unreachable: ${e instanceof Error ? e.message : 'unknown'}`;
+    }
+  }
+
   const base = {
     source: src.label,
-    source_url: src.url,
+    source_url: usedUrl,
     county,
     fetched_at: new Date().toISOString(),
   };
 
-  let xml = '';
-  let health: 'ok' | 'degraded' | 'down' = 'ok';
-  let note: string | null = null;
-  try {
-    const res = await fetch(src.url, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT),
-      headers: { 'User-Agent': OFFICIAL_NEWS_UA, Accept: 'application/rss+xml, application/xml, text/xml' },
-    });
-    if (!res.ok) {
-      health = 'down';
-      note = `upstream HTTP ${res.status}`;
-    } else {
-      xml = await res.text();
-    }
-  } catch (e: unknown) {
-    health = 'down';
-    note = `upstream unreachable: ${e instanceof Error ? e.message : 'unknown'}`;
-  }
-
-  const items = health === 'ok' ? parseRssItems(xml, src.linkPrefix, OFFICIAL_NEWS_MAX_ITEMS) : [];
+  const items = health === 'ok' ? parseRssItems(xml, src.linkPrefixes, OFFICIAL_NEWS_MAX_ITEMS) : [];
   // Reached the feed but recovered nothing usable: that is degraded, not ok.
   // "No news" and "we could not read the news" must never render the same.
   if (health === 'ok' && items.length === 0) {
