@@ -1830,6 +1830,80 @@ const FIRMS_PRIMARY_TOKEN = FIRMS_PRIMARY_DATASETS.join('+');
 // outside this shape is rejected rather than forwarded.
 const FIRMS_DATASET_RE = /^[A-Za-z0-9_]{1,64}$/;
 
+// ── DETECTION AGE — THE ACQUISITION CLOCK ──────────────────────────────────
+// P36a-1. A detection's freshness is the age of the SATELLITE OBSERVATION, never
+// the age of our fetch. The live map conflated the two: its badge measured fetch
+// age, so a detection acquired 12 h earlier displayed "LIVE" two minutes after a
+// successful poll, beside a caption reading "Newest detection is about 12 h old".
+//
+// These thresholds DELIBERATELY OVERRIDE the 5-15 minute window in
+// docs/api/V4_8_DATA_FRESHNESS_POLICY.md. That window describes a fetch/cache
+// interval; applied to acquisition time it would mark almost every detection
+// stale on arrival, because FIRMS direct-broadcast latency for Hawaiʻi is
+// 20-30 minutes (see FIRE_DANGER_LATENCY_NOTE).
+//
+//   FRESH      <= 3600 s   1 h  — covers that latency plus margin
+//   STALE_OK   <= 43200 s  12 h — until the next VIIRS pass cluster
+//   STALE_DROP >  43200 s
+//   UNKNOWN    timestamp missing or unparseable — never guessed
+const FIRE_DETECTION_FRESH_MAX_S = 3600;
+const FIRE_DETECTION_STALE_OK_MAX_S = 43200;
+
+// A detection timestamped slightly in the future is clock skew between the
+// satellite feed and this worker, not a future observation. Tolerate 5 minutes
+// of it as FRESH; anything further ahead is not something we can reason about,
+// so it becomes UNKNOWN rather than being clamped to zero.
+const FIRE_DETECTION_MAX_SKEW_S = -300;
+
+// FIRMS gives acq_date "YYYY-MM-DD" and acq_time as HHMM UTC with leading zeros
+// dropped: "5" is 00:05, "45" is 00:45, "130" is 01:30. Pure, never throws, and
+// returns null rather than guessing — an unparseable timestamp must read
+// UNKNOWN, never be coerced into a plausible-looking time.
+function firmsAcqToIso(acqDate: string, acqTime: string): string | null {
+  const d = String(acqDate || '').trim();
+  const t = String(acqTime || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  if (!/^\d{1,4}$/.test(t)) return null;
+
+  const [y, mo, da] = d.split('-').map((n) => parseInt(n, 10));
+  if (mo < 1 || mo > 12 || da < 1 || da > 31) return null;
+
+  const hhmm = t.padStart(4, '0');
+  const hh = parseInt(hhmm.slice(0, 2), 10);
+  const mm = parseInt(hhmm.slice(2), 10);
+  if (hh > 23 || mm > 59) return null;
+
+  // Round-trip through Date so an impossible calendar date (2026-02-31) is
+  // rejected by the calendar itself rather than by a longer rule list here.
+  const iso = `${d}T${hhmm.slice(0, 2)}:${hhmm.slice(2)}:00Z`;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  const back = new Date(ms);
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() + 1 !== mo || back.getUTCDate() !== da) return null;
+  return iso;
+}
+
+// Pure, never throws. Null age (no usable timestamp) is UNKNOWN, never FRESH:
+// not knowing when something was seen is not evidence that it was seen recently.
+function classifyFireDetectionAge(ageSeconds: number | null): {
+  freshness_status: 'FRESH' | 'STALE_OK' | 'STALE_DROP' | 'UNKNOWN';
+  signal_state: 'active' | 'aging' | 'historical' | null;
+} {
+  if (ageSeconds === null || !Number.isFinite(ageSeconds)) {
+    return { freshness_status: 'UNKNOWN', signal_state: null };
+  }
+  if (ageSeconds < FIRE_DETECTION_MAX_SKEW_S) {
+    return { freshness_status: 'UNKNOWN', signal_state: null };
+  }
+  if (ageSeconds <= FIRE_DETECTION_FRESH_MAX_S) {
+    return { freshness_status: 'FRESH', signal_state: 'active' };
+  }
+  if (ageSeconds <= FIRE_DETECTION_STALE_OK_MAX_S) {
+    return { freshness_status: 'STALE_OK', signal_state: 'aging' };
+  }
+  return { freshness_status: 'STALE_DROP', signal_state: 'historical' };
+}
+
 // Canonical FIRMS cache-key builder. The reader (SUMMARY_FIRMS_KEY) and the
 // writer (handleFirmsHotspots) both build the key HERE so they cannot drift.
 // Module scope, pure, never throws. `_` is the redacted MAP_KEY slot.
@@ -1955,6 +2029,14 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
       bbox: { west, south, east, north },
       upstreamLatencyMs: Date.now() - t0,
       generated_at: new Date().toISOString(),
+      // P36a-1, ADDITIVE. States the rule a consumer would otherwise have to
+      // infer from the per-feature values — above all that the clock is the
+      // satellite observation time, not our fetch time.
+      freshness_policy: {
+        clock: 'acquisition_time',
+        fresh_max_s: FIRE_DETECTION_FRESH_MAX_S,
+        stale_ok_max_s: FIRE_DETECTION_STALE_OK_MAX_S,
+      },
     },
   };
 
@@ -2070,6 +2152,10 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
   const modisSet = buildModisSet(modisCsv);
   const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
   const features: unknown[] = [];
+  // One clock for the whole batch (P36a-1). Reading Date.now() per row would let
+  // two detections acquired at the same instant land in different freshness
+  // bands purely because the loop took time to run.
+  const nowMs = Date.now();
 
   for (let i = 1; i < lines.length && features.length < limit; i++) {
     const vals = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
@@ -2091,6 +2177,26 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
       ? 'high'
       : (row.confidence || '');
 
+    // P36a-1, ADDITIVE. `frp` below stays a string for existing consumers; this
+    // is the same value as a number, or null when FIRMS did not report one.
+    // numOrNull, NOT Number(): Number('') is 0, and a fire with no reported
+    // radiative power must not read as a fire with zero radiative power.
+    const frpRaw = row.frp;
+    const frpNum = (frpRaw === undefined || frpRaw === null || String(frpRaw).trim() === '')
+      ? null
+      : Number(frpRaw);
+    const frp_mw = frpNum !== null && Number.isFinite(frpNum) ? frpNum : null;
+
+    // Acquisition clock. Computed at response generation, so a cached response
+    // drifts by at most the hotspots TTL (300 s) — well inside the 1 h FRESH
+    // band, so the classification cannot flip because of caching alone.
+    const acq_datetime_utc = firmsAcqToIso(row.acq_date || '', row.acq_time || '');
+    const acqMs = acq_datetime_utc ? Date.parse(acq_datetime_utc) : NaN;
+    const observation_age_s = Number.isFinite(acqMs)
+      ? Math.round((nowMs - acqMs) / 1000)
+      : null;
+    const { freshness_status, signal_state } = classifyFireDetectionAge(observation_age_s);
+
     features.push({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [lng, lat] },
@@ -2099,6 +2205,12 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
         bright_ti4: row.bright_ti4 || '',
         bright_ti5: row.bright_ti5 || '',
         frp: row.frp || '',
+        // ── P36a-1 additive detection-age fields ──────────────────────────
+        frp_mw,
+        acq_datetime_utc,
+        observation_age_s,
+        freshness_status,
+        signal_state,
         confidence: row.confidence || '',
         detection_confidence,
         is_night_detection,
