@@ -3912,11 +3912,35 @@
       // Volcanic vs wildland split of raw FIRMS features (Layer A tagged each
       // feature with properties.volcanic_zone). A missing field → counted as
       // wildland (fail-closed: keeps the fire advisory when we cannot tell).
+      // P36a-3c-min. Only detections the Worker classified as CURRENT feed the
+      // hero ladder. `total` stays every returned detection, because the
+      // hazard-snapshot card legitimately reports the raw count.
+      //
+      // Without this the ladder treats a 20-hour-old, 1 MW pixel exactly like a
+      // fire seen ten minutes ago: wildlandCount > 0 selects FIRE_ACTIVE at
+      // :4248 and the most-viewed page in the product alarms on something that
+      // stopped being visible to the satellite yesterday. Over-alarm on the
+      // homepage is not the safe direction — it spends the credibility the page
+      // needs on the day something is actually burning.
+      //
+      // Only an EXPLICIT STALE_DROP is excluded. Missing or UNKNOWN freshness
+      // keeps counting, which extends the fail-closed rule in the comment
+      // above: if a future Worker change stops emitting freshness_status, the
+      // hero must degrade toward showing the advisory, never toward silently
+      // reading "calm". Not knowing a detection's age is not evidence it is old.
       function fireZoneSplit(firePayload) {
         const items = getItems(firePayload);
-        let volcanic = 0;
-        for (const it of items) { if (it && it.properties && it.properties.volcanic_zone === true) volcanic++; }
-        return { total: items.length, volcanic: volcanic, wildland: items.length - volcanic };
+        const isCurrent = (it) => {
+          const f = it && it.properties && it.properties.freshness_status;
+          return f !== "STALE_DROP";
+        };
+        let volcanic = 0, wildland = 0;
+        for (const it of items) {
+          if (!isCurrent(it)) continue;
+          if (it.properties.volcanic_zone === true) volcanic++;
+          else wildland++;
+        }
+        return { total: items.length, volcanic: volcanic, wildland: wildland };
       }
       // SINGLE shared advisory decision — used by BOTH the hero and the Kūpuna
       // advisory so the two surfaces never diverge. Decision table:
