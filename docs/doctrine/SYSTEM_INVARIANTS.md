@@ -95,7 +95,9 @@ STALE_DROP
 
 Stale data must always be labeled.
 
-Signals marked STALE_DROP must never be displayed.
+Signals marked STALE_DROP must never be displayed or counted as current.
+They may appear only visibly de-emphasised, labeled with their age, and
+excluded from counts, severity, nearest-distance and alerts.
 
 Reason:
 

@@ -144,3 +144,40 @@ guess timestamps\
 display signals without provenance
 
 Transparency is mandatory for civic trust.
+
+------------------------------------------------------------------------
+
+# 8. Fire detections (acquisition clock)
+
+Fire detections are classified on the ACQUISITION clock — when the satellite
+observed the pixel — never on fetch time. These two are different questions and
+were once conflated: a detection acquired 12 hours earlier displayed as "LIVE"
+two minutes after a successful poll.
+
+FRESH        age <= 1 hour
+STALE_OK     age <= 12 hours
+STALE_DROP   age > 12 hours
+UNKNOWN      acquisition timestamp missing or unparseable
+
+Signal state follows: FRESH -> active, STALE_OK -> aging, STALE_DROP ->
+historical, UNKNOWN -> no state.
+
+These thresholds deliberately override the 5-15 minute window in section 3.
+That window is a FETCH/CACHE interval — how often we ask upstream. Applied to
+acquisition time it would mark almost every detection stale on arrival, because
+FIRMS direct-broadcast latency for Hawaiʻi is 20-30 minutes.
+
+Rolling window
+
+The upstream FIRMS query returns whole UTC CALENDAR days, so at 00:00 UTC
+(14:00 HST) every detection from the previous UTC day disappears. Kahu Ola
+requests one extra calendar day and then keeps only detections inside a rolling
+24 hours on the acquisition clock. Detections whose acquisition time cannot be
+parsed are dropped and counted, never kept.
+
+UI behaviour
+
+STALE_DROP detections are shown de-emphasised and labeled with their age, and
+are excluded from counts, severity, nearest-distance and alerts — see Invariant
+4. They are not hidden: a resident is entitled to know that something was seen
+yesterday afternoon and nothing since.

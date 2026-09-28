@@ -2743,6 +2743,7 @@
       <span class="metric-value v-fire" id="fire-count"><span class="spinner"></span></span>
     </div>
     <div class="metric-subnote" id="fire-volcanic-note"></div>
+    <div class="metric-subnote" id="fire-age-split"></div>
     <div class="metric-subnote" id="fire-cloud-caveat"></div>
 
     <div class="metric">
@@ -2771,6 +2772,7 @@
     </div>
 
     <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
+    <div class="metric-subnote" id="fire-feed-updated"></div>
     <!-- Detection age is INFORMATION, not an alarm — plain, uncoloured. Old
          detections on a calm day are good news. -->
     <div class="metric-subnote" id="detection-age-note"></div>
@@ -3528,6 +3530,62 @@
         else { el.className = "freshness f-old"; el.textContent = _t("map.fresh.outdated") || "✗ OUTDATED"; }
       });
     }
+    // ── P36a-2 / ruling 6: the two-clocks defect ─────────────────────────────
+    // applyFreshness() measures how long since WE last polled. On the fire
+    // layer that produced "✓ LIVE" two minutes after a successful fetch, beside
+    // a caption reading "Newest detection is about 12 h old" — the badge
+    // answered a question nobody asked while looking like it answered the one
+    // they did.
+    //
+    // The prominent badge now reflects the NEWEST NON-VOLCANIC detection's
+    // freshness, straight from the Worker's classification. Feed health moves
+    // to a quieter second line. applyFreshness() is deliberately NOT modified:
+    // smoke, perimeters and the other modules still use it correctly, and
+    // changing it for fire's sake would break them.
+    function applyFireBadge(fire, fireCurrent) {
+      const feedEl = document.getElementById("fire-feed-updated");
+      if (feedEl) {
+        const mins = fire?.fetchAt ? Math.max(0, Math.round((Date.now() - fire.fetchAt.getTime()) / 60000)) : null;
+        feedEl.textContent = mins === null ? ""
+          : (_tmpl("map.fire_feed_updated", { n: mins }) || `Data updated ${mins} min ago`);
+      }
+      const el = document.getElementById("freshness-badge");
+      if (!el) return;
+      if (fire?.status === "unavailable") {
+        el.className = "freshness f-old";
+        el.textContent = _t("map.fresh.source_down") || "✗ SOURCE DOWN";
+        return;
+      }
+      // Zero current detections keeps the A3 rule: neutral grey, never green.
+      // "Nothing was seen" is not "nothing is burning".
+      if (!fireCurrent.length) {
+        el.className = "freshness f-unknown";
+        el.textContent = _t("status.none_detected") || "NONE DETECTED";
+        return;
+      }
+      // Newest = smallest observation age among current detections.
+      let best = null;
+      for (const f of fireCurrent) {
+        const a = f?.properties?.observation_age_s;
+        if (typeof a !== "number" || !Number.isFinite(a)) continue;
+        if (best === null || a < best) best = a;
+      }
+      if (best === null) {
+        el.className = "freshness f-unknown";
+        el.textContent = _t("map.fire_age_unknown") || "Age unknown";
+        return;
+      }
+      // No green, and no check mark. A tick reads as "all clear" — the opposite
+      // of what a fire detection means — and green on the fire layer says the
+      // same thing in colour. Both detection states use amber (.f-stale): a
+      // detection is a thing to look at, not a reassurance. The A3 zero-state
+      // above stays neutral grey. Neutral dot, never ✓ or ⚠.
+      el.className = "freshness f-stale";
+      el.textContent = best <= 3600
+        ? (_t("map.fire_badge_fresh") || "● SEEN WITHIN THE HOUR")
+        : (_t("map.fire_badge_stale_ok") || "● SEEN IN THE LAST 12 HOURS");
+    }
+
     function fitHawaii(animated = false) {
       map.fitBounds(HAWAII_BOUNDS, { padding: { top: 96, right: 24, bottom: 120, left: 24 }, duration: animated ? 700 : 0, maxZoom: 8 });
       currentViewMode = lastKnownUserCoord ? "My Location" : "Statewide";
@@ -3613,7 +3671,10 @@
       if (!raw || typeof raw !== "object") return {};
       const confValid = ["low", "nominal", "high"];
       const classValid = ["satellite_detection", "derived_signal", "confirmed_observation", "official_hazard"];
-      const stateValid = ["new", "active", "updating", "expired", "historical"];
+      // "aging" is the Worker's STALE_OK state (P36a-1: FRESH->active,
+      // STALE_OK->aging, STALE_DROP->historical). It was missing here, so every
+      // STALE_OK detection failed the allowlist and read "Unknown".
+      const stateValid = ["new", "active", "updating", "expired", "historical", "aging"];
       const freshnessValid = ["FRESH", "STALE_OK", "STALE_DROP"];
       const lat = typeof raw.latitude === "number" ? raw.latitude : typeof raw.Latitude === "number" ? raw.Latitude : null;
       const lng = typeof raw.longitude === "number" ? raw.longitude : typeof raw.Longitude === "number" ? raw.Longitude : null;
@@ -3630,16 +3691,33 @@
           : (typeof raw.Acq_datetime_utc === "string" && raw.Acq_datetime_utc.trim()) ? raw.Acq_datetime_utc.trim() : null;
       const signal_id = (typeof raw.signal_id === "string" && raw.signal_id.trim()) ? raw.signal_id.trim() : null;
       const signal_class = classValid.includes(raw.signal_class) ? raw.signal_class : "satellite_detection";
-      const signal_state = stateValid.includes(raw.signal_state) ? raw.signal_state : "active";
+      // P36a-2. NO default to "active". The Worker never used to send this
+      // field, so every detection defaulted to active regardless of age — a
+      // 12-hour-old pixel read as a live fire. Absent now means unknown.
+      const signal_state = stateValid.includes(raw.signal_state) ? raw.signal_state : null;
       const freshness_status = freshnessValid.includes(raw.freshness_status) ? raw.freshness_status : null;
+      // Seconds since the satellite saw it, straight from the Worker. The client
+      // never re-derives the thresholds — it only renders what was classified.
+      const observation_age_s = typeof raw.observation_age_s === "number" && Number.isFinite(raw.observation_age_s)
+        ? raw.observation_age_s : null;
       const observed_at_utc = (typeof raw.observed_at_utc === "string" && raw.observed_at_utc.trim()) ? raw.observed_at_utc.trim() : null;
       let provenance = null;
       try { provenance = typeof raw.provenance === "string" ? JSON.parse(raw.provenance) : (raw.provenance && typeof raw.provenance === "object" ? raw.provenance : null); } catch { }
-      const frp_mw = typeof raw.frp_mw === "number" ? raw.frp_mw : typeof raw.frp === "number" ? raw.frp : typeof raw.power === "number" ? raw.power : null;
+      // P36a-2. Prefer the Worker's numeric frp_mw. The legacy `frp` is a
+      // STRING ("3.4"), and requiring typeof === "number" silently produced null
+      // for EVERY detection — which also collapsed severity to UNKNOWN for every
+      // detection, not just the popup. Accept a finite numeric string; anything
+      // non-finite stays null, never 0: a fire with no reported radiative power
+      // is not a fire with zero radiative power.
+      const frpCandidate = raw.frp_mw ?? raw.frp ?? raw.power;
+      const frpNum = (frpCandidate === null || frpCandidate === undefined || String(frpCandidate).trim() === "")
+        ? NaN : Number(frpCandidate);
+      const frp_mw = Number.isFinite(frpNum) ? frpNum : null;
       return {
         latitude: lat, longitude: lng,
         detection_confidence, satellite, distance_to_nearest_place_miles, acq_datetime_utc,
         signal_id, signal_class, signal_state, freshness_status, observed_at_utc, provenance,
+        observation_age_s,
         frp_mw,
         brightness: raw.brightness ?? raw.bright_ti4 ?? raw.bright_t31 ?? null,
         acq_date: raw.acq_date || null,
@@ -3658,7 +3736,26 @@
         const [lng, lat] = [Number(coordinates[0]), Number(coordinates[1])];
         if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
         const frp = n.frp_mw;
-        const severity = String(props.severity || props.severity_level || (Number(frp) >= 25 ? "CRITICAL" : Number(frp) >= 8 ? "ELEVATED" : "UNKNOWN")).toUpperCase();
+        const isVolcanic = props.volcanic_zone === true;
+        // P36a-2 / D1. An FRP severity tier is a claim about a WILDFIRE, so it
+        // is earned by two things and not one.
+        //
+        // VOLCANIC: never tiered. Measured live 2026-09-28: every CRITICAL and
+        // ELEVATED detection in Hawaiʻi was volcanic_zone, three of them at
+        // 155 MW — Kīlauea lava. Tiering them would paint three critical
+        // wildfire markers on an erupting volcano. This mirrors the same call
+        // the Worker already made for fire-spread (worker/src/index.ts:2171),
+        // where 9 of 10 detections were Kīlauea driving every shaded cell.
+        // The gap was invisible until now only because the FRP string bug
+        // pinned every severity to UNKNOWN.
+        //
+        // STALE_DROP: never tiered. Past 12 h this is a record of something
+        // seen, not a statement about what is burning now.
+        const severityEligible = !isVolcanic
+          && (n.freshness_status === "FRESH" || n.freshness_status === "STALE_OK");
+        const severity = severityEligible
+          ? String(props.severity || props.severity_level || (Number(frp) >= 25 ? "CRITICAL" : Number(frp) >= 8 ? "ELEVATED" : "UNKNOWN")).toUpperCase()
+          : "UNKNOWN";
         return {
           type: "Feature",
           geometry: { type: "Point", coordinates: [lng, lat] },
@@ -3679,6 +3776,7 @@
             signal_class: n.signal_class,
             signal_state: n.signal_state,
             freshness_status: n.freshness_status,
+            observation_age_s: n.observation_age_s,
             signal_id: n.signal_id,
             satellite: n.satellite,
             distance_to_nearest_place_miles: n.distance_to_nearest_place_miles,
@@ -5113,13 +5211,39 @@
     }
     function ensureFireLayers() {
       ensureSource("fires", { type: "geojson", data: { type: "FeatureCollection", features: [] }, cluster: true, clusterMaxZoom: 9, clusterRadius: 52 });
+      // P36a-2 / D2. Older (STALE_DROP) detections live in their OWN source and
+      // are deliberately NOT clustered: a cluster bubble is a count, and ruling
+      // 2 excludes them from counts. Clustering them would also merge a
+      // 13-hour-old pixel into the same bubble as a live one, which is exactly
+      // the conflation this increment removes.
+      ensureSource("fires-older", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // P36a-2 / D2. Added BEFORE the current-fire layers so it renders BELOW
+      // them: an older detection must never sit on top of a live one. Grey, low
+      // opacity, no pulse — visibly present, visibly not current. Still
+      // clickable, to the same popup, which names its age.
+      ensureLayer({ id: "fires-older-layer", type: "circle", source: "fires-older", paint: { "circle-color": "#8ea3b7", "circle-opacity": 0.35, "circle-radius": 5, "circle-stroke-width": 1, "circle-stroke-color": "rgba(142,163,183,0.55)" } });
       ensureLayer({ id: "clusters", type: "circle", source: "fires", filter: ["has", "point_count"], paint: { "circle-color": ["step", ["get", "point_count"], "#ff8a00", 8, "#ff6a00", 20, "#ff3d00"], "circle-radius": ["step", ["get", "point_count"], 16, 8, 22, 20, 28], "circle-opacity": 0.95, "circle-stroke-width": 2, "circle-stroke-color": "rgba(255,140,0,0.26)" } });
       ensureLayer({ id: "cluster-count", type: "symbol", source: "fires", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Open Sans Bold"], "text-size": 12 }, paint: { "text-color": "#ffffff" } });
       ensureLayer({ id: "unclustered-fires-glow", type: "circle", source: "fires", filter: ["!", ["has", "point_count"]], paint: { "circle-color": ["case", ["==", ["get", "severity"], "CRITICAL"], "rgba(255,23,68,0.18)", "rgba(255,138,0,0.16)"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 10, 9, 14, 12, 18, 15, 24], "circle-opacity": 1 } });
       ensureLayer({ id: "unclustered-fires", type: "circle", source: "fires", filter: ["!", ["has", "point_count"]], paint: { "circle-color": ["case", ["==", ["get", "severity"], "CRITICAL"], "#ff1744", "#ff8a00"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 4, 9, 6, 12, 8, 15, 10], "circle-opacity": 0.96, "circle-stroke-width": 2, "circle-stroke-color": "rgba(255,255,255,0.08)" } });
       if (!map.__fireHoverBound) { map.__fireHoverBound = true; map.on("mouseenter", "clusters", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "clusters", () => { map.getCanvas().style.cursor = ""; }); map.on("mouseenter", "unclustered-fires", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "unclustered-fires", () => { map.getCanvas().style.cursor = ""; }); }
     }
-    function updateFireSource(features) { const s = map.getSource("fires"); if (s) s.setData({ type: "FeatureCollection", features }); }
+    // P36a-2 / D2. Current detections cluster; older ones go to their own
+    // un-clustered source. Volcanic detections stay with the current set: they
+    // are excluded from COUNTS and severity, not hidden from the map, and they
+    // keep their existing volcanic popup treatment.
+    function updateFireSource(features) {
+      const all = Array.isArray(features) ? features : [];
+      // X2. Only EXPLICITLY current detections get the current style. An
+      // unknown-age detection (old cached response, unparseable timestamp) is
+      // de-emphasised with the older ones — styling it as current would be the
+      // same guess the counts already refuse to make. Volcanic detections stay
+      // current-styled; they are excluded from counts and severity, not hidden.
+      const current = all.filter((f) => fireIsCurrent(f) || fireIsVolcanic(f));
+      const older = all.filter((f) => !fireIsCurrent(f) && !fireIsVolcanic(f));
+      const s = map.getSource("fires"); if (s) s.setData({ type: "FeatureCollection", features: current });
+      const o = map.getSource("fires-older"); if (o) o.setData({ type: "FeatureCollection", features: older });
+    }
     function updateSmokeSource(features) { const s = map.getSource("smoke"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updatePerimeterSource(features) { const s = map.getSource("perimeters"); if (s) s.setData({ type: "FeatureCollection", features }); }
     function updateFlashFloodSource(features) { const s = map.getSource("flash-flood"); if (s) s.setData({ type: "FeatureCollection", features }); }
@@ -6560,6 +6684,37 @@
       maybeShowLandslideCard();
     }
 
+    // ── P36a-2: ONE definition of "current", used by every fire surface ──────
+    // The Worker classifies; the client never re-derives thresholds. These read
+    // freshness_status and volcanic_zone and nothing else, so the popup, the
+    // counts, the badge, the markers and the refresh re-paint cannot disagree
+    // about what a detection is — which is how the badge ended up reading LIVE
+    // beside a caption saying "about 12 h old".
+    function fireIsStaleDrop(f) { return f?.properties?.freshness_status === "STALE_DROP"; }
+    function fireIsVolcanic(f) { return f?.properties?.volcanic_zone === true; }
+    // "Current" = a wildfire signal we are willing to treat as present now:
+    // not volcanic, and seen within the last 12 h. Everything the panel counts,
+    // ranks by distance or calls critical is drawn from this set.
+    // Requires an EXPLICIT current classification. Testing "not STALE_DROP"
+    // instead would count an old-cache response — where the Worker sent no
+    // freshness at all — as current, which is precisely the guess ruling 1
+    // forbids. Unknown-age detections stay visible on the map and in the total;
+    // they are simply not claimed as current.
+    function fireIsCurrent(f) {
+      const s = f?.properties?.freshness_status;
+      return !fireIsVolcanic(f) && (s === "FRESH" || s === "STALE_OK");
+    }
+    // Plain-language age for display only (ruling 1 allows computing this from
+    // acq_datetime_utc against device time). Returns null when we cannot say.
+    function fireAgeText(props) {
+      const s = props?.observation_age_s;
+      if (typeof s !== "number" || !Number.isFinite(s)) return null;
+      const mins = Math.max(0, Math.round(s / 60));
+      if (mins < 60) return _tmpl("map.fire_age_min", { n: mins }) || `seen ${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      return _tmpl("map.fire_age_hr", { n: hrs }) || `seen about ${hrs} h ago`;
+    }
+
     function renderUnifiedPanels() {
       const fire = getState("fire");
       const smoke = getState("smoke");
@@ -6568,11 +6723,29 @@
       const floodContext = getState("floodContext");
       const mrms = getState("mrmsRain");
       const fireFeatures = fire.features;
+      // P36a-2. Three views of the same set, so no surface has to re-decide:
+      //   fireFeatures  — everything, which the "All thermal detections" metric
+      //                   still reports (its D4 contract is deliberately total)
+      //   fireCurrent   — non-volcanic, seen within 12 h: what "now" means here
+      //   fireOlder     — non-volcanic, 12-24 h: shown, never counted as current
+      const fireCurrent = fireFeatures.filter(fireIsCurrent);
+      const fireOlder = fireFeatures.filter((f) => !fireIsVolcanic(f) && fireIsStaleDrop(f));
+      // R-F. Non-volcanic detections the Worker could not classify — an old
+      // cached response predating the freshness fields, or an unparseable
+      // acquisition time. Named rather than absorbed, so Current + Older +
+      // Unknown always reconciles against the total above. Claiming one of the
+      // other two would be a guess; leaving them out silently would make the
+      // arithmetic lie.
+      const fireUnknownAge = fireFeatures.filter((f) =>
+        !fireIsVolcanic(f) && !fireIsStaleDrop(f) && !fireIsCurrent(f));
       const smokeCount = smoke.features.length;
       const floodCount = flashFlood.features.length;
       let nearest = Infinity; let criticalCount = 0;
       const refPoint = lastKnownUserCoord || REF_CENTER;
-      for (const f of fireFeatures) {
+      // Nearest and Critical are claims about what is burning now, so they read
+      // the CURRENT set only. A 13-hour-old pixel must not set "Nearest", and a
+      // volcanic detection must never be called a critical fire.
+      for (const f of fireCurrent) {
         const coords = f?.geometry?.coordinates;
         if (!Array.isArray(coords)) continue;
         if (f.properties?.severity === "CRITICAL") criticalCount += 1;
@@ -6599,6 +6772,24 @@
               `${volc} of these are volcanic (Kīlauea / Mauna Loa), not wildfire.`)
             : "";
         }
+        // P36a-2 / ruling 7. Older detections are never silently dropped from
+        // view — they are named. Without this line a resident cannot tell "no
+        // fire was seen today" from "nothing has been seen since yesterday
+        // afternoon", and those are very different facts. Volcanic detections
+        // are excluded from both halves; they have their own line above.
+        const splitEl = document.getElementById(`fire-age-split-${suffix}`);
+        if (splitEl) {
+          const splitBase = (fireCurrent.length || fireOlder.length || fireUnknownAge.length)
+            ? (_tmpl("map.fire_count_split", { current: fireCurrent.length, older: fireOlder.length }) ||
+              `Current (≤ 12 h): ${fireCurrent.length} · Older (12–24 h): ${fireOlder.length}`)
+            : "";
+          // Conditional third label — only when there is something to explain.
+          const splitUnknown = fireUnknownAge.length
+            ? (_tmpl("map.fire_count_unknown", { n: fireUnknownAge.length }) ||
+              ` · Age unknown: ${fireUnknownAge.length}`)
+            : "";
+          splitEl.textContent = splitBase ? splitBase + splitUnknown : "";
+        }
         // A zero here means "nothing was SEEN", never "nothing is burning":
         // VIIRS cannot see through thick cloud. Always on at zero — a caveat
         // that appears only sometimes teaches people to read its absence as a
@@ -6608,7 +6799,7 @@
         // knowing whether a storm is overhead is not knowing there is none.
         const cloudEl = document.getElementById(`fire-cloud-caveat-${suffix}`);
         if (cloudEl) {
-          if (fireFeatures.length > 0) cloudEl.textContent = "";
+          if (fireCurrent.length > 0) cloudEl.textContent = "";
           else {
             const calm = String(summaryStorm?.status || "") === "none";
             cloudEl.textContent = calm
@@ -6620,7 +6811,7 @@
         if (nearestEl) {
           // "None" in green read as "no fire near you". It means no fire was
           // DETECTED — same satellite blind spot as the count above it.
-          if (!fireFeatures.length || !Number.isFinite(nearest)) { nearestEl.textContent = _t("signal.fire_no_detections") || "No fire detections"; nearestEl.className = "metric-value v-neutral"; }
+          if (!fireCurrent.length || !Number.isFinite(nearest)) { nearestEl.textContent = _t("signal.fire_no_detections") || "No fire detections"; nearestEl.className = "metric-value v-neutral"; }
           else { nearestEl.textContent = `${nearest.toFixed(1)} mi`; nearestEl.className = "metric-value " + (nearest < 5 ? "v-crit" : nearest < 20 ? "v-warn" : "v-fire"); }
         }
         const criticalEl = document.getElementById(`critical-count-${suffix}`);
@@ -6653,12 +6844,12 @@
           const refLabel = lastKnownUserCoord ? (_t("map.ref_label_you") || "your device location") : (_t("map.ref_label_view") || "the reference view");
           const fireScopeRegion = fireScope === "usa" ? (_t("map.region_usa") || "the USA") : (_t("map.region_hawaii") || "Hawai\u02bbi");
           if (appState.diagnostics.isOffline) summaryText.textContent = _t("map.summary_offline") || "Cached hazard data is being shown while connectivity is degraded.";
-          else if (fireFeatures.length === 0 && floodCount > 0) summaryText.textContent = _tmpl("map.fire_summary_flood_active", { n: floodCount, s: floodCount === 1 ? "" : "s" }) || `Flash flood watch geometry is active in ${floodCount} area${floodCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
-          else if (fireFeatures.length === 0 && smokeCount > 0) summaryText.textContent = _tmpl("map.fire_summary_smoke_active", { n: smokeCount, s: smokeCount === 1 ? "" : "s" }) || `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
-          else if (fireFeatures.length === 0) summaryText.textContent = _tmpl("map.fire_summary_none", { region: fireScopeRegion }) || `NASA FIRMS returned no current wildfire detections across ${fireScopeRegion} in this snapshot.`;
+          else if (fireCurrent.length === 0 && floodCount > 0) summaryText.textContent = _tmpl("map.fire_summary_flood_active", { n: floodCount, s: floodCount === 1 ? "" : "s" }) || `Flash flood watch geometry is active in ${floodCount} area${floodCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
+          else if (fireCurrent.length === 0 && smokeCount > 0) summaryText.textContent = _tmpl("map.fire_summary_smoke_active", { n: smokeCount, s: smokeCount === 1 ? "" : "s" }) || `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
+          else if (fireCurrent.length === 0) summaryText.textContent = _tmpl("map.fire_summary_none", { region: fireScopeRegion }) || `NASA FIRMS returned no current wildfire detections across ${fireScopeRegion} in this snapshot.`;
           else if (criticalCount > 0 && Number.isFinite(nearest)) summaryText.textContent = _tmpl("map.fire_summary_critical", { region: fireScopeRegion, dist: nearest.toFixed(1), loc: refLabel }) || `NASA FIRMS indicates critical wildfire detections in ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-          else if (Number.isFinite(nearest)) summaryText.textContent = _tmpl("map.fire_summary_n_nearest", { n: fireFeatures.length, s: fireFeatures.length === 1 ? "" : "s", region: fireScopeRegion, dist: nearest.toFixed(1), loc: refLabel }) || `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
-          else summaryText.textContent = _tmpl("map.fire_summary_n", { n: fireFeatures.length, s: fireFeatures.length === 1 ? "" : "s", region: fireScopeRegion }) || `NASA FIRMS returned ${fireFeatures.length} wildfire detection${fireFeatures.length === 1 ? "" : "s"} across ${fireScopeRegion}.`;
+          else if (Number.isFinite(nearest)) summaryText.textContent = _tmpl("map.fire_summary_n_nearest", { n: fireCurrent.length, s: fireCurrent.length === 1 ? "" : "s", region: fireScopeRegion, dist: nearest.toFixed(1), loc: refLabel }) || `NASA FIRMS returned ${fireCurrent.length} wildfire detection${fireCurrent.length === 1 ? "" : "s"} across ${fireScopeRegion}. The nearest signal is about ${nearest.toFixed(1)} miles from ${refLabel}.`;
+          else summaryText.textContent = _tmpl("map.fire_summary_n", { n: fireCurrent.length, s: fireCurrent.length === 1 ? "" : "s", region: fireScopeRegion }) || `NASA FIRMS returned ${fireCurrent.length} wildfire detection${fireCurrent.length === 1 ? "" : "s"} across ${fireScopeRegion}.`;
         }
         const summarySource = document.getElementById(`summary-source-${suffix}`);
         if (summarySource) summarySource.textContent = `${_t("map.source_colon") || "Source:"} ${(fire.sourceLabel || "NASA FIRMS \xb7 Kahu Ola Worker")} \xb7 Delivered by Kahu Ola civic aggregator \xb7 Flood official: ${flashFlood.sourceLabel || "NWS"} \xb7 Local context: ${floodContext.sourceLabel || "terrain"} \xb7 MRMS: ${mrms.sourceLabel || "MRMS"} \xb7 Fire Weather: ${getState("windRisk").sourceLabel || "NWS / RAWS"} \xb7 Radar: NOAA`;
@@ -6672,7 +6863,7 @@
       window._lastFireSourceTime = fire.sourceTime || null;
       window._lastFireFetchAt = fire.fetchAt || null;
       window._lastFireStatus = fire.status || null;
-      applyFreshness(fire.fetchAt, fire.status);
+      applyFireBadge(fire, fireCurrent);
       updateRainRadarStatusUI();
       updateAccordionPreviews();
     }
@@ -6831,16 +7022,42 @@
       const rawConf = p.detection_confidence != null ? p.detection_confidence : p.confidence;
       const confLabel = confLabels[String(rawConf || "").toLowerCase()] || (rawConf != null ? String(rawConf) : "—");
       // Freshness
-      const freshnessLabels = { FRESH: _t("map.fire_fresh_fresh") || "Fresh (<15 min)", STALE_OK: _t("map.fire_fresh_stale") || "Stale (15\u201360 min)", STALE_DROP: _t("map.fire_fresh_drop") || "Outdated (>60 min)" };
-      const freshnessLabel = freshnessLabels[p.freshness_status] || (p.freshness_status ? String(p.freshness_status) : "—");
+      // P36a-2 / ruling 5. NEW keys (map.fire_age_*). The old map.fire_fresh_*
+      // values encode the retired 15/60-minute FETCH window and would now be
+      // wrong; per D3 they are left in place, unused, and logged to backlog.
+      // Never "—": a detection we cannot classify reads UNKNOWN, which is a
+      // statement, where an em dash is just an absence the reader must guess at.
+      const freshnessLabels = {
+        FRESH: _t("map.fire_age_fresh") || "Seen within the hour",
+        STALE_OK: _t("map.fire_age_stale_ok") || "Seen in the last 12 hours",
+        STALE_DROP: _t("map.fire_age_stale_drop") || "Seen more than 12 hours ago",
+      };
+      const ageText = fireAgeText(p);
+      const freshnessBase = freshnessLabels[p.freshness_status] || (_t("map.fire_age_unknown") || "Age unknown");
+      const freshnessLabel = ageText ? `${freshnessBase} · ${ageText}` : freshnessBase;
       // Timestamps — prefer ISO acq_datetime_utc, fall back to legacy acq_date/acq_time pair
       const acqTime = p.acq_datetime_utc ? String(p.acq_datetime_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : formatDetectedTime(p.acq_date, p.acq_time);
       const observedTime = p.observed_at_utc ? String(p.observed_at_utc).replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "") + " UTC" : null;
-      const signalStateLabel = p.signal_state || "active";
+      // Past an hour this must not read "active". The Worker classifies it;
+      // absent means unknown, never current.
+      const signalStateLabels = {
+        active: _t("map.fire_state_active") || "Active",
+        aging: _t("map.fire_state_aging") || "Aging",
+        historical: _t("map.fire_state_historical") || "Historical",
+      };
+      const signalStateLabel = signalStateLabels[p.signal_state] || (_t("map.fire_state_unknown") || "Unknown");
       const frpVal = p.frp != null ? Number(p.frp) : null;
+      // X1. An intensity tier is a WILDFIRE descriptor. Kīlauea routinely reads
+      // 155 MW, and labelling that "Extreme" tells a resident a wildfire of
+      // extreme intensity is burning where there is lava. The MW value is still
+      // shown — it is a real measurement — but it is named as volcanic heat.
+      // Same reasoning as the severity gate: the number is real, the wildfire
+      // reading of it is not.
       const frp = frpVal != null && isFinite(frpVal)
-        ? `${frpVal} MW \u00b7 ${frpVal >= 50 ? "Extreme (\u226550 MW)" : frpVal >= 25 ? "High (25\u201350 MW)" : frpVal >= 10 ? "Moderate (10\u201325 MW)" : "Low (<10 MW)"}`
-        : "\u2014";
+        ? (p.volcanic_zone === true
+          ? `${frpVal} MW \u00b7 ${_t("map.fire_frp_volcanic") || "Volcanic heat — not a wildfire intensity"}`
+          : `${frpVal} MW \u00b7 ${frpVal >= 50 ? "Extreme (\u226550 MW)" : frpVal >= 25 ? "High (25\u201350 MW)" : frpVal >= 10 ? "Moderate (10\u201325 MW)" : "Low (<10 MW)"}`)
+        : (_t("map.fire_frp_not_reported") || "Not reported");
       const distCommunityMi = p.distance_to_nearest_place_miles != null ? Number(p.distance_to_nearest_place_miles) : null;
       const distCommunityRow = distCommunityMi != null && isFinite(distCommunityMi)
         ? `<div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_nearest_community", "Nearest community")}</div><div class="popup-metric-value"${distCommunityMi < 5 ? ' style="color:#ff4d4d;font-weight:700"' : ""}>${distCommunityMi.toFixed(1)} mi${distCommunityMi < 5 ? " \u26a0" : ""}</div></div>`
@@ -7014,6 +7231,11 @@
           // Sweep: this path re-paints the count after every refresh and was
           // restoring v-good on zero, clobbering renderUnifiedPanels()' neutral
           // token. A fix that one refresh undoes is not a fix.
+          // P36a-2. This metric is "All thermal detections" and stays a TOTAL,
+          // volcanic and older included — that is its D4 contract, and the
+          // Current/Older split plus the volcanic line sit directly beneath it.
+          // renderUnifiedPanels() repaints those on onFetchComplete, so the
+          // split cannot be left stale by this path.
           fireCount.className = "metric-value " + (n === null ? "v-dim" : n > 0 ? "v-fire" : "v-neutral");
           fireCount.textContent = n === null ? "\u2014" : String(n);
         }
@@ -7071,7 +7293,9 @@
       ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "water-quality-fill", "water-quality-outline", "water-quality-point", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-cone-fill", "hurricane-cone-outline", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
-      ["clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      // "fires-older-layer" is FIRST so it is re-stacked lowest of the fire
+      // group — older detections stay beneath every current marker.
+      ["fires-older-layer", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
     }
@@ -7083,6 +7307,13 @@
         if (fire) { openFirePopup(fire, e.lngLat); return; }
         const cluster = queryTopFeature(e.point, ["clusters"]);
         if (cluster) { zoomToCluster(cluster); return; }
+        // P36a-2 / D2. Tested AFTER the current-fire layers, so where an older
+        // marker overlaps a live one the live one wins the click. Same popup —
+        // an older detection is still a real observation and still answers
+        // "what was seen here"; the popup names its age. queryTopFeature already
+        // skips layers at visibility:none, so this stays Invariant-10 safe.
+        const olderFire = queryTopFeature(e.point, ["fires-older-layer"]);
+        if (olderFire) { openFirePopup(olderFire, e.lngLat); return; }
         if (flashFloodVisible) { const flash = queryTopFeature(e.point, ["flash-flood-point", "flash-flood-fill"]); if (flash) { openFlashFloodPopup(flash, e.lngLat); return; } }
         if (floodContextVisible) { const flood = queryTopFeature(e.point, ["flood-context-fill"]); if (flood) { openFloodContextPopup(flood, e.lngLat); return; } }
         if (mrmsVisible) { const mrms = queryTopFeature(e.point, ["mrms-rain-fill"]); if (mrms) { openMrmsPopup(mrms, e.lngLat); return; } }
@@ -8372,8 +8603,13 @@
       // Re-apply footer text (modeFooter holds children — target the span directly)
       const _mft = document.getElementById("map-footer-text");
       if (_mft && !IS_LOCAL) _mft.textContent = _t("map.footer") || "Kahu Ola civic technology";
-      // Re-apply freshness chips — applyFreshness() reads _t() on each call
-      applyFreshness((window._lastFireFetchAt instanceof Date) ? window._lastFireFetchAt : null, window._lastFireStatus);
+      // P36a-2. The fire badge is now classification-driven, not fetch-driven,
+      // so re-render it from live state rather than calling applyFreshness()
+      // here — that would repaint the retired fetch-age badge over it on every
+      // language switch. renderUnifiedPanels() re-runs applyFireBadge() with
+      // the current feature set and re-reads _t(), which is what a locale
+      // change actually needs.
+      try { renderUnifiedPanels(); } catch (e) { /* keep the last paint */ }
       // P32a: applyAll() resets #alerts-note to its data-i18n placeholder and
       // the unplaced-zone list is JS-built, so both have to be re-rendered from
       // live state after a language switch — otherwise the only surface these
