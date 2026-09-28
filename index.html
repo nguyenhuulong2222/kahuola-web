@@ -1840,6 +1840,11 @@
               <p class="signal-caveat" id="fireCaveat" hidden></p>
               <div class="meta-row">
                 <span class="chip" id="fireSourceChip">NASA FIRMS</span>
+                <!-- D2. Static anchor, hidden by default. JS sets href from a
+                     FIXED county->URL table and the text via setText, so no
+                     user-influenced string is ever written as HTML. -->
+                <a class="chip chip-action" id="fireCountyLink" href="https://dod.hawaii.gov/hiema/"
+                   target="_blank" rel="noopener noreferrer" hidden></a>
                 <a href="live-map" class="chip chip-action" data-i18n="signal.check_neighborhood">📍 Check My Neighborhood</a>
               </div>
             </section>
@@ -3608,7 +3613,12 @@
         // in case any future path reaches FIRE_ACTIVE on an all-volcanic split.
         const hv = ((primaryEvent === "VOLCANIC_HEAT" || (primaryEvent === "FIRE_ACTIVE" && !redFlag)) && counts.fireSplit &&
           classifyHeatSignals(counts.fireSplit.volcanic, counts.fireSplit.wildland) === "VOG")
-          ? heroVolcanicWording(counts.fireSplit.total || volcCount) : null;
+          // D1. Was fireSplit.total — EVERY detection — so five Maui wildfire
+          // detections were banner-labelled as Kīlauea volcanic heat ("25 Heat
+          // Signals · Kīlauea/Mauna Loa Volcanic Zone" while 5 of them were the
+          // Olowalu brush fire). A wildland detection must never be attributed
+          // to the volcanic zone.
+          ? heroVolcanicWording(counts.fireSplit.volcanic || volcCount) : null;
 
         // Narrative — title with key word highlight
         // P34b. Find Help rides the hero state rather than keeping its own:
@@ -3824,6 +3834,12 @@
         const split = fireZoneSplit(payload);
         const wild = split.wildland;
         const volc = split.volcanic;
+        const older = split.wildlandOlder || 0;
+        // Reset the county link on every render — it belongs to the OLDER
+        // branch only, and a stale link left visible would point a reader at a
+        // county that no longer has a detection.
+        const _lk0 = document.getElementById("fireCountyLink");
+        if (_lk0) _lk0.hidden = true;
         const freshness = timeAgo(getGeneratedAt(payload));
         const badge = document.getElementById("fireStatusDetail");
 
@@ -3836,6 +3852,37 @@
                || `${wild} wildfire signal${wild === 1 ? "" : "s"} detected in the current statewide Worker snapshot. Open the live map for island-level detail.`));
           if (badge) badge.className = "status active";
           setText("fireStatusDetail", wild >= 5 ? (_t("status.active") || "ACTIVE") : (_t("status.elevated") || "ELEVATED"));
+        } else if (older > 0) {
+          // D2. Older wildland detections outrank the volcanic line here. A
+          // resident whose county has an active fire must not open this page
+          // and read only "volcanic heat at Kīlauea". The satellite has gone
+          // quiet on this fire; that is not the same as the fire being out,
+          // and the copy says so and sends them to the authority that knows.
+          const olderH = Math.max(1, Math.round((split.olderAgeSeconds || 0) / 3600));
+          // Name the county only when every older detection resolves to one we
+          // can identify; otherwise say nothing about location rather than guess.
+          const cKeys = Array.isArray(split.olderCounties) ? split.olderCounties : [];
+          const cNames = cKeys.map(countyName).filter(Boolean);
+          const where = cNames.length ? cNames.join(" \u00b7 ") : "";
+          setText("fireTitle", _tmpl("signal.fire_title_older", { n: older, s: older > 1 ? "s" : "" })
+            || `\ud83d\udd25 Older Fire Detection${older > 1 ? "s" : ""} \u2014 ${older}`);
+          setText("fireCopy", where
+            ? (_tmpl("signal.fire_copy_older_where", { n: older, s: older > 1 ? "s" : "", h: olderH, where: where })
+               || `${older} older wildfire detection${older > 1 ? "s" : ""} in ${where} \u2014 last seen by satellite about ${olderH} h ago, not re-detected since. Satellites can miss smoldering fires \u2014 check ${where} Emergency Management for current status.`)
+            : (_tmpl("signal.fire_copy_older", { n: older, s: older > 1 ? "s" : "", h: olderH })
+               || `${older} older wildfire detection${older > 1 ? "s" : ""} \u2014 last seen by satellite about ${olderH} h ago, not re-detected since. Satellites can miss smoldering fires \u2014 check your county emergency agency for current status.`));
+          // Link: href from the FIXED table only, text via setText.
+          const lk = document.getElementById("fireCountyLink");
+          if (lk) {
+            const primary = cKeys.length ? cKeys[0] : null;
+            lk.href = (primary && COUNTY_LINKS[primary]) || "https://dod.hawaii.gov/hiema/";
+            setText("fireCountyLink", primary
+              ? (_tmpl("signal.fire_county_link", { where: countyName(primary) || "" }) || `${countyName(primary)} Emergency Management`)
+              : (_t("signal.fire_county_link_state") || "Hawaiʻi Emergency Management"));
+            lk.hidden = false;
+          }
+          if (badge) badge.className = "status watch";
+          setText("fireStatusDetail", _t("status.older_detections") || "OLDER");
         } else if (volc > 0) {
           setText("fireTitle", _tmpl("signal.fire_title_volcanic", { n: volc, s: volc > 1 ? "s" : "" }) || `\ud83c\udf0b Volcanic Heat \u2014 ${volc} Signal${volc > 1 ? "s" : ""}`);
           setText("fireCopy",  _tmpl("signal.fire_copy_volcanic_tmpl", { n: volc, s: volc > 1 ? "s" : "" })
@@ -3852,7 +3899,7 @@
         // VIIRS cannot see through thick cloud. The caveat is always on when
         // the count is zero — a caveat that appears only sometimes teaches
         // people to read its absence as a guarantee.
-        renderFireCaveat(wild === 0 && volc === 0, stormStatus);
+        renderFireCaveat(wild === 0 && volc === 0 && older === 0, stormStatus);
 
         setText("fireSourceChip", _t("source.nasa_firms") || "NASA FIRMS");
         setText("fireFreshnessChip", freshness);
@@ -3912,6 +3959,40 @@
       // Volcanic vs wildland split of raw FIRMS features (Layer A tagged each
       // feature with properties.volcanic_zone). A missing field → counted as
       // wildland (fail-closed: keeps the fire advisory when we cannot tell).
+      // ── D2: county attribution ────────────────────────────────────────────
+      // Counties, not islands: a resident acts on what their COUNTY emergency
+      // agency says, and Maui County covers four islands. Bboxes are generous
+      // and non-overlapping enough for detection attribution; a point matching
+      // none of them yields no name rather than a guess.
+      const COUNTY_BOXES = [
+        { key: "kauai",    w: -160.30, s: 21.75, e: -159.25, n: 22.30 },  // Kauaʻi, Niʻihau
+        { key: "honolulu", w: -158.35, s: 21.20, e: -157.60, n: 21.75 },  // Oʻahu
+        { key: "maui",     w: -157.35, s: 20.45, e: -155.95, n: 21.25 },  // Maui, Molokaʻi, Lānaʻi, Kahoʻolawe
+        { key: "hawaii",   w: -156.10, s: 18.85, e: -154.75, n: 20.30 },  // Hawaiʻi Island
+      ];
+      // Only agency URLs already present on this page. Counties without their
+      // own emergency-management link fall back to the state agency (HIEMA)
+      // rather than to a guessed county URL.
+      const COUNTY_LINKS = {
+        maui:     "https://www.mauicounty.gov/983/Emergency-Management-Agency",
+        kauai:    "https://dod.hawaii.gov/hiema/",
+        honolulu: "https://dod.hawaii.gov/hiema/",
+        hawaii:   "https://dod.hawaii.gov/hiema/",
+      };
+      function countyKeyForPoint(lng, lat) {
+        if (!isFinite(lng) || !isFinite(lat)) return null;
+        for (const b of COUNTY_BOXES) {
+          if (lng >= b.w && lng <= b.e && lat >= b.s && lat <= b.n) return b.key;
+        }
+        return null;
+      }
+      function countyName(key) {
+        const t = _t("county." + key);
+        if (t && t !== "county." + key) return t;
+        return { kauai: "Kauaʻi County", honolulu: "City & County of Honolulu",
+                 maui: "Maui County", hawaii: "Hawaiʻi County" }[key] || null;
+      }
+
       // P36a-3c-min. Only detections the Worker classified as CURRENT feed the
       // hero ladder. `total` stays every returned detection, because the
       // hazard-snapshot card legitimately reports the raw count.
@@ -3934,13 +4015,36 @@
           const f = it && it.properties && it.properties.freshness_status;
           return f !== "STALE_DROP";
         };
-        let volcanic = 0, wildland = 0;
+        let volcanic = 0, wildland = 0, wildlandOlder = 0, oldestOlderS = null;
+        const olderCounties = [];
         for (const it of items) {
-          if (!isCurrent(it)) continue;
-          if (it.properties.volcanic_zone === true) volcanic++;
+          const pr = (it && it.properties) || {};
+          const isVolc = pr.volcanic_zone === true;
+          if (!isCurrent(it)) {
+            // D2. Older WILDLAND detections are counted separately rather than
+            // discarded. Excluding them from the hero ladder was right — a
+            // 17-hour-old pixel must not trigger FIRE_ACTIVE — but dropping
+            // them from the page entirely is how satellite silence ends a fire
+            // that is still burning. The Olowalu brush fire was reported
+            // 2026-09-26 13:57 HST with an evacuation order and was still
+            // listed active by the county on 2026-09-27 evening, while these
+            // five detections were its last satellite trace.
+            if (!isVolc) {
+              wildlandOlder++;
+              const a = pr.observation_age_s;
+              if (typeof a === "number" && isFinite(a) && (oldestOlderS === null || a > oldestOlderS)) oldestOlderS = a;
+              const c = (it.geometry && Array.isArray(it.geometry.coordinates))
+                ? countyKeyForPoint(Number(it.geometry.coordinates[0]), Number(it.geometry.coordinates[1])) : null;
+              if (c && olderCounties.indexOf(c) === -1) olderCounties.push(c);
+            }
+            continue;
+          }
+          if (isVolc) volcanic++;
           else wildland++;
         }
-        return { total: items.length, volcanic: volcanic, wildland: wildland };
+        return { total: items.length, volcanic: volcanic, wildland: wildland,
+                 wildlandOlder: wildlandOlder, olderAgeSeconds: oldestOlderS,
+                 olderCounties: olderCounties };
       }
       // SINGLE shared advisory decision — used by BOTH the hero and the Kūpuna
       // advisory so the two surfaces never diverge. Decision table:
@@ -4670,7 +4774,9 @@
         const heroSplit = fireZoneSplit(fire);
         const hv = ((primaryEvent === "VOLCANIC_HEAT" || (primaryEvent === "FIRE_ACTIVE" && !redFlag)) &&
           classifyHeatSignals(heroSplit.volcanic, heroSplit.wildland) === "VOG")
-          ? heroVolcanicWording(heroSplit.total || volcCount) : null;
+          // D1 twin — same correction as applyHero; these two must agree or a
+          // locale switch re-introduces the mislabel.
+          ? heroVolcanicWording(heroSplit.volcanic || volcCount) : null;
 
         // Re-render hero title (innerHTML — developer-controlled strings only)
         const titleEl = document.getElementById("heroTitle");
