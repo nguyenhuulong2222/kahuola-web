@@ -2076,9 +2076,32 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   // days old must not sit in a 24 h layer (Invariant III — drop, never infer).
   // Both drop reasons are counted and reported; a row that vanishes without a
   // number beside it is how a silent window bug survives a second time.
+  // RS-1. Region sanity, fail-closed. The hotspots parser validated only
+  // isNaN(lat)/isNaN(lng) — no range check and no containment — so a row outside
+  // the requested area, or with lat/lon transposed, would be plotted wherever it
+  // landed. FIRMS constrains its own response to the bbox we send, which is
+  // exactly why nothing caught it: the guarantee lived entirely upstream.
+  //
+  // Coordinates are DROPPED, never corrected and never swapped (Invariant III).
+  // A transposed pair is not a point we can recover — guessing which reading was
+  // intended would place a fire somewhere nobody observed one. The count is
+  // reported so a silent drop can never look like a quiet day.
+  let dropped_out_of_region = 0;
+  const [rgW, rgS, rgE, rgN] = bbox;
+  const inRegion = merged.filter((f) => {
+    const c = (f as { geometry?: { coordinates?: unknown } } | null)?.geometry?.coordinates;
+    const pair = Array.isArray(c) ? c : null;
+    const lng = pair ? Number(pair[0]) : NaN;
+    const lat = pair ? Number(pair[1]) : NaN;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { dropped_out_of_region++; return false; }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) { dropped_out_of_region++; return false; }
+    if (lng < rgW || lng > rgE || lat < rgS || lat > rgN) { dropped_out_of_region++; return false; }
+    return true;
+  });
+
   let dropped_outside_window = 0;
   let dropped_unparseable_time = 0;
-  const inWindow = rollingWindowS === null ? merged : merged.filter((f) => {
+  const inWindow = rollingWindowS === null ? inRegion : inRegion.filter((f) => {
     const age = (f as { properties?: { observation_age_s?: unknown } })?.properties?.observation_age_s;
     if (typeof age !== 'number' || !Number.isFinite(age)) { dropped_unparseable_time++; return false; }
     if (age < FIRE_DETECTION_MAX_SKEW_S || age > rollingWindowS) { dropped_outside_window++; return false; }
@@ -2126,6 +2149,7 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
       },
       dropped_outside_window,
       dropped_unparseable_time,
+      dropped_out_of_region,
     },
   };
 
@@ -2279,6 +2303,28 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
     // Acquisition clock. Computed at response generation, so a cached response
     // drifts by at most the hotspots TTL (300 s) — well inside the 1 h FRESH
     // band, so the classification cannot flip because of caching alone.
+    // RS-1. Pixel footprint, additive. FIRMS `scan` and `track` are the along-
+    // and cross-track pixel dimensions in km at the detection's position — a
+    // VIIRS pixel is ~375 m at nadir and grows toward the swath edge, so a
+    // detection near the edge covers several times the ground area of one at
+    // nadir. Without these a reader cannot tell how much ground "one detection"
+    // actually represents, which is the difference between a dot and a claim.
+    //
+    // numOrNull, not Number(): Number('') is 0, and a pixel of zero area is a
+    // statement about the world that FIRMS never made. Missing stays null.
+    const dimOrNull = (v: unknown): number | null => {
+      if (v === undefined || v === null || String(v).trim() === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const scan_km = dimOrNull(row.scan);
+    const track_km = dimOrNull(row.track);
+    // Only when BOTH dimensions are real. One valid dimension tells us nothing
+    // about area, and multiplying by a guessed second one would invent it.
+    const footprint_km2 = (scan_km !== null && track_km !== null)
+      ? Math.round(scan_km * track_km * 1000) / 1000
+      : null;
+
     const acq_datetime_utc = firmsAcqToIso(row.acq_date || '', row.acq_time || '');
     const acqMs = acq_datetime_utc ? Date.parse(acq_datetime_utc) : NaN;
     const observation_age_s = Number.isFinite(acqMs)
@@ -2296,6 +2342,12 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
         frp: row.frp || '',
         // ── P36a-1 additive detection-age fields ──────────────────────────
         frp_mw,
+        // ── RS-1 additive pixel footprint ─────────────────────────────────
+        // `scan` and `track` above stay exactly as they are (raw strings) for
+        // existing consumers; these are the same values as numbers, or null.
+        scan_km,
+        track_km,
+        footprint_km2,
         acq_datetime_utc,
         observation_age_s,
         freshness_status,
