@@ -3238,7 +3238,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=d2e8af20"></script>
+  <script src="/i18n/kahuola-i18n.js?v=1d36929e"></script>
 
   <script>
     "use strict";
@@ -3795,12 +3795,34 @@
       const frpNum = (frpCandidate === null || frpCandidate === undefined || String(frpCandidate).trim() === "")
         ? NaN : Number(frpCandidate);
       const frp_mw = Number.isFinite(frpNum) ? frpNum : null;
+      // RS-2. The RS-1 pixel-footprint fields. This allowlist DROPS anything it
+      // does not name, so the Worker sending them was not enough to make them
+      // renderable — they arrived and were thrown away here.
+      //
+      // Never 0 and never Number(null). A pixel with no reported dimension is
+      // not a zero-area pixel, and `Number(null)` is 0, which would print a
+      // "0.0 x 0.0 km" footprint as though the satellite had pinpointed the
+      // heat exactly. Same reasoning as the frp_mw guard directly above.
+      const dimOrNull = (v) => {
+        if (v === null || v === undefined || String(v).trim() === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      };
+      const scan_km = dimOrNull(raw.scan_km);
+      const track_km = dimOrNull(raw.track_km);
+      const footprint_km2 = dimOrNull(raw.footprint_km2);
+      // FIRMS day/night acquisition flag: "D" or "N" and nothing else. An
+      // unlisted code is unknown, and an unknown pass is omitted from the
+      // popup line rather than shown raw or guessed at.
+      const dnRaw = typeof raw.daynight === "string" ? raw.daynight.trim().toUpperCase() : null;
+      const daynight = (dnRaw === "D" || dnRaw === "N") ? dnRaw : null;
       return {
         latitude: lat, longitude: lng,
         detection_confidence, satellite, distance_to_nearest_place_miles, acq_datetime_utc,
         signal_id, signal_class, signal_state, freshness_status, observed_at_utc, provenance,
         observation_age_s,
         frp_mw,
+        scan_km, track_km, footprint_km2, daynight,
         brightness: raw.brightness ?? raw.bright_ti4 ?? raw.bright_t31 ?? null,
         acq_date: raw.acq_date || null,
         acq_time: raw.acq_time || null,
@@ -3861,6 +3883,13 @@
             observation_age_s: n.observation_age_s,
             signal_id: n.signal_id,
             satellite: n.satellite,
+            // RS-2. VIIRS pixel dimensions at the scan angle of this detection,
+            // and the day/night pass flag. Passed through unchanged — the popup
+            // does the display mapping, nothing here re-decides anything.
+            scan_km: n.scan_km,
+            track_km: n.track_km,
+            footprint_km2: n.footprint_km2,
+            daynight: n.daynight,
             distance_to_nearest_place_miles: n.distance_to_nearest_place_miles,
             provenance: n.provenance ? JSON.stringify(n.provenance) : null,
             source: props.provider || props.source || (n.provenance?.source_agency ? String(n.provenance.source_agency).replace(/_/g, " ") : "NASA FIRMS"),
@@ -7182,7 +7211,50 @@
       const popupTitle = isVolcanicDetection
         ? _L("map.popup_title_volcanic", "Volcanic heat signal")
         : _L("map.popup_title_fire", "Wildfire Detection Signal");
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">${popupGlyph} ${popupTitle}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type", "Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf", "Detection confidence")}</div><div class="popup-metric-value">${confDisplay}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired", "Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you", "Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness", "Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state", "Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp", "FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite", "Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}${nightBadge}</div></div>${distCommunityRow}${observedRow}</div>${p.volcanic_zone === true ? `<div class="popup-note" style="border-color:rgba(255,204,102,.45);background:rgba(255,204,102,.10)">🌋 ${_L("map.popup_volcanic_zone", "Inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire.")}</div>` : ""}<div class="popup-note">${_L("map.popup_fire_disclaimer", "\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions", "Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view", "Satellite View")}</a></div></div>`;
+      // RS-2 (a). Who saw it, on which pass, how long ago — one line, built
+      // only from fields the Worker sent. The satellite CODE ("N21") is not a
+      // name any reader knows, so it is expanded through an EXPLICIT table and
+      // nothing else: an unlisted code drops out of the line rather than being
+      // printed raw or guessed at. The pass and the age follow the same rule,
+      // and if all three parts are missing the line does not render at all.
+      const SAT_NAMES = { N20: "NOAA-20", N21: "NOAA-21", N: "Suomi NPP", T: "Terra", A: "Aqua" };
+      const satCode = typeof p.satellite === "string" ? p.satellite.trim().toUpperCase() : "";
+      const satName = SAT_NAMES[satCode] || null;
+      const passLabel = p.daynight === "D" ? _L("map.pass_day", "day pass")
+        : p.daynight === "N" ? _L("map.pass_night", "night pass") : null;
+      const detectedByParts = [satName, passLabel, ageText].filter(Boolean);
+      // The label introduces the satellite, so with no mapped satellite name it
+      // has nothing to introduce: "Detected by seen 30 min ago" is not a
+      // sentence. The remaining parts still carry real information, so they are
+      // shown unlabelled rather than dropped.
+      const detectedByLabel = satName
+        ? `<strong>${_L("map.popup_detected_by", "Detected by")}</strong> `
+        : "";
+      const detectedByRow = detectedByParts.length
+        ? `<div class="popup-note">\ud83d\udef0 ${detectedByLabel}${escapeHtml(detectedByParts.join(" \u00b7 "))}</div>`
+        : "";
+      // RS-2 (b). A VIIRS detection is a PIXEL, not a point. The marker sits at
+      // the pixel centre and the heat is somewhere inside it, which is the
+      // difference between "the fire is here" and "the fire is within this
+      // square" — at 0.5 km that is several streets. Renders only when BOTH
+      // dimensions are real; a missing dimension means no claim about
+      // precision, never a zero-size pixel. Volcanic-zone popups get this line
+      // too: it says "heat", which is true on either kind of detection.
+      const fmtKm = (v) => (Number.isFinite(v) && v >= 0.1 ? v.toFixed(1) : "0.1");
+      const scanKm = p.scan_km != null ? Number(p.scan_km) : null;
+      const trackKm = p.track_km != null ? Number(p.track_km) : null;
+      const precisionRow = (scanKm !== null && trackKm !== null && Number.isFinite(scanKm) && Number.isFinite(trackKm))
+        ? `<div class="popup-note">\ud83d\udccd ${_tmpl("map.popup_precision", { scan: fmtKm(scanKm), track: fmtKm(trackKm) }) || `Location precision: the detected heat is somewhere within a ~${fmtKm(scanKm)} \u00d7 ${fmtKm(trackKm)} km satellite pixel around this point.`}</div>`
+        : "";
+      // RS-2 (c). The named anti-pattern, stated where someone is actually
+      // looking at a detection: cloud and thick smoke block the sensor, so an
+      // empty map is not an all-clear. Wildland popups ONLY — on a
+      // volcanic-zone popup this would be a sentence about a wildfire that
+      // nobody claimed was there.
+      const limitsRow = !isVolcanicDetection
+        ? `<div class="popup-note">\u2601 ${_L("map.popup_sat_limits", "Clouds and thick smoke can hide fires. No detection does not mean no fire.")}</div>`
+        : "";
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">${popupGlyph} ${popupTitle}</div><div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)} \xb7 ${escapeHtml(sourceLabel)}</div></div><div class="popup-severity normal">${escapeHtml(signalClassLabel)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_type", "Signal type")}</div><div class="popup-metric-value">${escapeHtml(signalClassLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_det_conf", "Detection confidence")}</div><div class="popup-metric-value">${confDisplay}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_acquired", "Acquired (UTC)")}</div><div class="popup-metric-value">${escapeHtml(acqTime)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_dist_from_you", "Distance from you")}</div><div class="popup-metric-value">${escapeHtml(milesFromYou)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_freshness", "Freshness")}</div><div class="popup-metric-value">${escapeHtml(freshnessLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_signal_state", "Signal state")}</div><div class="popup-metric-value">${escapeHtml(signalStateLabel)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_frp", "FRP (radiative power)")}</div><div class="popup-metric-value">${escapeHtml(frp)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_satellite", "Satellite")}</div><div class="popup-metric-value">${escapeHtml(satellite)}${nightBadge}</div></div>${distCommunityRow}${observedRow}</div>${detectedByRow}${precisionRow}${limitsRow}${p.volcanic_zone === true ? `<div class="popup-note" style="border-color:rgba(255,204,102,.45);background:rgba(255,204,102,.10)">🌋 ${_L("map.popup_volcanic_zone", "Inside the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire.")}</div>` : ""}<div class="popup-note">${_L("map.popup_fire_disclaimer", "\u26a0\ufe0f This is a satellite fire detection observation \u2014 not a confirmed public hazard, evacuation order, or official warning. Always follow NWS and county emergency guidance.")}</div><div class="popup-actions"><a class="popup-btn" href="${googleDirections}" target="_blank" rel="noopener noreferrer">${_L("map.popup_open_directions", "Open Directions")}</a><a class="popup-btn" href="${googleMaps}" target="_blank" rel="noopener noreferrer">Google Maps</a><a class="popup-btn" href="${appleMaps}" target="_blank" rel="noopener noreferrer">Apple Maps</a><a class="popup-btn" href="${satelliteFocus}" target="_blank" rel="noopener noreferrer">${_L("map.popup_satellite_view", "Satellite View")}</a></div></div>`;
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "360px" }).setLngLat(lngLat || coords).setHTML(html).addTo(map);
     }
 
