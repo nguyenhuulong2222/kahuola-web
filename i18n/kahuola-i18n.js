@@ -254,7 +254,7 @@
 
       // Map page (live-map.html) — Class A + B
       "map.intro_title": "Live Hawai\u02bfi Hazard Map",
-      "map.intro_lead": "Real-time wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.",
+      "map.intro_lead": "Satellite wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.",
       "map.panel_head_hawaii": "Fire Signals \xb7 Hawai\u02bfi",
       "map.panel_head_usa": "Fire Signals \xb7 USA",
       "map.scope_hint_hawaii": "Showing satellite fire detections for Hawai\u02bfi only.",
@@ -968,7 +968,7 @@
       "status.red_flag": "RED FLAG",
 
       // ── Signal card titles (Class B templates) ────────────────
-      "signal.fire_title_active": "\ud83d\udd25 Fire Signal \u2014 {n} Active",
+      "signal.fire_title_active": "\ud83d\udd25 Fire Signal \u2014 {n} heat detection{s}",
       "signal.flood_title_active": "\ud83c\udf27 Flood Signal \u2014 {n} Elevated",
 
       // ── Signal card long copies (Class B) ─────────────────────
@@ -1199,7 +1199,7 @@
       "gs.lead": "Open Kahu Ola in any browser, or download the iOS app for native alerts and offline-first hazard awareness.",
       "gs.web_badge": "Web \xb7 Available Now",
       "gs.web_title": "Kahu Ola Live Map",
-      "gs.web_desc": "Real-time wildfire detections, flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
+      "gs.web_desc": "Satellite wildfire detections (typically 20\u201330 minutes after each satellite pass), flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
       "gs.web_li1": "NASA FIRMS fire hotspots",
       "gs.web_li2": "NWS official flood + tsunami alerts",
       "gs.web_li3": "Live NEXRAD rain radar",
@@ -2171,7 +2171,7 @@
       "status.red_flag": "C\u1edd \u0110\u1ecf",
 
       // ── Signal card titles ────────────────────────────────────
-      "signal.fire_title_active": "\ud83d\udd25 T\xedn hi\u1ec7u ch\u00e1y \u2014 {n} \u0111ang ho\u1ea1t \u0111\u1ed9ng",
+      "signal.fire_title_active": "\ud83d\udd25 T\xedn hi\u1ec7u ch\u00e1y \u2014 {n} l\u01b0\u1ee3t ph\xe1t hi\u1ec7n nhi\u1ec7t",
       "signal.flood_title_active": "\ud83c\udf27 T\xedn hi\u1ec7u l\u0169 \u2014 {n} n\u00e2ng cao",
 
       // ── Signal card long copies ───────────────────────────────
@@ -2395,7 +2395,7 @@
       "gs.lead": "M\u1edf Kahu Ola tr\xean b\u1ea5t k\u1ef3 tr\xecnh duy\u1ec7t n\xe0o, ho\u1eb7c t\u1ea3i \u1ee9ng d\u1ee5ng iOS \u0111\u1ec3 nh\u1eadn c\u1ea3nh b\xe1o g\u1ed1c v\xe0 theo d\xf5i nguy c\u01a1 ngay c\u1ea3 khi m\u1ea1ng y\u1ebfu.",
       "gs.web_badge": "Web \xb7 C\xf3 s\u1eb5n ngay",
       "gs.web_title": "B\u1ea3n \u0111\u1ed3 Tr\u1ef1c ti\u1ebfp Kahu Ola",
-      "gs.web_desc": "Ph\xe1t hi\u1ec7n ch\xe1y r\u1eebng th\u1eddi gian th\u1ef1c, c\u1ea3nh b\xe1o l\u0169 qu\xe9t, tr\u1ea1ng th\xe1i s\xf3ng th\u1ea7n, \u0111\u01b0\u1eddng \u0111i b\xe3o v\xe0 radar m\u01b0a \u2014 t\u1ea5t c\u1ea3 trong m\u1ed9t b\u1ea3ng \u0111i\u1ec1u khi\u1ec3n d\xe2n s\u1ef1. Ho\u1ea1t \u0111\u1ed9ng tr\xean m\u1ecdi thi\u1ebft b\u1ecb, m\u1ecdi tr\xecnh duy\u1ec7t.",
+      "gs.web_desc": "Ph\xe1t hi\u1ec7n ch\xe1y r\u1eebng t\u1eeb v\u1ec7 tinh (th\u01b0\u1eddng 20\u201330 ph\xfat sau m\u1ed7i l\u01b0\u1ee3t bay qua), c\u1ea3nh b\xe1o l\u0169 qu\xe9t, tr\u1ea1ng th\xe1i s\xf3ng th\u1ea7n, \u0111\u01b0\u1eddng \u0111i b\xe3o v\xe0 radar m\u01b0a \u2014 t\u1ea5t c\u1ea3 trong m\u1ed9t b\u1ea3ng \u0111i\u1ec1u khi\u1ec3n d\xe2n s\u1ef1. Ho\u1ea1t \u0111\u1ed9ng tr\xean m\u1ecdi thi\u1ebft b\u1ecb, m\u1ecdi tr\xecnh duy\u1ec7t.",
       "gs.web_li1": "\u0110i\u1ec3m n\xf3ng ch\xe1y NASA FIRMS",
       "gs.web_li2": "C\u1ea3nh b\xe1o l\u0169 + s\xf3ng th\u1ea7n ch\xednh th\u1ee9c NWS",
       "gs.web_li3": "Radar m\u01b0a NEXRAD tr\u1ef1c ti\u1ebfp",
@@ -3164,7 +3164,10 @@
       "gs.label": "E Ho\u02bbomaka", "gs.lead": "E wehe i\u0101 Kahu Ola ma k\u0113l\u0101 me k\u0113ia browser \u2014 \u02bba\u02bbohe ho\u02bboiho, \u02bba\u02bbohe helu, \u02bba\u02bbohe ho\u02bbonohonoho. Ke ho\u02bbouka wikiwiki nei ka palapala \u02bb\u0101ina pilikia a hana n\u014d me ka p\u016bnaehana \u02bbole ma hope o ka hele \u02bbana mua.",
       "gs.title_l1": "Loa\u02bba ma ka p\u016bnaewele.", "gs.title_l2": "Ke hiki ana ka app mobile.",
       "gs.web_badge": "P\u016bnaewele \xb7 Loa\u02bba i k\u0113ia manawa", "gs.web_title": "Kahu Ola Live Map",
-      "gs.web_desc": "N\u0101 \u02bbike ahi \u0101mau, n\u0101 a\u02bboaia wai kahe awiwi, ke k\u016blana tsunami, n\u0101 ala hui makani, a me ka radar ua \u2014 \u0101pau ma kekahi ki \u02bb\u014dnaehana aupuni. Hana ma luna o k\u0113l\u0101 me k\u0113ia p\u016bnaehana, k\u0113l\u0101 me k\u0113ia browser.", "gs.web_li1": KEEP_ENGLISH,
+      // NEEDS NATIVE REVIEW: reverted to EN after immediacy claim removal (2026-09-30)
+      // \u2014 review with Kahele Dukelow before restoring \u02bb\u014clelo Hawai\u02bbi.
+      "gs.web_desc": "Satellite wildfire detections (typically 20\u201330 minutes after each satellite pass), flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
+      "gs.web_li1": KEEP_ENGLISH,
       "gs.web_li2": "N\u0101 a\u02bboaia kai a wai kahe awiwi k\u016b\u02bbokok\u014d\u02bba o NWS", "gs.web_li3": KEEP_ENGLISH,
       "gs.web_li4": "Ke k\u016blana ahi kelima a me ka makani", "gs.web_li5": KEEP_ENGLISH,
       "gs.web_cta": "Wehe i ka Palapala \u02bb\u0100ina \u2192", "gs.mobile_badge": "iOS \xb7 E Hiki Mai Ana",
@@ -3875,7 +3878,9 @@
       "gs.label": "Magsimula", "gs.lead": "Buksan ang Kahu Ola sa anumang browser \u2014 walang download, walang account, walang setup. Ang live hazard map ay naglo-load nang mabilis at gumagana nang offline pagkatapos ng unang pagbisita.",
       "gs.title_l1": "Available na sa web.", "gs.title_l2": "Mobile app malapit nang dumating.",
       "gs.web_badge": "Web \xb7 Available Na", "gs.web_title": "Kahu Ola Live Map",
-      "gs.web_desc": "Mga real-time na wildfire detection, flash flood alert, tsunami status, hurricane track, at rain radar \u2014 lahat sa isang civic dashboard. Gumagana sa anumang device, anumang browser.", "gs.web_li1": KEEP_ENGLISH,
+      // NEEDS NATIVE REVIEW: reverted to EN after immediacy claim removal (2026-09-30)
+      "gs.web_desc": "Satellite wildfire detections (typically 20\u201330 minutes after each satellite pass), flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
+      "gs.web_li1": KEEP_ENGLISH,
       "gs.web_li2": "Mga opisyal na flood + tsunami alert ng NWS", "gs.web_li3": KEEP_ENGLISH,
       "gs.web_li4": "Fire weather + konteksto ng hangin", "gs.web_li5": KEEP_ENGLISH,
       "gs.web_cta": "Buksan ang Live na Mapa \u2192", "gs.mobile_badge": "iOS \xb7 Paparating",
@@ -4492,7 +4497,9 @@
       "gs.label": "Mangrugi", "gs.lead": "Buksan ti Kahu Ola iti anioman a browser \u2014 awan download, awan account, awan setup. Ti live hazard map ket umload iti nagdanag ken gumagawa offline kalpasan ti umuna nga bisita.",
       "gs.title_l1": "Available ti agdama iti web.", "gs.title_l2": "Mobile app ti umayto.",
       "gs.web_badge": "Web \xb7 Available Ita", "gs.web_title": "Kahu Ola Live Map",
-      "gs.web_desc": "Mga real-time nga wildfire detection, flash flood alert, tsunami status, hurricane track, ken rain radar \u2014 amin iti maysa nga civic dashboard. Gumagawa iti anioman nga device, anioman nga browser.", "gs.web_li1": KEEP_ENGLISH,
+      // NEEDS NATIVE REVIEW: reverted to EN after immediacy claim removal (2026-09-30)
+      "gs.web_desc": "Satellite wildfire detections (typically 20\u201330 minutes after each satellite pass), flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
+      "gs.web_li1": KEEP_ENGLISH,
       "gs.web_li2": "Opisyal nga flood + tsunami alert ti NWS", "gs.web_li3": KEEP_ENGLISH,
       "gs.web_li4": "Fire weather + konteksto ti angin", "gs.web_li5": KEEP_ENGLISH,
       "gs.web_cta": "Abriren ti Live nga Mapa \u2192", "gs.mobile_badge": "iOS \xb7 Mapayen",
@@ -5110,7 +5117,9 @@
       "gs.label": "\u59cb\u3081\u308b", "gs.lead": "\u4efb\u610f\u306e\u30d6\u30e9\u30a6\u30b6\u3067Kahu Ola\u3092\u958b\u304f\u2014\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u4e0d\u8981\u3001\u30a2\u30ab\u30a6\u30f3\u30c8\u4e0d\u8981\u3001\u8a2d\u5b9a\u4e0d\u8981\u3002\u30e9\u30a4\u30d6\u30cf\u30b6\u30fc\u30c9\u30de\u30c3\u30d7\u306f\u5373\u5ea7\u306b\u8aad\u307f\u8fbc\u307e\u308c\u3001\u521d\u56de\u30a2\u30af\u30bb\u30b9\u5f8c\u306f\u30aa\u30d5\u30e9\u30a4\u30f3\u3067\u3082\u52d5\u4f5c\u3057\u307e\u3059\u3002",
       "gs.title_l1": "\u30a6\u30a7\u30d6\u3067\u4eca\u3059\u3050\u5229\u7528\u53ef\u80fd\u3002", "gs.title_l2": "\u30e2\u30d0\u30a4\u30eb\u30a2\u30d7\u30ea\u3082\u307e\u3082\u306a\u304f\u3002",
       "gs.web_badge": "\u30a6\u30a7\u30d6 \xb7 \u4eca\u3059\u3050\u5229\u7528\u53ef\u80fd", "gs.web_title": "Kahu Ola \u30e9\u30a4\u30d6\u30de\u30c3\u30d7",
-      "gs.web_desc": "\u30ea\u30a2\u30eb\u30bf\u30a4\u30e0\u306e\u5c71\u706b\u4e8b\u691c\u77e5\u3001\u6025\u4fd5\u6d2a\u6c34\u8b66\u5831\u3001\u6d25\u6ce2\u72b6\u6cc1\u3001\u30cf\u30ea\u30b1\u30fc\u30f3\u306e\u8ecc\u8de1\u3001\u30ec\u30fc\u30c0\u30fc\u964d\u96e8\u2014\u3059\u3079\u3066\u30072\u3064\u306e\u5e02\u6c11\u30c0\u30c3\u30b7\u30e5\u30dc\u30fc\u30c9\u306b\u3002\u3042\u3089\u3086\u308b\u30c7\u30d0\u30a4\u30b9\u3001\u3042\u3089\u3086\u308b\u30d6\u30e9\u30a6\u30b6\u3067\u52d5\u4f5c\u3002", "gs.web_li1": KEEP_ENGLISH,
+      // NEEDS NATIVE REVIEW: reverted to EN after immediacy claim removal (2026-09-30)
+      "gs.web_desc": "Satellite wildfire detections (typically 20\u201330 minutes after each satellite pass), flash flood alerts, tsunami status, hurricane tracks, and rain radar \u2014 all in one civic dashboard. Works on any device, any browser.",
+      "gs.web_li1": KEEP_ENGLISH,
       "gs.web_li2": "NWS\u516c\u5f0f\u6d2a\u6c34\u30fb\u6d25\u6ce2\u8b66\u5831", "gs.web_li3": KEEP_ENGLISH,
       "gs.web_li4": "\u706b\u707d\u6c17\u8c61\u30fb\u98a8\u51b5\u30b3\u30f3\u30c6\u30ad\u30b9\u30c8", "gs.web_li5": KEEP_ENGLISH,
       "gs.web_cta": "\u30e9\u30a4\u30d6\u30de\u30c3\u30d7\u3092\u958b\u304f \u2192", "gs.mobile_badge": "iOS \xb7 \u307e\u3082\u306a\u304f",

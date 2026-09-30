@@ -2664,7 +2664,7 @@
           <div class="gscard primary">
             <div><span class="gs-badge" data-i18n="gs.web_badge">Web · Available Now</span></div>
             <h3 data-i18n="gs.web_title">Kahu Ola Live Map</h3>
-            <p data-i18n="gs.web_desc">Real-time wildfire detections, flash flood alerts, tsunami status, hurricane tracks, and rain radar — all in one civic dashboard. Works on any device, any browser.</p>
+            <p data-i18n="gs.web_desc">Satellite wildfire detections (typically 20–30 minutes after each satellite pass), flash flood alerts, tsunami status, hurricane tracks, and rain radar — all in one civic dashboard. Works on any device, any browser.</p>
             <ul class="gs-list">
               <li data-i18n="gs.web_li1">NASA FIRMS fire hotspots</li>
               <li data-i18n="gs.web_li2">NWS official flood + tsunami alerts</li>
@@ -2743,7 +2743,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=d2e8af20"></script>
+  <script src="/i18n/kahuola-i18n.js?v=740900ac"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -4082,7 +4082,11 @@
         const badge = document.getElementById("fireStatusDetail");
 
         if (wild > 0) {
-          setText("fireTitle", _tmpl("signal.fire_title_active", { n: wild }) || `\ud83d\udd25 Fire Signal \u2014 ${wild} Active`);
+          // RS-C. `s` must be PASSED: tmpl() substitutes only the keys it is
+          // given, so {s} in the value would otherwise ship as literal braces.
+          // These are wildland heat detections, not a count of fires that are
+          // "Active" — a satellite saw heat, which is a different claim.
+          setText("fireTitle", _tmpl("signal.fire_title_active", { n: wild, s: wild === 1 ? "" : "s" }) || `\ud83d\udd25 Fire Signal \u2014 ${wild} heat detection${wild === 1 ? "" : "s"}`);
           setText("fireCopy", volc > 0
             ? (_tmpl("signal.fire_copy_mixed_tmpl", { w: wild, ws: wild > 1 ? "s" : "", v: volc, vs: volc > 1 ? "s" : "" })
                || `${wild} wildfire signal${wild === 1 ? "" : "s"} outside the volcanic zones, plus ${volc} volcanic heat signal${volc === 1 ? "" : "s"} at K\u012blauea/Mauna Loa. Open the live map for island-level detail.`)
