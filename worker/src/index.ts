@@ -1394,7 +1394,13 @@ type MorningBrief = {
   };
   wildfire: {
     status: BriefStatus;
+    // RS-A1. `detections` is the WILDLAND count — the field name promises
+    // wildfire and now keeps that promise. The two siblings are additive, so
+    // the total this used to report is still available, just no longer called
+    // a wildfire.
     detections: number;
+    volcanic_heat_detections: number;
+    total_heat_detections: number;
     nearest_km: number | null;
     note: string;
     source: string;
@@ -1516,7 +1522,20 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
   const hurricane = hurricaneJson.status === 'fulfilled' ? hurricaneJson.value : null;
   const landslide = landslideJson.status === 'fulfilled' ? landslideJson.value : null;
 
-  const wildfireDetections = Array.isArray(fire?.features) ? fire.features.length : 0;
+  // RS-A1. This used to be one number called `wildfireDetections`, and it was
+  // the TOTAL — Kīlauea included. Measured live 2026-09-30: summary reported
+  // count 1 / wildland 0 / volcanic 1 while this endpoint published "1 wildfire
+  // detections are present" and status ACTIVE. There was no wildfire anywhere
+  // in Hawaiʻi. The 05:30 HST cron publishes this brief outward, so nobody had
+  // to open a page for it to be wrong.
+  //
+  // Same predicate as the summary (isVolcanicHeatFeature), so the two surfaces
+  // cannot disagree about which detections are lava.
+  const heatFeatures: any[] = Array.isArray(fire?.features) ? fire.features : [];
+  const totalHeatDetections = heatFeatures.length;
+  let volcanicHeatDetections = 0;
+  for (const f of heatFeatures) { if (isVolcanicHeatFeature(f)) volcanicHeatDetections++; }
+  const wildlandDetections = Math.max(0, totalHeatDetections - volcanicHeatDetections);
   const tsunamiSignals = Array.isArray(tsunami?.signals) ? tsunami.signals.length : 0;
   // P29a-1. `hurricane` is now a StormPositions, not a parsed envelope.
   // source_status is read from the result itself because
@@ -1536,12 +1555,19 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
   const floodWatchCount = Number(flood?.summary?.watch_count || 0);
   const floodActive = floodWarningCount > 0 || floodWatchCount > 0;
 
+  // RS-A1. The word "wildfire" is now earned by a wildland detection and
+  // nothing else. The volcanic branch sits BELOW the flood warning — an
+  // official warning outranks thermal context — but ABOVE the default, because
+  // "no escalation is active" while Kīlauea is registering heat is the same
+  // absence-reads-as-safety error pointed the other way.
   const headline =
-    wildfireDetections > 0
+    wildlandDetections > 0
       ? 'Wildfire detections are present in the current Hawaiʻi snapshot.'
       : floodWarningCount > 0
         ? 'Flood warning conditions are active in parts of Hawaiʻi.'
-        : 'No statewide primary hazard escalation is active in the current snapshot.';
+        : volcanicHeatDetections > 0
+          ? 'Satellite heat is present only in the Kīlauea/Mauna Loa volcanic zones.'
+          : 'No statewide primary hazard escalation is active in the current snapshot.';
 
   return {
     schema_version: 'v1',
@@ -1553,15 +1579,25 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
       civic_note: 'Use this brief for situational awareness only.'
     },
     wildfire: {
-      status: inferBriefStatusFromSettled(fireJson, wildfireDetections > 0),
-      detections: wildfireDetections,
+      // ACTIVE is a claim about a wildfire, so only a wildland detection earns
+      // it. Volcanic-only falls through to the existing zero-state MONITORING.
+      status: inferBriefStatusFromSettled(fireJson, wildlandDetections > 0),
+      detections: wildlandDetections,
+      volcanic_heat_detections: volcanicHeatDetections,
+      total_heat_detections: totalHeatDetections,
       nearest_km: asNumberOrNull(fire?.properties?.nearest_km),
+      // The outage branch is untouched: a source we could not reach is neither
+      // a wildfire nor a quiet sky. The zero branch says why an empty result is
+      // not an all-clear — clouds and the gaps between passes hide fires, and
+      // this brief goes out whether or not anyone is watching the map.
       note:
         fireJson.status === 'rejected'
           ? 'Wildfire source could not be verified right now.'
-          : wildfireDetections > 0
-            ? `${wildfireDetections} wildfire detections are present in the current snapshot.`
-            : 'No wildfire detections were returned in the current snapshot.',
+          : wildlandDetections > 0
+            ? `Satellite heat: ${wildlandDetections} detection${wildlandDetections === 1 ? '' : 's'} outside volcanic zones \u2014 possible wildfire signals.`
+            : volcanicHeatDetections > 0
+              ? 'Satellite heat detected only in volcanic zones (K\u012blauea/Mauna Loa) \u2014 volcanic activity, not wildfire.'
+              : 'No satellite heat detected in the latest passes. Clouds or gaps between passes can hide fires.',
       source: 'NASA FIRMS via Kahu Ola Worker'
     },
     flood: {
@@ -1655,6 +1691,8 @@ async function handleMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promis
       wildfire: {
         status: degradedStatus,
         detections: 0,
+        volcanic_heat_detections: 0,
+        total_heat_detections: 0,
         nearest_km: null,
         note: 'Wildfire source could not be verified right now.',
         source: 'NASA FIRMS via Kahu Ola Worker',
@@ -2256,6 +2294,20 @@ function inVolcanicZone(lng: number, lat: number): boolean {
     if (lng >= z.west && lng <= z.east && lat >= z.south && lat <= z.north) return true;
   }
   return false;
+}
+
+// RS-A1. Reads the volcanic_zone flag that inVolcanicZone() above already wrote
+// onto each feature. ONE predicate, shared by every surface that splits heat
+// into volcanic and wildland — readSummaryFirms and the morning brief. A second
+// copy is how `count === volcanic + wildland` drifts apart across two surfaces.
+//
+// A MISSING or undefined flag is NOT volcanic, so it counts as wildland. That
+// is deliberate and must not be "fixed": an old cache predating the flag, or a
+// feature we failed to classify, is reported as possible wildfire rather than
+// quietly filed under lava. Over-reporting heat is recoverable; hiding a
+// possible wildfire is not.
+function isVolcanicHeatFeature(f: any): boolean {
+  return f?.properties?.volcanic_zone === true;
 }
 
 function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = ''): { type: string; features: unknown[] } {
@@ -5118,7 +5170,7 @@ async function readSummaryFirms(key: string, nowMs: number): Promise<SummarySrc>
     // Additive breakdown. Old caches without volcanic_zone → volcanic 0, all
     // wildland. Invariant (asserted in test): count === volcanic + wildland.
     let volcanic = 0;
-    for (const f of feats) { if (f?.properties?.volcanic_zone === true) volcanic++; }
+    for (const f of feats) { if (isVolcanicHeatFeature(f)) volcanic++; }
     const wildland = Math.max(0, total - volcanic);
     return { count: total, status: total > 0 ? 'detected' : 'none', age_seconds: age,
       volcanic_zone_count: volcanic, wildland_count: wildland };
