@@ -1391,6 +1391,16 @@ type MorningBrief = {
   summary: {
     headline: string;
     civic_note: string;
+    // RS-A2, ADDITIVE. Which primary sources could not be verified for THIS
+    // brief. Always present — [] means every primary source answered, which is
+    // a different statement from "we did not say", and a downstream reader
+    // (n8n, Apps Script, a future mobile card) must be able to tell them apart
+    // without parsing prose.
+    sources_unverified: string[];
+    // Answered, but not fully: one of two satellite feeds reported. Real
+    // coverage, thinner than usual. Kept OUT of sources_unverified so it never
+    // escalates the headline.
+    sources_partial: string[];
   };
   wildfire: {
     status: BriefStatus;
@@ -1465,6 +1475,26 @@ function inferBriefStatusFromSettled<T>(
     return 'UNAVAILABLE';
   }
   return hasActiveSignal ? 'ACTIVE' : 'MONITORING';
+}
+
+// RS-A2. Every brief source handler is built to Invariant II — always 200 with
+// valid JSON — so a dead upstream RESOLVES with a degraded envelope instead of
+// rejecting. inferBriefStatusFromSettled alone therefore cannot see an outage:
+// it read `fulfilled` and reported MONITORING while NWS was unreachable, and a
+// total FIRMS outage produced features:[] which the wildfire section then
+// worded as a quiet sky. Same defect P29a-1 documented for the hurricane feed.
+//
+// `degraded` is the handler's OWN outage signal, read by the caller. A rejected
+// promise still wins, so TIMEOUT stays distinguishable from UNAVAILABLE. No new
+// BriefStatus values.
+function briefSectionStatus<T>(
+  settled: PromiseSettledResult<T>,
+  degraded: boolean,
+  hasActiveSignal: boolean
+): BriefStatus {
+  const base = inferBriefStatusFromSettled(settled, hasActiveSignal);
+  if (base === 'TIMEOUT' || base === 'UNAVAILABLE') return base;
+  return degraded ? 'UNAVAILABLE' : base;
 }
 
 async function fetchJsonSafe(url: string): Promise<any> {
@@ -1555,19 +1585,74 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
   const floodWatchCount = Number(flood?.summary?.watch_count || 0);
   const floodActive = floodWarningCount > 0 || floodWatchCount > 0;
 
+  // RS-A2. Fail-closed source verification. Casts to any are deliberate: the
+  // existing `fire?.properties` / `flood?.summary` reads below carry known tsc
+  // errors against the handlers' untyped Response bodies, and adding more of
+  // them would grow that baseline rather than the code's honesty.
+  //
+  // FIRMS reports its own health: 'ok' (both VIIRS feeds answered), 'partial'
+  // (one did), 'degraded' (neither). Anything that is NOT ok-or-partial counts
+  // as unverified — including a MISSING field, which is what an older cached
+  // envelope or a shape change would produce. Guessing 'ok' there is how a
+  // silent outage gets published as a calm morning.
+  const fireProps: any = (fire as any)?.properties ?? null;
+  const fireHealth: unknown = fireProps?.health;
+  const wildfirePartial = fireJson.status === 'fulfilled' && fireHealth === 'partial';
+  const wildfireUnverified =
+    fireJson.status !== 'fulfilled' || !(fireHealth === 'ok' || fireHealth === 'partial');
+
+  // handleFlashFlood answers an unreachable NWS with a 200 envelope carrying
+  // summary.status 'unavailable'. A missing summary is unverified for the same
+  // reason as a missing FIRMS health.
+  const floodSummary: any = (flood as any)?.summary ?? null;
+  const floodUnverified =
+    floodJson.status !== 'fulfilled' || !floodSummary || floodSummary.status === 'unavailable';
+
+  // Order is fixed, not discovered, so the array is stable across briefs.
+  const sourcesUnverified: string[] = [];
+  if (wildfireUnverified) sourcesUnverified.push('wildfire');
+  if (floodUnverified) sourcesUnverified.push('flood');
+  const sourcesPartial: string[] = [];
+  if (wildfirePartial) sourcesPartial.push('wildfire');
+
   // RS-A1. The word "wildfire" is now earned by a wildland detection and
   // nothing else. The volcanic branch sits BELOW the flood warning — an
   // official warning outranks thermal context — but ABOVE the default, because
   // "no escalation is active" while Kīlauea is registering heat is the same
   // absence-reads-as-safety error pointed the other way.
+  // RS-A2. A VERIFIED real hazard still leads — a confirmed flood warning is
+  // the headline even with FIRMS down, because telling someone about an outage
+  // instead of the warning over their valley would be its own failure. But an
+  // unverified source now outranks volcanic-only heat AND the default, because
+  // "no statewide primary hazard escalation is active" is a claim, and a brief
+  // that could not reach FIRMS has not earned it. This ladder is published by
+  // the 05:30 HST cron whether or not anyone is reading.
   const headline =
-    wildlandDetections > 0
+    (wildlandDetections > 0 && !wildfireUnverified)
       ? 'Wildfire detections are present in the current Hawaiʻi snapshot.'
-      : floodWarningCount > 0
+      : (floodWarningCount > 0 && !floodUnverified)
         ? 'Flood warning conditions are active in parts of Hawaiʻi.'
+        : sourcesUnverified.length > 0
+          ? 'Some hazard sources could not be verified right now. Check official NWS and county alerts.'
+          : volcanicHeatDetections > 0
+            ? 'Satellite heat is present only in the Kīlauea/Mauna Loa volcanic zones.'
+            : 'No statewide primary hazard escalation is active in the current snapshot.';
+
+  // Partial coverage is stated, never escalated: one feed answered, so the
+  // reading is real — just thinner than usual, and a reader deciding whether to
+  // trust an empty result deserves to know which.
+  const wildfireCoverageNote = wildfirePartial
+    ? ' One of the two satellite feeds did not report, so coverage is reduced.'
+    : '';
+  const wildfireNote =
+    (fireJson.status === 'rejected' || wildfireUnverified)
+      ? 'Wildfire source could not be verified right now.'
+      : ((wildlandDetections > 0
+        ? `Satellite heat: ${wildlandDetections} detection${wildlandDetections === 1 ? '' : 's'} outside volcanic zones \u2014 possible wildfire signals.`
         : volcanicHeatDetections > 0
-          ? 'Satellite heat is present only in the Kīlauea/Mauna Loa volcanic zones.'
-          : 'No statewide primary hazard escalation is active in the current snapshot.';
+          ? 'Satellite heat detected only in volcanic zones (K\u012blauea/Mauna Loa) \u2014 volcanic activity, not wildfire.'
+          : 'No satellite heat detected in the latest passes. Clouds or gaps between passes can hide fires.')
+        + wildfireCoverageNote);
 
   return {
     schema_version: 'v1',
@@ -1576,32 +1661,29 @@ async function buildMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promise
     timezone: 'Pacific/Honolulu',
     summary: {
       headline,
-      civic_note: 'Use this brief for situational awareness only.'
+      civic_note: 'Use this brief for situational awareness only.',
+      sources_unverified: sourcesUnverified,
+      sources_partial: sourcesPartial
     },
     wildfire: {
       // ACTIVE is a claim about a wildfire, so only a wildland detection earns
       // it. Volcanic-only falls through to the existing zero-state MONITORING.
-      status: inferBriefStatusFromSettled(fireJson, wildlandDetections > 0),
+      status: briefSectionStatus(fireJson, wildfireUnverified, wildlandDetections > 0),
       detections: wildlandDetections,
       volcanic_heat_detections: volcanicHeatDetections,
       total_heat_detections: totalHeatDetections,
       nearest_km: asNumberOrNull(fire?.properties?.nearest_km),
-      // The outage branch is untouched: a source we could not reach is neither
-      // a wildfire nor a quiet sky. The zero branch says why an empty result is
-      // not an all-clear — clouds and the gaps between passes hide fires, and
-      // this brief goes out whether or not anyone is watching the map.
-      note:
-        fireJson.status === 'rejected'
-          ? 'Wildfire source could not be verified right now.'
-          : wildlandDetections > 0
-            ? `Satellite heat: ${wildlandDetections} detection${wildlandDetections === 1 ? '' : 's'} outside volcanic zones \u2014 possible wildfire signals.`
-            : volcanicHeatDetections > 0
-              ? 'Satellite heat detected only in volcanic zones (K\u012blauea/Mauna Loa) \u2014 volcanic activity, not wildfire.'
-              : 'No satellite heat detected in the latest passes. Clouds or gaps between passes can hide fires.',
+      // RS-A2. Built above. The outage wording now actually fires: it used to
+      // test only `rejected`, which a handler built to Invariant II never is,
+      // so an unreachable FIRMS fell through to the empty-result branch and was
+      // published as "No satellite heat detected in the latest passes."
+      note: wildfireNote,
       source: 'NASA FIRMS via Kahu Ola Worker'
     },
     flood: {
-      status: inferBriefStatusFromSettled(floodJson, floodActive),
+      // The note below already reads the handler's own unavailable message; it
+      // was only the STATUS that reported MONITORING through an NWS outage.
+      status: briefSectionStatus(floodJson, floodUnverified, floodActive),
       active_watch: floodWatchCount > 0,
       active_warning: floodWarningCount > 0,
       note:
@@ -1687,6 +1769,11 @@ async function handleMorningBrief(url: URL, env: Env, cors: CorsHeaders): Promis
       summary: {
         headline: 'Morning brief is temporarily degraded.',
         civic_note: 'Some live hazard sources could not be verified right now.',
+        // This path means the whole build threw, so neither primary source was
+        // verified. Naming both is the honest reading; an empty array here
+        // would claim verification the brief never achieved.
+        sources_unverified: ['wildfire', 'flood'],
+        sources_partial: [],
       },
       wildfire: {
         status: degradedStatus,
