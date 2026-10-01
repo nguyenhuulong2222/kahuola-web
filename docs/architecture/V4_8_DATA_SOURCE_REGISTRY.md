@@ -27,6 +27,23 @@ It exists to make source provenance explicit for:
 - **Typical Kahu Ola Usage:** FireSignal
 - **Parser Owner:** `parsers/firms.ts`
 - **Trust Notes:** Satellite detection only; not a confirmed field report by default
+- **Products in production:** `VIIRS_NOAA20_NRT`, `VIIRS_NOAA21_NRT`
+  (`worker/src/index.ts` → `FIRMS_PRIMARY_DATASETS`); `MODIS_NRT` as a cross-reference only
+- **Revisit (Hawaiʻi):** polar-orbiting, so a small number of passes per day per
+  satellite — roughly one day and one night pass each, a few total across NOAA-20
+  and NOAA-21. **Not continuous.** Between passes there is no observation at all,
+  which is why a zero count is never an all-clear (see `REMOTE_SENSING_RULES.md` A4)
+- **Latency:** NRT, measured in tens of minutes after the pass, not seconds. Site
+  copy states “20–30+ minutes after each satellite pass”. Kahu Ola adds its own
+  300 s hotspot cache on top; the **pass**, not the processing, is the limiting factor
+- **Pixel size:** VIIRS I-band nominal 375 m at nadir, growing off-nadir. Carried
+  per-detection as `scan_km` × `track_km` (+ `footprint_km2`) since RS-1.
+  Measured live over Hawaiʻi 2026-09-30: **0.51 × 0.41 km**. A detection marks the
+  **pixel center**, never an exact fire location (A5)
+- **Overpass (day/night):** sun-synchronous ~13:30 LTAN orbit, so roughly early
+  afternoon and after-midnight local passes. `daynight` (`D`/`N`) is carried
+  per-detection. **Nominal — verify against NASA LANCE/FIRMS documentation before
+  any public claim about specific pass times**
 
 ### NWS Alerts / api.weather.gov
 - **Provider:** NOAA / National Weather Service
@@ -86,6 +103,20 @@ It exists to make source provenance explicit for:
 - **Expected Latency:** Fast to medium
 - **Typical Kahu Ola Usage:** Fire/storm/radar context
 - **Parser Owner:** `parsers/noaa.ts`
+- **Revisit:** geostationary — continuous station-keeping over the Pacific, with
+  full-disk imagery on a fixed minutes-scale cadence. This is the one fire-adjacent
+  source that may honestly be called near-continuous; FIRMS may not (A4)
+- **Latency:** minutes from scan to availability — faster than FIRMS, but it is
+  **context (L3), not detection (L2)**, and must never be styled or worded as a
+  detection (A6)
+- **Pixel size:** ABI nominal 2 km for emissive IR bands and 0.5–1 km for
+  visible/near-IR, **at nadir**. Hawaiʻi sits far off GOES-West nadir, so the
+  effective ground footprint here is materially coarser than the nominal figure.
+  **Nominal — verify against NOAA ABI documentation before any public claim**
+- **Overpass (day/night):** no overpass gap, but band availability is not constant.
+  The Fire Temperature RGB composite (P41) combines an emissive band with two
+  **reflective** bands, so it is expected to be daylight-only. Any night use needs
+  that verified first
 
 ### PacIOOS
 - **Provider:** PacIOOS

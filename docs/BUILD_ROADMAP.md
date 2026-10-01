@@ -1,6 +1,6 @@
 # KAHU OLA — BUILD ROADMAP (Claude Code Prompts)
 
-**Last updated:** 2026-09-12
+**Last updated:** 2026-10-01
 **Owner:** Long Nguyen · kahuola.org
 **Purpose:** Single source of truth for what gets built, in what order, and what is
 done vs not. Each numbered item = one Claude Code prompt = one increment
@@ -57,6 +57,31 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
 
 > Done in this track (reference): "Data format error" on live-map — **RESOLVED**.
 > Worker W4–W8 routes — **LIVE** (2026-03-19, ver 160d1fe8).
+- [x] **P39 · RS series — data honesty sweep** — `DONE` (2026-09-30 → 2026-10-01)
+  One line of work: the product must not tell a resident something the data
+  cannot support, in either direction. “Absence reads as safety” and its mirror,
+  “presence reads as danger”. Rules distilled into
+  `docs/REMOTE_SENSING_RULES.md`.
+  - RS-0 · read-only audit (items A–H) — no branch
+  - RS-1 · Worker: additive `scan_km`/`track_km`/`footprint_km2` + region/range
+    sanity on `/api/firms/hotspots` — `37e98da`
+  - RS-2 · wildfire popup: detected-by, pixel-footprint precision, satellite
+    limits (EN+VI) — `9c637ed`
+  - RS-2b · pass-frequency sentence + VI “lượt phát hiện” — `197b696`
+  - RS-2c · last VI detection noun (`map.fire_summary_n_nearest`) — `f966dcf`
+  - RS-A · read-only `summary.fire.count` consumer audit — no branch
+  - RS-A1 · brief: volcanic heat is not a wildfire — `efe2e80`
+  - RS-A2 · brief: an unverified source must not read as calm — `15fe4fe`
+  - RS-3 · immediacy claims removed (about.html, `how.step1_body`) — `4ad86bc`
+  - RS-3b · zero-state fire card no longer claims continuous watching — `9fcc198`
+  - RS-C · i18n: “real-time” and “Active” out of the bundle — `a0f5001`
+  - RS-C2 / RS-C3 · read-only hero-title traces — no branch
+  - RS-H1 · langchange TDZ: a language switch must not abort the render — `ecadaa2`
+  - RS-H2 · hero stops asserting an undetected wildfire; red-flag title added —
+    `8547a29`
+  - RS-H3 · one `heroTitleFor()`; unknown state → DEGRADED, never calm — `3bc54e8`
+  - RS-O1 · ʻokina U+02BB, 68 occurrences — `74a51dc`
+  There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
 
@@ -77,6 +102,25 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   LLM over our own hazard JSON ("is it safe at my address?"). No PII.
 - [ ] **P11 · Stage 5 — SAR burn-extent tiles (Sentinel-1)** — `DEFERRED`
   Offline pipeline → R2. Do not start before P04–P10 ship.
+- [ ] **P40 · PACE aerosol context layer (Hawaiʻi smoke)** — `DEFERRED`
+  **Context only (L3).** TEMPO does not cover Hawaiʻi — it is a North America
+  geostationary instrument, so the obvious aerosol source for the mainland is
+  simply unavailable here. PACE is the candidate. Never styled or worded as a
+  detection (A6). Smoke presence is NOT fire presence and must not feed the fire
+  ladder.
+- [ ] **P41 · GOES Fire Temperature RGB visual layer** — `DEFERRED`
+  After the GOES poller. A composite, not a detection — reading it requires the
+  legend, so it does not ship without one on the same screen. Two of its three
+  bands are reflective (≈2.2 µm and ≈1.6 µm), so it is expected to be
+  **daylight-only**; confirm against NOAA documentation before any copy promises
+  night coverage. Hawaiʻi sits far off GOES-West nadir, so effective pixel size
+  is coarser than the nominal figure (see registry).
+- [ ] **P42 · “Today vs normal” fire baseline** — `PLANNING`
+  Harmonized monthly calendar from archive products. **After NASA Space Apps
+  (2026-11-15).** Gated on A1 and A2 in `docs/REMOTE_SENSING_RULES.md`: archive
+  products of ONE Collection, never summed NRT, and normalized for the 2012 /
+  2018 / 2023 satellite additions. Also gated on the open P3 in A9 — hotspots
+  does not yet parse `version`, so a response cannot prove its Collection.
 
 ## TRACK B — NWS integration
 
@@ -376,6 +420,11 @@ Standing rulings:
 - [ ] Google Business Profile submission (service-area, hide address, show Maui County)
 - [ ] BRIC program status re-verify (every 6 months — volatile)
 - [ ] Legal incorporation (Hawaii Form DNP-1) — `DEFERRED to 2029` (hard gate, immigration attorney first)
+- [ ] NASA ARSET wildfire-specific training course (Long, manual) — complete
+      **before 2026-11-14**. Builds on ARSET Fundamentals of Remote Sensing
+      (already held). Feeds A1/A2 in `docs/REMOTE_SENSING_RULES.md`: historical
+      FIRMS statistics and multi-year normalization are the two places this
+      project is most likely to get the science wrong without it.
 
 ## CONTINUOUS
 
@@ -424,6 +473,25 @@ dependency order → then the parallelizable and growth work.
   2026-03-08 and production already matches main byte-for-byte. Re-verified on
   the iOS Simulator. Corrected the stale "4h TTL" note — live-map HTML is
   max-age=30, must-revalidate, cf-cache-status DYNAMIC.
+- 2026-10-01 — RS series continued and closed: RS-2b/2c (pass-frequency sentence,
+  VI “lượt phát hiện” unified), RS-3/3b (immediacy claims removed from about.html,
+  how.step1_body and the zero-state fire card), RS-A2 (an unreachable source no
+  longer reads as calm), RS-C (“real-time” / “Active” out of the bundle),
+  RS-H1 (langchange TDZ), RS-H2 (hero stops asserting an undetected wildfire;
+  new `hero.title_html.red_flag`), RS-H3 (one `heroTitleFor()`, unknown state →
+  DEGRADED not calm), RS-O1 (ʻokina U+02BB, 68 occurrences). Eleven increments,
+  each verified by rendering the real page in headless Chrome rather than by
+  testing extracted functions. See P39.
+  ⚠ Naming note: the prompt-side labels P36a and P37a–P37c (FIRMS detection-age
+  fields, verbatim county news endpoint) are NOT this roadmap’s P36/P37, which are
+  TRACK G items (Service Worker, HPRS simulator). No renumbering for now — read
+  the track before matching a P number.
+- 2026-09-30 — RS line opened after a read-only audit (RS-0) found the product
+  telling residents things the data could not support. RS-1 added per-detection
+  pixel footprint (`scan_km`/`track_km`/`footprint_km2`) plus region sanity to
+  `/api/firms/hotspots`; RS-2 put “where the heat actually is” into the wildfire
+  popup; RS-A1 stopped the morning brief calling Kīlauea lava a wildfire, which
+  it had been publishing outward on the 05:30 HST cron. See P39.
 - 2026-09-18 — P34b: No Door findability. VI `nav.resources` was colliding with
   `nav.support` (both "Hỗ trợ") — now "Tìm trợ giúp". Resources link rolled out
   to all six pages (live-map in both desktop and mobile navs). Hazard-state CTA
