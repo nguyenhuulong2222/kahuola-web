@@ -3371,7 +3371,11 @@
         if (redFlag && primaryEvent === "FIRE_ACTIVE") {
           return {
             kicker:      _t("hero.kicker.red_flag")          || "RED FLAG WARNING",
-            title:       "Critical fire weather conditions active.",
+            // RS-H3. Dead on this path: heroTitleFor() owns every hero title,
+            // and FIRE_ACTIVEʼs entry is non-null so the caller never reads
+            // n.title here. Emptied rather than left as a second, divergent
+            // source of truth for the same words.
+            title:       "",
             narrative:   _t("hero.narrative.red_flag")       || "NWS has issued a Red Flag Warning. Low humidity, high winds, and dry fuel increase wildfire risk significantly.",
             bannerTitle: _t("hero.banner.red_flag")          || "\ud83d\udea9 NWS Red Flag Warning Active",
             bannerCopy:  _t("hero.banner_copy.nws_red_flag") || "Source: National Weather Service \xb7 official",
@@ -3702,6 +3706,66 @@
         }
       }
 
+      // RS-H3. ONE source of truth for the hero title. There were two
+      // hand-maintained titleMaps — applyHeroʼs and the langchange twinʼs —
+      // and the ONLY thing they disagreed about was the storm-product variable
+      // name, which ctx now carries. They had already drifted once in a way
+      // that threw (RS-H1), and a missing entry would have been worse: the old
+      // `|| titleMap.MONITORING` fallback turned any unmapped state into
+      // "Hawaiʻi is calm right now."
+      //
+      // ctx = { fireCount, redFlag, stormProduct }. fireCount is the WILDLAND
+      // count. Returns { html, cls }; html === null means the title carries
+      // DATA (a county name) and the caller sets it as text, never innerHTML.
+      //
+      // Declared BEFORE heroTitleFor so the Set is initialised before any call
+      // can reach it — the ordering lesson from RS-H1.
+      const _heroUnknownSeen = new Set();
+      function heroTitleFor(primaryEvent, ctx) {
+        const fireCount    = (ctx && ctx.fireCount) || 0;
+        const redFlag      = !!(ctx && ctx.redFlag);
+        const stormProduct = ctx && ctx.stormProduct;
+        const titleMap = {
+            MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',            cls: 'calm'  },
+            STORM_WARNING: { html: stormTitleHtml(stormProduct, "warning"), cls: (stormProduct && stormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
+            STORM_WATCH:   { html: stormTitleHtml(stormProduct, "watch"),   cls: 'warn'  },
+            FIRE_ACTIVE:   (fireCount === 0 && redFlag)
+              ? { html: _t("hero.title_html.red_flag")    || '<span class="hero-title-key">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.', cls: 'fire'  }
+              : { html: _t("hero.title_html.fire_active") || '<span class="hero-title-key">Wildfire signal</span> detected in Hawai\u02bfi.', cls: 'fire'  },
+            // P52. A volcanic thermal signal is not a wildfire and not calm.
+            // Amber, not fire-orange \u2014 it carries an air-quality decision,
+            // not an evacuation one.
+            // P36a-4. RECENT_WILDFIRE is the one state whose title carries DATA
+            // (a county name), so html is null and the caller sets it as text.
+            // Plain text, no span markup: a county name must never reach innerHTML.
+            // RS-H3: the "must exist in BOTH maps / the twin below" warning these
+            // comments used to carry is retired \u2014 there is one map now, and this
+            // is it. A state missing HERE no longer silently reads "calm"; it falls
+            // to DEGRADED and logs HERO_UNKNOWN_STATE.
+            RECENT_WILDFIRE: { html: null, cls: 'warn' },
+            VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',              cls: 'warn'  },
+            FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
+            FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
+            FLOOD_ADVISORY:{ html: _t("hero.title_html.flood_advisory")|| 'Flood <span class="hero-title-key">advisory</span> in effect.',                  cls: 'flood' },
+            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',           cls: 'warn'  },
+        };
+        const hit = titleMap[primaryEvent];
+        if (hit) return hit;
+        // An unknown state is NOT calm. A page that cannot name what is
+        // happening says so; DEGRADED is the honest reading. Logged once per
+        // distinct value so a stuck state does not emit a line on every render
+        // and every language switch.
+        if (!_heroUnknownSeen.has(String(primaryEvent))) {
+          _heroUnknownSeen.add(String(primaryEvent));
+          console.warn(JSON.stringify({
+            timestamp: new Date().toISOString(), module: "hero",
+            event_code: "HERO_UNKNOWN_STATE", primary_event: String(primaryEvent),
+            fallback: "DEGRADED"
+          }));
+        }
+        return titleMap.DEGRADED;
+      }
+
       function applyHero(primaryEvent, counts, _freshStr, fireWeatherPayload, floodPayload, summaryPayload, alertsPayload) {
         // P52: WILDLAND detections. Every use below is wildfire wording.
         const fireCount   = counts.fireCount || 0;
@@ -3745,29 +3809,7 @@
         // hero.title_html.* are developer-controlled static strings with span markup — innerHTML-safe
         const titleEl = document.getElementById("heroTitle");
         if (titleEl) {
-          const titleMap = {
-            MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',            cls: 'calm'  },
-            STORM_WARNING: { html: stormTitleHtml(stormProduct, "warning"), cls: (stormProduct && stormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
-            STORM_WATCH:   { html: stormTitleHtml(stormProduct, "watch"),   cls: 'warn'  },
-            FIRE_ACTIVE:   (fireCount === 0 && redFlag)
-              ? { html: _t("hero.title_html.red_flag")    || '<span class="hero-title-key">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.', cls: 'fire'  }
-              : { html: _t("hero.title_html.fire_active") || '<span class="hero-title-key">Wildfire signal</span> detected in Hawai\u02bfi.', cls: 'fire'  },
-            // P52. A volcanic thermal signal is not a wildfire and not calm.
-            // Amber, not fire-orange \u2014 it carries an air-quality decision,
-            // not an evacuation one. MUST also exist in the language-change
-            // twin of this map below, or a locale switch reverts it to
-            // "Hawai\u02bfi is calm right now".
-            // P36a-4 twin — must exist in BOTH maps or a locale switch drops the
-            // state back to "calm". Plain text, no span markup: the county name
-            // comes from data and must never reach innerHTML.
-            RECENT_WILDFIRE: { html: null, cls: 'warn' },
-            VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',              cls: 'warn'  },
-            FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',             cls: 'flood' },
-            FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',         cls: 'flood' },
-            FLOOD_ADVISORY:{ html: _t("hero.title_html.flood_advisory")|| 'Flood <span class="hero-title-key">advisory</span> in effect.',                  cls: 'flood' },
-            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',           cls: 'warn'  },
-          };
-          const titleData = titleMap[primaryEvent] || titleMap.MONITORING;
+          const titleData = heroTitleFor(primaryEvent, { fireCount, redFlag, stormProduct });
           // html === null means the title carries DATA (a county name), so it is
           // set as text. innerHTML is reserved for the developer-controlled
           // static strings above it.
@@ -5042,29 +5084,7 @@
         // Re-render hero title (innerHTML — developer-controlled strings only)
         const titleEl = document.getElementById("heroTitle");
         if (titleEl) {
-          const titleMap = {
-            MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',          cls: 'calm'  },
-            STORM_WARNING: { html: stormTitleHtml(_langStormProduct, "warning"), cls: (_langStormProduct && _langStormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
-            STORM_WATCH:   { html: stormTitleHtml(_langStormProduct, "watch"),   cls: 'warn'  },
-            FIRE_ACTIVE:   (fireCount === 0 && redFlag)
-              ? { html: _t("hero.title_html.red_flag")    || '<span class="hero-title-key">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.', cls: 'fire'  }
-              : { html: _t("hero.title_html.fire_active") || '<span class="hero-title-key">Wildfire signal</span> detected in Hawai\u02bfi.', cls: 'fire'  },
-            // P52 \u2014 twin of the VOLCANIC_HEAT entry in applyHero's map.
-            // P36a-4 twin — must exist in BOTH maps or a locale switch drops the
-            // state back to "calm". Plain text, no span markup: the county name
-            // comes from data and must never reach innerHTML.
-            RECENT_WILDFIRE: { html: null, cls: 'warn' },
-            VOLCANIC_HEAT: { html: _t("hero.title_html.volcanic_heat") || 'Volcanic heat at <span class="hero-title-key">K\u012blauea</span>.',            cls: 'warn'  },
-            FLOOD_WARNING: { html: _t("hero.title_html.flood_warning") || 'Flash flood <span class="hero-title-key">warning</span> in effect.',           cls: 'flood' },
-            FLOOD_WATCH:   { html: _t("hero.title_html.flood_watch")   || 'Flood <span class="hero-title-key">watch</span> conditions developing.',       cls: 'flood' },
-            // P36: this map is the language-change twin of the one in applyHero.
-            // A state missing here silently falls back to MONITORING — "Hawaiʻi
-            // is calm right now" — the moment a reader switches language. Any
-            // new hero state must be added to BOTH maps.
-            FLOOD_ADVISORY:{ html: _t("hero.title_html.flood_advisory")|| 'Flood <span class="hero-title-key">advisory</span> in effect.',                cls: 'flood' },
-            DEGRADED:      { html: _t("hero.title_html.degraded")      || 'Conditions could <span class="hero-title-key">not be confirmed</span>.',         cls: 'warn'  },
-          };
-          const td = titleMap[primaryEvent] || titleMap.MONITORING;
+          const td = heroTitleFor(primaryEvent, { fireCount, redFlag, stormProduct: _langStormProduct });
           // P36a-4 twin of applyHero's text-path: html === null means the title
           // carries data (a county name) and must be set as text, never HTML.
           if (!hv && td.html === null) { titleEl.textContent = n.title || ""; }
