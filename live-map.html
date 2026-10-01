@@ -2096,6 +2096,30 @@
       margin-bottom: 4px;
     }
 
+    /* RS-F. The same provenance vocabulary on the rows that had no kicker.
+       Smaller and tighter than .priority-kicker because these rows already
+       carry a title and a live note line; at 390px a third line must not push
+       the row past its 74px min-height into an overflowing panel. */
+    .mini-module-kicker,
+    .layer-status-kicker,
+    .panel-kicker {
+      font-size: 10px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: rgba(194, 216, 255, 0.66);
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+
+    @media (max-width: 420px) {
+      .mini-module-kicker,
+      .layer-status-kicker,
+      .panel-kicker {
+        font-size: 9.5px;
+        letter-spacing: .06em;
+      }
+    }
+
     .priority-title {
       font-size: 19px;
       font-weight: 700;
@@ -2705,6 +2729,7 @@
       </div>
 
       <aside class="desktop-panel" role="complementary" aria-label="Fire hazard metrics">
+        <div class="panel-kicker" data-i18n="map.kicker_firms">Detection · NASA FIRMS (VIIRS)</div>
         <div class="panel-head" id="panel-head-desktop">Fire Signals · Hawaiʻi</div>
         <div class="fire-scope-hint" id="fire-scope-hint-desktop">Showing satellite fire detections for Hawaiʻi only.
         </div>
@@ -2750,6 +2775,7 @@
               <a class="action-btn" href="/support" data-i18n="nav.support">Support</a>
             </div>
           </div>
+          <div class="panel-kicker" data-i18n="map.kicker_firms">Detection · NASA FIRMS (VIIRS)</div>
           <div class="panel-head" id="panel-head-mobile">Fire Signals · Hawaiʻi</div>
           <div class="fire-scope-hint" id="fire-scope-hint-mobile">Showing satellite fire detections for Hawaiʻi only.
           </div>
@@ -2900,6 +2926,7 @@
               data-hazard-detail="Smoke remains a secondary situational layer under wildfire-first hierarchy. A visible smoke layer does not mean smoke is currently detected; the status badge distinguishes detected, none, and unavailable states."
               tabindex="0" role="button" aria-label="Flash Flood Watch details">
               <div>
+                <div class="layer-status-kicker" data-i18n="map.kicker_smoke">Official · NOAA HMS analysis</div>
                 <div class="layer-status-name" data-i18n="map.layer_smoke">Smoke</div>
                 <div class="layer-status-note" id="smoke-status-note" data-i18n="map.wait_smoke">Waiting for the latest
                   NOAA HMS snapshot.</div>
@@ -2918,6 +2945,7 @@
               data-hazard-detail="Perimeters should remain directly under fire in the hierarchy. Estimated boundaries must never be presented as official, and unavailable perimeter feeds should fail safely without breaking the map."
               tabindex="0" role="button" aria-label="Perimeter details">
               <div>
+                <div class="layer-status-kicker" data-i18n="map.kicker_perimeters">Official or estimated · NIFC WFIGS (see each perimeter)</div>
                 <div class="layer-status-name" data-i18n="map.layer_perimeters">Perimeters</div>
                 <div class="layer-status-note" id="perimeter-status-note" data-i18n="map.wait_perim">Waiting for the
                   latest perimeter feed.</div>
@@ -3081,6 +3109,7 @@
             <!-- MRMS Rainfall — only rendered when data is real -->
             <div class="mini-module" id="mrms-rain-card" tabindex="0" role="button" aria-label="MRMS rainfall details">
               <div>
+                <div class="mini-module-kicker" data-i18n="map.kicker_mrms">Estimate · derived from NEXRAD radar</div>
                 <div class="mini-module-title" data-i18n="map.layer_mrms">MRMS Rainfall</div>
                 <div class="mini-module-note" id="mrms-rain-note" data-i18n="map.mrms_note_init">NEXRAD QPE · Live when
                   available</div>
@@ -3091,6 +3120,7 @@
             <!-- Fire Weather -->
             <div class="mini-module" id="wind-risk-card" tabindex="0" role="button" aria-label="Fire Weather details">
               <div>
+                <div class="mini-module-kicker" data-i18n="map.kicker_fire_weather">Official · National Weather Service</div>
                 <div class="mini-module-title" data-i18n="map.layer_fire_weather">Fire Weather</div>
                 <div class="mini-module-note" id="wind-risk-note" data-i18n="map.wind_note_init">Wind + humidity spread
                   context</div>
@@ -3174,6 +3204,7 @@
             <div class="mini-module mini-module--context" id="flood-context-card" tabindex="0" role="button"
               aria-label="Flood context details">
               <div>
+                <div class="mini-module-kicker" data-i18n="map.kicker_flood_context">Estimate · Kahu Ola terrain model</div>
                 <div class="mini-module-title" data-i18n="map.layer_flood_context">Flood Context</div>
                 <div class="mini-module-note" id="flood-context-note" data-i18n="map.flood_ctx_note_init">Statewide
                   Hawaiʻi terrain + runoff context</div>
@@ -3186,6 +3217,7 @@
             <div class="mini-module mini-module--context" id="landslide-card" tabindex="0" role="button"
               aria-label="Landslide risk status" style="display:none">
               <div>
+                <div class="mini-module-kicker" data-i18n="map.kicker_landslide">Estimate · susceptibility model</div>
                 <div class="mini-module-title" data-i18n="map.layer_landslide">Landslide Risk</div>
                 <div class="mini-module-note" id="landslide-note" data-i18n="map.s_landslide_context">Terrain + rainfall
                   context</div>
@@ -3197,6 +3229,7 @@
             <div class="mini-module mini-module--context" id="local-hazards-card" tabindex="0" role="button"
               aria-label="Local hazard reports status">
               <div>
+                <div class="mini-module-kicker" data-i18n="map.kicker_local_reports">Official · NWS Honolulu storm reports</div>
                 <div class="mini-module-title" data-i18n="map.layer_local_reports">Local Reports</div>
                 <div class="mini-module-note" id="local-hazards-note" data-i18n="map.local_note_init">NWS Honolulu local
                   storm reports</div>
@@ -3238,7 +3271,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=be322214"></script>
+  <script src="/i18n/kahuola-i18n.js?v=bc5a9c82"></script>
 
   <script>
     "use strict";
@@ -4119,9 +4152,35 @@
       }).filter(Boolean);
     }
 
+    // RS-F. signalClass is INTERNAL config, not an API field. It records what a
+    // layer actually is under docs/REMOTE_SENSING_RULES.md A6 and maps to the one
+    // provenance vocabulary the UI already uses in its kicker line:
+    //   detection -> "Detection \xb7"   context -> "Official \xb7"   estimate -> "Estimate \xb7"
+    //
+    // A layer with no valid signalClass gets NO kicker and a structured warning.
+    // Guessing would be worse than silence: a model estimate wearing "Official"
+    // is the exact failure Invariant 5 exists to prevent.
+    const SIGNAL_CLASSES = ["detection", "context", "estimate"];
+    const _signalClassWarned = new Set();
+    function signalClassOf(key) {
+      const model = HAZARD_REGISTRY[key];
+      const cls = model && model.signalClass;
+      if (SIGNAL_CLASSES.indexOf(cls) !== -1) return cls;
+      if (!_signalClassWarned.has(String(key))) {
+        _signalClassWarned.add(String(key));
+        console.warn(JSON.stringify({
+          timestamp: new Date().toISOString(), module: "map",
+          event_code: "LAYER_SIGNAL_CLASS_UNKNOWN", layer: String(key),
+          signal_class: cls === undefined ? null : String(cls)
+        }));
+      }
+      return null;
+    }
+
     const HAZARD_REGISTRY = {
       fire: {
         key: "fire",
+        signalClass: "detection",
         get endpoint() { return getFireEndpoint(); },
         enabled: true,
         affectsGlobalHealth: false, // fire endpoint errors shown per-signal, not as global red banner
@@ -4136,6 +4195,7 @@
       },
       smoke: {
         key: "smoke",
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./smoke-test.json" : "https://kahuola.org/api/hazards/smoke?region=hawaii",
         enabled: true,
         parsePayload(json) { const raw = parseCanonicalSignals(json, "smoke"); return { features: normalizeSmokeFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NOAA HMS" }; },
@@ -4143,6 +4203,7 @@
       },
       perimeter: {
         key: "perimeter",
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./perimeters-test.json" : "https://kahuola.org/api/hazards/perimeters?region=hawaii",
         enabled: true,
         parsePayload(json) { const raw = parseCanonicalSignals(json, "perimeter"); return { features: normalizePerimeterFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NIFC / County Perimeters" }; },
@@ -4150,6 +4211,7 @@
       },
       flashFlood: {
         key: "flashFlood",
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./flash-flood-test.json" : "https://kahuola.org/api/hazards/flash-flood?region=hawaii",
         enabled: true, affectsGlobalHealth: false,
         // P39: the Worker's summary is carried through so the card can read the
@@ -4179,6 +4241,7 @@
       },
       floodContext: {
         key: "floodContext",
+        signalClass: "estimate",
         endpoint: IS_LOCAL ? "./flood-context-test.json" : "https://kahuola.org/api/hazards/flood-context?region=hawaii",
         enabled: true, affectsGlobalHealth: false,
         parsePayload(json) { const raw = parseCanonicalSignals(json, "floodContext"); return { features: normalizeFloodContextFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || "NWS + Kahu Ola" }; },
@@ -4196,6 +4259,7 @@
       },
       mrmsRain: {
         key: "mrmsRain",
+        signalClass: "estimate",
         endpoint: IS_LOCAL ? "./mrms-qpe-test.json" : "https://kahuola.org/api/hazards/mrms-qpe?region=hawaii",
         enabled: true,
         affectsGlobalHealth: false,
@@ -4239,6 +4303,7 @@
       },
       rainRadar: {
         key: "rainRadar",
+        signalClass: "context",
         endpoint: "",
         enabled: false, affectsGlobalHealth: false,
         parsePayload() { return { features: [], sourceTime: new Date(), sourceLabel: "NOAA Radar Tiles" }; },
@@ -4246,6 +4311,7 @@
       },
       windRisk: {
         key: "windRisk",
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./fire-weather-test.json" : "https://kahuola.org/api/hazards/fire-weather?region=hawaii",
         enabled: true, affectsGlobalHealth: false,
         parsePayload(json) { const raw = parseCanonicalSignals(json, "windRisk"); return { features: normalizeWindRiskFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: "NWS / RAWS" }; },
@@ -4268,6 +4334,7 @@
       },
       fireDanger: {
         key: "fireDanger", enabled: true,
+        signalClass: "estimate",
         // affectsGlobalHealth false: this is a model estimate, not an official feed.
         // Losing it must not flip the whole app to "offline".
         affectsGlobalHealth: false,
@@ -4314,6 +4381,7 @@
       },
       airQuality: {
         key: "airQuality", enabled: true,
+        signalClass: "context",
         // Official measurement feed; losing it must not flip the whole app to
         // "offline" the way a core hazard source would.
         affectsGlobalHealth: false,
@@ -4341,6 +4409,7 @@
       },
       alerts: {
         key: "alerts", enabled: true, affectsGlobalHealth: false,
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./alerts-test.json" : "https://kahuola.org/api/hazards/alerts?region=hawaii",
         parsePayload(json) {
           const raw = parseCanonicalSignals(json, "alerts");
@@ -4368,6 +4437,7 @@
       },
       tsunami: {
         key: "tsunami", enabled: false, affectsGlobalHealth: true, // lazy — enabled on user request or seismic alert
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./tsunami-test.json" : "https://kahuola.org/api/hazards/tsunami",
         parsePayload(json) { const raw = parseCanonicalSignals(json, "tsunami"); return { features: normalizeTsunamiFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "NWS TWC" }; },
         ensureLayers, applyData(features) { updateTsunamiSource(features); },
@@ -4379,6 +4449,7 @@
         // while the API reported a major hurricane whose forecast centre passes
         // 184 mi from Niʻihau. Storm data must not wait for a tap.
         key: "hurricane", enabled: true, affectsGlobalHealth: false,
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./hurricane-test.json" : "https://kahuola.org/api/hazards/hurricane",
         parsePayload(json) {
           const raw = parseCanonicalSignals(json, "hurricane");
@@ -4399,6 +4470,7 @@
       },
       landslide: {
         key: "landslide", enabled: false, affectsGlobalHealth: false, // lazy — enabled on user request
+        signalClass: "estimate",
         endpoint: IS_LOCAL ? "./landslide-test.json" : "https://kahuola.org/api/hazards/landslide?region=hawaii",
         parsePayload(json) { const raw = parseCanonicalSignals(json, "landslide"); return { features: normalizeLandslideFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "Terrain Context" }; },
         ensureLayers, applyData(features) { updateLandslideSource(features); },
@@ -4407,6 +4479,7 @@
       },
       coastal: {
         key: "coastal", enabled: false, affectsGlobalHealth: false, // lazy — enabled on user request
+        signalClass: "context",
         endpoint: IS_LOCAL ? "./coastal-test.json" : "https://kahuola.org/api/hazards/coastal",
         parsePayload(json) { const raw = parseCanonicalSignals(json, "coastal"); return { features: normalizeCoastalFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || new Date(), sourceLabel: "NWS" }; },
         ensureLayers, applyData(features) { updateCoastalSource(features); },
@@ -4415,6 +4488,7 @@
       },
       localHazards: {
         key: "localHazards",
+        signalClass: "context",
         endpoint: IS_LOCAL
           ? "./local-hazards-test.json"
           : "https://kahuola.org/api/hazards/local-hazards?region=hawaii",

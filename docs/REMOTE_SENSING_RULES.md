@@ -91,6 +91,14 @@ L2 | Detection — an instrument saw something | FIRMS hotspot | yes, it is one 
 L3 | Context — gridded/composited observation | NEXRAD QPE, HMS smoke | no |
 L4 | Estimate — model output | fire-danger heuristic, flood context | **never** |
 
+**The UI renders these through ONE vocabulary — the layer kicker:** `detection` →
+“Detection ·”, `context` → “Official ·”, `estimate` → “Estimate ·”, followed by the
+source name. `signalClass` on each `HAZARD_REGISTRY` entry is the internal config
+that drives it (RS-F). **Do not introduce a second label vocabulary** — a
+DETECTION/CONTEXT/ESTIMATE badge beside “Official · National Weather Service”
+states the same fact twice in two languages on one row. A layer with no valid
+`signalClass` gets no kicker and a structured warning, never a guessed prefix.
+
 An estimate is never styled or worded as a detection: not the same colour ramp,
 not the same icon, not the same verbs. Invariant 5 (estimated never labeled
 official) is the floor, not the ceiling — an L4 value also does not inherit an

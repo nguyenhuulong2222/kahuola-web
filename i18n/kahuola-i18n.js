@@ -338,6 +338,20 @@
       "map.aqi_cat_hazardous": "Hazardous",
       // ── Fire Spread Concern (P05a) — model estimate, never presented as official ──
       "map.kicker_fire_danger": "Estimate \xb7 Kahu Ola model",
+      // RS-F. ONE provenance vocabulary, not two. signalClass on each
+      // HAZARD_REGISTRY entry maps to the prefix a reader sees here:
+      //   detection -> "Detection \xb7"   context -> "Official \xb7"   estimate -> "Estimate \xb7"
+      // A second DETECTION/CONTEXT/ESTIMATE badge beside these would state the
+      // same fact twice in two vocabularies on one row.
+      "map.kicker_nws_coastal": "Official \xb7 National Weather Service",
+      "map.kicker_firms": "Detection \xb7 NASA FIRMS (VIIRS)",
+      "map.kicker_mrms": "Estimate \xb7 derived from NEXRAD radar",
+      "map.kicker_fire_weather": "Official \xb7 National Weather Service",
+      "map.kicker_flood_context": "Estimate \xb7 Kahu Ola terrain model",
+      "map.kicker_landslide": "Estimate \xb7 susceptibility model",
+      "map.kicker_local_reports": "Official \xb7 NWS Honolulu storm reports",
+      "map.kicker_perimeters": "Official or estimated \xb7 NIFC WFIGS (see each perimeter)",
+      "map.kicker_smoke": "Official \xb7 NOAA HMS analysis",
       "map.hazard_fire_danger": "Fire Spread Concern",
       "map.fire_danger_note_init": "Where a fire could spread next, based on wind and dryness. Tap to show or hide the map layer.",
       "map.fire_danger_unavailable": "Fire spread estimate is temporarily unavailable. The map layer is not shown. For official fire information, follow HIEMA, County Emergency Management, and NWS.",
@@ -1553,6 +1567,15 @@
       "map.aqi_cat_hazardous": "Nguy hi\u1ec3m",
       // \u2500\u2500 Fire Spread Concern (P05a) \u2014 \u01b0\u1edbc t\u00ednh c\u1ee7a m\u00f4 h\u00ecnh, kh\u00f4ng ph\u1ea3i ngu\u1ed3n ch\u00ednh th\u1ee9c \u2500\u2500
       "map.kicker_fire_danger": "\u01af\u1edbc t\u00ednh \xb7 m\u00f4 h\u00ecnh Kahu Ola",
+      "map.kicker_nws_coastal": "Ch\xednh th\u1ee9c \xb7 National Weather Service",
+      "map.kicker_firms": "Ph\xe1t hi\u1ec7n \xb7 NASA FIRMS (VIIRS)",
+      "map.kicker_mrms": "\u01af\u1edbc t\xednh \xb7 suy ra t\u1eeb radar NEXRAD",
+      "map.kicker_fire_weather": "Ch\xednh th\u1ee9c \xb7 C\u01a1 quan Th\u1eddi ti\u1ebft Qu\u1ed1c gia",
+      "map.kicker_flood_context": "\u01af\u1edbc t\xednh \xb7 m\xf4 h\xecnh \u0111\u1ecba h\xecnh Kahu Ola",
+      "map.kicker_landslide": "\u01af\u1edbc t\xednh \xb7 m\xf4 h\xecnh nguy c\u01a1 s\u1ea1t l\u1edf",
+      "map.kicker_local_reports": "Ch\xednh th\u1ee9c \xb7 b\xe1o c\xe1o th\u1eddi ti\u1ebft NWS Honolulu",
+      "map.kicker_perimeters": "Ch\xednh th\u1ee9c ho\u1eb7c \u01b0\u1edbc t\xednh \xb7 NIFC WFIGS (xem t\u1eebng \u0111\u01b0\u1eddng bao)",
+      "map.kicker_smoke": "Ch\xednh th\u1ee9c \xb7 ph\xe2n t\xedch NOAA HMS",
       "map.hazard_fire_danger": "Nguy c\u01a1 ch\u00e1y lan",
       "map.fire_danger_note_init": "N\u01a1i \u0111\u00e1m ch\u00e1y c\u00f3 th\u1ec3 lan t\u1edbi, d\u1ef1a tr\u00ean gi\u00f3 v\u00e0 \u0111\u1ed9 kh\u00f4. Ch\u1ea1m \u0111\u1ec3 hi\u1ec7n ho\u1eb7c \u1ea9n l\u1edbp b\u1ea3n \u0111\u1ed3.",
       "map.fire_danger_unavailable": "\u01af\u1edbc t\u00ednh ch\u00e1y lan t\u1ea1m th\u1eddi kh\u00f4ng kh\u1ea3 d\u1ee5ng. L\u1edbp b\u1ea3n \u0111\u1ed3 kh\u00f4ng \u0111\u01b0\u1ee3c hi\u1ec3n th\u1ecb. \u0110\u1ec3 bi\u1ebft th\u00f4ng tin ch\u00e1y ch\u00ednh th\u1ee9c, h\u00e3y theo d\u00f5i HIEMA, Qu\u1ea3n l\u00fd Kh\u1ea9n c\u1ea5p Qu\u1eadn v\u00e0 NWS.",

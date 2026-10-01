@@ -81,6 +81,23 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     `8547a29`
   - RS-H3 · one `heroTitleFor()`; unknown state → DEGRADED, never calm — `3bc54e8`
   - RS-O1 · ʻokina U+02BB, 68 occurrences — `74a51dc`
+  - RS-5 · docs: `REMOTE_SENSING_RULES.md`, roadmap P39–P42, registry revisit/
+    latency/pixel/overpass — `48a4ea5`
+  - RS-F · `signalClass` on all 16 HAZARD_REGISTRY entries, surfaced through the
+    EXISTING kicker vocabulary (Detection · / Official · / Estimate ·) rather than
+    a second badge; kickers added to the 7 rows that had none plus the fire panel;
+    `map.kicker_nws_coastal` was missing and is now defined
+  Open follow-ups from this line:
+  - **RS-F2 (Worker, backlog)** — `/api/hazards/mrms-qpe` sets
+    `authority: 'observational'` while its own note calls it a “NEXRAD-derived QPE
+    proxy … not official NOAA MRMS product”. The layer is classed `estimate` in the
+    client (A6), so the envelope now contradicts the UI. Should read derived/
+    estimate. Worker-side, additive.
+  - The methodology-page prompt written 2026-09-24 was **never saved to the repo**.
+    `git ls-files | grep -i methodolog` returns nothing; the only related artifact
+    is `methodology-wip/PHASE-B-C0-APPROVED.md`, a sibling of the repo (kept outside
+    so Pages cannot serve it), which is the paused Phase B/C0 record, not the prompt.
+    RS-F step 4 was skipped for this reason.
   There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
