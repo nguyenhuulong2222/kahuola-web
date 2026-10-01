@@ -5032,6 +5032,11 @@
           // locale switch re-introduces the mislabel.
           ? heroVolcanicWording(heroSplit.volcanic || volcCount) : null;
 
+        // n and _rw must be declared before the title block reads n.title (mirrors applyHero :3720–3721) — RS-H1.
+        // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
+        const _rw = recentWildfireInfo(heroSplit);
+        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere, volcCount, _rw);
+
         // Re-render hero title (innerHTML — developer-controlled strings only)
         const titleEl = document.getElementById("heroTitle");
         if (titleEl) {
@@ -5064,9 +5069,6 @@
         }
 
         // Re-render hero narrative / kicker / banner
-        // buildNarrative() is already wired for _t()/_tmpl() so calling it here is safe
-        const _rw = recentWildfireInfo(heroSplit);
-        const n = buildNarrative(primaryEvent, fireCount, floodWarn, floodWatch, redFlag, highWind, _langStormProduct, _langStormWhere, volcCount, _rw);
         setText("heroNarrative", hv ? hv.narrative : n.narrative);
         setText("heroBannerTitle", hv ? hv.bannerTitle : n.bannerTitle);
         setText("heroBannerCopy", n.bannerCopy);
