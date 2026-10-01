@@ -972,7 +972,7 @@
       "signal.flood_title_active": "\ud83c\udf27 Flood Signal \u2014 {n} Elevated",
 
       // ── Signal card long copies (Class B) ─────────────────────
-      "signal.fire_copy_monitoring_long": "Kahu Ola is constantly scanning satellite data to protect our communities. While statewide signals are clear, wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.",
+      "signal.fire_copy_monitoring_long": "No satellite heat has been detected in the latest passes. Satellites pass over Hawai\u02bbi only a few times a day \u2014 wildland conditions change rapidly. Use the Live Map to verify your exact neighborhood.",
       "signal.fire_copy_active_tmpl": "{n} wildfire signal{s} detected in the current statewide Worker snapshot. Open the live map for island-level detail.",
       "signal.flood_copy_monitoring_long": "Our system is monitoring watershed conditions to keep residents safe. No NWS flood watch, warning or advisory is active right now, but mountain streams can flash-flood without warning. Check your local area to be sure.",
       "signal.flood_copy_active_tmpl": "{n} flood context feature{s} detected in the current statewide snapshot. Heavy rain may cause streams and low-lying roads to change quickly.",
@@ -2175,7 +2175,7 @@
       "signal.flood_title_active": "\ud83c\udf27 T\xedn hi\u1ec7u l\u0169 \u2014 {n} n\u00e2ng cao",
 
       // ── Signal card long copies ───────────────────────────────
-      "signal.fire_copy_monitoring_long": "Kahu Ola li\xean t\u1ee5c qu\xe9t d\u1eef li\u1ec7u v\u1ec7 tinh \u0111\u1ec3 b\u1ea3o v\u1ec7 c\u1ed9ng \u0111\u1ed3ng. M\u1eb7c d\xf9 t\xedn hi\u1ec7u to\xe0n ti\u1ec3u bang hi\u1ec7n t\u1ea1i \u0111ang r\xf5 r\xe0ng, \u0111i\u1ec1u ki\u1ec7n ch\u00e1y r\u1eebng thay \u0111\u1ed5i nhanh ch\xf3ng. D\xf9ng B\u1ea3n \u0111\u1ed3 tr\u1ef1c ti\u1ebfp \u0111\u1ec3 ki\u1ec3m tra khu v\u1ef1c c\u1ee7a b\u1ea1n.",
+      "signal.fire_copy_monitoring_long": "Ch\u01b0a ph\xe1t hi\u1ec7n nhi\u1ec7t t\u1eeb v\u1ec7 tinh trong c\xe1c l\u01b0\u1ee3t bay qua g\u1ea7n nh\u1ea5t. V\u1ec7 tinh ch\u1ec9 bay qua Hawai\u02bbi v\xe0i l\u1ea7n m\u1ed7i ng\xe0y \u2014 \u0111i\u1ec1u ki\u1ec7n ch\u00e1y r\u1eebng thay \u0111\u1ed5i nhanh ch\xf3ng. D\xf9ng B\u1ea3n \u0111\u1ed3 tr\u1ef1c ti\u1ebfp \u0111\u1ec3 ki\u1ec3m tra khu v\u1ef1c c\u1ee7a b\u1ea1n.",
       "signal.fire_copy_active_tmpl": "Ph\u00e1t hi\u1ec7n {n} t\xedn hi\u1ec7u ch\u00e1y r\u1eebng trong \u1ea3nh ch\u1ee5p to\xe0n ti\u1ec3u bang hi\u1ec7n t\u1ea1i. M\u1edf b\u1ea3n \u0111\u1ed3 tr\u1ef1c ti\u1ebfp \u0111\u1ec3 bi\u1ebft chi ti\u1ebft t\u1eebng h\xf2n \u0111\u1ea3o.",
       "signal.flood_copy_monitoring_long": "H\u1ec7 th\u1ed1ng c\u1ee7a ch\u00fang t\u00f4i \u0111ang theo d\u00f5i \u0111i\u1ec1u ki\u1ec7n l\u01b0u v\u1ef1c \u0111\u1ec3 b\u1ea3o v\u1ec7 c\u01b0 d\u00e2n. Hi\u1ec7n kh\u00f4ng c\u00f3 theo d\u00f5i, c\u1ea3nh b\u00e1o hay khuy\u1ebfn c\u00e1o l\u0169 n\u00e0o c\u1ee7a NWS, nh\u01b0ng su\u1ed1i tr\u00ean n\u00fai c\u00f3 th\u1ec3 d\u00e2ng l\u0169 b\u1ea5t ng\u1edd. H\u00e3y ki\u1ec3m tra khu v\u1ef1c c\u1ee7a b\u1ea1n \u0111\u1ec3 ch\u1eafc ch\u1eafn.",
       "signal.flood_copy_active_tmpl": "Ph\u00e1t hi\u1ec7n {n} \u0111\u1eb7c \u0111i\u1ec3m ng\u1eef c\u1ea3nh l\u0169 trong \u1ea3nh ch\u1ee5p to\xe0n ti\u1ec3u bang hi\u1ec7n t\u1ea1i. M\u01b0a l\u1edbn c\xf3 th\u1ec3 khi\u1ebfn su\u1ed1i v\xe0 \u0111\u01b0\u1eddng th\u1ea5p thay \u0111\u1ed5i nhanh ch\xf3ng.",
