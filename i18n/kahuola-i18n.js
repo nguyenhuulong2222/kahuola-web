@@ -1721,7 +1721,7 @@
       "map.summary_offline": "Dữ liệu nguy cơ đã lưu đang được hiển thị trong khi kết nối bị gián đoạn.",
       "map.fire_summary_none": "NASA FIRMS không phát hiện cháy rừng hiện tại trên {region} trong ảnh chụp này.",
       "map.fire_summary_critical": "NASA FIRMS phát hiện cháy nghiêm trọng tại {region}. Tín hiệu gần nhất cách {loc} khoảng {dist} dặm.",
-      "map.fire_summary_n_nearest": "NASA FIRMS trả về {n} tín hiệu phát hiện cháy trên {region}. Tín hiệu gần nhất cách {loc} khoảng {dist} dặm.",
+      "map.fire_summary_n_nearest": "NASA FIRMS trả về {n} lượt phát hiện cháy rừng trên {region}. Lượt phát hiện gần nhất cách {loc} khoảng {dist} dặm.",
       "map.fire_summary_n": "NASA FIRMS trả về {n} lượt phát hiện cháy rừng trên {region}.",
       "map.fire_summary_flood_active": "Theo dõi lũ quét đang hoạt động ở {n} khu vực. NASA FIRMS không phát hiện cháy trong ảnh chụp này — mây bão có thể che khuất tầm nhìn của vệ tinh.",
       "map.fire_summary_smoke_active": "NOAA HMS hiển thị {n} vùng khói. NASA FIRMS không phát hiện cháy trong ảnh chụp này — khói và mây có thể che khuất tầm nhìn của vệ tinh.",
