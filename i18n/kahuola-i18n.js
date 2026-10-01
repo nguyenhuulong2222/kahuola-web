@@ -117,7 +117,7 @@
 
       // Brand
       "brand.kicker": "Kahu Ola \xb7 Guardian of Life",
-      "brand.title": "Hawai\u02bfi Hazard Signals",
+      "brand.title": "Hawai\u02bbi Hazard Signals",
       "brand.sub": "Clear civic hazard signals for wildfire, flood, storm, and air quality across the Hawaiian Islands.",
       "brand.guardian": "Guardian of Life",
 
@@ -253,14 +253,14 @@
       "links.official_copy": "Kahu Ola does not issue emergency orders. Follow official authorities for urgent decisions.",
 
       // Map page (live-map.html) — Class A + B
-      "map.intro_title": "Live Hawai\u02bfi Hazard Map",
+      "map.intro_title": "Live Hawai\u02bbi Hazard Map",
       "map.intro_lead": "Satellite wildfire detections, flash flood alerts, air quality, fire weather, and storm context across the Hawaiian Islands. Data is aggregated from NASA FIRMS, NOAA, NWS, EPA AirNow, and PacIOOS through the Kahu Ola civic aggregator.",
-      "map.panel_head_hawaii": "Fire Signals \xb7 Hawai\u02bfi",
+      "map.panel_head_hawaii": "Fire Signals \xb7 Hawai\u02bbi",
       "map.panel_head_usa": "Fire Signals \xb7 USA",
-      "map.scope_hint_hawaii": "Showing satellite fire detections for Hawai\u02bfi only.",
+      "map.scope_hint_hawaii": "Showing satellite fire detections for Hawai\u02bbi only.",
       "map.scope_hint_usa": "Showing satellite fire detections across the USA.",
       "map.scope_label": "Fire Scope",
-      "map.scope_hawaii": "Hawai\u02bfi",
+      "map.scope_hawaii": "Hawai\u02bbi",
       "map.scope_usa": "USA",
       "map.refresh": "\u21bb REFRESH",
       "map.use_location": "Use My Location",
@@ -306,7 +306,7 @@
       "map.accordion_snapshot": "Snapshot Context",
       "map.accordion_snapshot_sub": "Situational context and source details.",
       "map.accordion_secondary": "Secondary Layers",
-      "map.accordion_hazards": "Active Hazards \xb7 Hawai\u02bfi",
+      "map.accordion_hazards": "Active Hazards \xb7 Hawai\u02bbi",
       "map.accordion_evidence": "Supporting Evidence",
       "map.accordion_context": "Context Layers",
 
@@ -490,7 +490,7 @@
       // MRMS/Rain status
       "map.s_rain_n": "Rain \xb7 {n}",
       "map.s_rain_note_n": "NEXRAD QPE: rainfall detected across {n} zone(s).",
-      "map.s_rain_none_note": "No significant rainfall at Hawai\u02bfi NEXRAD stations.",
+      "map.s_rain_none_note": "No significant rainfall at Hawai\u02bbi NEXRAD stations.",
       "map.s_rain_unavail_note": "NEXRAD QPE temporarily unavailable.",
       // Fire weather status
       "map.s_fw_red_flag": "Red Flag Active",
@@ -538,7 +538,7 @@
       "map.wait_smoke": "Waiting for the latest NOAA HMS snapshot.",
       "map.smoke_layer_note": "Layer visibility does not mean smoke is detected.",
       "map.wait_perim": "Waiting for the latest perimeter feed.",
-      "map.flood_subnote": "Statewide Hawai\u02bfi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.",
+      "map.flood_subnote": "Statewide Hawai\u02bbi context: island terrain + runoff logic. Delivered by Kahu Ola civic aggregator.",
       "map.tsunami_tap_note": "NWS Tsunami Warning Center \u2014 tap to load live status.",
       "map.hurricane_tap_note": "NHC Pacific basin \u2014 tap to load live status.",
       "map.mrms_note_init": "NEXRAD QPE \xb7 Live when available",
@@ -587,7 +587,7 @@
       "map.hd_radar_st_active": "Live NOAA radar visible",
       "map.hd_radar_st_off": "Radar is off",
       "map.hd_radar_note": "Source: NOAA NEXRAD via Iowa Mesonet \xb7 Proxied by Kahu Ola (USA + territories).",
-      "map.hd_radar_body": "NEXRAD shows real-time precipitation radar for Hawai\u02bfi and other US territories. Transparent areas mean no radar echo \u2014 no significant rain. Data refreshes every 2\u20135 minutes.",
+      "map.hd_radar_body": "NEXRAD shows real-time precipitation radar for Hawai\u02bbi and other US territories. Transparent areas mean no radar echo \u2014 no significant rain. Data refreshes every 2\u20135 minutes.",
       // Hazard module detail: Fire Weather
       "map.hd_wind_title": "Fire Weather",
       "map.hd_wind_st_active": "Fire weather spread context active",
@@ -762,7 +762,7 @@
       "map.popup_title_flash_warn": "Flash Flood WARNING",
       "map.popup_title_flash_watch": "Flash Flood Watch",
       // Popup notes and disclaimers
-      "map.popup_flood_ctx_note": "Estimated local Hawai\u02bfi flood context. Source: NWS alerts + Kahu Ola terrain logic.",
+      "map.popup_flood_ctx_note": "Estimated local Hawai\u02bbi flood context. Source: NWS alerts + Kahu Ola terrain logic.",
       "map.popup_mrms_note": "MRMS rainfall is contextual. Pair with official NWS alerts.",
       "map.popup_perimeter_note": "Perimeter boundaries may lag fast-moving field conditions.",
       "map.popup_perimeter_disclaimer": "Estimated perimeter — not official fire boundary.",
@@ -818,7 +818,7 @@
       "map.low_bandwidth": "Low-Bandwidth Mode",
       "map.static_preview": "Static preview \u2014 loads instantly during network outages.",
       "map.open_full_map": "Open Full Map \u2197",
-      "map.mini_map_title": "Mini Hawai\u02bfi Map",
+      "map.mini_map_title": "Mini Hawai\u02bbi Map",
       "map.mini_map_desc": "Visual confirmation of statewide hazard context. Tap anywhere on the map to open interactive mode.",
 
       // Source labels (agency acronyms always preserved — Class A locked)
@@ -855,8 +855,8 @@
       // ── Hero titles (innerHTML — developer-controlled static HTML only) ──
       // These contain <span class="hero-title-key"> for visual emphasis.
       // Use ONLY as innerHTML on a trusted, developer-controlled element.
-      "hero.title_html.monitoring": "Hawai\u02bfi is <span class=\"hero-title-key\">calm</span> right now.",
-      "hero.title_html.fire_active": "<span class=\"hero-title-key\">Wildfire signal</span> detected in Hawai\u02bfi.",
+      "hero.title_html.monitoring": "Hawai\u02bbi is <span class=\"hero-title-key\">calm</span> right now.",
+      "hero.title_html.fire_active": "<span class=\"hero-title-key\">Wildfire signal</span> detected in Hawai\u02bbi.",
       "hero.title_html.red_flag": "<span class=\"hero-title-key\">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.",
       "hero.title_html.flood_warning": "Flash flood <span class=\"hero-title-key\">warning</span> in effect.",
       "hero.title_html.flood_watch": "Flood <span class=\"hero-title-key\">watch</span> conditions developing.",
@@ -868,7 +868,7 @@
       "hero.narrative.red_flag": "NWS has issued a Red Flag Warning. Low humidity, high winds, and dry fuel increase wildfire risk significantly.",
       "hero.narrative.flood_warning": "NWS has issued an active flood warning for parts of Hawai\u02bbi. Move away from streams, avoid low-lying roads, and follow official instructions.",
       "hero.narrative.flood_watch": "NWS is monitoring conditions that could produce flooding. Prepare, stay informed, and avoid flood-prone areas.",
-      "hero.narrative.fire_watch": "NWS is monitoring fire weather conditions in parts of Hawai\u02bfi. Stay informed, avoid outdoor burning, and watch for official updates.",
+      "hero.narrative.fire_watch": "NWS is monitoring fire weather conditions in parts of Hawai\u02bbi. Stay informed, avoid outdoor burning, and watch for official updates.",
       "hero.narrative.degraded": "Some data sources are delayed. Showing last known state. Always follow official emergency instructions.",
 
       // ── Banner titles (Class B templates, {n} = count, {s} = plural suffix) ──
@@ -1023,7 +1023,7 @@
       "kupuna.body.fire": "Active wildfire signals detected. K\u016bpuna, keiki, and those with respiratory conditions should stay indoors with windows closed. Monitor official evacuation orders and keep go-bags ready. E m\u0101lama pono.",
       "kupuna.body.flood_warning": "Flash flood warning is active. K\u016bpuna, keiki, and residents near streams or low-lying roads should move to higher ground immediately. Do not attempt to cross flooded roadways. Follow official NWS and county emergency instructions. E m\u0101lama pono.",
       "kupuna.body.flood_watch": "A flood watch is in effect. K\u016bpuna, keiki, and those in low-lying or flood-prone areas should prepare for possible rapid water rises. Have an emergency plan ready and monitor official alerts. E m\u0101lama pono.",
-      "kupuna.body.elevated": "Fire weather conditions are elevated across parts of Hawai\u02bfi. K\u016bpuna, keiki, and those with breathing concerns should stay informed and limit strenuous outdoor activity during dry, windy periods. E m\u0101lama pono.",
+      "kupuna.body.elevated": "Fire weather conditions are elevated across parts of Hawai\u02bbi. K\u016bpuna, keiki, and those with breathing concerns should stay informed and limit strenuous outdoor activity during dry, windy periods. E m\u0101lama pono.",
       "kupuna.body.calm": "Statewide conditions are calm. K\u016bpuna, keiki, and those in low-lying areas should remain informed through official alerts. E m\u0101lama pono \u2014 care for one another.",
       "signal.strip.unavailable": "Could not check right now",
       "status.unavailable": "\u2014",
@@ -1140,7 +1140,7 @@
       // Official links — individual card descriptions (agency names stay English)
       "links.hiema_desc": "State emergency information and preparedness guidance",
       "links.maui_ema_desc": "County emergency instructions, alerts, and local safety information",
-      "links.nws_hfo_desc": "Official watches, warnings, and weather statements for Hawai\u02bfi",
+      "links.nws_hfo_desc": "Official watches, warnings, and weather statements for Hawai\u02bbi",
 
       // How It Works
       "how.label": "How It Works",
@@ -1159,7 +1159,7 @@
       "mission.title_l1": "Built after Lahaina.",
       "mission.title_l2": "Built for everyone.",
       "mission.lead": "The 2023 Lahaina wildfire revealed a devastating gap: advanced satellites were tracking the fire in real-time while residents had no clear, accessible signal. Life-saving data existed \u2014 it just wasn\u2019t reaching people in plain language.",
-      "mission.body": "Kahu Ola was built to close that gap. Not to replace official emergency services \u2014 but to give every resident of Hawai\u02bfi access to the same data that emergency managers use, translated into calm, understandable language before, during, and after a hazard.",
+      "mission.body": "Kahu Ola was built to close that gap. Not to replace official emergency services \u2014 but to give every resident of Hawai\u02bbi access to the same data that emergency managers use, translated into calm, understandable language before, during, and after a hazard.",
       "mission.chip_fire": "\uD83D\uDD25 Wildfire-First",
       "mission.chip_privacy": "\uD83D\uDD12 Privacy-First",
       "mission.chip_resilience": "\u26A1 Failure-Tolerant",
@@ -1171,7 +1171,7 @@
       "mission.val3_title": "Honest about uncertainty",
       "mission.val3_body": "Every signal shows its source and age. Estimated fire perimeters are never labeled official. Stale data is always marked. Kahu Ola never fabricates or inflates hazard severity.",
       "mission.val4_title": "Community-driven \xb7 Free public service",
-      "mission.val4_body": "An independent civic technology initiative \u2014 not a government agency, not a commercial product. Built to remain freely accessible to every resident of Hawai\u02bfi.",
+      "mission.val4_body": "An independent civic technology initiative \u2014 not a government agency, not a commercial product. Built to remain freely accessible to every resident of Hawai\u02bbi.",
 
       // Privacy-First Architecture
       "privarch.label": "Privacy-First Architecture",
@@ -1221,7 +1221,7 @@
       "footer.follow": "Follow for daily hazard briefs:",
 
       // ── Map preview card (homepage mini-map section) ──────────
-      "map.preview_title": "Mini Hawai\u02bfi Map",
+      "map.preview_title": "Mini Hawai\u02bbi Map",
       "map.preview_desc": "Visual confirmation of statewide hazard context. Tap anywhere on the map to open interactive mode.",
       "map.preview_chip": "Map Preview",
       "map.preview_low_bandwidth": "Low-Bandwidth Mode",
@@ -1229,7 +1229,7 @@
       "map.preview_open_cta": "Open Full Map \u2197",
 
       // ── Region names (for fire summary templates) ─────────────
-      "map.region_hawaii": "Hawai\u02bfi",
+      "map.region_hawaii": "Hawai\u02bbi",
       "map.region_usa": "the USA",
       "map.radar_note_live": "NEXRAD \xb7 Via Kahu Ola \xb7 ~5 min refresh",
 
@@ -1320,7 +1320,7 @@
 
       // Brand
       "brand.kicker": "Kahu Ola \xb7 Ng\u01b0\u1eddi b\u1ea3o v\u1ec7 cu\u1ed9c s\u1ed1ng",
-      "brand.title": "T\xedn hi\u1ec7u nguy c\u01a1 Hawai\u02bfi",
+      "brand.title": "T\xedn hi\u1ec7u nguy c\u01a1 Hawai\u02bbi",
       "brand.sub": "T\xedn hi\u1ec7u nguy c\u01a1 d\u00e2n s\u1ef1 r\u00f5 r\u00e0ng v\u1ec1 ch\u00e1y r\u1eebng, l\u0169 l\u1ee5t, b\u00e3o v\u00e0 ch\u1ea5t l\u01b0\u1ee3ng kh\u00f4ng kh\xed tr\xean qu\u1ea7n \u0111\u1ea3o Hawaii.",
       "brand.guardian": "Ng\u01b0\u1eddi b\u1ea3o v\u1ec7 cu\u1ed9c s\u1ed1ng",
 
@@ -1470,12 +1470,12 @@
       "links.official_copy": "Kahu Ola kh\xf4ng ph\u00e1t l\u1ec7nh kh\u1ea9n c\u1ea5p. H\xe3y tu\xe2n theo c\u01a1 quan ch\u1ee9c n\u0103ng ch\xednh th\u1ee9c cho c\u00e1c quy\u1ebft \u0111\u1ecbnh kh\u1ea9n c\u1ea5p.",
 
       // Map page
-      "map.panel_head_hawaii": "T\xedn hi\u1ec7u ch\u00e1y \xb7 Hawai\u02bfi",
+      "map.panel_head_hawaii": "T\xedn hi\u1ec7u ch\u00e1y \xb7 Hawai\u02bbi",
       "map.panel_head_usa": "T\xedn hi\u1ec7u ch\u00e1y \xb7 To\u00e0n n\u01b0\u1edbc M\u1ef9",
-      "map.scope_hint_hawaii": "\u0110ang hi\u1ec3n th\u1ecb ph\u00e1t hi\u1ec7n ch\u00e1y qua v\u1ec7 tinh t\u1ea1i Hawai\u02bfi.",
+      "map.scope_hint_hawaii": "\u0110ang hi\u1ec3n th\u1ecb ph\u00e1t hi\u1ec7n ch\u00e1y qua v\u1ec7 tinh t\u1ea1i Hawai\u02bbi.",
       "map.scope_hint_usa": "\u0110ang hi\u1ec3n th\u1ecb ph\u00e1t hi\u1ec7n ch\u00e1y qua v\u1ec7 tinh tr\xean to\u00e0n n\u01b0\u1edbc M\u1ef9.",
       "map.scope_label": "Ph\u1ea1m vi ch\u00e1y",
-      "map.scope_hawaii": "Hawai\u02bfi",
+      "map.scope_hawaii": "Hawai\u02bbi",
       "map.scope_usa": "To\u00e0n n\u01b0\u1edbc M\u1ef9",
       "map.refresh": "\u21bb L\xe0m m\u1edbi",
       "map.use_location": "D\xf9ng v\u1ecb tr\xed c\u1ee7a t\xf4i",
@@ -1521,7 +1521,7 @@
       "map.accordion_snapshot": "Ng\u1eef c\u1ea3nh \u1ea2nh ch\u1ee5p",
       "map.accordion_snapshot_sub": "Ng\u1eef c\u1ea3nh t\xecnh hu\u1ed1ng v\xe0 chi ti\u1ebft ngu\u1ed3n.",
       "map.accordion_secondary": "L\u1edbp Th\u1ee9 c\u1ea5p",
-      "map.accordion_hazards": "Nguy c\u01a1 \u0110ang ho\u1ea1t \u0111\u1ed9ng \xb7 Hawai\u02bfi",
+      "map.accordion_hazards": "Nguy c\u01a1 \u0110ang ho\u1ea1t \u0111\u1ed9ng \xb7 Hawai\u02bbi",
       "map.accordion_evidence": "B\u1eb1ng ch\u1ee9ng H\u1ed7 tr\u1ee3",
       "map.accordion_context": "L\u1edbp B\u1ed1i c\u1ea3nh",
 
@@ -2023,7 +2023,7 @@
       "map.low_bandwidth": "Ch\u1ebf \u0111\u1ed9 b\u0103ng th\xf4ng th\u1ea5p",
       "map.static_preview": "\u1ea2nh t\u0129nh \u2014 t\u1ea3i ngay c\u1ea3 khi m\u1ea1ng ch\u1eadm.",
       "map.open_full_map": "M\u1edf b\u1ea3n \u0111\u1ed3 \u0111\u1ea7y \u0111\u1ee7 \u2197",
-      "map.mini_map_title": "B\u1ea3n \u0111\u1ed3 thu nh\u1ecf Hawai\u02bfi",
+      "map.mini_map_title": "B\u1ea3n \u0111\u1ed3 thu nh\u1ecf Hawai\u02bbi",
       "map.mini_map_desc": "X\xe1c nh\u1eadn t\xecnh tr\u1ea1ng nguy c\u01a1 to\u00e0n ti\u1ec3u bang. Nh\u1ea5n v\xe0o b\u1ea3n \u0111\u1ed3 \u0111\u1ec3 m\u1edf ch\u1ebf \u0111\u1ed9 t\u01b0\u01a1ng t\u00e1c.",
 
       // Source labels — agency acronyms locked
@@ -2066,8 +2066,8 @@
       "brief.kicker.kauai": "B\u1ea2N TIN \u0110\u1ecaA PH\u01af\u01a0NG \u2014 KAUA\u02bbI",
 
       // ── Hero titles (innerHTML — developer-controlled) ────────
-      "hero.title_html.monitoring": "Hawai\u02bfi \u0111ang <span class=\"hero-title-key\">b\u00ecnh y\xean</span> l\xfac n\xe0y.",
-      "hero.title_html.fire_active": "Ph\u00e1t hi\u1ec7n <span class=\"hero-title-key\">t\u00edn hi\u1ec7u ch\u00e1y r\u1eebng</span> t\u1ea1i Hawai\u02bfi.",
+      "hero.title_html.monitoring": "Hawai\u02bbi \u0111ang <span class=\"hero-title-key\">b\u00ecnh y\xean</span> l\xfac n\xe0y.",
+      "hero.title_html.fire_active": "Ph\u00e1t hi\u1ec7n <span class=\"hero-title-key\">t\u00edn hi\u1ec7u ch\u00e1y r\u1eebng</span> t\u1ea1i Hawai\u02bbi.",
       "hero.title_html.red_flag": "<span class=\"hero-title-key\">C\u1ea3nh b\xe1o C\u1edd \u0110\u1ecf</span>: nguy c\u01a1 ch\xe1y cao t\u1ea1i Hawai\u02bbi.",
       "hero.title_html.flood_warning": "C\u1ea3nh b\u00e1o <span class=\"hero-title-key\">l\u0169 qu\u00e9t</span> \u0111ang c\xf3 hi\u1ec7u l\u1ef1c.",
       "hero.title_html.flood_watch": "Theo d\xf5i <span class=\"hero-title-key\">l\u0169</span> \u0111ang ph\u00e1t tri\u1ec3n.",
@@ -2079,7 +2079,7 @@
       "hero.narrative.red_flag": "NWS \u0111\xe3 ph\u00e1t c\u1ea3nh b\u00e1o C\u1edd \u0110\u1ecf. \u0110\u1ed9 \u1ea9m th\u1ea5p, gi\xf3 m\u1ea1nh v\xe0 th\u1ef1c v\u1eadt kh\xf4 l\xe0m t\u0103ng nguy c\u01a1 ch\u00e1y r\u1eebng \u0111\u00e1ng k\u1ec3.",
       "hero.narrative.flood_warning": "NWS \u0111\u00e3 ph\u00e1t c\u1ea3nh b\u00e1o l\u0169 \u0111ang c\u00f3 hi\u1ec7u l\u1ef1c cho m\u1ed9t s\u1ed1 khu v\u1ef1c Hawai\u02bbi. Di chuy\u1ec3n xa kh\u1ecfi su\u1ed1i, tr\u00e1nh \u0111\u01b0\u1eddng th\u1ea5p v\u00e0 l\u00e0m theo h\u01b0\u1edbng d\u1eabn ch\u00ednh th\u1ee9c.",
       "hero.narrative.flood_watch": "NWS \u0111ang theo d\u00f5i c\u00e1c \u0111i\u1ec1u ki\u1ec7n c\u00f3 th\u1ec3 g\u00e2y ng\u1eadp l\u0169. H\u00e3y chu\u1ea9n b\u1ecb, c\u1eadp nh\u1eadt th\u00f4ng tin v\u00e0 tr\u00e1nh c\u00e1c v\u00f9ng d\u1ec5 l\u0169.",
-      "hero.narrative.fire_watch": "NWS \u0111ang theo d\xf5i \u0111i\u1ec1u ki\u1ec7n th\u1eddi ti\u1ebft ch\u00e1y r\u1eebng t\u1ea1i m\u1ed9t s\u1ed1 khu v\u1ef1c c\u1ee7a Hawai\u02bfi. C\u1eadp nh\u1eadt th\xf4ng tin, tr\u00e1nh \u0111\u1ed1t l\u1eeda ngo\xe0i tr\u1eddi v\xe0 ch\xfa \xfd c\u1eadp nh\u1eadt ch\xednh th\u1ee9c.",
+      "hero.narrative.fire_watch": "NWS \u0111ang theo d\xf5i \u0111i\u1ec1u ki\u1ec7n th\u1eddi ti\u1ebft ch\u00e1y r\u1eebng t\u1ea1i m\u1ed9t s\u1ed1 khu v\u1ef1c c\u1ee7a Hawai\u02bbi. C\u1eadp nh\u1eadt th\xf4ng tin, tr\u00e1nh \u0111\u1ed1t l\u1eeda ngo\xe0i tr\u1eddi v\xe0 ch\xfa \xfd c\u1eadp nh\u1eadt ch\xednh th\u1ee9c.",
       "hero.narrative.degraded": "M\u1ed9t s\u1ed1 ngu\u1ed3n d\u1eef li\u1ec7u b\u1ecb tr\u1ec5. \u0110ang hi\u1ec3n th\u1ecb tr\u1ea1ng th\u00e1i bi\u1ebft l\u1ea7n cu\u1ed1i. Lu\xf4n tu\xe2n theo h\u01b0\u1edbng d\u1eabn kh\u1ea9n c\u1ea5p ch\xednh th\u1ee9c.",
 
       // ── Banner titles ─────────────────────────────────────────
@@ -2226,7 +2226,7 @@
       "kupuna.body.fire": "\u0110\xe3 ph\u00e1t hi\u1ec7n t\xedn hi\u1ec7u ch\u00e1y r\u1eebng. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\xe0 nh\u1eefng ai c\xf3 v\u1ea5n \u0111\u1ec1 h\xf4 h\u1ea5p n\xean \u1edf trong nh\xe0 v\u1edbi c\u1eeda s\u1ed5 \u0111\xf3ng. Theo d\xf5i l\u1ec7nh s\u01a1 t\u00e1n ch\xednh th\u1ee9c v\xe0 gi\u1eef t\xfai \u0111\u1ed3 kh\u1ea9n c\u1ea5p s\u1eb5n s\xe0ng. E m\u0101lama pono.",
       "kupuna.body.flood_warning": "C\u1ea3nh b\u00e1o l\u0169 qu\u00e9t \u0111ang ho\u1ea1t \u0111\u1ed9ng. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\xe0 c\u01b0 d\xe2n g\u1ea7n su\u1ed1i ho\u1eb7c \u0111\u01b0\u1eddng th\u1ea5p n\xean di chuy\u1ec3n l\xean v\xf9ng cao ngay. Kh\xf4ng c\u1ed1 qua \u0111\u01b0\u1eddng b\u1ecb ng\u1eadp. L\xe0m theo h\u01b0\u1edbng d\u1eabn c\u1ee7a NWS v\xe0 c\u1ea5p c\u1ee9u qu\u1eadn. E m\u0101lama pono.",
       "kupuna.body.flood_watch": "Theo d\xf5i l\u0169 \u0111ang c\xf3 hi\u1ec7u l\u1ef1c. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\xe0 c\u01b0 d\xe2n v\xf9ng th\u1ea5p n\xean chu\u1ea9n b\u1ecb cho kh\u1ea3 n\u0103ng n\u01b0\u1edbc d\xe2ng nhanh. S\u1eb5n s\xe0ng k\u1ebf ho\u1ea1ch kh\u1ea9n c\u1ea5p v\xe0 theo d\xf5i c\u1ea3nh b\u00e1o ch\xednh th\u1ee9c. E m\u0101lama pono.",
-      "kupuna.body.elevated": "\u0110i\u1ec1u ki\u1ec7n th\u1eddi ti\u1ebft ch\u00e1y r\u1eebng t\u0103ng cao t\u1ea1i m\u1ed9t s\u1ed1 khu v\u1ef1c c\u1ee7a Hawai\u02bfi. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\xe0 ng\u01b0\u1eddi c\xf3 v\u1ea5n \u0111\u1ec1 h\xf4 h\u1ea5p n\xean c\u1eadp nh\u1eadt th\xf4ng tin v\xe0 h\u1ea1n ch\u1ebf ho\u1ea1t \u0111\u1ed9ng ngo\xe0i tr\u1eddi m\u1ea1nh. E m\u0101lama pono.",
+      "kupuna.body.elevated": "\u0110i\u1ec1u ki\u1ec7n th\u1eddi ti\u1ebft ch\u00e1y r\u1eebng t\u0103ng cao t\u1ea1i m\u1ed9t s\u1ed1 khu v\u1ef1c c\u1ee7a Hawai\u02bbi. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\xe0 ng\u01b0\u1eddi c\xf3 v\u1ea5n \u0111\u1ec1 h\xf4 h\u1ea5p n\xean c\u1eadp nh\u1eadt th\xf4ng tin v\xe0 h\u1ea1n ch\u1ebf ho\u1ea1t \u0111\u1ed9ng ngo\xe0i tr\u1eddi m\u1ea1nh. E m\u0101lama pono.",
       "kupuna.body.calm": "\u0110i\u1ec1u ki\u1ec7n to\xe0n ti\u1ec3u bang \u0111ang b\u00ecnh y\xean. Ng\u01b0\u1eddi cao tu\u1ed5i, tr\u1ebb em v\xe0 c\u01b0 d\xe2n v\xf9ng th\u1ea5p n\xean ti\u1ebfp t\u1ee5c theo d\xf5i qua c\u1ea3nh b\u00e1o ch\xednh th\u1ee9c. E m\u0101lama pono.",
       "signal.strip.unavailable": "Hi\u1ec7n ch\u01b0a ki\u1ec3m tra \u0111\u01b0\u1ee3c",
       "status.unavailable": "\u2014",
@@ -2337,7 +2337,7 @@
       // Official links — individual card descriptions
       "links.hiema_desc": "Th\xf4ng tin kh\u1ea9n c\u1ea5p v\xe0 h\u01b0\u1edbng d\u1eabn chu\u1ea9n b\u1ecb c\u1ee7a ti\u1ec3u bang",
       "links.maui_ema_desc": "H\u01b0\u1edbng d\u1eabn kh\u1ea9n c\u1ea5p, c\u1ea3nh b\xe1o v\xe0 th\xf4ng tin an to\xe0n \u0111\u1ecba ph\u01b0\u01a1ng c\u1ee7a qu\u1eadn",
-      "links.nws_hfo_desc": "Theo d\xf5i, c\u1ea3nh b\xe1o v\xe0 th\xf4ng b\xe1o th\u1eddi ti\u1ebft ch\xednh th\u1ee9c cho Hawai\u02bfi",
+      "links.nws_hfo_desc": "Theo d\xf5i, c\u1ea3nh b\xe1o v\xe0 th\xf4ng b\xe1o th\u1eddi ti\u1ebft ch\xednh th\u1ee9c cho Hawai\u02bbi",
 
       // How It Works
       "how.label": "C\xe1ch Th\u1ee9c Ho\u1ea1t \u0110\u1ed9ng",
@@ -2356,7 +2356,7 @@
       "mission.title_l1": "X\xe2y d\u1ef1ng sau Lahaina.",
       "mission.title_l2": "X\xe2y d\u1ef1ng cho m\u1ecdi ng\u01b0\u1eddi.",
       "mission.lead": "V\u1ee5 ch\xe1y r\u1eebng Lahaina n\u0103m 2023 b\u1ed9c l\u1ed9 kho\u1ea3ng c\xe1ch tai h\u1ea1i: c\xe1c v\u1ec7 tinh ti\xean ti\u1ebfn \u0111ang theo d\xf5i \u0111\xe1m ch\xe1y theo th\u1eddi gian th\u1ef1c trong khi c\u01b0 d\xe2n kh\xf4ng c\xf3 t\xedn hi\u1ec7u r\xf5 r\xe0ng, d\u1ec5 ti\u1ebfp c\u1eadn. D\u1eef li\u1ec7u c\u1ee9u ng\u01b0\u1eddi \u0111\xe3 t\u1ed3n t\u1ea1i \u2014 ch\u1ec9 l\xe0 kh\xf4ng \u0111\u1ebfn \u0111\u01b0\u1ee3c m\u1ecdi ng\u01b0\u1eddi b\u1eb1ng ng\xf4n ng\u1eef \u0111\u01a1n gi\u1ea3n.",
-      "mission.body": "Kahu Ola \u0111\u01b0\u1ee3c x\xe2y d\u1ef1ng \u0111\u1ec3 thu h\u1eb9p kho\u1ea3ng c\xe1ch \u0111\xf3. Kh\xf4ng thay th\u1ebf d\u1ecbch v\u1ee5 kh\u1ea9n c\u1ea5p ch\xednh th\u1ee9c \u2014 m\xe0 \u0111\u1ec3 cung c\u1ea5p cho m\u1ecdi c\u01b0 d\xe2n Hawai\u02bfi quy\u1ec1n ti\u1ebfp c\u1eadn d\u1eef li\u1ec7u m\xe0 c\xe1c nh\xe0 qu\u1ea3n l\xfd kh\u1ea9n c\u1ea5p s\u1eed d\u1ee5ng, \u0111\u01b0\u1ee3c d\u1ecbch th\xe0nh ng\xf4n ng\u1eef b\xecnh t\u0129nh, d\u1ec5 hi\u1ec3u tr\u01b0\u1edbc, trong v\xe0 sau nguy c\u01a1.",
+      "mission.body": "Kahu Ola \u0111\u01b0\u1ee3c x\xe2y d\u1ef1ng \u0111\u1ec3 thu h\u1eb9p kho\u1ea3ng c\xe1ch \u0111\xf3. Kh\xf4ng thay th\u1ebf d\u1ecbch v\u1ee5 kh\u1ea9n c\u1ea5p ch\xednh th\u1ee9c \u2014 m\xe0 \u0111\u1ec3 cung c\u1ea5p cho m\u1ecdi c\u01b0 d\xe2n Hawai\u02bbi quy\u1ec1n ti\u1ebfp c\u1eadn d\u1eef li\u1ec7u m\xe0 c\xe1c nh\xe0 qu\u1ea3n l\xfd kh\u1ea9n c\u1ea5p s\u1eed d\u1ee5ng, \u0111\u01b0\u1ee3c d\u1ecbch th\xe0nh ng\xf4n ng\u1eef b\xecnh t\u0129nh, d\u1ec5 hi\u1ec3u tr\u01b0\u1edbc, trong v\xe0 sau nguy c\u01a1.",
       "mission.chip_fire": "\ud83d\udd25 \u01afu ti\xean Ch\xe1y r\u1eebng",
       "mission.chip_privacy": "\ud83d\udd12 \u01afu ti\xean Quy\u1ec1n ri\xeang t\u01b0",
       "mission.chip_resilience": "\u26a1 Ch\u1ecbu l\u1ed7i",
@@ -2368,7 +2368,7 @@
       "mission.val3_title": "Trung th\u1ef1c v\u1ec1 s\u1ef1 kh\xf4ng ch\u1eafc ch\u1eafn",
       "mission.val3_body": "M\u1ed7i t\xedn hi\u1ec7u hi\u1ec3n th\u1ecb ngu\u1ed3n v\xe0 tu\u1ed5i. Chu vi ch\xe1y \u01b0\u1edbc t\xednh kh\xf4ng bao gi\u1edd \u0111\u01b0\u1ee3c g\xe1n nh\xe3n ch\xednh th\u1ee9c. D\u1eef li\u1ec7u c\u0169 lu\xf4n \u0111\u01b0\u1ee3c \u0111\xe1nh d\u1ea5u. Kahu Ola kh\xf4ng bao gi\u1edd b\u1ecba \u0111\u1eb7t ho\u1eb7c ph\xf3ng \u0111\u1ea1i m\u1ee9c \u0111\u1ed9 nguy c\u01a1.",
       "mission.val4_title": "Do c\u1ed9ng \u0111\u1ed3ng \xb7 D\u1ecbch v\u1ee5 c\xf4ng c\u1ed9ng mi\u1ec5n ph\xed",
-      "mission.val4_body": "M\u1ed9t s\xe1ng ki\u1ebfn c\xf4ng ngh\u1ec7 d\xe2n s\u1ef1 \u0111\u1ed9c l\u1eadp \u2014 kh\xf4ng ph\u1ea3i c\u01a1 quan ch\xednh ph\u1ee7, kh\xf4ng ph\u1ea3i s\u1ea3n ph\u1ea9m th\u01b0\u01a1ng m\u1ea1i. \u0110\u01b0\u1ee3c x\xe2y d\u1ef1ng \u0111\u1ec3 lu\xf4n c\xf3 th\u1ec3 truy c\u1eadp mi\u1ec5n ph\xed cho m\u1ecdi c\u01b0 d\xe2n Hawai\u02bfi.",
+      "mission.val4_body": "M\u1ed9t s\xe1ng ki\u1ebfn c\xf4ng ngh\u1ec7 d\xe2n s\u1ef1 \u0111\u1ed9c l\u1eadp \u2014 kh\xf4ng ph\u1ea3i c\u01a1 quan ch\xednh ph\u1ee7, kh\xf4ng ph\u1ea3i s\u1ea3n ph\u1ea9m th\u01b0\u01a1ng m\u1ea1i. \u0110\u01b0\u1ee3c x\xe2y d\u1ef1ng \u0111\u1ec3 lu\xf4n c\xf3 th\u1ec3 truy c\u1eadp mi\u1ec5n ph\xed cho m\u1ecdi c\u01b0 d\xe2n Hawai\u02bbi.",
 
       // Privacy-First Architecture
       "privarch.label": "Ki\u1ebfn Tr\xfac \u01afu Ti\xean Quy\u1ec1n Ri\xeang T\u01b0",
@@ -2418,7 +2418,7 @@
       "footer.follow": "Theo d\xf5i \u0111\u1ec3 nh\u1eadn b\u1ea3n tin nguy c\u01a1 h\xe0ng ng\xe0y:",
 
       // ── Map preview card ──────────────────────────────────────
-      "map.preview_title": "B\u1ea3n \u0111\u1ed3 Thu nh\u1ecf Hawai\u02bfi",
+      "map.preview_title": "B\u1ea3n \u0111\u1ed3 Thu nh\u1ecf Hawai\u02bbi",
       "map.preview_desc": "X\xe1c nh\u1eadn tr\u1ef1c quan v\u1ec1 ng\u1eef c\u1ea3nh nguy c\u01a1 to\xe0n ti\u1ec3u bang. Nh\u1ea5n v\xe0o b\u1ea5t k\u1ef3 \u0111\xe2u tr\xean b\u1ea3n \u0111\u1ed3 \u0111\u1ec3 m\u1edf ch\u1ebf \u0111\u1ed9 t\u01b0\u01a1ng t\xe1c.",
       "map.preview_chip": "Xem tr\u01b0\u1edbc b\u1ea3n \u0111\u1ed3",
       "map.preview_low_bandwidth": "Ch\u1ebf \u0111\u1ed9 B\u0103ng th\xf4ng Th\u1ea5p",
@@ -2426,7 +2426,7 @@
       "map.preview_open_cta": "M\u1edf B\u1ea3n \u0111\u1ed3 \u0110\u1ea7y \u0111\u1ee7 \u2197",
 
       // ── Region names ──────────────────────────────────────────
-      "map.region_hawaii": "Hawai\u02bfi",
+      "map.region_hawaii": "Hawai\u02bbi",
       "map.region_usa": "to\xe0n n\u01b0\u1edbc M\u1ef9",
       "map.radar_note_live": KEEP_ENGLISH,
 
@@ -2501,7 +2501,7 @@
       "res.maui_humane_society": KEEP_ENGLISH,
       "res.medquest": KEEP_ENGLISH,
       "res.hi_doh": KEEP_ENGLISH,
-      "meta.label": "\u02bbo\u02bblelo Hawai\u02bfi",
+      "meta.label": "\u02bbo\u02bblelo Hawai\u02bbi",
       "meta.lang_html": "haw",
       // Volcanic/VOG + snapshot keys (Phase A/B) — locale completeness
       "card.snapshot.title": "\u02bbIke P\u014dkole o n\u0101 P\u014d\u02bbino o Hawai\u02bbi",
@@ -2542,7 +2542,7 @@
       // Brand — Kahu Ola IS the Hawaiian brand name
       "brand.guardian": "Kahu Ola",
       "brand.kicker": "Kahu Ola \xb7 N\u0101 Kahu o ke Ola",
-      "brand.title": "N\u0101 H\u014d\u02bbailona Pilikia o Hawai\u02bfi",
+      "brand.title": "N\u0101 H\u014d\u02bbailona Pilikia o Hawai\u02bbi",
       "brand.sub": KEEP_ENGLISH,
 
       // ALL hazard terms: KEEP ENGLISH
@@ -2599,12 +2599,12 @@
       "civic.source_disclosure": KEEP_ENGLISH,
 
       // Map: safe non-hazard labels only
-      "map.panel_head_hawaii": "N\u0101 h\u014d\u02bbailona ahi \xb7 Hawai\u02bfi",
+      "map.panel_head_hawaii": "N\u0101 h\u014d\u02bbailona ahi \xb7 Hawai\u02bbi",
       "map.panel_head_usa": "N\u0101 h\u014d\u02bbailona ahi \xb7 \u02bbAmelika",
-      "map.scope_hint_hawaii": "Ke h\u014d\u02bbike nei i n\u0101 ahi no Hawai\u02bfi wale n\u014d.",
+      "map.scope_hint_hawaii": "Ke h\u014d\u02bbike nei i n\u0101 ahi no Hawai\u02bbi wale n\u014d.",
       "map.scope_hint_usa": "Ke h\u014d\u02bbike nei i n\u0101 ahi ma \u02bbAmelika.",
       "map.scope_label": "\u0100pana ahi",
-      "map.scope_hawaii": "Hawai\u02bfi",
+      "map.scope_hawaii": "Hawai\u02bbi",
       "map.scope_usa": "USA",
       "map.refresh": "\u21bb H\u014d\u02bbhou",
       "map.use_location": "E ho\u02bbohana i ko\u02bbou wahi",
@@ -3371,7 +3371,7 @@
 
       // Map
       "map.scope_label": "Saklaw ng Apoy",
-      "map.scope_hawaii": "Hawai\u02bfi",
+      "map.scope_hawaii": "Hawai\u02bbi",
       "map.scope_usa": "USA",
       "map.refresh": "\u21bb I-refresh",
       "map.use_location": "Gamitin ang Aking Lokasyon",
@@ -3406,9 +3406,9 @@
       "map.open_full_map": "Buksan ang Buong Mapa",
       "map.dark_map": "Madilim na Mapa",
       "map.basemap_dark": "Madilim",
-      "map.panel_head_hawaii": "Hawai\u02bfi \xb7 Kalagayan",
+      "map.panel_head_hawaii": "Hawai\u02bbi \xb7 Kalagayan",
       "map.panel_head_usa": "USA \xb7 Kalagayan",
-      "map.scope_hint_hawaii": "Hawai\u02bfi lamang",
+      "map.scope_hint_hawaii": "Hawai\u02bbi lamang",
       "map.scope_hint_usa": "USA at mga teritoryo",
       "map.view_statewide": "Tingnan ang Buong Estado",
       "map.view_my_location": "Tingnan ang Aking Lokasyon",
@@ -4082,7 +4082,7 @@
 
       // Map
       "map.scope_label": "Saklaw ti Apoy",
-      "map.scope_hawaii": "Hawai\u02bfi",
+      "map.scope_hawaii": "Hawai\u02bbi",
       "map.scope_usa": "USA",
       "map.refresh": "\u21bb Agbago",
       "map.use_location": "Usaren ti Lokasionko",
@@ -4117,9 +4117,9 @@
       "map.open_full_map": "Lukatan ti Bilog nga Mapa",
       "map.dark_map": "Nadirlem nga Mapa",
       "map.basemap_dark": "Nadirlem",
-      "map.panel_head_hawaii": "Hawai\u02bfi \xb7 Kasasaad",
+      "map.panel_head_hawaii": "Hawai\u02bbi \xb7 Kasasaad",
       "map.panel_head_usa": "USA \xb7 Kasasaad",
-      "map.scope_hint_hawaii": "Hawai\u02bfi laeng",
+      "map.scope_hint_hawaii": "Hawai\u02bbi laeng",
       "map.scope_hint_usa": "USA ken dagiti teritoryo",
       "map.view_statewide": "Kitaen ti Amin nga Estado",
       "map.view_my_location": "Kitaen ti Lokasionko",
@@ -4646,7 +4646,7 @@
       // Brand
       "brand.guardian": "\u547d\u306e\u5b88\u308a\u795e",
       "brand.kicker": "Kahu Ola \xb7 \u547d\u306e\u5b88\u308a\u795e",
-      "brand.title": "Hawai\u02bfi \u5371\u967a\u4fe1\u53f7",
+      "brand.title": "Hawai\u02bbi \u5371\u967a\u4fe1\u53f7",
       "brand.sub": KEEP_ENGLISH,
 
       // ALL hazard signals: KEEP ENGLISH
@@ -4703,7 +4703,7 @@
 
       // Map
       "map.scope_label": "\u706b\u707d\u30b9\u30b3\u30fc\u30d7",
-      "map.scope_hawaii": "Hawai\u02bfi",
+      "map.scope_hawaii": "Hawai\u02bbi",
       "map.scope_usa": "USA",
       "map.refresh": "\u66f4\u65b0",
       "map.use_location": "\u73fe\u5728\u5730\u3092\u4f7f\u7528",
@@ -4738,9 +4738,9 @@
       "map.open_full_map": "\u30d5\u30eb\u30de\u30c3\u30d7\u3092\u958b\u304f",
       "map.dark_map": "\u30c0\u30fc\u30af\u30de\u30c3\u30d7",
       "map.basemap_dark": "\u30c0\u30fc\u30af",
-      "map.panel_head_hawaii": "Hawai\u02bfi \xb7 \u72b6\u6cc1",
+      "map.panel_head_hawaii": "Hawai\u02bbi \xb7 \u72b6\u6cc1",
       "map.panel_head_usa": "USA \xb7 \u72b6\u6cc1",
-      "map.scope_hint_hawaii": "Hawai\u02bfi\u306e\u307f",
+      "map.scope_hint_hawaii": "Hawai\u02bbi\u306e\u307f",
       "map.scope_hint_usa": "USA\u3068\u9818\u571f",
       "map.view_statewide": "\u5168\u5cf6\u3092\u8868\u793a",
       "map.view_my_location": "\u73fe\u5728\u5730\u3092\u8868\u793a",
