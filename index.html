@@ -2743,7 +2743,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=db2ea015"></script>
+  <script src="/i18n/kahuola-i18n.js?v=29ab4bb4"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";
@@ -3350,12 +3350,12 @@
         }
         if (primaryEvent === "FIRE_ACTIVE" && fireCount > 0) {
           return {
-            kicker:      _t("hero.kicker.fire_active") || "FIRE SIGNAL ACTIVE",
+            kicker:      _t("hero.kicker.fire_active") || "FIRE SIGNAL DETECTED",
             title:       fireCount === 1
               ? "One wildfire detection in Hawai\u02bfi."
               : `${fireCount} wildfire detections across Hawai\u02bfi.`,
             narrative:   _t("hero.narrative.fire_active") || "NASA FIRMS satellite has detected active fire heat signatures. Open the live map to see location and distance from you.",
-            bannerTitle: _tmpl("hero.banner.fire_active", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `\ud83d\udd25 ${fireCount} Active Wildfire Signal${fireCount > 1 ? "s" : ""}`,
+            bannerTitle: _tmpl("hero.banner.fire_active", { n: fireCount, s: fireCount > 1 ? "s" : "" }) || `\ud83d\udd25 ${fireCount} Wildfire Signal${fireCount > 1 ? "s" : ""}`,
             bannerCopy:  _t("hero.banner_copy.nasa_firms") || "Source: NASA FIRMS VIIRS/MODIS \xb7 verified this snapshot",
             kicClass: "fire"
           };
@@ -3749,7 +3749,9 @@
             MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',            cls: 'calm'  },
             STORM_WARNING: { html: stormTitleHtml(stormProduct, "warning"), cls: (stormProduct && stormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
             STORM_WATCH:   { html: stormTitleHtml(stormProduct, "watch"),   cls: 'warn'  },
-            FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',          cls: 'fire'  },
+            FIRE_ACTIVE:   (fireCount === 0 && redFlag)
+              ? { html: _t("hero.title_html.red_flag")    || '<span class="hero-title-key">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.', cls: 'fire'  }
+              : { html: _t("hero.title_html.fire_active") || '<span class="hero-title-key">Wildfire signal</span> detected in Hawai\u02bfi.', cls: 'fire'  },
             // P52. A volcanic thermal signal is not a wildfire and not calm.
             // Amber, not fire-orange \u2014 it carries an air-quality decision,
             // not an evacuation one. MUST also exist in the language-change
@@ -5044,7 +5046,9 @@
             MONITORING:    { html: _t("hero.title_html.monitoring")    || 'Hawai\u02bfi is <span class="hero-title-key">calm</span> right now.',          cls: 'calm'  },
             STORM_WARNING: { html: stormTitleHtml(_langStormProduct, "warning"), cls: (_langStormProduct && _langStormProduct.key) === 'hurricane_warning' ? 'fire' : 'flood' },
             STORM_WATCH:   { html: stormTitleHtml(_langStormProduct, "watch"),   cls: 'warn'  },
-            FIRE_ACTIVE:   { html: _t("hero.title_html.fire_active")   || '<span class="hero-title-key">Wildfire</span> detected in Hawai\u02bfi.',        cls: 'fire'  },
+            FIRE_ACTIVE:   (fireCount === 0 && redFlag)
+              ? { html: _t("hero.title_html.red_flag")    || '<span class="hero-title-key">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.', cls: 'fire'  }
+              : { html: _t("hero.title_html.fire_active") || '<span class="hero-title-key">Wildfire signal</span> detected in Hawai\u02bfi.', cls: 'fire'  },
             // P52 \u2014 twin of the VOLCANIC_HEAT entry in applyHero's map.
             // P36a-4 twin — must exist in BOTH maps or a locale switch drops the
             // state back to "calm". Plain text, no span markup: the county name

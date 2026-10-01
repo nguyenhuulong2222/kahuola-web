@@ -839,7 +839,7 @@
 
       // ── Hero kickers (Class A — state badge labels) ───────────
       "hero.kicker.system_normal": "SYSTEM NORMAL",
-      "hero.kicker.fire_active": "FIRE SIGNAL ACTIVE",
+      "hero.kicker.fire_active": "FIRE SIGNAL DETECTED",
       "hero.kicker.red_flag": "RED FLAG WARNING",
       "hero.kicker.flood_warning": "FLOOD WARNING ACTIVE",
       "hero.kicker.flood_watch": "FLOOD WATCH",
@@ -856,7 +856,8 @@
       // These contain <span class="hero-title-key"> for visual emphasis.
       // Use ONLY as innerHTML on a trusted, developer-controlled element.
       "hero.title_html.monitoring": "Hawai\u02bfi is <span class=\"hero-title-key\">calm</span> right now.",
-      "hero.title_html.fire_active": "<span class=\"hero-title-key\">Wildfire</span> detected in Hawai\u02bfi.",
+      "hero.title_html.fire_active": "<span class=\"hero-title-key\">Wildfire signal</span> detected in Hawai\u02bfi.",
+      "hero.title_html.red_flag": "<span class=\"hero-title-key\">Red Flag Warning</span>: high fire danger in Hawai\u02bbi.",
       "hero.title_html.flood_warning": "Flash flood <span class=\"hero-title-key\">warning</span> in effect.",
       "hero.title_html.flood_watch": "Flood <span class=\"hero-title-key\">watch</span> conditions developing.",
       "hero.title_html.degraded": "Latest data temporarily <span class=\"hero-title-key\">delayed</span>.",
@@ -872,7 +873,7 @@
 
       // ── Banner titles (Class B templates, {n} = count, {s} = plural suffix) ──
       "hero.banner.system_normal": "\u2705 No Active Hazards Detected",
-      "hero.banner.fire_active": "\ud83d\udd25 {n} Active Wildfire Signal{s}",
+      "hero.banner.fire_active": "\ud83d\udd25 {n} Wildfire Signal{s}",
       "hero.banner.red_flag": "\ud83d\udea9 NWS Red Flag Warning Active",
       "hero.banner.flood_warning": "\ud83c\udf0a NWS Flood Warning \u2014 Official",
       "hero.banner.flood_watch": "\ud83d\udc41 NWS Flood Watch Active",
@@ -2047,9 +2048,9 @@
 
       // ── Hero kickers ──────────────────────────────────────────
       "hero.kicker.system_normal": "H\u1ec6 TH\u1ed0NG B\u00ccNH TH\u01af\u1edcNG",
-      "hero.kicker.fire_active": "T\xcdN HI\u1ec6U CH\u00c1Y \u0110ANG HO\u1ea0T \u0110\u1ed8NG",
+      "hero.kicker.fire_active": "PH\u00c1T HI\u1ec6N T\u00cdN HI\u1ec6U CH\u00c1Y",
       // hazard.red_flag_warning LOCKED vi: C\u1ea3nh b\u00e1o c\u1edd \u0111\u1ecf
-      "hero.kicker.red_flag": "C\u1ea2NH B\u00c1O C\u1edd \u0110\u1ecf",
+      "hero.kicker.red_flag": "C\u1ea2NH B\u00c1O C\u1edc \u0110\u1ece",
       // hazard.flash_flood_warning LOCKED vi: C\u1ea3nh b\u00e1o l\u0169 qu\u00e9t
       "hero.kicker.flood_warning": "C\u1ea2NH B\u00c1O L\u0168 QU\u00c9T \u0110ANG HO\u1ea0T \u0110\u1ed8NG",
       // hazard.flash_flood_watch LOCKED vi: Theo d\xf5i l\u0169 qu\u00e9t
@@ -2066,7 +2067,8 @@
 
       // ── Hero titles (innerHTML — developer-controlled) ────────
       "hero.title_html.monitoring": "Hawai\u02bfi \u0111ang <span class=\"hero-title-key\">b\u00ecnh y\xean</span> l\xfac n\xe0y.",
-      "hero.title_html.fire_active": "<span class=\"hero-title-key\">Ch\u00e1y r\u1eebng</span> ph\u00e1t hi\u1ec7n t\u1ea1i Hawai\u02bfi.",
+      "hero.title_html.fire_active": "Ph\u00e1t hi\u1ec7n <span class=\"hero-title-key\">t\u00edn hi\u1ec7u ch\u00e1y r\u1eebng</span> t\u1ea1i Hawai\u02bfi.",
+      "hero.title_html.red_flag": "<span class=\"hero-title-key\">C\u1ea3nh b\xe1o C\u1edd \u0110\u1ecf</span>: nguy c\u01a1 ch\xe1y cao t\u1ea1i Hawai\u02bbi.",
       "hero.title_html.flood_warning": "C\u1ea3nh b\u00e1o <span class=\"hero-title-key\">l\u0169 qu\u00e9t</span> \u0111ang c\xf3 hi\u1ec7u l\u1ef1c.",
       "hero.title_html.flood_watch": "Theo d\xf5i <span class=\"hero-title-key\">l\u0169</span> \u0111ang ph\u00e1t tri\u1ec3n.",
       "hero.title_html.degraded": "D\u1eef li\u1ec7u t\u1ea1m th\u1eddi <span class=\"hero-title-key\">b\u1ecb tr\u1ec5</span>.",
@@ -4437,7 +4439,8 @@
       "hero.banner.fire_watch": "\u26a0\ufe0f NWS Fire Weather Watch Aktibo", "hero.banner.flood_warning": KEEP_ENGLISH,
       "hero.banner.flood_watch": "\ud83d\udc41 NWS Flash Flood Watch Aktibo", "hero.banner.red_flag": KEEP_ENGLISH,
       "hero.banner.degraded": "\u26a0\ufe0f Nababa ti Kalidad ti Data", "hero.kicker.system_normal": "NORMAL TI SISTEMA",
-      "hero.kicker.fire_active": "AKTIBO TI FIRE SIGNAL", "hero.kicker.fire_watch": "FIRE WEATHER WATCH",
+      // NEEDS NATIVE REVIEW: reverted to EN after 'active' claim removal (2026-10-01)
+      "hero.kicker.fire_active": "FIRE SIGNAL DETECTED", "hero.kicker.fire_watch": "FIRE WEATHER WATCH",
       "hero.kicker.flood_warning": "AKTIBO TI FLOOD WARNING", "hero.kicker.flood_watch": "FLOOD WATCH",
       "hero.kicker.red_flag": "RED FLAG WARNING", "hero.kicker.degraded": "NALUGAYAN TI DATA",
       "hero.narrative.system_normal": "Awan aktibo nga patarus, alerto, wenno natukoy nga wildfire manipud satellite iti intero nga estado.", "hero.narrative.fire_active": KEEP_ENGLISH,
@@ -5058,7 +5061,8 @@
       "hero.banner.fire_watch": "\u26a0\ufe0f NWS \u706b\u707d\u6c17\u8c61\u6ce8\u610f\u5831 \u767a\u4ee4\u4e2d", "hero.banner.flood_warning": KEEP_ENGLISH,
       "hero.banner.flood_watch": "\ud83d\udc41 NWS \u6d2a\u6c34\u6ce8\u610f\u5831 \u767a\u4ee4\u4e2d", "hero.banner.red_flag": KEEP_ENGLISH,
       "hero.banner.degraded": "\u26a0\ufe0f \u30c7\u30fc\u30bf\u54c1\u8cea\u4f4e\u4e0b\u4e2d", "hero.kicker.system_normal": "\u30b7\u30b9\u30c6\u30e0\u6b63\u5e38",
-      "hero.kicker.fire_active": "\u5c71\u706b\u4e8b\u30b7\u30b0\u30ca\u30eb \u767a\u751f\u4e2d", "hero.kicker.fire_watch": "\u706b\u707d\u6c17\u8c61 \u6ce8\u610f\u5831",
+      // NEEDS NATIVE REVIEW: reverted to EN after 'active' claim removal (2026-10-01)
+      "hero.kicker.fire_active": "FIRE SIGNAL DETECTED", "hero.kicker.fire_watch": "\u706b\u707d\u6c17\u8c61 \u6ce8\u610f\u5831",
       "hero.kicker.flood_warning": "\u6d2a\u6c34\u8b66\u5831 \u767a\u4ee4\u4e2d", "hero.kicker.flood_watch": "\u6d2a\u6c34\u6ce8\u610f\u5831",
       "hero.kicker.red_flag": "\u30ec\u30c3\u30c9\u30d5\u30e9\u30c3\u30b0 \u8b66\u5831", "hero.kicker.degraded": "\u30c7\u30fc\u30bf\u9045\u5ef6",
       "hero.narrative.system_normal": "\u5dde\u5168\u4f53\u3067\u30a2\u30af\u30c6\u30a3\u30d6\u306a\u6ce8\u610f\u5831\u3001\u8b66\u544a\u3001\u307e\u305f\u306f\u885b\u661f\u306b\u3088\u308b\u5c71\u706b\u4e8b\u691c\u77e5\u306f\u3042\u308a\u307e\u305b\u3093\u3002", "hero.narrative.fire_active": KEEP_ENGLISH,
