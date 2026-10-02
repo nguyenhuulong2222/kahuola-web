@@ -4533,6 +4533,89 @@
       }).filter(Boolean);
     }
 
+    // RS-M1. MapLibre joins two consecutive vertices by interpolating longitude
+    // directly, so a pair that straddles the antimeridian (-177.2 -> +179.6, a
+    // delta of +356.8) is drawn the LONG way: a dashed orange line across the
+    // entire map at the latitude of that segment. Measured live 2026-10-02 on
+    // Tropical Storm Nolo, tracking 300 deg out of -166.4 and crossing +180
+    // between tau 60 and tau 72.
+    //
+    // The payload is not wrong. NHC publishes those longitudes and the Worker
+    // passes them through verbatim (worker/src/index.ts:6576), which is a
+    // guarantee worth keeping -- so this is a DISPLAY-ONLY transform and lives
+    // here, in the client, not in the API.
+    //
+    // Progressive unwrap, left to right: each longitude is shifted by whole
+    // multiples of 360 until it is within 180 deg of the previous one. Every
+    // output longitude is the SAME POINT ON THE SPHERE as its input; no vertex
+    // is added, removed or moved, and latitude is never touched. A path with no
+    // jump comes back byte-identical, and running it twice changes nothing.
+    //
+    // NEVER apply this to the cone. NHC already splits a cone that crosses +180
+    // into a MultiPolygon with one part ending at +180 and the next starting at
+    // -180 (confirmed in the live payload), and the Worker preserves that split.
+    // Unwrapping those rings would merge two correct polygons into one that
+    // straddles the seam -- replacing a working cone with a broken one.
+    function unwrapPath(coords) {
+      if (!Array.isArray(coords) || coords.length === 0) return coords;
+      const out = [];
+      let shifted = false;
+      for (let i = 0; i < coords.length; i++) {
+        const pt = coords[i];
+        if (!Array.isArray(pt) || pt.length < 2 || !Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) return coords;
+        if (i === 0) { out.push([pt[0], pt[1]]); continue; }
+        let lon = pt[0];
+        const prev = out[i - 1][0];
+        while (lon - prev > 180) lon -= 360;
+        while (lon - prev < -180) lon += 360;
+        if (lon !== pt[0]) shifted = true;
+        out.push([lon, pt[1]]);
+      }
+      // Nothing crossed the seam, so hand back the ORIGINAL array. "Byte-identical"
+      // is then literal rather than merely equal in value, the `===` short-circuits
+      // in the two callers below actually fire, and the common case (every storm
+      // that never approaches +/-180) allocates nothing.
+      return shifted ? out : coords;
+    }
+
+    // LineString and each part of a MultiLineString, independently. Anything
+    // else -- Point, Polygon, MultiPolygon -- is returned untouched.
+    function unwrapLineGeometryForDisplay(geom) {
+      if (!geom || typeof geom !== "object") return geom;
+      if (geom.type === "LineString") {
+        const c = unwrapPath(geom.coordinates);
+        return c === geom.coordinates ? geom : { type: "LineString", coordinates: c };
+      }
+      if (geom.type === "MultiLineString" && Array.isArray(geom.coordinates)) {
+        return { type: "MultiLineString", coordinates: geom.coordinates.map(unwrapPath) };
+      }
+      return geom;
+    }
+
+    // The forecast block carries the same sequence twice: `track.coordinates`
+    // draws the line and `points[]` draws the vertex circles and their labels.
+    // They MUST share one frame or the circles sit on a different world copy
+    // from the line they belong to, so both are rebuilt from a single unwrap.
+    // A point is only re-framed when its own lon/lat still match the track
+    // vertex at the same index; if the two ever stop agreeing, the point keeps
+    // its published longitude rather than inheriting a guess.
+    function unwrapForecastForDisplay(fc) {
+      if (!fc || typeof fc !== "object") return fc;
+      const raw = fc.track && Array.isArray(fc.track.coordinates) ? fc.track.coordinates : null;
+      if (!raw || raw.length < 2) return fc;
+      const un = unwrapPath(raw);
+      if (un === raw) return fc;
+      const pts = Array.isArray(fc.points) ? fc.points : null;
+      const next = Object.assign({}, fc, { track: { type: "LineString", coordinates: un } });
+      if (pts && pts.length === raw.length) {
+        next.points = pts.map((pt, i) =>
+          (pt && pt.lon === raw[i][0] && pt.lat === raw[i][1])
+            ? Object.assign({}, pt, { lon: un[i][0] })
+            : pt);
+      }
+      return next;
+    }
+
     function normalizeHurricaneFeatures(rawSignals) {
       return (Array.isArray(rawSignals) ? rawSignals : []).map((s) => {
         if (!s.geometry) return null;
@@ -4563,7 +4646,9 @@
             event_time_source: props.event_time_source ?? null,
             current_position_nearest_island: props.current_position_nearest_island ?? null,
             forecast_status: props.forecast_status ?? null,
-            forecast: props.forecast ?? null,
+            // RS-M1. Display-only antimeridian unwrap; the cone below is NOT
+            // unwrapped -- NHC already split it correctly at +/-180.
+            forecast: props.forecast ? unwrapForecastForDisplay(props.forecast) : null,
             forecast_closest_approach: props.forecast_closest_approach ?? null,
             wind_probabilities: props.wind_probabilities ?? null,
             wind_probabilities_status: props.wind_probabilities_status ?? null,
