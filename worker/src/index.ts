@@ -4667,7 +4667,14 @@ function hmsKmlUrl(date: Date): string {
 // Instead BOTH outcomes are cached for 900 s, negative included. A 404 is a
 // fact about the world ("NOAA has not published this file yet"), not an error
 // to retry hot, and caching it is what removes the amplification.
+//
+// SAT-0a-1 F6. Only a 404 is that kind of fact. A 5xx or an oversize (413)
+// says nothing about whether the file exists, so it is remembered for
+// HMS_KML_FAIL_TTL only: long enough to stop a retry storm against a
+// struggling host, short enough not to manufacture an outage that outlives the
+// real one. A transport failure/timeout (status 0) is not cached at all.
 const HMS_KML_TTL = 900;
+const HMS_KML_FAIL_TTL = 120;
 
 async function fetchHmsKml(date: Date): Promise<{ ok: boolean; text: string | null; status: number }> {
   const url = hmsKmlUrl(date);
@@ -4679,17 +4686,18 @@ async function fetchHmsKml(date: Date): Promise<{ ok: boolean; text: string | nu
     const hit = await caches.default.match(new Request(url));
     if (hit) return { ok: true, text: await hit.text(), status: 200 };
     const miss = await caches.default.match(new Request(missKey));
-    if (miss) return { ok: false, text: null, status: Number(await miss.text()) || 404 };
+    if (miss) { const st = Number(await miss.text()); return { ok: false, text: null, status: Number.isFinite(st) ? st : 404 }; }
   } catch (e) { /* a cache read must never fail the request */ }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
   const rememberMiss = async (status: number) => {
+    const ttl = status === 404 ? HMS_KML_TTL : HMS_KML_FAIL_TTL;
     try {
       await caches.default.put(
         new Request(missKey),
         new Response(String(status), {
-          headers: { 'Content-Type': 'text/plain', 'Cache-Control': `public, max-age=${HMS_KML_TTL}` },
+          headers: { 'Content-Type': 'text/plain', 'Cache-Control': `public, max-age=${ttl}` },
         }),
       );
     } catch (e) { /* ignore */ }
@@ -4751,14 +4759,33 @@ function parseKmlRing(raw: string): number[][] | null {
 }
 
 // Extract smoke polygons from HMS KML. Module scope, never throws, fail-closed.
-// Any bad Placemark/Polygon is dropped; a wholly-bad file yields [].
-function parseHmsKml(text: string): HmsSmoke[] {
+//
+// SAT-0a-1 F2. The parser used to return [] for a malformed file and drop bad
+// placemarks silently, so a broken file read exactly like "no smoke". It now
+// reports what it could not read: `dropped` counts placemarks that lost at
+// least one polygon (or yielded none), `total_placemarks` counts all found,
+// and `failed` marks a body it could not read at all. The caller decides.
+// Both counts cover the WHOLE HMS file (all of North America), not just the
+// placemarks near Hawaiʻi.
+//
+// A structurally valid KML (has a <kml> root) with no Placemark is a valid
+// empty file: NOAA outlined no smoke anywhere, so failed=false, features=[].
+// Only a non-KML body (HTML error page, empty, unparseable) or a file whose
+// every placemark is unreadable is failed.
+type HmsParse = { features: HmsSmoke[]; dropped: number; total_placemarks: number; failed: boolean };
+
+function parseHmsKml(text: string): HmsParse {
   const out: HmsSmoke[] = [];
-  if (typeof text !== 'string' || text.length === 0) return out;
+  let dropped = 0;
+  let total = 0;
+  if (typeof text !== 'string' || text.trim().length === 0) return { features: out, dropped, total_placemarks: total, failed: true };
   try {
     const placemarks = text.match(/<Placemark\b[\s\S]*?<\/Placemark>/gi);
-    if (!placemarks) return out;
+    if (!placemarks) return { features: out, dropped, total_placemarks: total, failed: !/<kml\b/i.test(text) };
+    total = placemarks.length;
     for (const pm of placemarks) {
+      let kept = 0;
+      let lost = false;
       try {
         let density: HmsSmoke['density'] = null;
         const dm = pm.match(/\b(Light|Medium|Heavy)\b/i);   // absent → null (no fabrication)
@@ -4767,21 +4794,23 @@ function parseHmsKml(text: string): HmsSmoke[] {
           density = d === 'heavy' ? 'heavy' : d === 'medium' ? 'medium' : 'light';
         }
         const polys = pm.match(/<Polygon\b[\s\S]*?<\/Polygon>/gi);
-        if (!polys) continue;
-        for (const poly of polys) {
-          const outer = poly.match(/<outerBoundaryIs\b[\s\S]*?<\/outerBoundaryIs>/i);
-          const scope = outer ? outer[0] : poly;
-          const cm = scope.match(/<coordinates\b[^>]*>([\s\S]*?)<\/coordinates>/i);
-          if (!cm) continue;
-          const ring = parseKmlRing(cm[1]);
-          if (ring) out.push({ ring, density });            // invalid ring → already dropped
+        if (polys) {
+          for (const poly of polys) {
+            const outer = poly.match(/<outerBoundaryIs\b[\s\S]*?<\/outerBoundaryIs>/i);
+            const scope = outer ? outer[0] : poly;
+            const cm = scope.match(/<coordinates\b[^>]*>([\s\S]*?)<\/coordinates>/i);
+            const ring = cm ? parseKmlRing(cm[1]) : null;
+            if (ring) { out.push({ ring, density }); kept++; } else lost = true;
+          }
         }
-      } catch { /* drop this placemark, continue with the next */ }
+      } catch { lost = true; /* drop this placemark, continue with the next */ }
+      if (lost || kept === 0) dropped++;
     }
   } catch {
-    return [];
+    return { features: [], dropped: total, total_placemarks: total, failed: true };
   }
-  return out;
+  // Placemarks present but none readable: unreadable, not "no smoke".
+  return { features: out, dropped, total_placemarks: total, failed: out.length === 0 };
 }
 
 // Bbox overlap between a ring and a [west, south, east, north] box.
@@ -4798,13 +4827,18 @@ function ringIntersectsBbox(ring: number[][], west: number, south: number, east:
 
 // Unavailable path — writes the 60s status key ONLY (no-clobber of the primary
 // snapshot smoke-hawaii-v1). Mirrors the shipped summary status-key contract.
+//
+// SAT-0a-1 F1. `error` is what makes this distinguishable from "no polygons":
+// the shape is otherwise identical (200, signals: []), and a client that only
+// counts features would render an outage as an all-clear. live-map's
+// payloadError() routes any top-level `error` string to "Unavailable".
 async function smokeUnavailable(region: string, cors: CorsHeaders, note: string): Promise<Response> {
   const envelope = buildHazardEnvelope('smoke', 'NOAA HMS', region, [],
     { status: 'unavailable', count: 0, message: 'Smoke data temporarily unavailable.' },
     { authority: 'observational', note },
   );
   const statusResponse = new Response(
-    JSON.stringify({ ...envelope, stale_after_seconds: 60 }),
+    JSON.stringify({ ...envelope, error: 'upstream_unavailable', stale_after_seconds: 60 }),
     { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', 'X-Kahuola-Cache': 'MISS', ...cors } },
   );
   await caches.default.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
@@ -4820,30 +4854,45 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
   const cachedJson = cachedJsonResponse(cached, cors, 200);
   if (cachedJson) return cachedJson;
 
-  // Fetch chain (UTC): today's KML → 404/err → yesterday's KML → both fail.
+  // Fetch chain (UTC): today's KML → fetch failure OR unreadable file →
+  // yesterday's KML → both fail. SAT-0a-1 F2: a file that cannot be parsed is
+  // a failed day, never "no smoke", and is never cached as a snapshot.
   const todayUtc = new Date();
   const yesterdayUtc = new Date(todayUtc.getTime() - 86_400_000);
 
-  let kml = await fetchHmsKml(todayUtc);
+  const loadDay = async (date: Date): Promise<{ parsed: HmsParse } | { cause: string }> => {
+    const kml = await fetchHmsKml(date);
+    if (!kml.ok) return { cause: `HTTP ${kml.status || 'error'}` };
+    const p = parseHmsKml(kml.text || '');
+    return p.failed ? { cause: 'unreadable file' } : { parsed: p };
+  };
+
+  let day = await loadDay(todayUtc);
   let usedDate = todayUtc;
   let stale = false;
-  if (!kml.ok) {
-    const ykml = await fetchHmsKml(yesterdayUtc);
-    if (!ykml.ok) {
+  if (!('parsed' in day)) {
+    const todayCause = day.cause;
+    day = await loadDay(yesterdayUtc);
+    if (!('parsed' in day)) {
       // Both UTC days unavailable → no-clobber status key, primary snapshot intact.
-      return smokeUnavailable(region, cors, `Upstream unavailable: HMS KML HTTP ${kml.status || 'error'}`);
+      return smokeUnavailable(region, cors,
+        `Upstream unavailable: HMS KML today ${todayCause}; previous day ${day.cause}.`);
     }
-    kml = ykml;
     usedDate = yesterdayUtc;
     stale = true;   // serving previous UTC day — labelled honestly below
   }
 
-  const parsed = parseHmsKml(kml.text || '');
+  const parsed = day.parsed;
   const [hwWest, hwSouth, hwEast, hwNorth] = REGION_BBOXES.hawaii;
-  const nowIso = new Date().toISOString();
+  const dateStr = hmsDateStr(usedDate);
+  // SAT-0a-1 F4. event_time is the HMS analysis day (UTC midnight of the file
+  // actually used): HMS files are per UTC day and carry no per-polygon time we
+  // trust. It used to be the fetch time, which made yesterday's polygons look
+  // minutes old. generated_at (envelope) stays the response time.
+  const hmsDayIso = `${dateStr}T00:00:00.000Z`;
 
   // Hawaii bbox filter — KML covers all of North America; keep only overlaps.
-  const signals: Feature[] = parsed
+  const signals: Feature[] = parsed.features
     .filter((p) => ringIntersectsBbox(p.ring, hwWest, hwSouth, hwEast, hwNorth))
     .map((p, idx) => {
       const density = p.density ?? 'light';   // observational default; never fabricate medium/heavy
@@ -4859,19 +4908,20 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
           source: 'NOAA HMS',
           source_provider: 'NOAA_HMS',
           source_label: 'NOAA HMS',
-          event_time: nowIso,
+          event_time: hmsDayIso,
           advisory: 'Smoke detected in area. Air quality may be reduced.',
         },
       };
     });
 
-  const dateStr = hmsDateStr(usedDate);
+  // SAT-0a-1 F5. HMS polygons are drawn by analysts; no polygon is not "no smoke".
   const message = signals.length > 0
     ? `${signals.length} smoke polygon(s) detected near Hawaiʻi.`
-    : 'No significant smoke polygons detected near Hawaiʻi.';
+    : 'NOAA analysts have not outlined smoke near Hawaiʻi in this file. This does not rule out smoke.';
   // Honest freshness label: fallback day is stated explicitly + shorter stale TTL.
+  // SAT-0a-1 F3: cause-neutral — today's file may be unpublished, failing or unreadable.
   const note = stale
-    ? `NOAA HMS smoke from previous UTC day (${dateStr}); today's file not yet published. Advisory only.`
+    ? `NOAA HMS smoke from previous UTC day (${dateStr}); today's file is unavailable. Advisory only.`
     : `NOAA HMS satellite smoke detection (${dateStr}). Advisory only.`;
 
   const envelope = buildHazardEnvelope(
@@ -4884,8 +4934,13 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
     { authority: 'observational', note },
   );
 
+  // SAT-0a-1 F2/F3. hms_date / hms_day name the file actually used; a file
+  // that parsed only partly says so (the count is over the whole HMS file).
+  const fileMeta: JsonMap = { hms_date: dateStr, hms_day: stale ? 'previous' : 'today' };
+  if (parsed.dropped > 0) { fileMeta.parse_incomplete = true; fileMeta.dropped_placemarks = parsed.dropped; }
+
   const response = new Response(
-    JSON.stringify({ ...envelope, stale_after_seconds: stale ? 300 : 900 }),
+    JSON.stringify({ ...envelope, ...fileMeta, stale_after_seconds: stale ? 300 : 900 }),
     { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'X-Kahuola-Cache': 'MISS', ...cors } },
   );
   await cache.put(new Request(cacheKey), response.clone());
@@ -5198,7 +5253,7 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
 // Promise.all cannot swallow a ReferenceError. Each returns a deterministic
 // degraded shape on any miss / parse failure (Invariant III). Zero PII.
 
-type SummarySrc = { count: number | null; status: string; age_seconds: number | null; volcanic_zone_count?: number; wildland_count?: number };
+type SummarySrc = { count: number | null; status: string; age_seconds: number | null; volcanic_zone_count?: number; wildland_count?: number; hms_date?: string | null };
 
 // Seconds since an ISO timestamp, clamped to >= 0. null if unparseable.
 function summaryAgeSeconds(generatedAt: unknown, nowMs: number): number | null {
@@ -5223,9 +5278,11 @@ async function readSummaryEnvelope(key: string, nowMs: number): Promise<SummaryS
     const status = typeof j?.summary?.status === 'string' ? j.summary.status : 'unknown';
     const age = summaryAgeSeconds(j?.generated_at, nowMs);
     const n = j?.summary?.count;
-    if (typeof n === 'number' && Number.isFinite(n)) return { count: n, status, age_seconds: age };
-    if (Array.isArray(j?.signals)) return { count: j.signals.length, status, age_seconds: age };
-    return { count: null, status, age_seconds: age };
+    // SAT-0a-1 F7: HMS file date, present on smoke snapshots only.
+    const extra = typeof j?.hms_date === 'string' ? { hms_date: j.hms_date as string } : {};
+    if (typeof n === 'number' && Number.isFinite(n)) return { count: n, status, age_seconds: age, ...extra };
+    if (Array.isArray(j?.signals)) return { count: j.signals.length, status, age_seconds: age, ...extra };
+    return { count: null, status, age_seconds: age, ...extra };
   } catch {
     return { count: null, status: 'miss', age_seconds: null };
   }
@@ -5398,7 +5455,9 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
     generated_at: new Date(nowMs).toISOString(),
     stale: degraded,
     fire: { count: fire.count ?? 0, volcanic_zone_count: fire.volcanic_zone_count ?? 0, wildland_count: fire.wildland_count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS' },
-    smoke: { present: (smoke.count ?? 0) > 0, count: smoke.count ?? 0, status: smoke.status, age_seconds: smoke.age_seconds, source: 'NOAA HMS' },
+    // SAT-0a-1 F7: status is detected | none | unavailable (or miss/unknown if
+    // no snapshot could be read); hms_date is the HMS file day, null if unknown.
+    smoke: { present: (smoke.count ?? 0) > 0, count: smoke.count ?? 0, status: smoke.status, age_seconds: smoke.age_seconds, source: 'NOAA HMS', hms_date: smoke.hms_date ?? null },
     perimeters: { count: perim.count ?? 0, status: perim.status, age_seconds: perim.age_seconds, source: 'NIFC WFIGS' },
     // ADDITIVE — every key above is byte-shape identical to before P29.
     storm: {
