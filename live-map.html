@@ -2935,7 +2935,7 @@
                 <span class="hidden" id="smoke-status-text">—</span>
               </div>
               <div style="display:flex;align-items:center;gap:8px">
-                <div class="status-badge status-none" id="smoke-status-badge" data-i18n="map.s_smoke_none">No smoke
+                <div class="status-badge status-none" id="smoke-status-badge" data-i18n="map.wait_smoke">Waiting for the latest NOAA HMS snapshot.
                 </div><span class="detail-chev">›</span>
               </div>
             </div>
@@ -3271,7 +3271,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=bc5a9c82"></script>
+  <script src="/i18n/kahuola-i18n.js?v=904ca468"></script>
 
   <script>
     "use strict";
@@ -3468,7 +3468,7 @@
       const mrmsBadge = document.getElementById("mrms-rain-badge-desktop")?.textContent || document.getElementById("mrms-rain-badge-mobile")?.textContent || (_t("map.loading") || "Loading");
       const windBadge = document.getElementById("wind-risk-badge-desktop")?.textContent || document.getElementById("wind-risk-badge-mobile")?.textContent || (_t("map.loading") || "Loading");
       const contextBadge = document.getElementById("flood-context-badge-desktop")?.textContent || document.getElementById("flood-context-badge-mobile")?.textContent || (_t("map.s_unavailable") || "Unavailable");
-      const smokeBadge = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || (_t("map.s_smoke_none") || "No smoke");
+      const smokeBadge = document.getElementById("smoke-status-badge-desktop")?.textContent || document.getElementById("smoke-status-badge-mobile")?.textContent || (_t("map.wait_smoke") || "Waiting for the latest NOAA HMS snapshot.");
       const perimBadge = document.getElementById("perimeter-status-badge-desktop")?.textContent || document.getElementById("perimeter-status-badge-mobile")?.textContent || (_t("map.s_perim_none_badge") || "No perimeter");
 
       const _lFlood = _t("map.prev_label_flood") || "Flood";
@@ -4198,7 +4198,12 @@
         signalClass: "context",
         endpoint: IS_LOCAL ? "./smoke-test.json" : "https://kahuola.org/api/hazards/smoke?region=hawaii",
         enabled: true,
-        parsePayload(json) { const raw = parseCanonicalSignals(json, "smoke"); return { features: normalizeSmokeFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NOAA HMS" }; },
+        parsePayload(json) { const raw = parseCanonicalSignals(json, "smoke"); return { features: normalizeSmokeFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NOAA HMS", meta: { smokeStatus: json?.summary?.status, hmsDate: typeof json.hms_date === "string" ? json.hms_date : null, hmsDay: typeof json.hms_day === "string" ? json.hms_day : null } }; },
+        // SAT-0a-2 A1. Smoke state comes from the Worker's summary.status, never
+        // from a feature count: an empty signals[] is either "no polygon
+        // outlined" or an outage, and only the Worker knows which. Anything but
+        // detected / none (unavailable, miss, unknown, missing) is unavailable.
+        sourceStatusFrom(state) { const st = state.meta && state.meta.smokeStatus; return st === "detected" ? "detected" : st === "none" ? "none_outlined" : "unavailable"; },
         ensureLayers, applyData(features) { updateSmokeSource(features); }, onFetchComplete() { const s = getState("smoke"); updateSmokeStatusUI(s.sourceStatus, s.features.length); renderUnifiedPanels(); }, visible() { return smokeVisible; }
       },
       perimeter: {
@@ -4808,8 +4813,10 @@
         // the flash flood card said "Watch active" during a live Flash Flood
         // Warning, the tsunami card said "warning" for any signal, and the
         // alerts card once reported "Clear" while its endpoint was down.
-        state.sourceStatus = state.features.length > 0 ? "detected" : "none";
         state.meta = parsed.meta || {};
+        state.sourceStatus = typeof model.sourceStatusFrom === "function"
+          ? model.sourceStatusFrom(state)
+          : (state.features.length > 0 ? "detected" : "none");
         model.applyData(state.features);
         markSuccess();
       } catch (err) {
@@ -6730,11 +6737,18 @@
     }
 
     function updateSmokeStatusUI(state, count = 0) {
+      // SAT-0a-2 A2. States: detected | none_outlined | anything else = unavailable
+      // (incl. the legacy "none", which a count alone used to produce).
+      // A previous-UTC-day HMS file is named, with its date, in the note.
+      const smokeMeta = getState("smoke").meta || {};
+      const prevDay = (state === "detected" || state === "none_outlined") && smokeMeta.hmsDay === "previous" && smokeMeta.hmsDate
+        ? " " + (_tmpl("map.s_smoke_prev_day", { date: smokeMeta.hmsDate }) || `Showing NOAA HMS from the previous day (${smokeMeta.hmsDate}); today's file is unavailable.`)
+        : "";
       ["desktop", "mobile"].forEach((suffix) => {
         const badge = document.getElementById(`smoke-status-badge-${suffix}`); const note = document.getElementById(`smoke-status-note-${suffix}`); const sub = document.getElementById(`smoke-status-subnote-${suffix}`); const metric = document.getElementById(`smoke-status-text-${suffix}`); if (badge) badge.className = "status-badge";
-        if (state === "detected") { if (badge) { badge.classList.add("status-detected"); badge.textContent = count === 1 ? (_t("map.s_smoke_detected_1") || "Smoke detected") : (_tmpl("map.s_smoke_detected_n", { n: count }) || `Smoke detected · ${count}`); } if (metric) metric.textContent = count === 1 ? (_t("map.s_smoke_det_metric_1") || "Detected (1 region)") : (_tmpl("map.s_smoke_det_metric_n", { n: count }) || `Detected (${count} regions)`); if (note) note.textContent = count === 1 ? (_t("map.s_smoke_det_note_1") || "NOAA HMS shows smoke in 1 region in the current snapshot.") : (_tmpl("map.s_smoke_det_note_n", { n: count }) || `NOAA HMS shows smoke in ${count} regions in the current snapshot.`); if (sub) sub.textContent = smokeVisible ? (_t("map.s_smoke_det_sub_on") || "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage.") : (_t("map.s_smoke_det_sub_off") || "Smoke is present in the snapshot, but the Smoke Layer is currently off."); return; }
-        if (state === "none") { if (badge) { badge.classList.add("status-none"); badge.textContent = _t("map.s_smoke_none") || "No smoke"; } if (metric) metric.textContent = _t("map.s_smoke_none_metric") || "No smoke in current snapshot"; if (note) note.textContent = _t("map.s_smoke_none_note") || "NOAA HMS did not return any smoke polygons for the current snapshot."; if (sub) sub.textContent = _t("map.s_smoke_none_sub") || "Turning the smoke layer on only enables the map overlay."; return; }
-        if (badge) { badge.classList.add("status-unavailable"); badge.textContent = _t("map.s_unavailable") || "Unavailable"; } if (metric) metric.textContent = _t("map.s_smoke_unavail_metric") || "Smoke data unavailable"; if (note) note.textContent = _t("map.s_smoke_unavail_note") || "Smoke data is temporarily unavailable."; if (sub) sub.textContent = _t("map.s_smoke_unavail_sub") || "This state is different from \u2018No smoke\u2019.";
+        if (state === "detected") { if (badge) { badge.classList.add("status-detected"); badge.textContent = count === 1 ? (_t("map.s_smoke_detected_1") || "Smoke detected") : (_tmpl("map.s_smoke_detected_n", { n: count }) || `Smoke detected · ${count}`); } if (metric) metric.textContent = count === 1 ? (_t("map.s_smoke_det_metric_1") || "Detected (1 region)") : (_tmpl("map.s_smoke_det_metric_n", { n: count }) || `Detected (${count} regions)`); if (note) note.textContent = (count === 1 ? (_t("map.s_smoke_det_note_1") || "NOAA HMS shows smoke in 1 region in the current snapshot.") : (_tmpl("map.s_smoke_det_note_n", { n: count }) || `NOAA HMS shows smoke in ${count} regions in the current snapshot.`)) + prevDay; if (sub) sub.textContent = smokeVisible ? (_t("map.s_smoke_det_sub_on") || "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage.") : (_t("map.s_smoke_det_sub_off") || "Smoke is present in the snapshot, but the Smoke Layer is currently off."); return; }
+        if (state === "none_outlined") { if (badge) { badge.classList.add("status-none"); badge.textContent = _t("map.s_smoke_none") || "No smoke outlined"; } if (metric) metric.textContent = _t("map.s_smoke_none_metric") || "None outlined in current file"; if (note) note.textContent = (_t("map.s_smoke_none_note") || "NOAA analysts have not outlined smoke near Hawai\u02bbi in this file.") + prevDay; if (sub) sub.textContent = _t("map.s_smoke_none_sub") || "This does not rule out smoke. HMS is updated a few times a day and cannot see through cloud."; return; }
+        if (badge) { badge.classList.add("status-unavailable"); badge.textContent = _t("map.s_unavailable") || "Unavailable"; } if (metric) metric.textContent = _t("map.s_smoke_unavail_metric") || "Smoke data unavailable"; if (note) note.textContent = _t("map.s_smoke_unavail_note") || "Smoke data is temporarily unavailable."; if (sub) sub.textContent = _t("map.s_smoke_unavail_sub") || "This is different from \u201cNo smoke outlined\u201d.";
       });
     }
     function updatePerimeterStatusUI(state, count = 0) {
@@ -7124,7 +7138,7 @@
               : (_tmpl("map.detection_age_hr", { n: Math.round(mins / 60) }) || `Newest detection is about ${Math.round(mins / 60)} h old. No newer satellite detection means no new fire was seen.`);
         }
         const sourceEl = document.getElementById(`data-source-${suffix}`);
-        if (sourceEl) sourceEl.textContent = [fire.sourceLabel, smoke.status !== "unavailable" ? smoke.sourceLabel : null, perimeter.status !== "unavailable" ? perimeter.sourceLabel : null, flashFlood.status !== "unavailable" ? flashFlood.sourceLabel : null, mrms.status !== "unavailable" ? mrms.sourceLabel : null, "NOAA Radar Tiles"].filter(Boolean).join(" · ");
+        if (sourceEl) sourceEl.textContent = [fire.sourceLabel, smoke.status !== "unavailable" && smoke.sourceStatus !== "unavailable" ? smoke.sourceLabel : null, perimeter.status !== "unavailable" ? perimeter.sourceLabel : null, flashFlood.status !== "unavailable" ? flashFlood.sourceLabel : null, mrms.status !== "unavailable" ? mrms.sourceLabel : null, "NOAA Radar Tiles"].filter(Boolean).join(" · ");
         const summaryText = document.getElementById(`summary-text-${suffix}`);
         if (summaryText) {
           const refLabel = lastKnownUserCoord ? (_t("map.ref_label_you") || "your device location") : (_t("map.ref_label_view") || "the reference view");
@@ -7284,9 +7298,12 @@
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openSmokePopup(feature, lngLat) {
-      const p = feature.properties || {}; const density = p.density || "light"; const titleDensity = density.charAt(0).toUpperCase() + density.slice(1); const detected = p.event_time ? new Date(p.event_time).toISOString().replace("T", " ").slice(0, 16) + " UTC" : (_t("status.unavailable") || "Unavailable");
+      // SAT-0a-2 A4. HMS files are per UTC day; show that date, never a clock
+      // time (the Worker used to stamp the fetch time here).
+      const smokeMeta = getState("smoke").meta || {};
+      const p = feature.properties || {}; const density = p.density || "light"; const titleDensity = density.charAt(0).toUpperCase() + density.slice(1); const hmsDate = (typeof smokeMeta.hmsDate === "string" && smokeMeta.hmsDate) || (typeof p.event_time === "string" && /^\d{4}-\d{2}-\d{2}/.test(p.event_time) ? p.event_time.slice(0, 10) : null); const detected = hmsDate || (_t("status.unavailable") || "Unavailable");
       if (activePopup) activePopup.remove();
-      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌫 ${_L("map.popup_title_smoke", "Smoke Presence")}</div><div class="popup-coords">${escapeHtml(p.source || "NOAA HMS")}</div></div><div class="popup-severity normal">${escapeHtml(titleDensity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_density", "Density")}</div><div class="popup-metric-value">${escapeHtml(titleDensity)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_detected_time", "Detected Time")}</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${escapeHtml(p.advisory || (_t("map.popup_smoke_note_fallback") || "Smoke detected in this area."))}</div></div>`;
+      const html = `<div class="popup-card"><div class="popup-top"><div><div class="popup-title">🌫 ${_L("map.popup_title_smoke", "Smoke Presence")}</div><div class="popup-coords">${escapeHtml(p.source || "NOAA HMS")}</div></div><div class="popup-severity normal">${escapeHtml(titleDensity)}</div></div><div class="popup-grid"><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_density", "Density")}</div><div class="popup-metric-value">${escapeHtml(titleDensity)}</div></div><div class="popup-metric"><div class="popup-metric-label">${_L("map.popup_hms_date", "HMS analysis date")}</div><div class="popup-metric-value">${escapeHtml(detected)}</div></div></div><div class="popup-note">${escapeHtml(p.advisory || (_t("map.popup_smoke_note_fallback") || "Smoke detected in this area."))}</div></div>`;
       activePopup = new maplibregl.Popup({ closeButton: true, closeOnMove: false, offset: 14, maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map);
     }
     function openPerimeterPopup(feature, lngLat) {
@@ -8959,6 +8976,9 @@
       // applyAll() put there. Switching language must not lose a warning.
       updateFlashFloodStatusUI(getState("flashFlood"));
       updateTsunamiStatusUI(getState("tsunami"));
+      // SAT-0a-2: same for smoke — applyAll() resets the badge to its template
+      // key, which would leave a detected/unavailable state reading as loading.
+      updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length);
       // Re-render panel accordion content (JS-driven strings)
       renderUnifiedPanels();
     });

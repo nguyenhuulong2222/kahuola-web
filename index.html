@@ -2439,11 +2439,16 @@
                 if (!d || typeof d !== 'object' || !d.fire || !d.smoke || !d.perimeters) throw new Error('shape');
                 var fireN = (typeof d.fire.count === 'number' && isFinite(d.fire.count)) ? d.fire.count : 0;
                 var perimN = (typeof d.perimeters.count === 'number' && isFinite(d.perimeters.count)) ? d.perimeters.count : 0;
-                var smokeOn = d.smoke.present === true;
                 var ages = [d.fire.age_seconds, d.smoke.age_seconds, d.perimeters.age_seconds]
                   .filter(function (x) { return typeof x === 'number' && isFinite(x) && x >= 0; });
                 var maxAge = ages.length ? Math.max.apply(null, ages) : null;
-                var smokeVal = smokeOn ? (_t('card.snapshot.detected') || 'Detected') : (_t('card.snapshot.none') || 'None');
+                // SAT-0a-2 B. The row follows smoke.status, never present/count:
+                // count 0 is either "nothing outlined" or an outage.
+                var smokeSt = d.smoke.status;
+                var smokeVal = smokeSt === 'detected' ? (_t('card.snapshot.detected') || 'Detected')
+                  : smokeSt === 'none' ? (_t('card.snapshot.smoke_none_outlined') || 'None outlined')
+                  : (_t('map.s_unavailable') || 'Unavailable');
+                var smokeOn = smokeSt === 'detected';
                 // Volcanic vs wildland split (Layer B wording; Layer A owns the count).
                 var volc = (typeof d.fire.volcanic_zone_count === 'number') ? d.fire.volcanic_zone_count : 0;
                 var wild = (typeof d.fire.wildland_count === 'number') ? d.fire.wildland_count : (fireN - volc);
@@ -2743,7 +2748,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=bc5a9c82"></script>
+  <script src="/i18n/kahuola-i18n.js?v=904ca468"></script>
   <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
     (() => {
       "use strict";

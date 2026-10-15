@@ -94,7 +94,6 @@ function buildTemplate(d) {
   const fire = num(d.fire?.count);
   const volcanic = num(d.fire?.volcanic_zone_count);
   const wildland = Number.isFinite(d.fire?.wildland_count) ? d.fire.wildland_count : Math.max(0, fire - volcanic);
-  const smokeOn = d.smoke?.present === true;
   const smokeN = num(d.smoke?.count);
   const perim = num(d.perimeters?.count);
   const hp = hstParts(d.generated_at) || { hh: '--', mm: '--', hhmm: '--:--' };
@@ -123,12 +122,19 @@ function buildTemplate(d) {
 
   // Smoke bullet — adds a vog/air-quality note in the volcanic branch.
   const volcanicBranch = fire > 0 && wildland === 0 && volcanic > 0;
-  let smokeEn = smokeOn
+  // SAT-0a-2 D. Wording follows smoke.status, never present/count: count 0 is
+  // either "nothing outlined" (which does not rule out smoke) or an outage.
+  const smokeSt = d.smoke?.status;
+  let smokeEn = smokeSt === 'detected'
     ? `💨 Smoke: NOAA HMS is showing smoke over parts of Hawaiʻi.`
-    : `💨 Smoke: none in the current NOAA HMS snapshot.`;
-  let smokeVi = smokeOn
+    : smokeSt === 'none'
+      ? `💨 Smoke: none outlined by NOAA analysts near Hawaiʻi (this does not rule out smoke).`
+      : `💨 Smoke: NOAA HMS data unavailable.`;
+  let smokeVi = smokeSt === 'detected'
     ? `💨 Khói: NOAA HMS đang ghi nhận khói trên một số khu vực Hawaiʻi.`
-    : `💨 Khói: không có trong ảnh chụp NOAA HMS hiện tại.`;
+    : smokeSt === 'none'
+      ? `💨 Khói: chuyên viên NOAA chưa khoanh vùng khói gần Hawaiʻi (không loại trừ khả năng có khói).`
+      : `💨 Khói: chưa có dữ liệu NOAA HMS.`;
   if (volcanicBranch) {
     smokeEn += ' Volcanic smog (vog) can still affect air quality — check the Air Quality layer.';
     smokeVi += ' Khói núi lửa (vog) vẫn có thể ảnh hưởng chất lượng không khí — hãy xem lớp Air Quality.';
@@ -299,6 +305,14 @@ function runTests() {
 
   const smokey = buildTemplate({ ...base, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none' }, smoke: { present: true, count: 4, status: 'detected' } });
   ok('smoke branch: EN shows smoke', /showing smoke/.test(smokey.brief_en));
+  // SAT-0a-2: none is "not outlined", never "no smoke"; anything else is unavailable.
+  const smokeNone = buildTemplate({ ...base, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none' } });
+  ok('smoke none: EN does not rule out smoke', /none outlined by NOAA analysts.*does not rule out smoke/.test(smokeNone.brief_en));
+  ok('smoke none: VI không loại trừ', /không loại trừ khả năng có khói/.test(smokeNone.brief_vi));
+  const smokeDown = buildTemplate({ ...base, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none' }, smoke: { present: false, count: 0, status: 'unavailable' } });
+  ok('smoke unavailable: EN says unavailable', /NOAA HMS data unavailable/.test(smokeDown.brief_en) && !/none/i.test(smokeDown.brief_en.split('\n').find((l) => l.includes('💨'))));
+  const smokeMiss = buildTemplate({ ...base, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none' }, smoke: { present: false, count: 0, status: 'miss' } });
+  ok('smoke miss: VI chưa có dữ liệu', /chưa có dữ liệu NOAA HMS/.test(smokeMiss.brief_vi));
 
   const staleT = buildTemplate({ ...base, stale: true, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'unavailable' } });
   ok('stale branch: names delayed source', /delayed \(NASA FIRMS\)/.test(staleT.brief_en) && /bị trễ \(NASA FIRMS\)/.test(staleT.brief_vi));
