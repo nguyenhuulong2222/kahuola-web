@@ -1163,10 +1163,12 @@
       order: 2;
     }
 
-    /* The status text is an inline span; as a flex item it would be blockified
-       and pick up .metric-value's text-align:right. Keep it where it sat. */
+    /* The status text is an inline span; as a flex item it is blockified and
+       picks up .metric-value's text-align:right, which shows once it wraps
+       (VI). Keep it where it sat: start edge, start-aligned lines. */
     .layer-status-row>div:first-child>span {
       align-self: flex-start;
+      text-align: start;
     }
 
     .layer-status-row .status-badge,

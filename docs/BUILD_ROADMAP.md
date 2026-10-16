@@ -101,6 +101,8 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   - **SAT-0a-3 follow-up (backlog)** — Smoke 'Unavailable' is amber on live-map
     but grey on homepage — unify. (live-map badge `status-unavailable`; homepage
     snapshot row `is-neutral` / `--muted`, `95cb813`.)
+  - **SAT-0a-5 follow-up (backlog)** — Translate all hazard card aria-labels via
+    data-i18n-aria (14 cards + i18n token bump).
   There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
