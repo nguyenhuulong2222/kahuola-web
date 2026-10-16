@@ -98,6 +98,9 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     is `methodology-wip/PHASE-B-C0-APPROVED.md`, a sibling of the repo (kept outside
     so Pages cannot serve it), which is the paused Phase B/C0 record, not the prompt.
     RS-F step 4 was skipped for this reason.
+  - **SAT-0a-3 follow-up (backlog)** — Smoke 'Unavailable' is amber on live-map
+    but grey on homepage — unify. (live-map badge `status-unavailable`; homepage
+    snapshot row `is-neutral` / `--muted`, `95cb813`.)
   There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
