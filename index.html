@@ -2378,6 +2378,7 @@
       .hzsnap-row-label{flex:1;min-width:0;color:var(--text-dim);font-size:15px}
       .hzsnap-row-val{font-size:17px;font-weight:700;color:var(--ok)}
       .hzsnap-row-val.is-active{color:var(--fire)}
+      .hzsnap-row-val.is-neutral{color:var(--muted)}
       .hzsnap-fresh{margin:12px 0 0;font-size:13px;color:var(--muted)}
       .hzsnap-stale{color:var(--warn)}
       .hzsnap-loading{margin:6px 0;font-size:14px;color:var(--muted)}
@@ -2415,10 +2416,11 @@
             body.innerHTML = '<p class="hzsnap-unavailable"><span aria-hidden="true">🛰️</span><span>' +
               esc(_t('card.snapshot.unavailable') || 'Live snapshot temporarily unavailable — see the Live Map') + '</span></p>';
           }
-          function row(icon, label, val, active) {
+          // tone: true → alert (is-active), 'neutral' → grey (is-neutral), else green.
+          function row(icon, label, val, tone) {
             return '<div class="hzsnap-row"><span class="hzsnap-row-icon" aria-hidden="true">' + icon +
               '</span><span class="hzsnap-row-label">' + esc(label) +
-              '</span><span class="hzsnap-row-val' + (active ? ' is-active' : '') + '">' + esc(val) + '</span></div>';
+              '</span><span class="hzsnap-row-val' + (tone === 'neutral' ? ' is-neutral' : tone ? ' is-active' : '') + '">' + esc(val) + '</span></div>';
           }
           function freshText(maxAge) {
             if (maxAge == null) return _t('freshness.updated_recently') || 'Updated recently';
@@ -2448,13 +2450,14 @@
                 var smokeVal = smokeSt === 'detected' ? (_t('card.snapshot.detected') || 'Detected')
                   : smokeSt === 'none' ? (_t('card.snapshot.smoke_none_outlined') || 'None outlined')
                   : (_t('map.s_unavailable') || 'Unavailable');
-                var smokeOn = smokeSt === 'detected';
+                // SAT-0a-3. Never green: "none outlined" and an outage are not all-clear.
+                var smokeTone = smokeSt === 'detected' ? true : 'neutral';
                 // Volcanic vs wildland split (Layer B wording; Layer A owns the count).
                 var volc = (typeof d.fire.volcanic_zone_count === 'number') ? d.fire.volcanic_zone_count : 0;
                 var wild = (typeof d.fire.wildland_count === 'number') ? d.fire.wildland_count : (fireN - volc);
                 var html =
                   row('🔥', _t('card.snapshot.heat') || 'Satellite Heat Signals', String(fireN), fireN > 0) +
-                  row('💨', _t('card.snapshot.smoke') || 'Smoke', smokeVal, smokeOn) +
+                  row('💨', _t('card.snapshot.smoke') || 'Smoke', smokeVal, smokeTone) +
                   row('🗺️', _t('card.snapshot.perimeters') || 'Official Perimeters', String(perimN), perimN > 0);
                 if (volc > 0) {
                   html += '<p class="hzsnap-fresh">' +
