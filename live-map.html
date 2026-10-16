@@ -814,11 +814,9 @@
       padding: 0;
     }
 
+    /* SAT-0a-4. No inner scroll: the open accordion grows to its content and
+       only the outer .panel-body scrolls (was max-height min(34vh, 280px)). */
     .hazard-module-scroll {
-      max-height: min(34vh, 280px);
-      overflow: auto;
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
       padding: 0 12px 10px;
     }
 
@@ -1132,13 +1130,50 @@
       gap: 8px;
     }
 
+    /* SAT-0a-4. One column: kicker, name, badge on its own line, then the
+       notes at full card width. The badge sat beside the notes and squeezed
+       them to a few words per line (0px in VI on desktop). display:contents
+       lifts the text block's children into this flex column so `order` can
+       put the badge between name and notes without changing the markup. */
     .layer-status-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-      align-items: start;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
       padding: 8px 0;
       border-top: 1px solid var(--border);
+    }
+
+    .layer-status-row>div:first-child,
+    .mini-module>div:first-child {
+      display: contents;
+    }
+
+    .layer-status-row>div:last-child,
+    .mini-module>.status-badge {
+      order: 1;
+      align-self: flex-start;
+      max-width: 100%;
+      margin: 6px 0 2px;
+    }
+
+    /* Everything after kicker and title (notes, the JS-written status text)
+       keeps its source order below the badge. */
+    .layer-status-row>div:first-child>:not(.layer-status-kicker):not(.layer-status-name),
+    .mini-module>div:first-child>:not(.mini-module-kicker):not(.mini-module-title) {
+      order: 2;
+    }
+
+    /* The status text is an inline span; as a flex item it would be blockified
+       and pick up .metric-value's text-align:right. Keep it where it sat. */
+    .layer-status-row>div:first-child>span {
+      align-self: flex-start;
+    }
+
+    .layer-status-row .status-badge,
+    .priority-module-head .status-badge,
+    .mini-module>.status-badge {
+      white-space: normal;
+      max-width: 100%;
     }
 
     .layer-status-row:first-child {
@@ -1159,8 +1194,8 @@
     .layer-status-note {
       margin-top: 4px;
       color: var(--text-dim);
-      font-size: 11px;
-      line-height: 1.42;
+      font-size: 15px;
+      line-height: 1.5;
     }
 
     .smoke-status-top,
@@ -2077,14 +2112,15 @@
 
     .priority-module--secondary .priority-note {
       color: rgba(194, 206, 228, 0.75);
-      font-size: 12px;
+      font-size: 15px;
     }
 
+    /* SAT-0a-4. Badge on its own line below the title, not beside it. */
     .priority-module-head {
       display: flex;
+      flex-direction: column;
       align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
       margin-bottom: 10px;
     }
 
@@ -2134,8 +2170,8 @@
 
     .priority-subnote {
       color: rgba(194, 206, 228, 0.82);
-      font-size: 12px;
-      line-height: 1.45;
+      font-size: 15px;
+      line-height: 1.5;
     }
 
     /* ── P32a · alerts NWS locates only by zone code ───────────────────── */
@@ -2479,13 +2515,10 @@
       margin-top: 12px;
     }
 
+    /* SAT-0a-4. No inner scroll (was max-height min(44vh, 420px)); see
+       .hazard-module-scroll. */
     .flood-module-scroll {
-      overflow-y: auto;
-      max-height: min(44vh, 420px);
-      padding-right: 6px;
       margin-top: 12px;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(152, 190, 255, .20) transparent;
     }
 
     .flood-module-scroll::-webkit-scrollbar {
@@ -2501,11 +2534,11 @@
       background: transparent;
     }
 
+    /* SAT-0a-4. Column: kicker, title, badge, note (see .layer-status-row). */
     .mini-module {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      flex-direction: column;
+      align-items: stretch;
       min-height: 74px;
       padding: 13px 12px;
       border-radius: 20px;
@@ -2528,9 +2561,9 @@
     }
 
     .mini-module-note {
-      font-size: 12px;
+      font-size: 15px;
       color: rgba(194, 206, 228, 0.82);
-      line-height: 1.35;
+      line-height: 1.5;
     }
 
     #flood-card .chip {
