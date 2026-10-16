@@ -16,6 +16,14 @@ import { createRequire } from 'node:module';
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
+// Fixed clock. The fixtures carry real 2026-08-28 acquisition times and the
+// hotspots path keeps a ROLLING 24 h window, so against the wall clock every
+// row aged out a day after this file was written and 11 tests failed for a
+// reason that had nothing to do with the code. Pinned to two hours after the
+// fixture overpasses.
+const FIXED_NOW = Date.parse('2026-08-28T12:00:00Z');
+Date.now = () => FIXED_NOW;
+
 let pass = 0, fail = 0;
 const ok = (name, cond) => { cond ? (pass++, console.log('PASS — ' + name)) : (fail++, console.log('FAIL — ' + name)); };
 
@@ -116,8 +124,13 @@ ok('dedupe kept the FIRST dataset’s copy of the shared detection',
    r.json.features.filter(f => f.geometry.coordinates[0] === -156.6825).length === 1);
 ok('every feature is attributed to the dataset that served it',
    r.json.features.every(f => mod.FIRMS_PRIMARY_DATASETS.includes(f.properties.dataset)));
-ok('MODIS xref still fires on the merged default (detection_confidence high)',
-   r.json.features.some(f => f.properties.detection_confidence === 'high'));
+// SAT-0b-1. MODIS agreement is reported as corroborated_by and no longer
+// raises detection_confidence, which is FIRMS's own VIIRS letter, normalised.
+ok('MODIS xref still runs on the merged default (corroborated_by MODIS)',
+   r.json.features.some(f => Array.isArray(f.properties.corroborated_by) && f.properties.corroborated_by.includes('MODIS')));
+ok('MODIS match does NOT raise detection_confidence (fixture n → nominal)',
+   r.json.features.every(f => f.properties.detection_confidence === 'nominal'));
+ok('modis_xref reported ok', r.json.properties.modis_xref === 'ok');
 ok('no SNPP dataset was requested upstream', !requested.some(u => u.includes('SNPP')));
 ok('successful merge is written to cache', putCount === 1);
 ok('cache key is the merged-token key', [...cacheStore.keys()][0].includes(mod.FIRMS_PRIMARY_TOKEN));
@@ -125,12 +138,18 @@ ok('cache key is the merged-token key', [...cacheStore.keys()][0].includes(mod.F
 // ── 2. Merged count >= what a single dataset returns for the same window ────
 reset();
 const singleBody = csv([
-  row(19.4210, -155.2870, '2026-08-28', '1012', 'SNPP'),
-  row(19.4300, -155.2900, '2026-08-28', '1012', 'SNPP'),
-  row(19.4400, -155.3000, '2026-08-28', '1012', 'SNPP'),
+  row(19.4210, -155.2870, '2026-08-28', '1012', 'N20'),
+  row(19.4300, -155.2900, '2026-08-28', '1012', 'N20'),
+  row(19.4400, -155.3000, '2026-08-28', '1012', 'N20'),
 ]);
-upstreams = { VIIRS_SNPP_NRT: { body: singleBody }, MODIS_NRT: { body: '' } };
-const single = await call(HI + '&dataset=VIIRS_SNPP_NRT');
+// SAT-0b-1. The single-dataset baseline used to be SNPP; that override is now
+// refused (410), so the baseline is NOAA-20 on its own.
+upstreams = { VIIRS_NOAA20_NRT: { body: singleBody }, MODIS_NRT: { body: '' } };
+const single = await call(HI + '&dataset=VIIRS_NOAA20_NRT');
+reset();
+const retired = await call(HI + '&dataset=VIIRS_SNPP_NRT');
+ok('retired SNPP override → HTTP 410, nothing fetched upstream',
+   retired.res.status === 410 && requested.length === 0);
 reset();
 upstreams = {
   // NOAA-20 sees everything the single dataset saw...
@@ -245,8 +264,11 @@ upstreams = {
 };
 r = await call();
 ok('unparseable row is dropped, valid sibling kept', r.json.features.length === 1);
-ok('an HTML body parses to zero features, not to garbage',
-   r.json.properties.datasets_used.includes('VIIRS_NOAA21_NRT') && r.json.features.length === 1);
+// SAT-0b-1. It used to count as a dataset that answered (zero rows, health
+// ok) — a dead feed reading as a quiet day. An HTML body is now a failed source.
+ok('an HTML body is a FAILED source: not in datasets_used, health partial',
+   !r.json.properties.datasets_used.includes('VIIRS_NOAA21_NRT') &&
+   r.json.properties.health === 'partial' && r.json.features.length === 1);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

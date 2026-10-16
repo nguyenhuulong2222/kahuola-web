@@ -17,7 +17,7 @@ const ok = (name, cond) => { cond ? (pass++, console.log('PASS — ' + name)) : 
 const zones = [...src.matchAll(/\{ id: '([^']+)',\s*west: (-?[\d.]+), south: (-?[\d.]+), east: (-?[\d.]+), north: (-?[\d.]+) \}/g)]
   .map(m => ({ id: m[1], west: +m[2], south: +m[3], east: +m[4], north: +m[5] }));
 ok('parsed 2 volcanic zones from source', zones.length === 2);
-ok('zones are kilauea + mauna_loa', zones.map(z => z.id).join(',') === 'kilauea-summit-erz,mauna-loa');
+ok('zones are the two summit calderas (SAT-0b-1)', zones.map(z => z.id).join(',') === 'kilauea-summit,mauna-loa-summit');
 
 // Mirror of inVolcanicZone() (inclusive bbox on validated [lng,lat]).
 function inZone(lng, lat) {
@@ -25,18 +25,23 @@ function inZone(lng, lat) {
 }
 
 // --- Classification fixtures -------------------------------------------------
+// SAT-0b-1 ruling: summit calderas only. Lower Puna, Leilani, Pāhoa, Volcano
+// village and the rift zones are WILDLAND (over-warn, never hide).
 const cases = [
-  ['Kīlauea summit (Halemaʻumaʻu)', -155.287, 19.421, true],
-  ['Kīlauea lower ERZ / Leilani', -154.92, 19.46, true],
-  ['Kīlauea ocean-entry area', -154.85, 19.35, true],
-  ['Mauna Loa summit (Mokuʻāweoweo)', -155.608, 19.475, true],
-  ['Mauna Loa 2022 NERZ flow', -155.45, 19.55, true],
+  ['Kīlauea summit (Halemaʻumaʻu)', -155.287, 19.408, true],
+  ['Kīlauea caldera, live 2026-10-16 N21 pixel', -155.2858, 19.4012, true],
+  ['Mauna Loa summit (Mokuʻāweoweo)', -155.600, 19.475, true],
+  ['Kīlauea west caldera EDGE (inclusive)', -155.305, 19.40, true],
+  ['just WEST of Kīlauea caldera edge', -155.306, 19.40, false],
+  ['Kīlauea lower ERZ / Leilani', -154.914, 19.465, false],
+  ['Pāhoa town', -154.945, 19.494, false],
+  ['Volcano village', -155.234, 19.442, false],
+  ['HVNP Visitor Center rim', -155.2578, 19.4308, false],
+  ['Kīlauea ocean-entry area', -154.85, 19.35, false],
+  ['Mauna Loa 2022 NERZ flow', -155.45, 19.55, false],
   ['Lahaina, Maui (real wildfire risk)', -156.68, 20.88, false],
-  ['Hilo (pop. area, N of zones)', -155.09, 19.72, false],
+  ['Hilo (pop. area)', -155.09, 19.72, false],
   ['Honolulu, Oʻahu', -157.86, 21.31, false],
-  ['Kīlauea west bbox EDGE (inclusive)', -155.35, 19.40, true],
-  ['just WEST of Kīlauea edge', -155.36, 19.40, false],
-  ['gap between the two volcanoes', -155.37, 19.45, false],
 ];
 for (const [name, lng, lat, want] of cases) ok(`${name} → ${want ? 'volcanic' : 'wildland'}`, inZone(lng, lat) === want);
 
@@ -47,7 +52,7 @@ let volcanic = 0;
 for (const f of feats) if (f.properties.volcanic_zone === true) volcanic++;
 const wildland = Math.max(0, total - volcanic);
 ok('count === volcanic_zone_count + wildland_count', total === volcanic + wildland);
-ok('expected split (6 volcanic / 5 wildland)', volcanic === 6 && wildland === 5);
+ok('expected split (4 volcanic / 10 wildland)', volcanic === 4 && wildland === 10);
 console.log(`  (total=${total}, volcanic=${volcanic}, wildland=${wildland})`);
 
 // Old-cache fallback: features with no volcanic_zone field → all wildland, invariant holds.

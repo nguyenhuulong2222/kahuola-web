@@ -24,6 +24,13 @@ NASA_FIRMS_DATASETS = "VIIRS_NOAA20_NRT,VIIRS_NOAA21_NRT"
 NASA_FIRMS_BBOX = "-161,18,-154,23"
 NASA_FIRMS_DAY_RANGE = "1"
 
+# SAT-0b-1. Extra volcanic boxes for an eruption OUTSIDE the Kīlauea and Mauna
+# Loa summit calderas (e.g. a lower-Puna fissure). JSON array of
+# {"id","west","south","east","north"}; empty = summits only. Remove the entry
+# when the eruption ends: every detection inside a volcanic box is excluded
+# from wildfire counts, Nearest and Critical.
+VOLCANIC_EXTRA_ZONES = ""
+
 # Secrets already set in Cloudflare dashboard:
 # FIRMS_MAP_KEY
 # AIRNOW_API_KEY

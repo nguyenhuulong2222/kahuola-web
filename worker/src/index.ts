@@ -46,6 +46,10 @@ import {
 
 export interface Env {
   NASA_FIRMS_MAP_KEY: string;
+  // SAT-0b-1. Optional JSON array of extra volcanic boxes for an active Puna /
+  // rift eruption, e.g. [{"id":"puna-2026","west":-155.0,"south":19.4,
+  // "east":-154.8,"north":19.55}]. Unset or "" = summit calderas only.
+  VOLCANIC_EXTRA_ZONES?: string;
   AIRNOW_API_KEY?: string;
   MEDIA_BRIEF_WEBHOOK?: string;
   MEDIA_BRIEF_WEBHOOK_TOKEN?: string;
@@ -1189,6 +1193,7 @@ async function handleFloodContext(url: URL, cors: CorsHeaders): Promise<Response
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    configureVolcanicExtraZones(env.VOLCANIC_EXTRA_ZONES);
     // P1-B hardening: a single outer try/catch guarantees the Worker never
     // emits a Cloudflare HTML error page (1101 / 522 / 524). Any unhandled
     // exception becomes a valid JSON envelope so the client parser never
@@ -1335,6 +1340,7 @@ export default {
     }
   },
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    configureVolcanicExtraZones(env.VOLCANIC_EXTRA_ZONES);
     // Chạy mỗi 6AM HST — build brief và push to Apps Script
     const url = new URL('https://kahuola.org/api/media/push-now');
     const cors: CorsHeaders = {};
@@ -1958,6 +1964,22 @@ const FIRMS_PRIMARY_TOKEN = FIRMS_PRIMARY_DATASETS.join('+');
 // outside this shape is rejected rather than forwarded.
 const FIRMS_DATASET_RE = /^[A-Za-z0-9_]{1,64}$/;
 
+// SAT-0b-1. Datasets NOAA/NESDIS no longer delivers. FIRMS keeps answering
+// HTTP 200 with a header-only CSV for them, which reads exactly like "no fires",
+// so an explicit ?dataset= for one is refused instead of forwarded.
+// Suomi NPP: delivery ends 2026-11-01 13:00 UTC.
+const FIRMS_RETIRED_DATASETS: ReadonlySet<string> = new Set(['VIIRS_SNPP_NRT']);
+
+// SAT-0b-1. A FIRMS area CSV always starts with its header row, even when there
+// are zero detections. A body without one (an HTML error page, a bare
+// "Invalid MAP_KEY", an empty 200) is a failed source, not a quiet day.
+const FIRMS_CSV_REQUIRED_COLUMNS = ['latitude', 'longitude', 'acq_date', 'acq_time'] as const;
+function isFirmsCsv(body: string): boolean {
+  const first = body.trimStart().split('\n', 1)[0] || '';
+  const cols = first.split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
+  return FIRMS_CSV_REQUIRED_COLUMNS.every((c) => cols.includes(c));
+}
+
 // P36a-3a. Which requests get the rolling-window rule, by CONTAINMENT rather
 // than equality.
 //
@@ -2095,6 +2117,9 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
   if (datasetParam && !FIRMS_DATASET_RE.test(datasetParam)) {
     return err(400, 'dataset must be a FIRMS dataset id', cors);
   }
+  if (FIRMS_RETIRED_DATASETS.has(datasetParam)) {
+    return err(410, 'dataset retired: no longer delivered by NOAA/NESDIS', cors);
+  }
   const datasets: readonly string[] = datasetParam ? [datasetParam] : FIRMS_PRIMARY_DATASETS;
   const keyToken = datasetParam || FIRMS_PRIMARY_TOKEN;
 
@@ -2166,15 +2191,27 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
           `/${ds}/${west},${south},${east},${north}/${upstreamDays}`;
         const res = await fetch(upstream, { signal: AbortSignal.timeout(FETCH_TIMEOUT) });
         if (!res.ok) throw new Error(`upstream ${res.status}`);
-        return res.text();
+        const text = await res.text();
+        // SAT-0b-1. A 200 that is not a FIRMS CSV fails THIS source, so it
+        // shows up in datasets_used / health instead of as zero detections.
+        if (!isFirmsCsv(text)) throw new Error('upstream body is not a FIRMS CSV');
+        return text;
       }),
     ),
     modisXrefUrl
       ? fetch(modisXrefUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT) })
-          .then((r) => (r.ok ? r.text() : ''))
-          .catch(() => '')
-      : Promise.resolve(''),
+          .then(async (r) => {
+            if (!r.ok) return null;
+            const t = await r.text();
+            return isFirmsCsv(t) ? t : null;
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
+  // null = MODIS was not checked (not requested, or failed). Kept distinct
+  // from "checked, no match" so corroborated_by can say which it was.
+  const modisStatus: 'ok' | 'failed' | 'not_requested' =
+    !modisXrefUrl ? 'not_requested' : modisCsv === null ? 'failed' : 'ok';
 
   const merged: unknown[] = [];
   const datasetsUsed: string[] = [];
@@ -2275,6 +2312,12 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
       dropped_outside_window,
       dropped_unparseable_time,
       dropped_out_of_region,
+      // SAT-0b-1, additive. Whether the MODIS corroboration check ran; when it
+      // did not, every feature's corroborated_by is null rather than [].
+      modis_xref: modisStatus,
+      // SAT-0b-1, additive. The volcanic boxes this response was classified
+      // with, so a reader can see when an extra Puna zone is in force.
+      volcanic_zones: activeVolcanicZones().map((z) => z.id),
     },
   };
 
@@ -2339,45 +2382,138 @@ function dedupeFirmsFeatures(features: readonly unknown[]): unknown[] {
 }
 
 
-function buildModisSet(modisCsv: string): Set<string> {
-  if (!modisCsv) return new Set();
+// SAT-0b-1. VIIRS confidence letters → FireSignal DetectionConfidence.
+// FIRMS VIIRS reports l / n / h; full words are accepted too. Anything else
+// (blank, a MODIS 0–100 number, garbage) is null, never a guess.
+function normalizeViirsConfidence(raw: string | undefined): 'low' | 'nominal' | 'high' | null {
+  const c = (raw || '').trim().toLowerCase();
+  if (c === 'l' || c === 'low') return 'low';
+  if (c === 'n' || c === 'nominal') return 'nominal';
+  if (c === 'h' || c === 'high') return 'high';
+  return null;
+}
+
+// SAT-0b-1. MODIS corroboration window. A MODIS pixel is ~1 km at nadir and
+// grows toward the swath edge, so 3 km; 60 min covers Aqua passing near the
+// NOAA-20/21 afternoon orbit. Outside either bound it is a different look,
+// not agreement.
+const MODIS_XREF_MAX_KM = 3;
+const MODIS_XREF_MAX_S = 3600;
+
+type ModisIndex = Map<string, Array<{ lat: number; lng: number; ms: number }>>;
+const modisCell = (lat: number, lng: number) => `${Math.floor(lat * 10)},${Math.floor(lng * 10)}`;
+
+function buildModisIndex(modisCsv: string): ModisIndex {
+  const index: ModisIndex = new Map();
   const lines = modisCsv.trim().split('\n');
-  if (lines.length < 2) return new Set();
+  if (lines.length < 2) return index;
   const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
   const latIdx = headers.indexOf('latitude');
   const lngIdx = headers.indexOf('longitude');
-  if (latIdx < 0 || lngIdx < 0) return new Set();
-  const set = new Set<string>();
+  const dIdx = headers.indexOf('acq_date');
+  const tIdx = headers.indexOf('acq_time');
+  if (latIdx < 0 || lngIdx < 0 || dIdx < 0 || tIdx < 0) return index;
   for (let i = 1; i < lines.length; i++) {
     const vals = lines[i].split(',');
     const lat = parseFloat(vals[latIdx] || '');
     const lng = parseFloat(vals[lngIdx] || '');
-    if (!isNaN(lat) && !isNaN(lng)) {
-      // Round to 0.1° (~11 km) for loose spatial matching between satellites
-      set.add(`${Math.round(lat * 10)},${Math.round(lng * 10)}`);
+    const iso = firmsAcqToIso((vals[dIdx] || '').trim(), (vals[tIdx] || '').trim());
+    const ms = iso ? Date.parse(iso) : NaN;
+    // A MODIS row without a usable time cannot be placed in the window: drop.
+    if (isNaN(lat) || isNaN(lng) || !Number.isFinite(ms)) continue;
+    const k = modisCell(lat, lng);
+    const list = index.get(k);
+    if (list) list.push({ lat, lng, ms }); else index.set(k, [{ lat, lng, ms }]);
+  }
+  return index;
+}
+
+function modisCorroborates(index: ModisIndex, lat: number, lng: number, ms: number): boolean {
+  // 0.1° cells are ≥ ~10 km here, so the 3 × 3 neighbourhood covers 3 km.
+  const cy = Math.floor(lat * 10), cx = Math.floor(lng * 10);
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const list = index.get(`${cy + dy},${cx + dx}`);
+      if (!list) continue;
+      for (const m of list) {
+        if (Math.abs(m.ms - ms) > MODIS_XREF_MAX_S * 1000) continue;
+        if (haversineKm(lng, lat, m.lng, m.lat) <= MODIS_XREF_MAX_KM) return true;
+      }
     }
   }
-  return set;
+  return false;
 }
 
 // ── Volcanic zone classification (Layer A owns truth) ───────────────────────
-// USGS Hawaiian Volcano Observatory (HVO) active volcanic areas, public
-// reference as of 2026-07-05. Bboxes are DELIBERATELY GENEROUS: it is safer to
-// tag a near-volcano thermal detection as volcanic-zone than to let lava/vent
-// heat trigger an urban wildfire advisory. This is NOT inference — it is a
+// SAT-0b-1 ruling: SUMMIT CALDERAS ONLY. Fail-safe is over-warn, never hide.
+// The previous boxes covered Kīlauea's whole East Rift Zone and Mauna Loa's
+// rift zones — lower Puna, Leilani, Pāhoa and Volcano village, where people
+// live — so a brush fire there was filed as lava: purple, and left out of
+// Nearest, Critical and every wildfire count. Everything outside a summit
+// caldera is now wildland unless VOLCANIC_EXTRA_ZONES says otherwise.
+//   Kīlauea:   Kaluapele caldera incl. Halemaʻumaʻu (19.40°N/155.28°W) and the
+//              post-2018 collapse. Excludes the Visitor Center rim, Kīlauea Iki
+//              and Volcano village.
+//   Mauna Loa: Mokuʻāweoweo summit caldera (19.475°N/155.60°W).
+// An eruption outside these (a Puna fissure, a rift-zone flow) is added as an
+// operator override in VOLCANIC_EXTRA_ZONES and removed when it ends. It is a
 // geometry test on already-validated coordinates (Invariant III safe).
-//   Kīlauea:   summit 19.421°N/155.287°W (Halemaʻumaʻu) + East Rift Zone
-//              (2018 lower-ERZ / Leilani ~19.47°N/154.90°W → ocean entry).
-//   Mauna Loa: summit 19.475°N/155.608°W (Mokuʻāweoweo) + NE/SW Rift Zones
-//              (2022 NERZ fissures ~19.55°N/155.45–155.50°W).
-const VOLCANIC_ZONES: ReadonlyArray<{ id: string; west: number; south: number; east: number; north: number }> = [
-  { id: 'kilauea-summit-erz', west: -155.35, south: 19.25, east: -154.80, north: 19.50 },
-  { id: 'mauna-loa',          west: -155.75, south: 19.30, east: -155.40, north: 19.60 },
+type VolcanicZone = { id: string; west: number; south: number; east: number; north: number };
+const VOLCANIC_ZONES: ReadonlyArray<VolcanicZone> = [
+  { id: 'kilauea-summit', west: -155.305, south: 19.385, east: -155.255, north: 19.428 },
+  { id: 'mauna-loa-summit', west: -155.630, south: 19.450, east: -155.565, north: 19.510 },
 ];
+
+// SAT-0b-1. Operator override for an active eruption outside the summits.
+// Parsed once per distinct raw string. Each entry must be a finite box inside
+// the Hawaiʻi envelope with west < east and south < north, at most 10 entries;
+// anything else is DROPPED and logged. Dropping an extra zone can only make
+// more heat read as wildland — the over-warn direction the ruling asks for.
+const VOLCANIC_EXTRA_ZONES_MAX = 10;
+let volcanicExtraRaw: string | undefined;
+let volcanicExtraZones: ReadonlyArray<VolcanicZone> = [];
+
+function parseVolcanicExtraZones(raw: string | undefined): VolcanicZone[] {
+  if (!raw || !raw.trim()) return [];
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch {
+    console.warn(JSON.stringify({ layer: 'firms', stage: 'volcanic_extra_zones', error: 'invalid_json' }));
+    return [];
+  }
+  if (!Array.isArray(parsed)) {
+    console.warn(JSON.stringify({ layer: 'firms', stage: 'volcanic_extra_zones', error: 'not_an_array' }));
+    return [];
+  }
+  const [envW, envS, envE, envN] = HAWAII_ROLLING_ENVELOPE;
+  const out: VolcanicZone[] = [];
+  parsed.forEach((z: any, i: number) => {
+    const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
+    const west = n(z?.west), south = n(z?.south), east = n(z?.east), north = n(z?.north);
+    const id = typeof z?.id === 'string' && /^[a-z0-9-]{1,40}$/.test(z.id) ? z.id : '';
+    const valid = id && west < east && south < north
+      && west >= envW && east <= envE && south >= envS && north <= envN;
+    if (!valid || out.length >= VOLCANIC_EXTRA_ZONES_MAX) {
+      console.warn(JSON.stringify({ layer: 'firms', stage: 'volcanic_extra_zones', dropped_index: i }));
+      return;
+    }
+    out.push({ id: `extra:${id}`, west, south, east, north });
+  });
+  return out;
+}
+
+function configureVolcanicExtraZones(raw: string | undefined): void {
+  if (raw === volcanicExtraRaw) return;
+  volcanicExtraRaw = raw;
+  volcanicExtraZones = parseVolcanicExtraZones(raw);
+}
+
+function activeVolcanicZones(): ReadonlyArray<VolcanicZone> {
+  return volcanicExtraZones.length ? [...VOLCANIC_ZONES, ...volcanicExtraZones] : VOLCANIC_ZONES;
+}
 
 // Pure point-in-bbox on already-validated [lng, lat]. Module scope, never throws.
 function inVolcanicZone(lng: number, lat: number): boolean {
-  for (const z of VOLCANIC_ZONES) {
+  for (const z of activeVolcanicZones()) {
     if (lng >= z.west && lng <= z.east && lat >= z.south && lat <= z.north) return true;
   }
   return false;
@@ -2397,11 +2533,11 @@ function isVolcanicHeatFeature(f: any): boolean {
   return f?.properties?.volcanic_zone === true;
 }
 
-function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = ''): { type: string; features: unknown[] } {
+function firmsCsvToGeojson(csv: string, limit: number, modisCsv: string | null = null, dataset = ''): { type: string; features: unknown[] } {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return { type: 'FeatureCollection', features: [] };
 
-  const modisSet = buildModisSet(modisCsv);
+  const modisIndex = modisCsv === null ? null : buildModisIndex(modisCsv);
   const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
   const features: unknown[] = [];
   // One clock for the whole batch (P36a-1). Reading Date.now() per row would let
@@ -2419,15 +2555,26 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
     const lng = parseFloat(row.longitude || row.lon || row.lng || '');
     if (isNaN(lat) || isNaN(lng)) continue;
 
-    // Night detection: acq_time is HHMM UTC, night = 2000-2359 or 0000-0559
-    const acqTimeInt = parseInt((row.acq_time || '0000').padStart(4, '0'), 10);
-    const is_night_detection = acqTimeInt >= 2000 || acqTimeInt < 600;
+    // SAT-0b-1. Night comes from FIRMS's own day/night flag. It used to be a
+    // UTC hour window (20:00–05:59 UTC), which in Hawaiʻi (UTC−10) is
+    // 10:00–19:59 HST: every real night pass read as day and vice versa.
+    // Anything other than D or N is null — not known, never guessed.
+    const dn = (row.daynight || '').trim().toUpperCase();
+    const is_night_detection: boolean | null = dn === 'N' ? true : dn === 'D' ? false : null;
 
-    // Multi-satellite confirmation: high confidence if MODIS also detected hotspot nearby
-    const modisKey = `${Math.round(lat * 10)},${Math.round(lng * 10)}`;
-    const detection_confidence = modisSet.size > 0 && modisSet.has(modisKey)
-      ? 'high'
-      : (row.confidence || '');
+    // SAT-0b-1. FIRMS's own VIIRS confidence, in the FireSignal vocabulary
+    // (low | nominal | high). MODIS no longer RAISES it: a MODIS pixel in the
+    // same 0.1° cell (~11 km) at any time in two calendar days made every
+    // Kīlauea pixel "high". Unknown → null. `confidence` keeps the raw letter.
+    const detection_confidence = normalizeViirsConfidence(row.confidence);
+
+    // SAT-0b-1. MODIS agreement as its own field: a MODIS detection within
+    // MODIS_XREF_MAX_KM and MODIS_XREF_MAX_S of this one. null = not checked.
+    const rowAcqIso = firmsAcqToIso(row.acq_date || '', row.acq_time || '');
+    const rowAcqMs = rowAcqIso ? Date.parse(rowAcqIso) : NaN;
+    const corroborated_by: string[] | null = modisIndex === null
+      ? null
+      : (Number.isFinite(rowAcqMs) && modisCorroborates(modisIndex, lat, lng, rowAcqMs) ? ['MODIS'] : []);
 
     // P36a-1, ADDITIVE. `frp` below stays a string for existing consumers; this
     // is the same value as a number, or null when FIRMS did not report one.
@@ -2493,6 +2640,7 @@ function firmsCsvToGeojson(csv: string, limit: number, modisCsv = '', dataset = 
         signal_state,
         confidence: row.confidence || '',
         detection_confidence,
+        corroborated_by,
         is_night_detection,
         acq_date: row.acq_date || '',
         acq_time: row.acq_time || '',
@@ -2578,12 +2726,10 @@ type FirmsIngest = {
   //   producing all 75 of Hawaiʻi Island's shaded cells — 9 of them EXTREME —
   //   i.e. lava rendered as wind-driven wildfire spread.
   //
-  // TRADE-OFF, INHERITED FROM LAYER A AND DELIBERATE: VOLCANIC_ZONES bboxes are
-  // deliberately generous, so a genuine VEGETATION fire ignited by lava inside
-  // the ERZ bbox is excluded from spread scoring too. That is the safer
-  // failure: residents near Kīlauea already watch USGS HVO, whereas a permanent
-  // 24/7 wildfire advisory ringing an active volcano would discredit the whole
-  // layer. Layer A made this same call; this path inherits it on purpose.
+  // Inherited from Layer A: VOLCANIC_ZONES. Since SAT-0b-1 these are the two
+  // summit calderas only (plus any operator VOLCANIC_EXTRA_ZONES), so a
+  // vegetation fire in lower Puna or a rift zone IS scored here. Over-warn,
+  // never hide.
   hotspots: FirmsHotspot[];
   // Counted and REPORTED, never silently dropped — a detection that simply
   // vanishes from the envelope is its own kind of dishonesty.

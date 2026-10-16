@@ -103,6 +103,26 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     snapshot row `is-neutral` / `--muted`, `95cb813`.)
   - **SAT-0a-5 follow-up (backlog)** — Translate all hazard card aria-labels via
     data-i18n-aria (14 cards + i18n token bump).
+  - **SAT-0b-1 note (decided)** — The Worker's VOLCANIC_ZONES are now the two
+    summit calderas only (+ operator `VOLCANIC_EXTRA_ZONES`). kahuola-sat-pipeline
+    keeps its own copy of the OLD wide boxes on purpose: there they suppress ADP
+    smoke/dust over vog, a different purpose from wildfire classification.
+    Revisit in SAT-1 before the ADP layer goes public.
+  - **Ticket (backlog)** — Storm reports and marine advisories return 0.
+    `/api/hazards/local-hazards`: IEM `lsr.php` ignores the `wfo=HFO` parameter
+    the Worker sends (it returns all US reports; the Worker filters them).
+    `/api/hazards/alerts`: returned 0 on 2026-10-16 while an NWS Honolulu Small
+    Craft Advisory was in effect (issued 10-15 16:00Z, to 10-19 16:00Z). Check
+    whether marine zones are filtered on purpose.
+  - **Ticket (backlog)** — 19 pre-existing `tsc --noEmit` errors in worker/.
+    Every increment since SAT-0a-1 has held the count at 19 rather than fixing
+    them; clear them so a new error is visible.
+  - **SAT-0c (backlog) — DOH water quality honesty** (`worker/src/ocean.ts`,
+    live-map popup): treat DOH `postedDate` as UTC (`dohDateToIso` adds 10 h,
+    producing future timestamps); Worker-side `status === "Open"` check rather
+    than relying on the upstream filter; show "Posted X ago · DOH updated Y ago"
+    from `postedDate` / `updatedOn` (the popup labels the posted date
+    "Updated"); when DOH fails, say "DOH unavailable", never "clear".
   There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
