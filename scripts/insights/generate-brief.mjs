@@ -26,7 +26,15 @@ import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SUMMARY_URL = 'https://kahuola.org/api/hazards/summary';
-const OLLAMA_URL = 'http://localhost:11434/api/generate';
+// OLLAMA_URL = base (default localhost); in the n8n container pass
+// OLLAMA_URL=http://host.docker.internal:11434. BRIEF_OUTPUT_DIR overrides where
+// brief-latest.json is written (default = script dir), for the assets deploy.
+// (Ported from the n8n assets fork, SAT-0b-4: the repo copy is the single
+// source of truth and scripts/sync-brief.sh copies it to the assets folder.)
+const OLLAMA_BASE = (process.env.OLLAMA_URL || 'http://localhost:11434').replace(/\/$/, '');
+const OLLAMA_GEN = `${OLLAMA_BASE}/api/generate`;
+const OUTPUT_DIR = process.env.BRIEF_OUTPUT_DIR || HERE;
+const FB_MAX = 480;                       // Facebook compact-variant hard length gate
 const OLLAMA_MODEL = 'gemma4:e4b';
 const FETCH_TIMEOUT_MS = 8000;
 const GEMMA_TIMEOUT_MS = 30000;          // hard cap; timeout → template (by design)
@@ -90,7 +98,19 @@ function delayedSources(d) {
 
 // ── Template engine (Layer A → words; NO AI) ─────────────────────────────────
 // Returns { brief_en, brief_vi, allowedInts, generated_at }.
+// SAT-0b-4. FIRMS unavailable is its own state, never 0: the summary sends
+// count null + status "unavailable" (and a pre-0b-2 Worker sent count 0 +
+// status "miss"). Either way there is no number to report.
+function fireIsUnavailable(d) {
+  const st = d.fire?.status;
+  return st === 'unavailable' || st === 'miss' || !Number.isFinite(d.fire?.count);
+}
+
 function buildTemplate(d) {
+  // SAT-0b-4. One satellite down = real but reduced coverage: still reported,
+  // with a line saying so. Unavailable = no number at all.
+  const fireDown = fireIsUnavailable(d);
+  const firePartial = !fireDown && d.fire?.health === 'partial';
   const fire = num(d.fire?.count);
   const volcanic = num(d.fire?.volcanic_zone_count);
   const wildland = Number.isFinite(d.fire?.wildland_count) ? d.fire.wildland_count : Math.max(0, fire - volcanic);
@@ -105,9 +125,12 @@ function buildTemplate(d) {
   const allowedInts = new Set([fire, volcanic, wildland, smokeN, perim,
     parseInt(hp.hh, 10), parseInt(hp.mm, 10)].filter((n) => Number.isFinite(n)));
 
-  // Fire/heat bullet — three branches (volcanic / wildfire / clear).
+  // Fire/heat bullet — unavailable, then three branches (volcanic / wildfire / clear).
   let heatEn, heatVi;
-  if (fire === 0) {
+  if (fireDown) {
+    heatEn = '⚠ Satellite heat: NASA FIRMS fire data is unavailable right now — this is not a "no fire" reading. Check the Live Map and official sources.';
+    heatVi = '⚠ Nhiệt vệ tinh: hiện không có dữ liệu cháy NASA FIRMS — điều này KHÔNG có nghĩa là không có cháy. Hãy xem Live Map và nguồn chính thức.';
+  } else if (fire === 0) {
     heatEn = '✅ Satellite heat: no fire or heat detections in the current statewide snapshot.';
     heatVi = '✅ Nhiệt vệ tinh: không có tín hiệu cháy hay nhiệt nào trong ảnh chụp toàn bang hiện tại.';
   } else if (wildland === 0 && volcanic > 0) {
@@ -119,9 +142,12 @@ function buildTemplate(d) {
     heatEn = `🔥 Satellite heat: ${wildland} detection(s) outside volcanic zones — possible wildfire signals${extraEn}`;
     heatVi = `🔥 Nhiệt vệ tinh: ${wildland} tín hiệu ngoài vùng núi lửa — có thể là dấu hiệu cháy rừng${extraVi}`;
   }
+  const partialEn = 'One satellite is temporarily unavailable, so coverage is reduced.';
+  const partialVi = 'Một vệ tinh tạm thời không khả dụng, nên phạm vi quan sát bị giảm.';
+  if (firePartial) { heatEn += ` ${partialEn}`; heatVi += ` ${partialVi}`; }
 
   // Smoke bullet — adds a vog/air-quality note in the volcanic branch.
-  const volcanicBranch = fire > 0 && wildland === 0 && volcanic > 0;
+  const volcanicBranch = !fireDown && fire > 0 && wildland === 0 && volcanic > 0;
   // SAT-0a-2 D. Wording follows smoke.status, never present/count: count 0 is
   // either "nothing outlined" (which does not rule out smoke) or an outage.
   const smokeSt = d.smoke?.status;
@@ -159,7 +185,50 @@ function buildTemplate(d) {
 
   const brief_en = [`Kahu Ola — Hawaiʻi morning hazard brief`, heatEn, smokeEn, perimEn, freshEn, discEn, linkEn].join('\n');
   const brief_vi = [`Kahu Ola — Bản tin hiểm họa buổi sáng Hawaiʻi`, heatVi, smokeVi, perimVi, freshVi, discVi, linkVi].join('\n');
-  return { brief_en, brief_vi, allowedInts, generated_at: d.generated_at };
+
+  // ── Facebook compact variant (public channel) — TEMPLATE ONLY, no AI. ──
+  // ≤480 chars; carries exact numbers + volcanic wording + short disclaimer +
+  // link. Ported from the n8n assets fork (SAT-0b-4) with the SAT-0a-2 smoke
+  // rule (status, never present) and the SAT-0b-4 fire states.
+  const icon = fireDown ? '⚠' : fire === 0 ? '✅' : (wildland === 0 && volcanic > 0) ? '🌋' : '🔥';
+  const sigWord = (n) => (n === 1 ? 'signal' : 'signals');   // real EN plural
+  let fbHeatEn, fbHeatVi;
+  if (fireDown) {
+    fbHeatEn = 'Satellite fire data (NASA FIRMS) is unavailable right now — this is not a "no fire" reading.';
+    fbHeatVi = 'Hiện không có dữ liệu cháy vệ tinh (NASA FIRMS) — điều này KHÔNG có nghĩa là không có cháy.';
+  } else if (fire === 0) {
+    fbHeatEn = 'No satellite fire or heat detections statewide right now.';
+    fbHeatVi = 'Hiện không có tín hiệu cháy hay nhiệt vệ tinh nào trên toàn bang.';
+  } else if (wildland === 0 && volcanic > 0) {
+    fbHeatEn = `${volcanic} satellite heat ${sigWord(volcanic)} in the Kīlauea/Mauna Loa volcanic zone — likely volcanic activity, not a wildfire. Vog may affect air quality.`;
+    fbHeatVi = `${volcanic} tín hiệu nhiệt vệ tinh ở vùng núi lửa Kīlauea/Mauna Loa — có thể là hoạt động núi lửa, không phải cháy rừng. Vog có thể ảnh hưởng chất lượng không khí.`;
+  } else {
+    const exEn = volcanic > 0 ? ` +${volcanic} in the volcanic zone.` : '';
+    const exVi = volcanic > 0 ? ` +${volcanic} trong vùng núi lửa.` : '';
+    fbHeatEn = `${wildland} satellite heat ${sigWord(wildland)} outside volcanic zones — possible wildfire signals.${exEn}`;
+    fbHeatVi = `${wildland} tín hiệu nhiệt vệ tinh ngoài vùng núi lửa — có thể là dấu hiệu cháy rừng.${exVi}`;
+  }
+  if (firePartial) { fbHeatEn += ` ${partialEn}`; fbHeatVi += ` ${partialVi}`; }
+  const fbSmokeEn = smokeSt === 'detected' ? 'outlined' : smokeSt === 'none' ? 'none outlined' : 'data unavailable';
+  const fbSmokeVi = smokeSt === 'detected' ? 'có khoanh vùng' : smokeSt === 'none' ? 'chưa khoanh vùng' : 'chưa có dữ liệu';
+  const fbStatsEn = `🗺️ Official fire perimeters: ${perim}. Smoke: ${fbSmokeEn}.`;
+  const fbStatsVi = `🗺️ Ranh giới cháy chính thức: ${perim}. Khói: ${fbSmokeVi}.`;
+  const fbStaleEn = stale ? ` ⚠ Some data delayed (${delayed.length ? delayed.join(', ') : SOURCES_LINE}).` : '';
+  const fbStaleVi = stale ? ` ⚠ Dữ liệu có thể bị trễ (${delayed.length ? delayed.join(', ') : SOURCES_LINE}).` : '';
+  const brief_fb_en = [
+    `${icon} Kahu Ola — ${hp.hhmm} HST`,
+    fbHeatEn,
+    fbStatsEn + fbStaleEn,
+    `Situational awareness only — follow official guidance. ${LIVE_MAP}`,
+  ].join('\n');
+  const brief_fb_vi = [
+    `${icon} Kahu Ola — ${hp.hhmm} HST`,
+    fbHeatVi,
+    fbStatsVi + fbStaleVi,
+    `Chỉ để nhận thức tình huống — theo hướng dẫn chính thức. ${LIVE_MAP}`,
+  ].join('\n');
+
+  return { brief_en, brief_vi, brief_fb_en, brief_fb_vi, allowedInts, generated_at: d.generated_at, fireDown, firePartial };
 }
 
 // Degraded brief — fetch failed / unusable JSON. Still a real brief, never silent.
@@ -176,7 +245,9 @@ function degradedTemplate(nowIso) {
     'Chỉ để nhận thức tình huống — không thay thế chỉ đạo khẩn cấp chính thức. Hãy theo hướng dẫn của NWS, quận, và HI-EMA.',
     `Bản đồ trực tiếp: ${LIVE_MAP}`,
   ].join('\n');
-  return { brief_en, brief_vi, generated_at: nowIso };
+  const brief_fb_en = `⚠ Kahu Ola — this morning's snapshot data is unavailable. Check the Live Map and official sources. Situational awareness only — follow official guidance. ${LIVE_MAP}`;
+  const brief_fb_vi = `⚠ Kahu Ola — không lấy được dữ liệu snapshot sáng nay. Xem Live Map và nguồn chính thức. Chỉ để nhận thức tình huống — theo hướng dẫn chính thức. ${LIVE_MAP}`;
+  return { brief_en, brief_vi, brief_fb_en, brief_fb_vi, generated_at: nowIso };
 }
 
 // ── Validation gate (applied ONLY to Gemma output) ───────────────────────────
@@ -219,7 +290,7 @@ async function gemmaOne(templateText, lang, allowedInts) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), GEMMA_TIMEOUT_MS);
   try {
-    const r = await fetch(OLLAMA_URL, {
+    const r = await fetch(OLLAMA_GEN, {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'Content-Type': 'application/json' },
@@ -249,6 +320,19 @@ async function gemmaPolish(tmpl) {
   return { source: 'gemma', reason: null, en: en.text, vi: vi.text };
 }
 
+// SAT-0b-4. Channel flags, pure so they are testable.
+//   degraded     — read by n8n "IF: Post to FB? (not degraded)": true ONLY
+//                  when fire data is unavailable (ruling), so Facebook skips.
+//   data_delayed — the old meaning: any source stale / summary degraded.
+//   skipGemma    — fire unavailable: the AI rewrite is not allowed to touch it.
+function channelFlags(tmpl, data) {
+  return {
+    degraded: tmpl.fireDown === true,
+    data_delayed: data.stale === true || data.degraded === true,
+    skipGemma: tmpl.fireDown === true,
+  };
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main(argv) {
   const noGemma = argv.includes('--no-gemma');
@@ -258,25 +342,39 @@ async function main(argv) {
   let out;
   if (!res.ok) {
     const dt = degradedTemplate(nowIso);
-    out = { brief_en: dt.brief_en, brief_vi: dt.brief_vi, generated_at: dt.generated_at,
-      source: 'template', degraded: true, reason: `fetch:${res.error}` };
+    // brief_fb_* are ALWAYS template (no AI on the public channel).
+    out = { brief_en: dt.brief_en, brief_vi: dt.brief_vi, brief_fb_en: dt.brief_fb_en, brief_fb_vi: dt.brief_fb_vi,
+      generated_at: dt.generated_at, source: 'template', degraded: true, data_delayed: true, reason: `fetch:${res.error}` };
   } else {
     const tmpl = buildTemplate(res.data);
-    const degraded = res.data.stale === true || res.data.degraded === true;
+    // SAT-0b-4 ruling. `degraded` is what the n8n Facebook gate reads ("IF:
+    // Post to FB? (not degraded)"): Facebook is skipped ONLY when fire data is
+    // unavailable. One satellite down still posts, with the reduced-coverage
+    // line; a delayed smoke/perimeter source still posts, with its delay note.
+    // The old meaning (any source delayed) moves to data_delayed.
+    const { degraded, data_delayed, skipGemma } = channelFlags(tmpl, res.data);
     let source = 'template', reason = null;
     let brief_en = tmpl.brief_en, brief_vi = tmpl.brief_vi;
-    if (!noGemma) {
+    if (skipGemma) {
+      // The Gemma gate checks numbers, length and markers, not meaning: a
+      // rewrite could turn "unavailable" into "no fire". Template only.
+      reason = 'fire_unavailable_template_only';
+    } else if (!noGemma) {
       const g = await gemmaPolish(tmpl);
       if (g.source === 'gemma') { source = 'gemma'; brief_en = g.en; brief_vi = g.vi; }
       else reason = g.reason;              // stayed template; log why
     } else {
       reason = 'no_gemma_flag';
     }
-    out = { brief_en, brief_vi, generated_at: tmpl.generated_at, source, degraded };
+    // brief_fb_* are ALWAYS the template variant (never AI-touched).
+    out = { brief_en, brief_vi, brief_fb_en: tmpl.brief_fb_en, brief_fb_vi: tmpl.brief_fb_vi,
+      generated_at: tmpl.generated_at, source, degraded, data_delayed,
+      fire_status: tmpl.fireDown ? 'unavailable' : (res.data.fire?.status ?? null),
+      fire_health: res.data.fire?.health ?? null };
     if (reason) out.reason = reason;
   }
 
-  const file = join(HERE, 'brief-latest.json');
+  const file = join(OUTPUT_DIR, 'brief-latest.json');
   writeFileSync(file, JSON.stringify(out, null, 2) + '\n', 'utf8');
   process.stdout.write(JSON.stringify(out) + '\n');
   return out;
@@ -339,6 +437,53 @@ function runTests() {
   ok('gate: valid brief with legit HST time digits is NOT rejected as foreign',
     validateGemma('Kahu Ola. Satellite heat: 0 detections in the current snapshot. Smoke: none. Official fire perimeters: 0 active. Data as of 06:00 HST · sources: NASA FIRMS / NOAA HMS / NIFC WFIGS. Situational awareness only — does not replace official emergency directives. Live map: kahuola.org/live-map', { allowedInts: buildTemplate({ ...base, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none' } }).allowedInts, lang: 'en' }).ok);
 
+
+  // ── Facebook variant fixtures (ported from the n8n assets fork) ────────────
+  const fbLen = (o) => Math.max(o.brief_fb_en.length, o.brief_fb_vi.length);
+  ok(`FB length gate: volcanic ≤${FB_MAX} (en ${volc.brief_fb_en.length}/vi ${volc.brief_fb_vi.length})`, fbLen(volc) <= FB_MAX);
+  ok(`FB length gate: wildfire ≤${FB_MAX}`, fbLen(wild) <= FB_MAX);
+  ok(`FB length gate: all-clear ≤${FB_MAX}`, fbLen(clear) <= FB_MAX);
+  const worst = buildTemplate({ ...base, stale: true,
+    fire: { count: 99, volcanic_zone_count: 11, wildland_count: 88, status: 'detected', health: 'partial' },
+    smoke: { present: true, count: 12, status: 'unavailable' },
+    perimeters: { count: 34, status: 'unavailable' } });
+  ok(`FB length gate: WORST (wildfire +volcanic, partial, 2 delayed) ≤${FB_MAX} (en ${worst.brief_fb_en.length}/vi ${worst.brief_fb_vi.length})`, fbLen(worst) <= FB_MAX);
+  ok('FB volcanic: VI wording + count + link', /🌋/.test(volc.brief_fb_vi) && /có thể là hoạt động núi lửa, không phải cháy rừng/.test(volc.brief_fb_vi) && volc.brief_fb_vi.includes('25') && volc.brief_fb_vi.includes(LIVE_MAP));
+  ok('FB volcanic: never asserts eruption', !/erupt/i.test(volc.brief_fb_en) && !/phun trào/.test(volc.brief_fb_vi));
+  ok('FB wildfire: fire icon + counts', /🔥/.test(wild.brief_fb_en) && wild.brief_fb_en.includes('2') && wild.brief_fb_en.includes('1'));
+  ok('FB all-clear: check icon only when fire answered none', /✅/.test(clear.brief_fb_en));
+  ok('FB smoke follows status (none → "none outlined", never "none")', /Smoke: none outlined\./.test(clear.brief_fb_en) && /Khói: chưa khoanh vùng\./.test(clear.brief_fb_vi));
+  const fbDeg = degradedTemplate('2026-07-05T16:00:00.000Z');
+  ok('FB degraded (fetch failed): disclaimer + link', /Situational awareness only/.test(fbDeg.brief_fb_en) && fbDeg.brief_fb_vi.includes(LIVE_MAP));
+
+  // ── SAT-0b-4: fire unavailable is never "no fire" ──────────────────────────
+  const fdown = buildTemplate({ ...base, degraded: true, fire: { count: null, volcanic_zone_count: null, wildland_count: null, status: 'unavailable', health: 'unavailable' } });
+  for (const [k, txt] of [['brief_en', fdown.brief_en], ['brief_fb_en', fdown.brief_fb_en]]) {
+    ok(`fire unavailable: ${k} has no ✅ and no "no … detections"`, !/✅/.test(txt) && !/no (satellite )?fire or heat detections/i.test(txt) && !/No satellite fire/i.test(txt));
+  }
+  ok('fire unavailable: EN says unavailable, not a "no fire" reading', /fire data is unavailable/.test(fdown.brief_en) && /not a "no fire" reading/.test(fdown.brief_en));
+  ok('fire unavailable: VI KHÔNG có nghĩa là không có cháy', /KHÔNG có nghĩa là không có cháy/.test(fdown.brief_vi) && /KHÔNG có nghĩa là không có cháy/.test(fdown.brief_fb_vi));
+  ok('fire unavailable: VI has no "không có tín hiệu cháy"', !/không có tín hiệu cháy/.test(fdown.brief_vi) && !/không có tín hiệu cháy/.test(fdown.brief_fb_vi));
+  ok('fire unavailable: FB icon ⚠', fdown.brief_fb_en.startsWith('⚠') && fdown.brief_fb_vi.startsWith('⚠'));
+  ok(`fire unavailable: FB ≤${FB_MAX}`, fbLen(fdown) <= FB_MAX);
+  const fmiss = buildTemplate({ ...base, degraded: true, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'miss' } });
+  ok('fire "miss" (pre-0b-2 Worker, count 0) is also unavailable, not ✅', fmiss.fireDown && !/✅/.test(fmiss.brief_en) && !/✅/.test(fmiss.brief_fb_en));
+
+  // ── SAT-0b-4: one satellite down still reports, and says so ────────────────
+  const fpart = buildTemplate({ ...base, degraded: true, fire: { count: 3, volcanic_zone_count: 1, wildland_count: 2, status: 'detected', health: 'partial' } });
+  ok('partial: still reports the counts', /2 detection\(s\) outside volcanic zones/.test(fpart.brief_en) && fpart.brief_fb_en.includes('2'));
+  ok('partial: EN + VI reduced-coverage line in brief and FB',
+     /coverage is reduced/.test(fpart.brief_en) && /coverage is reduced/.test(fpart.brief_fb_en) &&
+     /phạm vi quan sát bị giảm/.test(fpart.brief_vi) && /phạm vi quan sát bị giảm/.test(fpart.brief_fb_vi));
+  const fpartNone = buildTemplate({ ...base, degraded: true, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none', health: 'partial' } });
+  ok('partial + zero: the ✅ line carries the reduced-coverage caveat', /✅/.test(fpartNone.brief_en) && /coverage is reduced/.test(fpartNone.brief_en));
+
+  // ── SAT-0b-4: channel flags (n8n FB gate reads `degraded`) ─────────────────
+  ok('flags: fire unavailable → degraded (FB skipped), Gemma skipped', channelFlags(fdown, { degraded: true }).degraded === true && channelFlags(fdown, {}).skipGemma === true);
+  ok('flags: one satellite down → NOT degraded (FB still posts)', channelFlags(fpart, { degraded: true }).degraded === false && channelFlags(fpart, { degraded: true }).data_delayed === true);
+  const smokeLate = buildTemplate({ ...base, stale: true, fire: { count: 0, volcanic_zone_count: 0, wildland_count: 0, status: 'none' }, smoke: { present: false, count: 0, status: 'unavailable' } });
+  ok('flags: only smoke delayed → NOT degraded, data_delayed true', channelFlags(smokeLate, { stale: true }).degraded === false && channelFlags(smokeLate, { stale: true }).data_delayed === true);
+  ok('flags: all fine → nothing set', JSON.stringify(channelFlags(clear, {})) === JSON.stringify({ degraded: false, data_delayed: false, skipGemma: false }));
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

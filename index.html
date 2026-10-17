@@ -2379,6 +2379,9 @@
       .hzsnap-row-val{font-size:17px;font-weight:700;color:var(--ok)}
       .hzsnap-row-val.is-active{color:var(--fire)}
       .hzsnap-row-val.is-neutral{color:var(--muted)}
+      /* SAT-0b-4. The live map's volcanic-heat violet (#9b8cff, 6.28:1 here):
+         volcanic heat is real heat, but not a wildfire, so never fire orange. */
+      .hzsnap-row-val.is-volcanic{color:#9b8cff}
       .hzsnap-fresh{margin:12px 0 0;font-size:13px;color:var(--muted)}
       .hzsnap-stale{color:var(--warn)}
       .hzsnap-loading{margin:6px 0;font-size:14px;color:var(--muted)}
@@ -2411,16 +2414,20 @@
           var I18N = window.KAHUOLA_I18N;
           var _t = function (k) { return I18N ? I18N.t(k) : null; };
           var _tmpl = function (k, v) { return I18N ? I18N.tmpl(k, v) : null; };
+          // SAT-0b-4. I18N.t returns the KEY itself for a key no locale has, so
+          // `_t(k) || fallback` never falls back. _tf treats key === result as missing.
+          var _tf = function (k, fb) { var v = _t(k); return (v && v !== k) ? v : fb; };
           function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
           function unavailable() {
             body.innerHTML = '<p class="hzsnap-unavailable"><span aria-hidden="true">🛰️</span><span>' +
               esc(_t('card.snapshot.unavailable') || 'Live snapshot temporarily unavailable — see the Live Map') + '</span></p>';
           }
-          // tone: true → alert (is-active), 'neutral' → grey (is-neutral), else green.
+          // tone: true → alert (is-active), 'neutral' → grey (is-neutral),
+          // 'volcanic' → violet (is-volcanic), else green.
           function row(icon, label, val, tone) {
             return '<div class="hzsnap-row"><span class="hzsnap-row-icon" aria-hidden="true">' + icon +
               '</span><span class="hzsnap-row-label">' + esc(label) +
-              '</span><span class="hzsnap-row-val' + (tone === 'neutral' ? ' is-neutral' : tone ? ' is-active' : '') + '">' + esc(val) + '</span></div>';
+              '</span><span class="hzsnap-row-val' + (tone === 'neutral' ? ' is-neutral' : tone === 'volcanic' ? ' is-volcanic' : tone ? ' is-active' : '') + '">' + esc(val) + '</span></div>';
           }
           function freshText(maxAge) {
             if (maxAge == null) return _t('freshness.updated_recently') || 'Updated recently';
@@ -2439,7 +2446,29 @@
               .then(function (d) {
                 clearTimeout(to);
                 if (!d || typeof d !== 'object' || !d.fire || !d.smoke || !d.perimeters) throw new Error('shape');
-                var fireN = (typeof d.fire.count === 'number' && isFinite(d.fire.count)) ? d.fire.count : 0;
+                // SAT-0b-4. FIRMS unavailable (status "unavailable"/"miss", or no
+                // numeric count) has no number: it reads "Unavailable" in grey,
+                // never a green "0". One satellite down still shows the count,
+                // plus a reduced-coverage line.
+                var fireDown = d.fire.status === 'unavailable' || d.fire.status === 'miss' || !(typeof d.fire.count === 'number' && isFinite(d.fire.count));
+                var firePartial = !fireDown && d.fire.health === 'partial';
+                var fireN = fireDown ? 0 : d.fire.count;
+                // SAT-0b-4. Heat-row colour. Orange ONLY for current (≤ 12 h)
+                // wildland detections; volcanic heat alone is violet; wildland
+                // seen only 12–24 h ago is grey; unavailable is grey. The count
+                // itself stays the detection count. locations (SAT-0b-2) gives
+                // the age split; a summary without it (pre-batch Worker) falls
+                // back to wildland_count, which is what this row used before.
+                var loc = d.fire.locations && typeof d.fire.locations === 'object' ? d.fire.locations : null;
+                var wildCur = loc && typeof loc.wildland_current === 'number' ? loc.wildland_current
+                  : ((typeof d.fire.wildland_count === 'number') ? d.fire.wildland_count : 0);
+                var wildOld = loc ? (Number(loc.wildland_older) || 0) + (Number(loc.wildland_unknown_age) || 0) : 0;
+                var volcN = (typeof d.fire.volcanic_zone_count === 'number') ? d.fire.volcanic_zone_count : 0;
+                var heatTone = fireDown ? 'neutral'
+                  : wildCur > 0 ? true
+                  : wildOld > 0 ? 'neutral'
+                  : volcN > 0 ? 'volcanic'
+                  : false;
                 var perimN = (typeof d.perimeters.count === 'number' && isFinite(d.perimeters.count)) ? d.perimeters.count : 0;
                 var ages = [d.fire.age_seconds, d.smoke.age_seconds, d.perimeters.age_seconds]
                   .filter(function (x) { return typeof x === 'number' && isFinite(x) && x >= 0; });
@@ -2456,10 +2485,14 @@
                 var volc = (typeof d.fire.volcanic_zone_count === 'number') ? d.fire.volcanic_zone_count : 0;
                 var wild = (typeof d.fire.wildland_count === 'number') ? d.fire.wildland_count : (fireN - volc);
                 var html =
-                  row('🔥', _t('card.snapshot.heat') || 'Satellite Heat Signals', String(fireN), fireN > 0) +
+                  row('🔥', _t('card.snapshot.heat') || 'Satellite Heat Signals', fireDown ? (_t('map.s_unavailable') || 'Unavailable') : String(fireN), heatTone) +
                   row('💨', _t('card.snapshot.smoke') || 'Smoke', smokeVal, smokeTone) +
                   row('🗺️', _t('card.snapshot.perimeters') || 'Official Perimeters', String(perimN), perimN > 0);
-                if (volc > 0) {
+                if (firePartial) {
+                  html += '<p class="hzsnap-fresh">' +
+                    esc(_tf('card.snapshot.fire_partial', 'One satellite is temporarily unavailable, so satellite heat coverage is reduced.')) + '</p>';
+                }
+                if (!fireDown && volc > 0) {
                   html += '<p class="hzsnap-fresh">' +
                     esc(_tmpl('card.snapshot.heat_volcanic', { n: volc }) || (volc + ' in Kīlauea/Mauna Loa volcanic zone (likely volcanic activity)')) +
                     (wild > 0 ? ' · ' + esc(_tmpl('card.snapshot.heat_wildland', { n: wild }) || (wild + ' outside volcanic zones')) : '') + '</p>';
