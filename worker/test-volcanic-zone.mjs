@@ -31,12 +31,17 @@ const cases = [
   ['Kīlauea summit (Halemaʻumaʻu)', -155.287, 19.408, true],
   ['Kīlauea caldera, live 2026-10-16 N21 pixel', -155.2858, 19.4012, true],
   ['Mauna Loa summit (Mokuʻāweoweo)', -155.600, 19.475, true],
-  ['Kīlauea west caldera EDGE (inclusive)', -155.305, 19.40, true],
-  ['just WEST of Kīlauea caldera edge', -155.306, 19.40, false],
+  ['Kīlauea box west EDGE (inclusive, SAT-0b-1c)', -155.350, 19.40, true],
+  ['just WEST of the Kīlauea box', -155.351, 19.40, false],
+  ['Kīlauea SW caldera margin (2026-10-17 edge pixel)', -155.28224, 19.38007, true],
+  ['Kīlauea W margin (2026-10-17 edge pixel)', -155.33337, 19.41586, true],
+  ['Kīlauea Military Camp', -155.2709, 19.4320, false],
+  ['Volcano village south edge (Hwy 11)', -155.2380, 19.4320, false],
   ['Kīlauea lower ERZ / Leilani', -154.914, 19.465, false],
   ['Pāhoa town', -154.945, 19.494, false],
   ['Volcano village', -155.234, 19.442, false],
   ['HVNP Visitor Center rim', -155.2578, 19.4308, false],
+  ['HVNP Visitor Center', -155.2575, 19.4294, false],
   ['Kīlauea ocean-entry area', -154.85, 19.35, false],
   ['Mauna Loa 2022 NERZ flow', -155.45, 19.55, false],
   ['Lahaina, Maui (real wildfire risk)', -156.68, 20.88, false],
@@ -52,7 +57,7 @@ let volcanic = 0;
 for (const f of feats) if (f.properties.volcanic_zone === true) volcanic++;
 const wildland = Math.max(0, total - volcanic);
 ok('count === volcanic_zone_count + wildland_count', total === volcanic + wildland);
-ok('expected split (4 volcanic / 10 wildland)', volcanic === 4 && wildland === 10);
+ok('expected split (6 volcanic / 13 wildland)', volcanic === 6 && wildland === 13);
 console.log(`  (total=${total}, volcanic=${volcanic}, wildland=${wildland})`);
 
 // Old-cache fallback: features with no volcanic_zone field → all wildland, invariant holds.

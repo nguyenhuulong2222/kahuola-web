@@ -2562,16 +2562,25 @@ function modisCorroborates(index: ModisIndex, lat: number, lng: number, ms: numb
 // live — so a brush fire there was filed as lava: purple, and left out of
 // Nearest, Critical and every wildfire count. Everything outside a summit
 // caldera is now wildland unless VOLCANIC_EXTRA_ZONES says otherwise.
-//   Kīlauea:   Kaluapele caldera incl. Halemaʻumaʻu (19.40°N/155.28°W) and the
-//              post-2018 collapse. Excludes the Visitor Center rim, Kīlauea Iki
-//              and Volcano village.
-//   Mauna Loa: Mokuʻāweoweo summit caldera (19.475°N/155.60°W).
+//   Kīlauea:   SAT-0b-1c, DERIVED FROM DATA. 90 days of FIRMS NOAA-20/21
+//              (2026-07-20 → 10-17, 3,096 pixels, all at the summit): pixels
+//              span lat 19.375–19.436, lon −155.345 → −155.233 — wider than the
+//              caldera rim the 0b-1 box drew (on 2026-10-17, 44 of 155 summit
+//              pixels fell outside it and published as "wildfire"). The box
+//              covers 99.45% of those pixels. Its NORTH edge is held at 19.426
+//              on purpose, below the HVNP Visitor Center (19.429), Kīlauea
+//              Military Camp (19.432) and the south edge of Volcano village
+//              (19.432): the 17 pixels left outside (one 2026-07-29 overpass)
+//              read as wildland — over-warn, never hide a fire where people are.
+//              Kīlauea Iki and Keanakākoʻi now fall inside (craters, no homes).
+//   Mauna Loa: Mokuʻāweoweo summit caldera (19.475°N/155.60°W). No eruption
+//              pixels in the 90-day window, so this stays the caldera outline.
 // An eruption outside these (a Puna fissure, a rift-zone flow) is added as an
 // operator override in VOLCANIC_EXTRA_ZONES and removed when it ends. It is a
 // geometry test on already-validated coordinates (Invariant III safe).
 type VolcanicZone = { id: string; west: number; south: number; east: number; north: number };
 const VOLCANIC_ZONES: ReadonlyArray<VolcanicZone> = [
-  { id: 'kilauea-summit', west: -155.305, south: 19.385, east: -155.255, north: 19.428 },
+  { id: 'kilauea-summit', west: -155.350, south: 19.370, east: -155.228, north: 19.426 },
   { id: 'mauna-loa-summit', west: -155.630, south: 19.450, east: -155.565, north: 19.510 },
 ];
 

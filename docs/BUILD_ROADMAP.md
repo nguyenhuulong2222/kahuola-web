@@ -138,6 +138,19 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     Script) counts wildland detections 12–24 h old as "Wildfire detections are
     present in the current Hawaiʻi snapshot". Outage and partial wording are
     already correct (test-sat0b5-morning-brief.mjs); the age wording is not.
+  - **SAT-0b-1d (backlog) — activity-gated volcanic margin.** SAT-0b-1c widened
+    the Kīlauea box to where 90 days of eruption pixels actually fall, so a
+    fire in its margin (Kīlauea Iki, Keanakākoʻi, the forest east of the
+    caldera) is filed as volcanic even when the summit is quiet.
+    - Core = the SAT-0b-1 caldera box (W −155.305 S 19.385 E −155.255
+      N 19.428): always volcanic.
+    - Margin = the SAT-0b-1c box minus the core: volcanic ONLY while the core
+      has ≥ N detections in the last 48 h (derive N from the 90-day FIRMS
+      pull); otherwise margin pixels count as wildland.
+    - Fixtures: the 2026-10-17 44 edge pixels with an active core → volcanic;
+      the same 44 with an empty core → wildland.
+    - Popup / summary wording for margin pixels: "Likely volcanic heat near
+      the active summit eruption" (EN + VI).
   - **n8n restart runbook (run AFTER the SAT-0b batch deploy)** — Docker has
     been down since 2026-07-19; last successful Morning Brief 2026-07-16.
     1. Long rotates the Facebook token and deletes the v4.6 BACKUP file.
