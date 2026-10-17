@@ -2270,13 +2270,18 @@ async function handleFirmsHotspots(url: URL, env: Env, cors: CorsHeaders): Promi
     return true;
   });
 
-  const features = dedupeFirmsFeatures(inWindow).slice(0, limit);
+  const features = assignFireLocations(dedupeFirmsFeatures(inWindow).slice(0, limit));
+  let location_count = 0;
+  for (const f of features) if ((f as any)?.properties?.location_primary === true) location_count++;
 
   const body = {
     type: 'FeatureCollection',
     features,
     properties: {
       returnedRecords: features.length,
+      // SAT-0b-2, additive. Distinct fire LOCATIONS after the cross-satellite
+      // match below. returnedRecords stays the detection count.
+      location_count,
       // Unchanged shape (a string) for existing consumers; it is now the merged
       // token rather than a single dataset id.
       dataset: keyToken,
@@ -2381,6 +2386,112 @@ function dedupeFirmsFeatures(features: readonly unknown[]): unknown[] {
   return out;
 }
 
+
+// ── SAT-0b-2: cross-satellite fire locations ─────────────────────────────────
+// One fire seen by NOAA-20 and NOAA-21 is two detections ~50 min apart. Both
+// stay on the map (two real observations), but they are ONE location for
+// counting and ranking. Two detections are the same location when:
+//   · they come from DIFFERENT satellites (same-pass pixels are never merged:
+//     neighbouring pixels of one pass are separate detections), and
+//   · |Δt| ≤ FIRE_LOCATION_MAX_S, and
+//   · distance ≤ max(FIRE_LOCATION_MIN_KM, 1.5 × the larger pixel dimension of
+//     the two) — VIIRS pixels grow from 375 m at nadir toward the swath edge.
+// Closest pairs merge first, and a location holds at most one detection per
+// satellite, so two pixels of one pass can never be chained together through a
+// third. A detection missing coordinates, time or satellite stays its own
+// location (never inferred).
+//
+// Adds to every feature: seen_by (satellites at this location), location_id,
+// and location_primary (true on exactly one detection per location: the newest).
+const FIRE_LOCATION_MAX_S = 3600;
+const FIRE_LOCATION_MIN_KM = 0.75;
+const FIRE_LOCATION_CELL_DEG = 0.02;   // ≥ 2 km: a 3 × 3 neighbourhood covers the max radius
+
+function assignFireLocations(features: unknown[]): unknown[] {
+  type Pt = { i: number; lat: number; lng: number; ms: number; sat: string; dimKm: number };
+  const pts: Pt[] = [];
+  const props = (f: unknown) => ((f as any)?.properties ?? {}) as Record<string, any>;
+  features.forEach((f, i) => {
+    const c = (f as any)?.geometry?.coordinates;
+    const p = props(f);
+    const lng = Array.isArray(c) ? Number(c[0]) : NaN;
+    const lat = Array.isArray(c) ? Number(c[1]) : NaN;
+    const ms = typeof p.acq_datetime_utc === 'string' ? Date.parse(p.acq_datetime_utc) : NaN;
+    const sat = typeof p.satellite === 'string' && p.satellite.trim() ? p.satellite.trim()
+      : (typeof p.dataset === 'string' ? p.dataset : '');
+    const dims = [p.scan_km, p.track_km].filter((v) => typeof v === 'number' && Number.isFinite(v) && v > 0) as number[];
+    pts.push({ i, lat, lng, ms, sat, dimKm: dims.length ? Math.max(...dims) : 0 });
+  });
+
+  // Union-find with a per-group satellite set.
+  const parent = pts.map((_, i) => i);
+  const sats = pts.map((p) => new Set(p.sat ? [p.sat] : []));
+  const find = (x: number): number => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const usable = (p: Pt) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Number.isFinite(p.ms) && p.sat !== '';
+
+  const grid = new Map<string, number[]>();
+  const cellOf = (lat: number, lng: number) => [Math.floor(lat / FIRE_LOCATION_CELL_DEG), Math.floor(lng / FIRE_LOCATION_CELL_DEG)];
+  for (const p of pts) {
+    if (!usable(p)) continue;
+    const [cy, cx] = cellOf(p.lat, p.lng);
+    const k = `${cy},${cx}`;
+    const list = grid.get(k); if (list) list.push(p.i); else grid.set(k, [p.i]);
+  }
+  const pairs: Array<{ a: number; b: number; km: number; dt: number }> = [];
+  for (const p of pts) {
+    if (!usable(p)) continue;
+    const [cy, cx] = cellOf(p.lat, p.lng);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      for (const j of grid.get(`${cy + dy},${cx + dx}`) || []) {
+        if (j <= p.i) continue;
+        const q = pts[j];
+        if (q.sat === p.sat) continue;
+        const dt = Math.abs(q.ms - p.ms) / 1000;
+        if (dt > FIRE_LOCATION_MAX_S) continue;
+        const km = haversineKm(p.lng, p.lat, q.lng, q.lat);
+        if (km <= Math.max(FIRE_LOCATION_MIN_KM, 1.5 * Math.max(p.dimKm, q.dimKm))) pairs.push({ a: p.i, b: j, km, dt });
+      }
+    }
+  }
+  pairs.sort((x, y) => x.km - y.km || x.dt - y.dt || x.a - y.a || x.b - y.b);
+  for (const { a, b } of pairs) {
+    const ra = find(a), rb = find(b);
+    if (ra === rb) continue;
+    let overlap = false;
+    for (const s of sats[rb]) if (sats[ra].has(s)) { overlap = true; break; }
+    if (overlap) continue;
+    parent[rb] = ra;
+    for (const s of sats[rb]) sats[ra].add(s);
+  }
+
+  // Primary = newest acquisition in the group; ties → earliest in input order.
+  const primary = new Map<number, number>();
+  for (const p of pts) {
+    const r = find(p.i);
+    const cur = primary.get(r);
+    if (cur === undefined) { primary.set(r, p.i); continue; }
+    const c = pts[cur];
+    const pNew = Number.isFinite(p.ms) ? p.ms : -Infinity;
+    const cNew = Number.isFinite(c.ms) ? c.ms : -Infinity;
+    if (pNew > cNew) primary.set(r, p.i);
+  }
+  return features.map((f, i) => {
+    const r = find(i);
+    const prim = pts[primary.get(r)!];
+    const location_id = Number.isFinite(prim.lat) && Number.isFinite(prim.lng)
+      ? `${prim.lat.toFixed(4)},${prim.lng.toFixed(4)},${Number.isFinite(prim.ms) ? new Date(prim.ms).toISOString() : 'unknown'}`
+      : `row-${i}`;
+    return {
+      ...(f as object),
+      properties: {
+        ...props(f),
+        seen_by: [...sats[r]].sort(),
+        location_id,
+        location_primary: primary.get(r) === i,
+      },
+    };
+  });
+}
 
 // SAT-0b-1. VIIRS confidence letters → FireSignal DetectionConfidence.
 // FIRMS VIIRS reports l / n / h; full words are accepted too. Anything else
@@ -5399,7 +5510,19 @@ async function handlePerimeters(url: URL, cors: CorsHeaders): Promise<Response> 
 // Promise.all cannot swallow a ReferenceError. Each returns a deterministic
 // degraded shape on any miss / parse failure (Invariant III). Zero PII.
 
-type SummarySrc = { count: number | null; status: string; age_seconds: number | null; volcanic_zone_count?: number; wildland_count?: number; hms_date?: string | null };
+type SummarySrc = { count: number | null; status: string; age_seconds: number | null; volcanic_zone_count?: number; wildland_count?: number; hms_date?: string | null; fire_detail?: SummaryFireDetail };
+
+// SAT-0b-2, additive fire detail for the summary. Counts here are LOCATIONS
+// (one fire seen by both satellites = 1); the legacy count / volcanic_zone_count
+// / wildland_count keep their detection meaning.
+type SummaryFireDetail = {
+  health: 'ok' | 'partial';
+  datasets_used: string[];
+  location_count: number;
+  locations: { volcanic: number; wildland_current: number; wildland_older: number; wildland_unknown_age: number };
+  newest_acq_utc: string | null;
+  newest_acq_age_s: number | null;
+};
 
 // Seconds since an ISO timestamp, clamped to >= 0. null if unparseable.
 function summaryAgeSeconds(generatedAt: unknown, nowMs: number): number | null {
@@ -5462,8 +5585,34 @@ async function readSummaryFirms(key: string, nowMs: number): Promise<SummarySrc>
     let volcanic = 0;
     for (const f of feats) { if (isVolcanicHeatFeature(f)) volcanic++; }
     const wildland = Math.max(0, total - volcanic);
+    // SAT-0b-2. A degraded snapshot is never cached by the hotspots handler, so
+    // reading one here would be a bug upstream; treat it as a miss, never as 0.
+    const health = j?.properties?.health;
+    if (health === 'degraded') return { count: null, status: 'miss', age_seconds: age };
+    // Location counts. A feature from a cache that predates SAT-0b-2 carries no
+    // location_primary, so it counts as its own location (= detections).
+    const loc = { volcanic: 0, wildland_current: 0, wildland_older: 0, wildland_unknown_age: 0 };
+    let newestMs = -Infinity;
+    for (const f of feats) {
+      const p = f?.properties ?? {};
+      const t = typeof p.acq_datetime_utc === 'string' ? Date.parse(p.acq_datetime_utc) : NaN;
+      if (Number.isFinite(t) && t > newestMs) newestMs = t;
+      if (p.location_primary === false) continue;
+      if (isVolcanicHeatFeature(f)) loc.volcanic++;
+      else if (p.freshness_status === 'FRESH' || p.freshness_status === 'STALE_OK') loc.wildland_current++;
+      else if (p.freshness_status === 'STALE_DROP') loc.wildland_older++;
+      else loc.wildland_unknown_age++;
+    }
+    const fire_detail: SummaryFireDetail = {
+      health: health === 'partial' ? 'partial' : 'ok',
+      datasets_used: Array.isArray(j?.properties?.datasets_used) ? j.properties.datasets_used.filter((d: unknown) => typeof d === 'string') : [],
+      location_count: loc.volcanic + loc.wildland_current + loc.wildland_older + loc.wildland_unknown_age,
+      locations: loc,
+      newest_acq_utc: Number.isFinite(newestMs) ? new Date(newestMs).toISOString() : null,
+      newest_acq_age_s: Number.isFinite(newestMs) ? Math.max(0, Math.round((nowMs - newestMs) / 1000)) : null,
+    };
     return { count: total, status: total > 0 ? 'detected' : 'none', age_seconds: age,
-      volcanic_zone_count: volcanic, wildland_count: wildland };
+      volcanic_zone_count: volcanic, wildland_count: wildland, fire_detail };
   } catch {
     return { count: null, status: 'miss', age_seconds: null };
   }
@@ -5523,7 +5672,10 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
   }
   if (warmTasks.length) await Promise.allSettled(warmTasks);
 
-  const degraded = summarySrcIsBad(smoke) || summarySrcIsBad(perim) || summarySrcIsBad(fire);
+  // SAT-0b-2. One FIRMS satellite down is degraded too: the snapshot is real
+  // but has half the passes, so the homepage's delay line must show.
+  const degraded = summarySrcIsBad(smoke) || summarySrcIsBad(perim) || summarySrcIsBad(fire)
+    || fire.fire_detail?.health === 'partial';
 
   // ── Storm input (P29) ────────────────────────────────────────────────
   // The summary previously read fire/smoke/perimeters only, so the "Active
@@ -5600,7 +5752,17 @@ async function handleHazardsSummary(url: URL, env: Env, cors: CorsHeaders): Prom
     region: 'hawaii',
     generated_at: new Date(nowMs).toISOString(),
     stale: degraded,
-    fire: { count: fire.count ?? 0, volcanic_zone_count: fire.volcanic_zone_count ?? 0, wildland_count: fire.wildland_count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS' },
+    // SAT-0b-2. Unavailable is null + "unavailable", never 0: a zero here is
+    // "no fire seen", and a missing feed is not that. Legacy keys keep their
+    // names and detection meaning; age_seconds is still the FETCH age —
+    // newest_acq_age_s is how old the newest satellite detection is.
+    fire: summarySrcIsBad(fire)
+      ? { count: null, volcanic_zone_count: null, wildland_count: null, status: 'unavailable', age_seconds: fire.age_seconds, source: 'NASA FIRMS',
+          health: 'unavailable', datasets_used: [], location_count: null, locations: null, newest_acq_utc: null, newest_acq_age_s: null }
+      : { count: fire.count, volcanic_zone_count: fire.volcanic_zone_count ?? 0, wildland_count: fire.wildland_count ?? 0, status: fire.status, age_seconds: fire.age_seconds, source: 'NASA FIRMS',
+          health: fire.fire_detail?.health ?? 'ok', datasets_used: fire.fire_detail?.datasets_used ?? [],
+          location_count: fire.fire_detail?.location_count ?? null, locations: fire.fire_detail?.locations ?? null,
+          newest_acq_utc: fire.fire_detail?.newest_acq_utc ?? null, newest_acq_age_s: fire.fire_detail?.newest_acq_age_s ?? null },
     // SAT-0a-1 F7: status is detected | none | unavailable (or miss/unknown if
     // no snapshot could be read); hms_date is the HMS file day, null if unknown.
     smoke: { present: (smoke.count ?? 0) > 0, count: smoke.count ?? 0, status: smoke.status, age_seconds: smoke.age_seconds, source: 'NOAA HMS', hms_date: smoke.hms_date ?? null },

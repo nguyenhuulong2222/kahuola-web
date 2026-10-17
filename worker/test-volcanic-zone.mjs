@@ -66,8 +66,12 @@ ok('firmsCsvToGeojson tags volcanic_zone via inVolcanicZone(lng, lat)',
    /volcanic_zone: inVolcanicZone\(lng, lat\)/.test(src));
 ok('readSummaryFirms derives wildland = total - volcanic',
    /const wildland = Math\.max\(0, total - volcanic\)/.test(src));
+// SAT-0b-2: the fire block now has an unavailable branch (null counts) and an
+// available branch carrying the legacy keys.
 ok('summary fire block adds volcanic_zone_count + wildland_count',
-   /fire: \{[^}]*volcanic_zone_count: fire\.volcanic_zone_count \?\? 0[^}]*wildland_count: fire\.wildland_count \?\? 0/.test(src));
+   /volcanic_zone_count: fire\.volcanic_zone_count \?\? 0, wildland_count: fire\.wildland_count \?\? 0/.test(src));
+ok('summary fire block: unavailable is null counts + status "unavailable", never 0',
+   /count: null, volcanic_zone_count: null, wildland_count: null, status: 'unavailable'/.test(src));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
