@@ -127,6 +127,9 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     alongside detections in the live-map fire panel, with new wording. The
     panel keeps the detection count (ruling); one fire seen by NOAA-20 and
     NOAA-21 currently reads "Current (≤ 12 h): 2".
+  - **Ticket (backlog)** — All hazard cards must be scope-aware. In USA scope
+    the accordion still reads "ACTIVE HAZARDS · HAWAIʻI" and the Flash Flood
+    card still says Hawaiʻi. (Smoke is covered by SAT-1a.)
   - **n8n restart runbook (run AFTER the SAT-0b batch deploy)** — Docker has
     been down since 2026-07-19; last successful Morning Brief 2026-07-16.
     1. Long rotates the Facebook token and deletes the v4.6 BACKUP file.

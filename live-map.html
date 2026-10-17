@@ -2778,6 +2778,32 @@
           <span class="det-legend-dot det-legend-square" aria-hidden="true"></span>
           <span>Air quality monitor (EPA AQI)</span>
         </div>
+        <!-- SAT-0b-3b. Shown only while the layer is on AND has point markers
+             on the map (syncPointLegendRows), so a quiet day adds no rows. -->
+        <div class="det-legend-row" id="legend-row-alerts" hidden>
+          <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 10.5 L1 10.5 Z" fill="#ff9800" stroke="#fff" stroke-width="1"/></svg>
+          <span>NWS alert (point)</span>
+        </div>
+        <div class="det-legend-row" id="legend-row-coastal" hidden>
+          <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 6 L6 11 L1 6 Z" fill="#58a6ff" stroke="#fff" stroke-width="1"/></svg>
+          <span>Coastal alert (NWS)</span>
+        </div>
+        <div class="det-legend-row" id="legend-row-lsr" hidden>
+          <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.8 L7.4 4.4 L11.2 4.6 L8.2 7 L9.2 10.8 L6 8.7 L2.8 10.8 L3.8 7 L0.8 4.6 L4.6 4.4 Z" fill="#ffb74d" stroke="#fff" stroke-width="0.8"/></svg>
+          <span>Local storm report (NWS)</span>
+        </div>
+        <div class="det-legend-row" id="legend-row-ff" hidden>
+          <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><rect x="0.5" y="2.5" width="11" height="7" rx="3.5" fill="#58a6ff" stroke="#e9f4ff" stroke-width="0.8"/><path d="M2.5 5 q0.75 -1 1.5 0 t1.5 0 t1.5 0 t1.5 0 M2.5 7 q0.75 -1 1.5 0 t1.5 0 t1.5 0 t1.5 0" fill="none" stroke="#fff" stroke-width="0.7"/></svg>
+          <span>Flash flood (NWS)</span>
+        </div>
+        <div class="det-legend-row" id="legend-row-tsu" hidden>
+          <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 9.5 C3.5 9.5 4 3 7.5 2.5 C10 2.2 11 5 8.8 5.8 C7.5 6.1 7 4.8 8 4.4 M1.5 9.5 L10.5 9.5" fill="none" stroke="#ff1744" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Tsunami (NWS TWC)</span>
+        </div>
+        <div class="det-legend-row" id="legend-row-tc" hidden>
+          <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 4.2 A4.8 4.8 0 0 1 5 1.3 M9.8 7.8 A4.8 4.8 0 0 1 7 10.7" fill="none" stroke="#ff6a00" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="6" r="2.6" fill="#ff6a00" stroke="#ffd5b5" stroke-width="0.8"/></svg>
+          <span>Tropical cyclone (NHC)</span>
+        </div>
       </div>
 
       <div id="perimeter-map-legend" class="perim-legend" hidden aria-hidden="true">
@@ -5004,7 +5030,9 @@
       // WATCH (Flash Flood Watch) = blue #58a6ff, lower opacity
       ensureLayer({ id: "flash-flood-fill", type: "fill", source: "flash-flood", filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]], paint: { "fill-color": ["match", ["get", "severity"], "WARNING", "#ff1744", "WATCH", "#58a6ff", "#8bc4ff"], "fill-opacity": flashFloodVisible ? ["match", ["get", "severity"], "WARNING", 0.25, "WATCH", 0.08, 0.06] : 0 } });
       ensureLayer({ id: "flash-flood-outline", type: "line", source: "flash-flood", filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]], paint: { "line-color": ["match", ["get", "severity"], "WARNING", "#ff4d6d", "WATCH", "#b1d9ff", "#b1d9ff"], "line-width": ["match", ["get", "severity"], "WARNING", 2.5, "WATCH", 1.8, 1.8], "line-opacity": flashFloodVisible ? ["match", ["get", "severity"], "WARNING", 0.9, "WATCH", 0.72, 0.72] : 0 } });
-      ensureLayer({ id: "flash-flood-point", type: "circle", source: "flash-flood", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 7, "circle-color": ["match", ["get", "severity"], "WARNING", "#ff1744", "WATCH", "#58a6ff", "#8bc4ff"], "circle-stroke-width": 1.5, "circle-stroke-color": "#e9f4ff", "circle-opacity": flashFloodVisible ? 1 : 0, "circle-stroke-opacity": flashFloodVisible ? 1 : 0 } });
+      // SAT-0b-3b. A wave pill in the same severity colours, not a disc.
+      ensureMarkerIcons();
+      ensureLayer({ id: "flash-flood-point", type: "symbol", source: "flash-flood", filter: ["==", ["geometry-type"], "Point"], layout: { "icon-image": ["concat", "kahuola-ff-", ["match", ["get", "severity"], "WARNING", "#ff1744", "WATCH", "#58a6ff", "#8bc4ff"]], "icon-size": 0.85, "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": flashFloodVisible ? 1 : 0 } });
       if (!map.__flashFloodHoverBound) { map.__flashFloodHoverBound = true;["flash-flood-fill", "flash-flood-point"].forEach((id) => { map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; }); }); }
       syncFlashFloodLayerVisibility();
     }
@@ -5013,7 +5041,10 @@
       const sevColor = ["match", ["get", "severity"], "CRITICAL", "#b71c1c", "WARNING", "#ff6a00", "WATCH", "#ff9800", "ADVISORY", "#ffca28", "#90a4ae"];
       ensureLayer({ id: "alerts-fill", type: "fill", source: "alerts", filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]], paint: { "fill-color": sevColor, "fill-opacity": alertsVisible ? 0.12 : 0 } });
       ensureLayer({ id: "alerts-outline", type: "line", source: "alerts", filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]], paint: { "line-color": sevColor, "line-width": 1.8, "line-opacity": alertsVisible ? 0.7 : 0 } });
-      ensureLayer({ id: "alerts-point", type: "circle", source: "alerts", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 6, "circle-color": sevColor, "circle-stroke-width": 1.5, "circle-stroke-color": "#fff", "circle-opacity": alertsVisible ? 0.9 : 0, "circle-stroke-opacity": alertsVisible ? 0.9 : 0 } });
+      // SAT-0b-3b. A warning triangle in the same severity colour, not a disc:
+      // round orange is fire only.
+      ensureMarkerIcons();
+      ensureLayer({ id: "alerts-point", type: "symbol", source: "alerts", filter: ["==", ["geometry-type"], "Point"], layout: { "icon-image": ["concat", "kahuola-tri-", sevColor], "icon-size": 0.75, "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": alertsVisible ? 0.95 : 0 } });
       if (!map.__alertsHoverBound) { map.__alertsHoverBound = true; ["alerts-fill", "alerts-point"].forEach((id) => { map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; }); }); }
       syncAlertsLayerVisibility();
     }
@@ -5080,6 +5111,65 @@
         g.arcTo(inset, inset, inset + w, inset, r); g.closePath();
         g.fillStyle = fill; g.globalAlpha = 1; g.fill();
         g.lineWidth = 1.6 * ratio; g.strokeStyle = "rgba(255,255,255,0.9)"; g.stroke();
+      } else if (id.startsWith("kahuola-tri-") || id.startsWith("kahuola-dia-")) {
+        // SAT-0b-3b. NWS alert point = warning triangle; coastal point = diamond.
+        const fill = id.slice(12), m = 3 * ratio, e = size - m;
+        g.beginPath();
+        if (id.startsWith("kahuola-tri-")) { g.moveTo(size / 2, m); g.lineTo(e, e - ratio); g.lineTo(m, e - ratio); }
+        else { g.moveTo(size / 2, m); g.lineTo(e, size / 2); g.lineTo(size / 2, e); g.lineTo(m, size / 2); }
+        g.closePath(); g.fillStyle = fill; g.fill();
+        g.lineJoin = "round"; g.lineWidth = 1.6 * ratio; g.strokeStyle = "#ffffff"; g.stroke();
+      } else if (id === "kahuola-lsr-star") {
+        // SAT-0b-3b. NWS local storm report = five-point star.
+        const cx = size / 2, cy = size / 2 + ratio, R = 10 * ratio, r = 4.2 * ratio;
+        g.beginPath();
+        for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R; g.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a)); }
+        g.closePath(); g.fillStyle = "#ffb74d"; g.fill();
+        g.lineJoin = "round"; g.lineWidth = 1.6 * ratio; g.strokeStyle = "#ffffff"; g.stroke();
+      } else if (id.startsWith("kahuola-tc-")) {
+        // SAT-0b-3b. Tropical-cyclone glyph (ring + two hooks), the symbol NHC
+        // itself uses: a storm centre must not be a round orange disc.
+        //   kahuola-tc-centre  current position (#ff6a00, light stroke)
+        //   kahuola-tc-fc      forecast point with a wind value
+        //   kahuola-tc-nodata  forecast point without one: hollow grey
+        const kind = id.slice(11);
+        const fill = kind === "centre" ? "#ff6a00" : kind === "fc" ? "#ff9d4d" : null;
+        const stroke = kind === "centre" ? "#ffd5b5" : kind === "fc" ? "#2a1405" : "#c2cee4";
+        const cx = size / 2, cy = size / 2, R = 5.5 * ratio;
+        g.lineWidth = 2.2 * ratio; g.strokeStyle = fill || stroke; g.lineCap = "round";
+        g.beginPath(); g.arc(cx, cy, R + 4 * ratio, Math.PI * 1.05, Math.PI * 1.55); g.stroke();
+        g.beginPath(); g.arc(cx, cy, R + 4 * ratio, Math.PI * 0.05, Math.PI * 0.55); g.stroke();
+        g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2);
+        if (fill) { g.fillStyle = fill; g.fill(); }
+        g.lineWidth = 1.5 * ratio; g.strokeStyle = stroke; g.stroke();
+      } else if (id.startsWith("kahuola-ff-")) {
+        // SAT-0b-3b. Flash flood point = a pill with two white wave lines, in
+        // the existing severity colour (warning red, watch blue, other pale
+        // blue). Wider than tall, so it never reads as a fire disc.
+        const fill = id.slice(11), h = 14 * ratio, w = 22 * ratio, x = (size - w) / 2, y = (size - h) / 2, r = h / 2;
+        g.beginPath();
+        g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+        g.lineTo(x + r, y + h); g.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5); g.closePath();
+        g.fillStyle = fill; g.fill(); g.lineWidth = 1.5 * ratio; g.strokeStyle = "#e9f4ff"; g.stroke();
+        g.lineWidth = 1.5 * ratio; g.strokeStyle = "#ffffff"; g.lineCap = "round";
+        for (const dy of [-2.4 * ratio, 2.4 * ratio]) {
+          const yy = size / 2 + dy; g.beginPath(); g.moveTo(x + 4 * ratio, yy);
+          for (let k = 0; k < 3; k++) { const x0 = x + 4 * ratio + k * 4.7 * ratio; g.quadraticCurveTo(x0 + 1.2 * ratio, yy - 1.8 * ratio, x0 + 2.35 * ratio, yy); g.quadraticCurveTo(x0 + 3.5 * ratio, yy + 1.8 * ratio, x0 + 4.7 * ratio, yy); }
+          g.stroke();
+        }
+      } else if (id === "kahuola-tsu-wave") {
+        // SAT-0b-3b. Tsunami point = a red breaking-wave curl on a base line,
+        // white-edged. Open and asymmetric, unlike a filled red fire cluster.
+        const draw = (color, width) => {
+          g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round"; g.lineJoin = "round";
+          g.beginPath(); g.moveTo(3 * ratio, 19 * ratio);
+          g.bezierCurveTo(7 * ratio, 19 * ratio, 8 * ratio, 6 * ratio, 15 * ratio, 5 * ratio);
+          g.bezierCurveTo(20 * ratio, 4.5 * ratio, 22 * ratio, 10 * ratio, 17.5 * ratio, 11.5 * ratio);
+          g.bezierCurveTo(15 * ratio, 12.2 * ratio, 14 * ratio, 9.5 * ratio, 16 * ratio, 8.8 * ratio);
+          g.stroke();
+          g.beginPath(); g.moveTo(3 * ratio, 19 * ratio); g.lineTo(21 * ratio, 19 * ratio); g.stroke();
+        };
+        draw("#ffffff", 5.2 * ratio); draw("#ff1744", 2.8 * ratio);
       } else if (id === "kahuola-wq-drop") {
         const cx = size / 2, top = 2 * ratio, rad = 7 * ratio, cy = size - 2 * ratio - rad;
         g.beginPath();
@@ -5092,10 +5182,33 @@
       } else return null;
       return { data: g.getImageData(0, 0, size, size), ratio };
     }
+    // SAT-0b-3b. A legend row per non-fire point shape, shown while its layer
+    // is on and actually has point markers on the map. Re-checked on idle,
+    // which follows every data update, toggle and pan.
+    const POINT_LEGEND_ROWS = [
+      ["legend-row-alerts", "alerts", ["alerts-point"]],
+      ["legend-row-coastal", "coastal", ["coastal-point"]],
+      ["legend-row-lsr", "local-hazards", ["local-hazards-point"]],
+      ["legend-row-tc", "hurricane", ["hurricane-point"]],
+      ["legend-row-ff", "flash-flood", ["flash-flood-point"]],
+      ["legend-row-tsu", "tsunami", ["tsunami-point"]],
+    ];
+    function syncPointLegendRows() {
+      for (const [rowId, srcId, layers] of POINT_LEGEND_ROWS) {
+        const row = document.getElementById(rowId); if (!row) continue;
+        let on = false;
+        try {
+          on = layers.some((id) => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none" && Number(map.getPaintProperty(id, "icon-opacity") ?? 1) > 0)
+            && map.getSource(srcId) && map.querySourceFeatures(srcId).some((f) => /Point/.test(f.geometry && f.geometry.type));
+        } catch (_) { on = false; }
+        row.hidden = !on;
+      }
+    }
     function ensureMarkerIcons() {
       if (!map.hasImage("kahuola-wq-drop")) { const ic = drawMarkerIcon("kahuola-wq-drop"); if (ic) map.addImage("kahuola-wq-drop", ic.data, { pixelRatio: ic.ratio }); }
       if (map.__markerIconsBound) return;
       map.__markerIconsBound = true;
+      map.on("idle", syncPointLegendRows);
       map.on("styleimagemissing", (e) => {
         if (!e || typeof e.id !== "string" || !e.id.startsWith("kahuola-") || map.hasImage(e.id)) return;
         const ic = drawMarkerIcon(e.id);
@@ -5415,12 +5528,17 @@
       ensureSource("tsunami", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       ensureLayer({ id: "tsunami-fill", type: "fill", source: "tsunami", paint: { "fill-color": "#ff1744", "fill-opacity": tsunamiVisible ? 0.20 : 0 } });
       ensureLayer({ id: "tsunami-outline", type: "line", source: "tsunami", paint: { "line-color": "#ff4d6d", "line-width": 2.5, "line-opacity": tsunamiVisible ? 0.90 : 0 } });
-      ensureLayer({ id: "tsunami-point", type: "circle", source: "tsunami", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 10, "circle-color": "#ff1744", "circle-stroke-width": 2, "circle-stroke-color": "#fff", "circle-opacity": tsunamiVisible ? 1 : 0, "circle-stroke-opacity": tsunamiVisible ? 1 : 0 } });
+      // SAT-0b-3b. A red breaking-wave glyph, not a filled red disc that reads
+      // as a fire cluster.
+      ensureMarkerIcons();
+      ensureLayer({ id: "tsunami-point", type: "symbol", source: "tsunami", filter: ["==", ["geometry-type"], "Point"], layout: { "icon-image": "kahuola-tsu-wave", "icon-size": 1.1, "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": tsunamiVisible ? 1 : 0 } });
       if (!map.__tsunamiHoverBound) { map.__tsunamiHoverBound = true;["tsunami-fill", "tsunami-point"].forEach(id => { map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; }); }); }
     }
     function ensureHurricaneLayers() {
       ensureSource("hurricane", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      ensureLayer({ id: "hurricane-point", type: "circle", source: "hurricane", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 14, "circle-color": "#ff6a00", "circle-stroke-width": 2.5, "circle-stroke-color": "#ffd5b5", "circle-opacity": hurricaneVisible ? 0.9 : 0, "circle-stroke-opacity": hurricaneVisible ? 1 : 0 } });
+      // SAT-0b-3b. NHC's tropical-cyclone glyph, not a round orange disc.
+      ensureMarkerIcons();
+      ensureLayer({ id: "hurricane-point", type: "symbol", source: "hurricane", filter: ["==", ["geometry-type"], "Point"], layout: { "icon-image": "kahuola-tc-centre", "icon-size": 1.25, "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": hurricaneVisible ? 0.95 : 0 } });
       if (!map.__hurricaneHoverBound) { map.__hurricaneHoverBound = true; map.on("mouseenter", "hurricane-point", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "hurricane-point", () => { map.getCanvas().style.cursor = ""; }); }
     }
     // ── P29b · FIX 3 — forecast track, points and labels ──────────────────
@@ -5430,6 +5548,7 @@
     // source, sibling layers each filtered by geometry-type.
     function ensureHurricaneForecastLayers() {
       ensureSource("hurricane-forecast", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureMarkerIcons();
 
       // ── P29c · cone of uncertainty ────────────────────────────────────
       // Added FIRST so it sits BENEATH the track line and every forecast point:
@@ -5497,28 +5616,29 @@
       // marker stays visually dominant over every forecast point.
       const _fcHasWind = ["has", "max_wind_kt"];
       ensureLayer({
+        // SAT-0b-3b. Same encoding as before, as a cyclone glyph instead of a
+        // round orange disc: size from max_wind_kt (glyph is 24 px at 1.0, so
+        // the old 4.5–11 px radii map to 0.4–0.95), and a hollow grey glyph at
+        // a fixed small size the scale never produces when wind is missing.
         id: "hurricane-forecast-point",
-        type: "circle",
+        type: "symbol",
         source: "hurricane-forecast",
         filter: ["==", ["geometry-type"], "Point"],
-        paint: {
-          "circle-radius": ["case", _fcHasWind,
+        layout: {
+          "icon-image": ["case", _fcHasWind, "kahuola-tc-fc", "kahuola-tc-nodata"],
+          "icon-size": ["case", _fcHasWind,
             ["interpolate", ["linear"], ["get", "max_wind_kt"],
-              25, 4.5,    // depression
-              34, 5.5,    // tropical storm
-              64, 7.5,    // hurricane
-              96, 9.5,    // major
-              140, 11],
-            // Missing wind: a small FIXED size that is never produced by the
-            // scale above, so it cannot be mistaken for a weak storm.
-            3.5],
-          "circle-color": "#ff9d4d",
-          "circle-stroke-width": ["case", _fcHasWind, 1.6, 1.4],
-          // Hollow + grey stroke when the value is missing — reads as "no data",
-          // not as "small storm".
-          "circle-stroke-color": ["case", _fcHasWind, "#2a1405", "#c2cee4"],
-          "circle-opacity": hurricaneVisible ? ["case", _fcHasWind, 0.95, 0.12] : 0,
-          "circle-stroke-opacity": hurricaneVisible ? 1 : 0
+              25, 0.40,   // depression
+              34, 0.48,   // tropical storm
+              64, 0.64,   // hurricane
+              96, 0.80,   // major
+              140, 0.95],
+            0.32],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true
+        },
+        paint: {
+          "icon-opacity": hurricaneVisible ? 1 : 0
         }
       });
 
@@ -5558,6 +5678,7 @@
 
     function ensureLocalHazardLayers() {
       ensureSource("local-hazards", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureMarkerIcons();
 
       ensureLayer({
         id: "local-hazards-line",
@@ -5595,18 +5716,13 @@
       });
 
       ensureLayer({
+        // SAT-0b-3b. A star, not a round orange disc: round orange is fire only.
         id: "local-hazards-point",
-        type: "circle",
+        type: "symbol",
         source: "local-hazards",
         filter: ["any", ["==", ["geometry-type"], "Point"], ["==", ["geometry-type"], "MultiPoint"]],
-        paint: {
-          "circle-radius": 10,
-          "circle-color": "#ffb74d",
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-          "circle-opacity": localHazardsVisible ? 0.95 : 0,
-          "circle-stroke-opacity": localHazardsVisible ? 1 : 0
-        }
+        layout: { "icon-image": "kahuola-lsr-star", "icon-size": 0.9, "icon-allow-overlap": true, "icon-ignore-placement": true },
+        paint: { "icon-opacity": localHazardsVisible ? 0.95 : 0 }
       });
 
       if (!map.__localHazardsHoverBound) {
@@ -6610,8 +6726,7 @@
         map.setPaintProperty("local-hazards-outline", "line-opacity", localHazardsVisible ? 0.82 : 0);
       }
       if (map.getLayer("local-hazards-point")) {
-        map.setPaintProperty("local-hazards-point", "circle-opacity", localHazardsVisible ? 0.95 : 0);
-        map.setPaintProperty("local-hazards-point", "circle-stroke-opacity", localHazardsVisible ? 1 : 0);
+        map.setPaintProperty("local-hazards-point", "icon-opacity", localHazardsVisible ? 0.95 : 0);
       }
     }
 
@@ -6619,6 +6734,7 @@
 
     function ensureCoastalLayers() {
       ensureSource("coastal", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureMarkerIcons();
       ensureLayer({
         id: "coastal-fill", type: "fill", source: "coastal",
         filter: ["any", ["==", ["geometry-type"], "Polygon"], ["==", ["geometry-type"], "MultiPolygon"]],
@@ -6638,14 +6754,15 @@
         }
       });
       ensureLayer({
-        id: "coastal-point", type: "circle", source: "coastal",
+        // SAT-0b-3b. A diamond in the same severity colour, not a disc.
+        id: "coastal-point", type: "symbol", source: "coastal",
         filter: ["==", ["geometry-type"], "Point"],
-        layout: { visibility: coastalVisible ? "visible" : "none" },
-        paint: {
-          "circle-radius": 8,
-          "circle-color": ["match", ["get", "severity"], "Extreme", "#ff1744", "Severe", "#ff1744", "Moderate", "#ff9800", "#58a6ff"],
-          "circle-stroke-width": 2, "circle-stroke-color": "#ffffff", "circle-opacity": 0.95
-        }
+        layout: {
+          visibility: coastalVisible ? "visible" : "none",
+          "icon-image": ["concat", "kahuola-dia-", ["match", ["get", "severity"], "Extreme", "#ff1744", "Severe", "#ff1744", "Moderate", "#ff9800", "#58a6ff"]],
+          "icon-size": 0.85, "icon-allow-overlap": true, "icon-ignore-placement": true
+        },
+        paint: { "icon-opacity": 0.95 }
       });
     }
     function updateCoastalSource(features) {
@@ -6808,7 +6925,7 @@
       setLayerVisibility("flash-flood-point", flashFloodVisible);
       if (map.getLayer("flash-flood-fill")) map.setPaintProperty("flash-flood-fill", "fill-opacity", flashFloodVisible ? ["match", ["get", "severity"], "WARNING", 0.25, "WATCH", 0.08, 0.06] : 0);
       if (map.getLayer("flash-flood-outline")) map.setPaintProperty("flash-flood-outline", "line-opacity", flashFloodVisible ? ["match", ["get", "severity"], "WARNING", 0.9, "WATCH", 0.72, 0.72] : 0);
-      if (map.getLayer("flash-flood-point")) { map.setPaintProperty("flash-flood-point", "circle-opacity", flashFloodVisible ? 1 : 0); map.setPaintProperty("flash-flood-point", "circle-stroke-opacity", flashFloodVisible ? 1 : 0); }
+      if (map.getLayer("flash-flood-point")) { map.setPaintProperty("flash-flood-point", "icon-opacity", flashFloodVisible ? 1 : 0); }
       ["flood-btn-panel-desktop", "flood-btn-panel-mobile", "flood-btn-mobile"].forEach((id) => { const el = document.getElementById(id); if (!el) return; el.textContent = flashFloodVisible ? (_t("map.flood_on") || "Flood Layers: On") : (_t("map.flood_off") || "Flood Layers: Off"); el.classList.toggle("active", flashFloodVisible); });
     }
     function syncFloodContextLayerVisibility() {
