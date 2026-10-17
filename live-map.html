@@ -3306,7 +3306,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=904ca468"></script>
+  <script src="/i18n/kahuola-i18n.js?v=29d97b05"></script>
 
   <script>
     "use strict";
@@ -8663,10 +8663,19 @@
       // caution is our own copy and localizes, and says so on its own line.
       const wEnv = oceanData.water;
       const wSigs = (oceanUsable(wEnv) && Array.isArray(wEnv.signals)) ? wEnv.signals : [];
+      // SAT-0c-hotfix. "No active advisories" is a statement about DOH, so it is
+      // only said when DOH answered. A missing or failed DOH source says so and
+      // links a DOH page that is reachable (the Worker picks it).
+      const dohDown = oceanUsable(wEnv) && !(wEnv.source_health && wEnv.source_health.doh === "ok");
+      const dohLink = wEnv && typeof wEnv.official_source_url === "string" && /^https:\/\//.test(wEnv.official_source_url)
+        ? ` <a href="${escapeHtml(wEnv.official_source_url)}" target="_blank" rel="noopener">Hawaiʻi DOH →</a>` : "";
+      const dohDownLine = dohDown
+        ? `<div class="hur-line">${escapeHtml(_t("map.oc_wq_doh_unavailable") || "Water quality advisories unavailable: the Hawaiʻi DOH source can't be reached right now. This is not an all-clear.")}${dohLink}</div>`
+        : "";
       let wInner;
       if (!oceanUsable(wEnv)) wInner = oceanUnavailableLine();
-      else if (!wSigs.length) wInner = `<div class="hur-line">${escapeHtml(_t("map.oc_wq_clear") || "No active water quality advisories")}</div>`;
-      else wInner = wSigs.map((sg) => {
+      else if (!wSigs.length) wInner = dohDownLine || `<div class="hur-line">${escapeHtml(_t("map.oc_wq_clear") || "No active water quality advisories")}</div>`;
+      else wInner = dohDownLine + wSigs.map((sg) => {
         const isDoh = sg.kind === "doh_advisory";
         const chip = `<span class="ocean-chip ${isDoh ? "ocean-chip--doh" : "ocean-chip--runoff"}">` +
           `${isDoh ? "⚠ " : "◦ "}${escapeHtml(isDoh ? (sg.advisory_type || _t("ocean.wq_doh") || "DOH advisory") : (_t("ocean.wq_runoff") || "Runoff caution"))}</span>`;
@@ -8674,7 +8683,7 @@
         const when = sg.started_at ? timeAgoMap(sg.started_at) : "";
         return oceanRow(sg.island_label || _t("ocean.wq_statewide") || "Statewide", "",
           `${detail} — ${sg.source}${when ? " · " + when : ""}`, chip);
-      }).join("") + waterQualityExplainerHtml(wSigs) + (wEnv.official_source_url
+      }).join("") + waterQualityExplainerHtml(wSigs) + (wEnv.official_source_url && !dohDown
         ? `<div class="hur-note"><a href="${escapeHtml(wEnv.official_source_url)}" target="_blank" rel="noopener">Hawaiʻi DOH →</a></div>` : "");
       html += oceanGroup("map.oc_heading_water", "Water quality", wInner);
 

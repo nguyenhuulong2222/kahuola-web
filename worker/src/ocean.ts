@@ -937,6 +937,15 @@ export const _internals = {
 const DOH_EVENTS_URL =
   'https://eha-cloud.doh.hawaii.gov/cwb/api/events?expand=locations&status=Open&statuses=Open';
 const DOH_PUBLIC_URL = 'https://eha-cloud.doh.hawaii.gov/cwb/#!/viewer';
+// SAT-0c-hotfix. Where to send people when the DOH events feed cannot be read.
+// The feed and the viewer share a host (eha-cloud.doh.hawaii.gov); its TLS
+// certificate expired 2026-10-16 23:59:59 UTC, which is what broke the feed,
+// so linking the viewer would land people on a browser certificate warning.
+// The Clean Water Branch home page is on health.hawaii.gov (verified valid
+// certificate, 2026-10-17) and points to DOH's current advisories.
+const DOH_FALLBACK_URL = 'https://health.hawaii.gov/cwb/';
+// SAT-0c-hotfix. A DOH-down answer is cached briefly so recovery shows quickly.
+const WQ_DOH_DOWN_TTL = 300;
 const NWS_ALERTS_HISTORY = 'https://api.weather.gov/alerts';
 const RUNOFF_LOOKBACK_HOURS = 72;
 
@@ -1267,6 +1276,12 @@ export async function handleOceanWaterQuality(
       'Hawaiʻi DOH / NWS', WQ_TTL, cors, deps, 'unavailable');
   }
 
+  // SAT-0c-hotfix. DOH unreadable while NWS answered: the runoff half is real,
+  // the advisory half is unknown. That is "partial", never "clear" — "clear"
+  // told people there were no advisories while DOH had 13 open (2026-10-17).
+  const dohDown = doh === null;
+  const sourceUrl = dohDown ? DOH_FALLBACK_URL : DOH_PUBLIC_URL;
+
   const signals: WaterQualitySignal[] = doh ? [...doh] : [];
   const dohIslands = new Set(signals.map((x) => x.island).filter(Boolean) as string[]);
 
@@ -1281,7 +1296,7 @@ export async function handleOceanWaterQuality(
       started_at: onset || null,
       // Says plainly that this is ours, not DOH's.
       source: 'Derived from NWS flash flood warnings · Kahu Ola',
-      official_source_url: DOH_PUBLIC_URL,
+      official_source_url: sourceUrl,
       fetched_at,
       // P27c. No geometry by design: a runoff caution is an island-level
       // inference from a county-wide warning, not a mapped extent. Drawing a
@@ -1301,19 +1316,27 @@ export async function handleOceanWaterQuality(
     stale_after_seconds: WQ_TTL,
     freshness: 'FRESH',
     // A clean ocean is NORMAL and reports 200 with an empty list — never an
-    // error, never a blank (Invariant 3).
-    status: signals.length ? 'active' : 'clear',
+    // error, never a blank (Invariant 3). "clear" requires DOH to have answered.
+    status: dohDown ? 'partial' : (signals.length ? 'active' : 'clear'),
     signals,
-    doh_advisory_count: signals.filter((x) => x.kind === 'doh_advisory').length,
+    // null, not 0, when DOH could not be read: zero is a statement about DOH.
+    doh_advisory_count: dohDown ? null : signals.filter((x) => x.kind === 'doh_advisory').length,
     runoff_caution_count: signals.filter((x) => x.kind === 'runoff_caution').length,
     runoff_lookback_hours: RUNOFF_LOOKBACK_HOURS,
     source_health: sourceHealth,
-    official_source_url: DOH_PUBLIC_URL,
-    note: 'Brown water and beach advisories are issued by the Hawaiʻi Department of Health. ' +
-      'Runoff cautions are derived by Kahu Ola from NWS flash flood warnings and are not DOH advisories.',
+    official_source_url: sourceUrl,
+    note: dohDown
+      ? 'Hawaiʻi DOH water quality advisories could not be retrieved. This is not an all-clear: ' +
+        'check the Hawaiʻi Department of Health directly. Runoff cautions below are derived by Kahu Ola ' +
+        'from NWS flash flood warnings and are not DOH advisories.'
+      : 'Brown water and beach advisories are issued by the Hawaiʻi Department of Health. ' +
+        'Runoff cautions are derived by Kahu Ola from NWS flash flood warnings and are not DOH advisories.',
   });
 
-  await writeSnapshot('water-quality', body);
-  await writeRouteCache('water-quality', body, WQ_TTL);
-  return deps.jsonResp(body, 200, jsonHeaders(WQ_TTL, 'MISS', cors));
+  // SAT-0c-hotfix. Only a DOH-backed answer becomes the fallback snapshot; a
+  // partial one would overwrite the last real advisory list with "unknown".
+  if (!dohDown) await writeSnapshot('water-quality', body);
+  const ttl = dohDown ? WQ_DOH_DOWN_TTL : WQ_TTL;
+  await writeRouteCache('water-quality', body, ttl);
+  return deps.jsonResp(body, 200, jsonHeaders(ttl, 'MISS', cors));
 }
