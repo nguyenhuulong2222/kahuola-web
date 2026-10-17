@@ -5070,8 +5070,15 @@ function parseHmsKml(text: string): HmsParse {
   return { features: out, dropped, total_placemarks: total, failed: out.length === 0 };
 }
 
-// Bbox overlap between a ring and a [west, south, east, north] box.
-function ringIntersectsBbox(ring: number[][], west: number, south: number, east: number, north: number): boolean {
+// SAT-0a-6. TRUE intersection between a polygon ring and a [west, south, east,
+// north] box. It used to compare bounding boxes only, and HMS draws
+// continent-sized polygons (e.g. lon −164…−32, lat 17…73 on 2023-08-07) whose
+// bounding box covers Hawaiʻi while no part of the smoke does: those read as
+// "smoke detected near Hawaiʻi" on days HMS outlined nothing here. The bbox
+// test stays as a cheap reject; a ring passes only if a vertex is inside the
+// box, a box corner is inside the ring (box wholly covered), or an edge of the
+// ring crosses an edge of the box. Pure, never throws on validated rings.
+function ringIntersectsBox(ring: number[][], west: number, south: number, east: number, north: number): boolean {
   let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
   for (const c of ring) {
     if (c[0] < minLon) minLon = c[0];
@@ -5079,7 +5086,49 @@ function ringIntersectsBbox(ring: number[][], west: number, south: number, east:
     if (c[1] < minLat) minLat = c[1];
     if (c[1] > maxLat) maxLat = c[1];
   }
-  return maxLon >= west && minLon <= east && maxLat >= south && minLat <= north;
+  if (maxLon < west || minLon > east || maxLat < south || minLat > north) return false;
+
+  for (const c of ring) {
+    if (c[0] >= west && c[0] <= east && c[1] >= south && c[1] <= north) return true;
+  }
+  const corners: Array<[number, number]> = [[west, south], [east, south], [east, north], [west, north]];
+  for (const [x, y] of corners) if (pointInRing(x, y, ring)) return true;
+
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const a = ring[i], b = ring[(i + 1) % n];
+    for (let k = 0; k < 4; k++) {
+      const c = corners[k], d = corners[(k + 1) % 4];
+      if (segmentsCross(a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1])) return true;
+    }
+  }
+  return false;
+}
+
+// Even-odd ray cast. Ring may or may not repeat its first vertex.
+function pointInRing(x: number, y: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// Closed-segment intersection (touching counts), via orientation signs.
+function segmentsCross(ax: number, ay: number, bx: number, by: number, cx: number, cy: number, dx: number, dy: number): boolean {
+  const orient = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) =>
+    Math.sign((qx - px) * (ry - py) - (qy - py) * (rx - px));
+  const onSeg = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) =>
+    Math.min(px, qx) <= rx && rx <= Math.max(px, qx) && Math.min(py, qy) <= ry && ry <= Math.max(py, qy);
+  const o1 = orient(ax, ay, bx, by, cx, cy), o2 = orient(ax, ay, bx, by, dx, dy);
+  const o3 = orient(cx, cy, dx, dy, ax, ay), o4 = orient(cx, cy, dx, dy, bx, by);
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && onSeg(ax, ay, bx, by, cx, cy)) return true;
+  if (o2 === 0 && onSeg(ax, ay, bx, by, dx, dy)) return true;
+  if (o3 === 0 && onSeg(cx, cy, dx, dy, ax, ay)) return true;
+  if (o4 === 0 && onSeg(cx, cy, dx, dy, bx, by)) return true;
+  return false;
 }
 
 // Unavailable path — writes the 60s status key ONLY (no-clobber of the primary
@@ -5148,9 +5197,10 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
   // minutes old. generated_at (envelope) stays the response time.
   const hmsDayIso = `${dateStr}T00:00:00.000Z`;
 
-  // Hawaii bbox filter — KML covers all of North America; keep only overlaps.
+  // Hawaiʻi filter — KML covers all of North America; keep only polygons that
+  // truly intersect the Hawaiʻi box (SAT-0a-6, ringIntersectsBox).
   const signals: Feature[] = parsed.features
-    .filter((p) => ringIntersectsBbox(p.ring, hwWest, hwSouth, hwEast, hwNorth))
+    .filter((p) => ringIntersectsBox(p.ring, hwWest, hwSouth, hwEast, hwNorth))
     .map((p, idx) => {
       const density = p.density ?? 'light';   // observational default; never fabricate medium/heavy
       const severity = density === 'heavy' ? 'WARNING' : density === 'medium' ? 'WATCH' : 'INFO';
