@@ -3028,7 +3028,7 @@ async function fetchFirmsMultiSensor(
   if (sensorsUsed.length === 0) {
     return { hotspots: [], volcanic_count: 0, volcanic_hotspots: [], health: 'degraded', sensors_used: [] };
   }
-  // Split AFTER dedupe so a fire seen by three satellites is counted once on
+  // Split AFTER dedupe so a fire seen by both satellites is counted once on
   // whichever side it belongs to.
   const deduped = dedupeHotspots(merged);
   const wildland = deduped.filter((h) => !h.volcanic);
@@ -3991,9 +3991,9 @@ const FIRE_DANGER_CONUS_DAYS = 2;
 // 5000 (truncated, silently). Four sub-bboxes keep each query under the cap.
 //
 // RATE-LIMIT MATH (budget is 5000 transactions / 10 min):
-//   3 sensors × 4 sub-bboxes = 12 transactions per COLD refresh.
-//   With FIRE_DANGER_FIRMS_TTL = 600 s that is at most 6 cold refreshes/hour
-//   = 72 transactions/hour ≈ 2% of the ceiling. Comfortably clear.
+//   2 sensors × 4 sub-bboxes = 8 transactions per COLD refresh (S-NPP dropped
+//   2026-08-28). With FIRE_DANGER_FIRMS_TTL = 600 s that is at most 6 cold
+//   refreshes/hour = 48 transactions/hour ≈ 1% of the ceiling. Comfortably clear.
 const CONUS_SUB_BBOXES: ReadonlyArray<[number, number, number, number]> = [
   [-125.0, 24.0, -95.75, 36.75],   // SW
   [-95.75, 24.0, -66.5, 36.75],    // SE
@@ -4145,7 +4145,7 @@ async function fetchFirmsConus(env: Env): Promise<FirmsIngest> {
   const jobs: Array<{ sensor: string; bbox: readonly number[] }> = [];
   for (const sensor of FIRE_DANGER_SENSORS) for (const bbox of CONUS_SUB_BBOXES) jobs.push({ sensor, bbox });
 
-  // 12 jobs (3 sensors x 4 sub-bboxes) — also past the cap.
+  // 8 jobs (2 sensors x 4 sub-bboxes) — also past the cap.
   const settled = await mapWithConcurrency(jobs, OUTBOUND_CONCURRENCY_LIMIT, async ({ sensor, bbox }) => {
     const cacheReq = new Request(fireDangerFirmsCacheKey(sensor, bbox, FIRE_DANGER_CONUS_DAYS));
     const cached = await cache.match(cacheReq);

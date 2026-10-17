@@ -130,6 +130,14 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
   - **Ticket (backlog)** — All hazard cards must be scope-aware. In USA scope
     the accordion still reads "ACTIVE HAZARDS · HAWAIʻI" and the Flash Flood
     card still says Hawaiʻi. (Smoke is covered by SAT-1a.)
+  - **Ticket (backlog)** — Homepage `_t()` returns the KEY itself when no locale
+    has it, so `_t(key) || fallback` never falls back (the raw key renders).
+    Fix it once, globally (return null for a missing key, as live-map's `_t`
+    does); until then every new homepage key goes through `_tf` (SAT-0b-4).
+  - **Ticket (backlog)** — `/api/media/morning-brief` (05:30 HST cron → Apps
+    Script) counts wildland detections 12–24 h old as "Wildfire detections are
+    present in the current Hawaiʻi snapshot". Outage and partial wording are
+    already correct (test-sat0b5-morning-brief.mjs); the age wording is not.
   - **n8n restart runbook (run AFTER the SAT-0b batch deploy)** — Docker has
     been down since 2026-07-19; last successful Morning Brief 2026-07-16.
     1. Long rotates the Facebook token and deletes the v4.6 BACKUP file.
@@ -144,12 +152,19 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     7. Restore the Telegram chat, reactivate the workflows.
     8. Investigate "Facebook: Emergency Post" failing with "Bad request -
        please check your parameters" (every emergency run ~2026-07-12..15).
+    9. "Video Autobuilder FULL V2" (active) reads /api/firms/hotspots directly
+       and publishes `fire: hotspotsData.length` to video, FB Reels and
+       Threads. After SAT-0b-1 an all-satellites-down response is HTTP 200 with
+       properties.health "degraded" and features [] — this workflow would
+       publish 0. Before reactivating it, make it treat health "degraded" as
+       fire data unavailable (and "partial" as reduced coverage), same rules
+       as the brief. It does not read the brief's `degraded`/`data_delayed`.
   There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
 
 - [x] **P04 · Stage 0 + Stage 1 — Fire-spread danger layer (backend)** — `DONE`
-  Worker-only. FIRMS ingest (NOAA-20/21 + SNPP fallback) + heuristic + new endpoint
+  Worker-only. FIRMS ingest (NOAA-20/21; S-NPP removed 2026-08-28, no fallback) + heuristic + new endpoint
   `/api/hazards/fire-danger`. **CORE VALUE.** Prompt written 2026-08-02.
   Shipped: /api/hazards/fire-danger live (worker/src/index.ts).
 - [ ] **P05 · Stage 1 overlay → live-map.html** — `NOT-STARTED`

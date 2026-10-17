@@ -2768,41 +2768,40 @@
           <span data-i18n="map.legend_det_volcanic">Volcanic heat (Kīlauea/Mauna Loa) — not wildfire</span>
         </div>
         <!-- SAT-0b-3. Round orange is fire only; the other point layers name
-             their own shape here while they are on. English until the 0b-5
-             i18n keys land (map.legend_wq / map.legend_aq). -->
+             their own shape here while they are on (map.legend_*). -->
         <div class="det-legend-row" id="legend-row-wq" hidden>
           <span class="det-legend-dot det-legend-drop" aria-hidden="true"></span>
-          <span>Water quality advisory (Hawaiʻi DOH)</span>
+          <span data-i18n="map.legend_wq">Water quality advisory (Hawaiʻi DOH)</span>
         </div>
         <div class="det-legend-row" id="legend-row-aq" hidden>
           <span class="det-legend-dot det-legend-square" aria-hidden="true"></span>
-          <span>Air quality monitor (EPA AQI)</span>
+          <span data-i18n="map.legend_aq">Air quality monitor (EPA AQI)</span>
         </div>
         <!-- SAT-0b-3b. Shown only while the layer is on AND has point markers
              on the map (syncPointLegendRows), so a quiet day adds no rows. -->
         <div class="det-legend-row" id="legend-row-alerts" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 10.5 L1 10.5 Z" fill="#ff9800" stroke="#fff" stroke-width="1"/></svg>
-          <span>NWS alert (point)</span>
+          <span data-i18n="map.legend_alerts">NWS alert (point)</span>
         </div>
         <div class="det-legend-row" id="legend-row-coastal" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 6 L6 11 L1 6 Z" fill="#58a6ff" stroke="#fff" stroke-width="1"/></svg>
-          <span>Coastal alert (NWS)</span>
+          <span data-i18n="map.legend_coastal">Coastal alert (NWS)</span>
         </div>
         <div class="det-legend-row" id="legend-row-lsr" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 0.8 L7.4 4.4 L11.2 4.6 L8.2 7 L9.2 10.8 L6 8.7 L2.8 10.8 L3.8 7 L0.8 4.6 L4.6 4.4 Z" fill="#ffb74d" stroke="#fff" stroke-width="0.8"/></svg>
-          <span>Local storm report (NWS)</span>
+          <span data-i18n="map.legend_lsr">Local storm report (NWS)</span>
         </div>
         <div class="det-legend-row" id="legend-row-ff" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><rect x="0.5" y="2.5" width="11" height="7" rx="3.5" fill="#58a6ff" stroke="#e9f4ff" stroke-width="0.8"/><path d="M2.5 5 q0.75 -1 1.5 0 t1.5 0 t1.5 0 t1.5 0 M2.5 7 q0.75 -1 1.5 0 t1.5 0 t1.5 0 t1.5 0" fill="none" stroke="#fff" stroke-width="0.7"/></svg>
-          <span>Flash flood (NWS)</span>
+          <span data-i18n="map.legend_ff">Flash flood (NWS)</span>
         </div>
         <div class="det-legend-row" id="legend-row-tsu" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 9.5 C3.5 9.5 4 3 7.5 2.5 C10 2.2 11 5 8.8 5.8 C7.5 6.1 7 4.8 8 4.4 M1.5 9.5 L10.5 9.5" fill="none" stroke="#ff1744" stroke-width="1.4" stroke-linecap="round"/></svg>
-          <span>Tsunami (NWS TWC)</span>
+          <span data-i18n="map.legend_tsu">Tsunami (NWS TWC)</span>
         </div>
         <div class="det-legend-row" id="legend-row-tc" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 4.2 A4.8 4.8 0 0 1 5 1.3 M9.8 7.8 A4.8 4.8 0 0 1 7 10.7" fill="none" stroke="#ff6a00" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="6" r="2.6" fill="#ff6a00" stroke="#ffd5b5" stroke-width="0.8"/></svg>
-          <span>Tropical cyclone (NHC)</span>
+          <span data-i18n="map.legend_tc">Tropical cyclone (NHC)</span>
         </div>
       </div>
 
@@ -3363,7 +3362,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=29d97b05"></script>
+  <script src="/i18n/kahuola-i18n.js?v=07b8229d"></script>
 
   <script>
     "use strict";
@@ -3770,8 +3769,9 @@
         const m = fire?.status === "ready" ? (fire.meta || {}) : {};
         if (m.health === "partial") {
           const names = (m.datasetsUsed || []).map((d) => FIRMS_DATASET_NAMES[d] || d).join(", ");
-          covEl.textContent = _tmpl("map.fire_partial", { sats: names }) ||
-            `One satellite is temporarily unavailable, so coverage is reduced${names ? ` (showing ${names} only)` : ""}. A fire can go unseen for longer.`;
+          covEl.textContent = names
+            ? (_tmpl("map.fire_partial", { sats: names }) || `One satellite is temporarily unavailable, so coverage is reduced (showing ${names} only). A fire can go unseen for longer.`)
+            : (_t("map.fire_partial_generic") || "One satellite is temporarily unavailable, so coverage is reduced. A fire can go unseen for longer.");
         } else covEl.textContent = "";
       }
       const el = document.getElementById(`freshness-badge-${suffix}`);
@@ -6407,8 +6407,8 @@
       // wildland fire while Kīlauea is thermally active.
       //
       // The COUNT is deliberately NOT printed, though it still gates the line.
-      // This path (3 VIIRS sensors, statewide bbox) and Layer A's legacy path
-      // (SNPP, region=hawaii) legitimately resolve different numbers of caldera
+      // This path (NOAA-20 + NOAA-21, statewide bbox, its own dedupe) and Layer
+      // A's hotspots path (region=hawaii) can resolve different numbers of caldera
       // pixels — 11 vs 9 on 2026-08-03. Both are right for their own query, but
       // a resident sees one page showing two numbers for one volcano, which
       // reads as the system contradicting itself. The pixel count changes
