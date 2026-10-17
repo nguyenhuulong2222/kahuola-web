@@ -3362,7 +3362,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=07b8229d"></script>
+  <script src="/i18n/kahuola-i18n.js?v=0662e8db"></script>
 
   <script>
     "use strict";
@@ -4317,7 +4317,9 @@
       smoke: {
         key: "smoke",
         signalClass: "context",
-        endpoint: IS_LOCAL ? "./smoke-test.json" : "https://kahuola.org/api/hazards/smoke?region=hawaii",
+        // SAT-1a. USA scope reads the USA HMS answer (CONUS + Alaska); Hawaiʻi
+        // scope stays region=hawaii, which also feeds /api/hazards/summary.
+        get endpoint() { return IS_LOCAL ? "./smoke-test.json" : `https://kahuola.org/api/hazards/smoke?region=${fireScope === "usa" ? "usa" : "hawaii"}`; },
         enabled: true,
         parsePayload(json) { const raw = parseCanonicalSignals(json, "smoke"); return { features: normalizeSmokeFeatures(raw), sourceTime: parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || "NOAA HMS", meta: { smokeStatus: json?.summary?.status, hmsDate: typeof json.hms_date === "string" ? json.hms_date : null, hmsDay: typeof json.hms_day === "string" ? json.hms_day : null } }; },
         // SAT-0a-2 A1. Smoke state comes from the Worker's summary.status, never
@@ -7009,13 +7011,18 @@
       // (incl. the legacy "none", which a count alone used to produce).
       // A previous-UTC-day HMS file is named, with its date, in the note.
       const smokeMeta = getState("smoke").meta || {};
+      // SAT-1a. The card names the area its data covers: Hawaiʻi scope reads
+      // region=hawaii ("near Hawaiʻi"), USA scope region=usa ("over the U.S.").
+      const smokePlace = fireScope === "usa"
+        ? (_t("map.s_smoke_place_usa") || "over the U.S.")
+        : (_t("map.s_smoke_place_hi") || "near Hawai\u02bbi");
       const prevDay = (state === "detected" || state === "none_outlined") && smokeMeta.hmsDay === "previous" && smokeMeta.hmsDate
         ? " " + (_tmpl("map.s_smoke_prev_day", { date: smokeMeta.hmsDate }) || `Showing NOAA HMS from the previous day (${smokeMeta.hmsDate}); today's file is unavailable.`)
         : "";
       ["desktop", "mobile"].forEach((suffix) => {
         const badge = document.getElementById(`smoke-status-badge-${suffix}`); const note = document.getElementById(`smoke-status-note-${suffix}`); const sub = document.getElementById(`smoke-status-subnote-${suffix}`); const metric = document.getElementById(`smoke-status-text-${suffix}`); if (badge) badge.className = "status-badge";
-        if (state === "detected") { if (badge) { badge.classList.add("status-detected"); badge.textContent = count === 1 ? (_t("map.s_smoke_detected_1") || "Smoke detected") : (_tmpl("map.s_smoke_detected_n", { n: count }) || `Smoke detected · ${count}`); } if (metric) metric.textContent = count === 1 ? (_t("map.s_smoke_det_metric_1") || "Detected (1 region)") : (_tmpl("map.s_smoke_det_metric_n", { n: count }) || `Detected (${count} regions)`); if (note) note.textContent = (count === 1 ? (_t("map.s_smoke_det_note_1") || "NOAA HMS shows smoke in 1 region in the current snapshot.") : (_tmpl("map.s_smoke_det_note_n", { n: count }) || `NOAA HMS shows smoke in ${count} regions in the current snapshot.`)) + prevDay; if (sub) sub.textContent = smokeVisible ? (_t("map.s_smoke_det_sub_on") || "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage.") : (_t("map.s_smoke_det_sub_off") || "Smoke is present in the snapshot, but the Smoke Layer is currently off."); return; }
-        if (state === "none_outlined") { if (badge) { badge.classList.add("status-none"); badge.textContent = _t("map.s_smoke_none") || "No smoke outlined"; } if (metric) metric.textContent = _t("map.s_smoke_none_metric") || "None outlined in current file"; if (note) note.textContent = (_t("map.s_smoke_none_note") || "NOAA analysts have not outlined smoke near Hawai\u02bbi in this file.") + prevDay; if (sub) sub.textContent = _t("map.s_smoke_none_sub") || "This does not rule out smoke. HMS is updated a few times a day and cannot see through cloud."; return; }
+        if (state === "detected") { if (badge) { badge.classList.add("status-detected"); badge.textContent = count === 1 ? (_t("map.s_smoke_detected_1") || "Smoke detected") : (_tmpl("map.s_smoke_detected_n", { n: count }) || `Smoke detected · ${count}`); } if (metric) metric.textContent = count === 1 ? (_t("map.s_smoke_det_metric_1") || "Detected (1 region)") : (_tmpl("map.s_smoke_det_metric_n", { n: count }) || `Detected (${count} regions)`); if (note) note.textContent = (count === 1 ? (_tmpl("map.s_smoke_det_note_1r", { place: smokePlace }) || `NOAA HMS shows smoke in 1 region ${smokePlace} in the current snapshot.`) : (_tmpl("map.s_smoke_det_note_nr", { n: count, place: smokePlace }) || `NOAA HMS shows smoke in ${count} regions ${smokePlace} in the current snapshot.`)) + prevDay; if (sub) sub.textContent = smokeVisible ? (_t("map.s_smoke_det_sub_on") || "Smoke polygons are visible now. Fire detections remain visually prioritized above smoke coverage.") : (_t("map.s_smoke_det_sub_off") || "Smoke is present in the snapshot, but the Smoke Layer is currently off."); return; }
+        if (state === "none_outlined") { if (badge) { badge.classList.add("status-none"); badge.textContent = _t("map.s_smoke_none") || "No smoke outlined"; } if (metric) metric.textContent = _t("map.s_smoke_none_metric") || "None outlined in current file"; if (note) note.textContent = (_tmpl("map.s_smoke_none_note_r", { place: smokePlace }) || `NOAA analysts have not outlined smoke ${smokePlace} in this file.`) + prevDay; if (sub) sub.textContent = _t("map.s_smoke_none_sub") || "This does not rule out smoke. HMS is updated a few times a day and cannot see through cloud."; return; }
         if (badge) { badge.classList.add("status-unavailable"); badge.textContent = _t("map.s_unavailable") || "Unavailable"; } if (metric) metric.textContent = _t("map.s_smoke_unavail_metric") || "Smoke data unavailable"; if (note) note.textContent = _t("map.s_smoke_unavail_note") || "Smoke data is temporarily unavailable."; if (sub) sub.textContent = _t("map.s_smoke_unavail_sub") || "This is different from \u201cNo smoke outlined\u201d.";
       });
     }
@@ -7207,6 +7214,7 @@
       } else {
         restoreHawaiiDefaults();
         refreshHazard("fire");
+        refreshHazard("smoke");   // SAT-1a: back to the Hawaiʻi HMS answer
       }
     }
     // ── USA national mode — enable all lazy modules, turn on tile overlays ────

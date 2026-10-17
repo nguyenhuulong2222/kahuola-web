@@ -5148,6 +5148,8 @@ function segmentsCross(ax: number, ay: number, bx: number, by: number, cx: numbe
 // counts features would render an outage as an all-clear. live-map's
 // payloadError() routes any top-level `error` string to "Unavailable".
 async function smokeUnavailable(region: string, cors: CorsHeaders, note: string): Promise<Response> {
+  // SAT-1a. Only the Hawaiʻi answer feeds /api/hazards/summary; a USA outage
+  // must never write the Hawaiʻi status key the summary reads.
   const envelope = buildHazardEnvelope('smoke', 'NOAA HMS', region, [],
     { status: 'unavailable', count: 0, message: 'Smoke data temporarily unavailable.' },
     { authority: 'observational', note },
@@ -5156,14 +5158,68 @@ async function smokeUnavailable(region: string, cors: CorsHeaders, note: string)
     JSON.stringify({ ...envelope, error: 'upstream_unavailable', stale_after_seconds: 60 }),
     { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', 'X-Kahuola-Cache': 'MISS', ...cors } },
   );
-  await caches.default.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
+  if (region === 'hawaii') await caches.default.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
   return statusResponse;
+}
+
+// ── SAT-1a: USA smoke region ────────────────────────────────────────────────
+// Same HMS file (it covers North America), filtered to CONUS + Alaska with the
+// same true polygon intersection as Hawaiʻi (SAT-0a-6). Alaska is clipped at
+// −170° (the HMS analysis area does not reach the western Aleutians, which
+// cross the antimeridian).
+const SMOKE_USA_BOXES: ReadonlyArray<[number, number, number, number]> = [
+  [-125.0, 24.0, -66.5, 49.5],    // CONUS (REGION_BBOXES.usa)
+  [-170.0, 51.0, -129.0, 72.0],   // Alaska
+];
+// Douglas–Peucker tolerance and coordinate precision for the USA payload. A
+// heavy smoke day carries hundreds of continent-scale analyst polygons; at
+// 0.01° (~1 km, finer than HMS's own drawing) nothing a reader can see moves.
+// Hawaiʻi polygons are rare and small, so they ship untouched.
+const SMOKE_USA_SIMPLIFY_DEG = 0.01;
+const SMOKE_USA_COORD_DP = 3;
+
+function simplifyRing(ring: number[][], tol: number): number[][] {
+  if (ring.length <= 4) return ring;
+  const keep = new Uint8Array(ring.length);
+  keep[0] = 1; keep[ring.length - 1] = 1;
+  const stack: Array<[number, number]> = [[0, ring.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop()!;
+    const [ax, ay] = ring[a], [bx, by] = ring[b];
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    let maxD = -1, idx = -1;
+    for (let i = a + 1; i < b; i++) {
+      const [px, py] = ring[i];
+      let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const ex = px - (ax + t * dx), ey = py - (ay + t * dy);
+      const d = ex * ex + ey * ey;
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (idx >= 0 && maxD > tol * tol) { keep[idx] = 1; stack.push([a, idx], [idx, b]); }
+  }
+  const out = ring.filter((_, i) => keep[i]);
+  // A ring needs at least 4 positions (3 distinct + closing). If simplification
+  // collapsed it, keep the original rather than ship an invalid polygon.
+  return out.length >= 4 ? out : ring;
+}
+
+function compactRing(ring: number[][]): number[][] {
+  const f = 10 ** SMOKE_USA_COORD_DP;
+  const r = simplifyRing(ring, SMOKE_USA_SIMPLIFY_DEG).map(([x, y]) => [Math.round(x * f) / f, Math.round(y * f) / f]);
+  const out: number[][] = [];
+  for (const p of r) { const q = out[out.length - 1]; if (!q || q[0] !== p[0] || q[1] !== p[1]) out.push(p); }
+  if (out.length && (out[0][0] !== out[out.length - 1][0] || out[0][1] !== out[out.length - 1][1])) out.push([...out[0]]);
+  return out.length >= 4 ? out : ring;
 }
 
 // ── SMOKE SIGNALS — NOAA HMS Smoke Polygons ──────────────────────────────
 async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
-  const region = resolveRegion(url);
-  const cacheKey = 'https://kahuola.org/cache/smoke-hawaii-v1';
+  // SAT-1a. region=usa → CONUS + Alaska from the same HMS file; anything else
+  // is Hawaiʻi (as before) and is labelled as Hawaiʻi, not echoed back.
+  const region = (url.searchParams.get('region') || '').trim().toLowerCase() === 'usa' ? 'usa' : 'hawaii';
+  const isUsa = region === 'usa';
+  const cacheKey = isUsa ? 'https://kahuola.org/cache/smoke-usa-v1' : 'https://kahuola.org/cache/smoke-hawaii-v1';
   const cache = caches.default;
   const cached = await cache.match(new Request(cacheKey));
   const cachedJson = cachedJsonResponse(cached, cors, 200);
@@ -5208,14 +5264,17 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
 
   // Hawaiʻi filter — KML covers all of North America; keep only polygons that
   // truly intersect the Hawaiʻi box (SAT-0a-6, ringIntersectsBox).
+  const inRegion = isUsa
+    ? (ring: number[][]) => SMOKE_USA_BOXES.some(([w, s, e, n]) => ringIntersectsBox(ring, w, s, e, n))
+    : (ring: number[][]) => ringIntersectsBox(ring, hwWest, hwSouth, hwEast, hwNorth);
   const signals: Feature[] = parsed.features
-    .filter((p) => ringIntersectsBox(p.ring, hwWest, hwSouth, hwEast, hwNorth))
+    .filter((p) => inRegion(p.ring))
     .map((p, idx) => {
       const density = p.density ?? 'light';   // observational default; never fabricate medium/heavy
       const severity = density === 'heavy' ? 'WARNING' : density === 'medium' ? 'WATCH' : 'INFO';
       return {
         type: 'Feature',
-        geometry: { type: 'Polygon', coordinates: [p.ring] },
+        geometry: { type: 'Polygon', coordinates: [isUsa ? compactRing(p.ring) : p.ring] },
         properties: {
           id: `smoke-${idx}`,
           smoke_density: density,
@@ -5231,9 +5290,10 @@ async function handleSmoke(url: URL, cors: CorsHeaders): Promise<Response> {
     });
 
   // SAT-0a-1 F5. HMS polygons are drawn by analysts; no polygon is not "no smoke".
+  const place = isUsa ? 'over the U.S. (CONUS + Alaska)' : 'near Hawaiʻi';
   const message = signals.length > 0
-    ? `${signals.length} smoke polygon(s) detected near Hawaiʻi.`
-    : 'NOAA analysts have not outlined smoke near Hawaiʻi in this file. This does not rule out smoke.';
+    ? `${signals.length} smoke polygon(s) outlined ${place}.`
+    : `NOAA analysts have not outlined smoke ${place} in this file. This does not rule out smoke.`;
   // Honest freshness label: fallback day is stated explicitly + shorter stale TTL.
   // SAT-0a-1 F3: cause-neutral — today's file may be unpublished, failing or unreadable.
   const note = stale

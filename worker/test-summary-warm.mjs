@@ -71,9 +71,13 @@ ok('warm FIRMS url has no dataset/days override', firmsWarm != null && !/dataset
 // --- 4. Smoke/perim: literal cache keys match the SUMMARY_* constants --------
 const smokeConst = rx(/const SUMMARY_SMOKE_KEY\s*=\s*'([^']+)'/);
 const perimConst = rx(/const SUMMARY_PERIM_KEY\s*=\s*'([^']+)'/);
-const smokeWriter = rx(/async function handleSmoke\([\s\S]*?const cacheKey\s*=\s*'([^']+)'/);
+// SAT-1a: handleSmoke picks its key per region (isUsa ? usa : hawaii); the
+// Hawaiʻi branch must still be the key the summary reads, and USA must differ.
+const smokeWriter = rx(/async function handleSmoke\([\s\S]*?const cacheKey\s*=\s*isUsa\s*\?\s*'[^']+'\s*:\s*'([^']+)'/);
+const smokeUsaKey = rx(/async function handleSmoke\([\s\S]*?const cacheKey\s*=\s*isUsa\s*\?\s*'([^']+)'/);
 const perimWriter = rx(/async function handlePerimeters\([\s\S]*?const cacheKey\s*=\s*'([^']+)'/);
 ok('handleSmoke cacheKey === SUMMARY_SMOKE_KEY', !!smokeConst && smokeConst === smokeWriter);
+ok('handleSmoke USA cache key is separate from the Hawaiʻi summary key', !!smokeUsaKey && smokeUsaKey !== smokeConst);
 ok('handlePerimeters cacheKey === SUMMARY_PERIM_KEY', !!perimConst && perimConst === perimWriter);
 ok('SUMMARY_SMOKE_KEY is the hawaii primary key', smokeConst === 'https://kahuola.org/cache/smoke-hawaii-v1');
 ok('SUMMARY_PERIM_KEY is the hawaii primary key', perimConst === 'https://kahuola.org/cache/perimeters-hawaii-v1');
