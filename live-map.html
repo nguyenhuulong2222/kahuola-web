@@ -2799,6 +2799,10 @@
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 9.5 C3.5 9.5 4 3 7.5 2.5 C10 2.2 11 5 8.8 5.8 C7.5 6.1 7 4.8 8 4.4 M1.5 9.5 L10.5 9.5" fill="none" stroke="#ff1744" stroke-width="1.4" stroke-linecap="round"/></svg>
           <span data-i18n="map.legend_tsu">Tsunami (NWS TWC)</span>
         </div>
+        <div class="det-legend-row" id="legend-row-smoke-sat" hidden>
+          <span class="det-legend-dot" style="border-radius:2px;background:rgba(142,36,170,.55);border:1px dashed #e1bee7" aria-hidden="true"></span>
+          <span data-i18n="map.legend_smoke_sat">Satellite haze estimate (GOES-18 ADP): smoke or vog, not official</span>
+        </div>
         <div class="det-legend-row" id="legend-row-tc" hidden>
           <svg class="det-legend-dot" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 4.2 A4.8 4.8 0 0 1 5 1.3 M9.8 7.8 A4.8 4.8 0 0 1 7 10.7" fill="none" stroke="#ff6a00" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="6" r="2.6" fill="#ff6a00" stroke="#ffd5b5" stroke-width="0.8"/></svg>
           <span data-i18n="map.legend_tc">Tropical cyclone (NHC)</span>
@@ -3045,6 +3049,21 @@
               <div style="display:flex;align-items:center;gap:8px">
                 <div class="status-badge status-none" id="perimeter-status-badge" data-i18n="map.s_perim_none_badge">No
                   perimeter</div><span class="detail-chev">›</span>
+              </div>
+            </div>
+            <!-- SAT-1b. Satellite haze estimate (GOES-18 ADP via the Kahu Ola satellite pipeline).
+                 An ESTIMATE beside the official HMS smoke row, never instead of it.
+                 Text is written by updateSmokeSatUI (no data-i18n on JS-managed nodes). -->
+            <div class="layer-status-row" id="smoke-sat-row">
+              <div>
+                <div class="layer-status-kicker" data-i18n="map.kicker_smoke_sat">Estimate · NOAA GOES-18 ADP (not official)</div>
+                <div class="layer-status-name" data-i18n="map.layer_smoke_sat">Satellite haze estimate</div>
+                <div class="layer-status-note" id="smoke-sat-note">—</div>
+                <div class="layer-status-note" id="smoke-sat-subnote"></div>
+                <div class="layer-status-note"><a id="smoke-sat-vog-link" href="https://vog.ivhhn.org/" target="_blank" rel="noopener noreferrer" data-i18n="map.ss_vog_link">Vog forecast and health guidance (Hawaiʻi Interagency Vog Dashboard) →</a></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="status-badge status-none" id="smoke-sat-badge">·</div>
               </div>
             </div>
           </div>
@@ -3342,6 +3361,7 @@
       <button class="action-btn satellite-btn" id="satellite-btn-panel" type="button"
         data-i18n="map.satellite">Satellite</button>
       <button class="action-btn smoke-btn" id="smoke-btn-panel" type="button">Smoke Layer: On</button>
+      <button class="action-btn" id="smoke-sat-btn-panel" type="button">Satellite haze: Off</button>
       <button class="action-btn airnow-btn" id="airnow-btn-panel" type="button">AQI Layer: Off</button>
       <button class="action-btn" id="perimeter-btn-panel" type="button">Perimeters: On</button>
       <button class="action-btn flood-btn" id="flood-btn-panel" type="button">Flood Layers: On</button>
@@ -3362,7 +3382,7 @@
        the sha256 prefix of i18n/kahuola-i18n.js and MUST be bumped
        whenever that file changes — this is a MANUAL step; there is no
        build pipeline here to derive it automatically. -->
-  <script src="/i18n/kahuola-i18n.js?v=0662e8db"></script>
+  <script src="/i18n/kahuola-i18n.js?v=b3a09c74"></script>
 
   <script>
     "use strict";
@@ -3443,6 +3463,7 @@
     let currentViewMode = "Statewide";
     let lastKnownUserCoord = null;
     let smokeVisible = true;
+    let smokeSatVisible = false;   // SAT-1b: satellite haze estimate, OFF by default
     let perimeterVisible = true;
     let flashFloodVisible = true;
     let floodContextVisible = false; // Hidden by default — only shows when NWS flash flood alert is active
@@ -3489,6 +3510,7 @@
       hazards: {
         fire: createHazardState("fire"),
         smoke: createHazardState("smoke"),
+        smokeSat: createHazardState("smokeSat"),
         perimeter: createHazardState("perimeter"),
         flashFlood: createHazardState("flashFlood"),
         floodContext: createHazardState("floodContext"),
@@ -4329,6 +4351,29 @@
         sourceStatusFrom(state) { const st = state.meta && state.meta.smokeStatus; return st === "detected" ? "detected" : st === "none" ? "none_outlined" : "unavailable"; },
         ensureLayers, applyData(features) { updateSmokeSource(features); }, onFetchComplete() { const s = getState("smoke"); updateSmokeStatusUI(s.sourceStatus, s.features.length); renderUnifiedPanels(); }, visible() { return smokeVisible; }
       },
+      // SAT-1b. Satellite haze estimate. Not counted anywhere, never an alert,
+      // never feeds the official smoke card; its own row + optional layer.
+      smokeSat: {
+        key: "smokeSat",
+        signalClass: "estimate",
+        endpoint: IS_LOCAL ? "./smoke-sat-test.json" : "https://kahuola.org/api/hazards/smoke-sat?region=hawaii",
+        enabled: true,
+        affectsGlobalHealth: false,
+        parsePayload(json) {
+          const ok = ["detected", "no_qualifying_detection", "night", "warming_up", "stale", "unavailable"];
+          const state = ok.includes(json && json.state) ? json.state : "unavailable";
+          return { features: [], sourceTime: parseDateMaybe(json.scan_start_utc) || new Date(), sourceLabel: "NOAA GOES-18 ADP (estimate)",
+            meta: { state, scanStart: json.scan_start_utc || null, ageS: typeof json.frame_age_seconds === "number" ? json.frame_age_seconds : null, partial: json.partial === true,
+              frameUrl: typeof json.frame_url === "string" && /^https:\/\/kahuola\.org\/api\/hazards\/smoke-sat\/frame\?key=/.test(json.frame_url) ? json.frame_url : null,
+              imageCoordinates: Array.isArray(json.image_coordinates) && json.image_coordinates.length === 4 ? json.image_coordinates : null,
+              coverage: json.coverage && json.coverage.type === "FeatureCollection" ? json.coverage : null } };
+        },
+        sourceStatusFrom(state) { return (state.meta && state.meta.state) || "unavailable"; },
+        ensureLayers() { ensureSmokeSatLayers(); },
+        applyData() { if (map.getSource("smoke-sat")) applySmokeSatFrame(); },
+        onFetchComplete() { updateSmokeSatUI(); },
+        visible() { return smokeSatVisible; }
+      },
       perimeter: {
         key: "perimeter",
         signalClass: "context",
@@ -4990,6 +5035,7 @@
       ensureWmsPlaceholderLayers(); // PacIOOS / GOES — raster base, visibility:none
       ensureAirnowLayers();         // AQICN AQI raster tiles, below smoke
       ensureAirQualityLayers();     // official DOH monitor points, above the tiles
+      ensureSmokeSatLayers();       // SAT-1b: under the official HMS smoke layer
       ensureSmokeLayers();
       ensurePerimeterLayers();
       ensureFloodContextLayers();  // lowest — terrain context base
@@ -5011,6 +5057,58 @@
       ensureFireDangerLayers();    // fire-spread estimate grid — BELOW alerts + fire markers
       ensureAlertsLayers();        // other NWS alerts (superset) — just below fire
       ensureFireLayers();          // fire always topmost
+    }
+    // ── SAT-1b · satellite haze estimate (GOES-18 ADP) ───────────────────
+    // A pre-rendered EPSG:3857 PNG over the frame bbox (MapLibre image source)
+    // plus the pipeline's coverage outline. OFF by default; drawn UNDER the
+    // official HMS smoke polygons so the estimate never covers the official
+    // product. Image/outline exist only while there is a current daytime frame.
+    const SMOKE_SAT_BLANK = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    function ensureSmokeSatLayers() {
+      if (!map.getSource("smoke-sat")) {
+        map.addSource("smoke-sat", { type: "image", url: SMOKE_SAT_BLANK, coordinates: [[-161, 23], [-154, 23], [-154, 18], [-161, 18]] });
+      }
+      ensureSource("smoke-sat-coverage", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureLayer({ id: "smoke-sat-layer", type: "raster", source: "smoke-sat", layout: { visibility: "none" }, paint: { "raster-opacity": 0.85, "raster-fade-duration": 0, "raster-resampling": "nearest" } });
+      ensureLayer({ id: "smoke-sat-coverage-line", type: "line", source: "smoke-sat-coverage", layout: { visibility: "none" }, paint: { "line-color": "#e1bee7", "line-width": 1.2, "line-dasharray": [3, 2], "line-opacity": 0.8 } });
+      applySmokeSatFrame();
+    }
+    function applySmokeSatFrame() {
+      const st = getState("smokeSat"); const m = (st && st.status === "ready" && st.meta) || {};
+      const hasFrame = m.state === "detected" || m.state === "no_qualifying_detection";
+      const src = map.getSource("smoke-sat");
+      if (src && hasFrame && m.frameUrl && Array.isArray(m.imageCoordinates)) { try { src.updateImage({ url: m.frameUrl, coordinates: m.imageCoordinates }); } catch (_) { } }
+      const cov = map.getSource("smoke-sat-coverage");
+      if (cov) cov.setData(hasFrame && m.coverage ? m.coverage : { type: "FeatureCollection", features: [] });
+      syncSmokeSatVisibility();
+    }
+    function syncSmokeSatVisibility() {
+      const m = (getState("smokeSat") || {}).meta || {};
+      const show = smokeSatVisible && (m.state === "detected" || m.state === "no_qualifying_detection");
+      setLayerVisibility("smoke-sat-layer", show);
+      setLayerVisibility("smoke-sat-coverage-line", show);
+      const row = document.getElementById("legend-row-smoke-sat"); if (row) row.hidden = !smokeSatVisible;
+      ["smoke-sat-btn-panel-desktop", "smoke-sat-btn-panel-mobile"].forEach((id) => { const el = document.getElementById(id); if (!el) return; el.textContent = smokeSatVisible ? (_t("map.smoke_sat_on") || "Satellite haze: On") : (_t("map.smoke_sat_off") || "Satellite haze: Off"); el.classList.toggle("active", smokeSatVisible); });
+    }
+    function toggleSmokeSatLayer() { smokeSatVisible = !smokeSatVisible; applySmokeSatFrame(); }
+    function updateSmokeSatUI() {
+      const st = getState("smokeSat"); const m = (st && st.status === "ready" && st.meta) || {};
+      const state = st && st.status === "unavailable" ? "unavailable" : (m.state || "unavailable");
+      const scan = m.scanStart ? hstTime(m.scanStart, { hour: "numeric", minute: "2-digit" }) : "";
+      const scanLine = scan ? (_tmpl("map.ss_scan", { time: scan }) || `Scan ${scan} HST`) : "";
+      const badgeText = { detected: _t("map.ss_detected") || "Haze detected", no_qualifying_detection: _t("map.ss_none") || "No qualifying detection", night: _t("map.ss_night") || "Night — daytime only", warming_up: _t("map.ss_warming") || "Warming up", stale: _t("map.ss_stale") || "Stale", unavailable: _t("map.s_unavailable") || "Unavailable" }[state] || (_t("map.s_unavailable") || "Unavailable");
+      const cls = state === "detected" ? "status-detected" : (state === "stale" || state === "unavailable") ? "status-unavailable" : "status-none";
+      const lead = state === "stale" ? (_tmpl("map.ss_stale_note", { n: Math.round((m.ageS || 0) / 60) }) || `Newest scan is ${Math.round((m.ageS || 0) / 60)} min old.`)
+        : state === "night" ? (_t("map.ss_night_note") || "ADP only works in daylight; there is no estimate at night.")
+        : state === "warming_up" ? (_t("map.ss_warming_note") || "Waiting for enough consecutive scans to confirm detections.")
+        : state === "unavailable" ? (_t("map.ss_unavailable_note") || "The satellite haze estimate is unavailable right now.")
+        : scanLine + (m.partial ? " · " + (_t("map.ss_partial_note") || "Part of the area was not covered in this scan.") : "");
+      const framing = _t("map.ss_note") || "Not an official product. ADP cannot tell wildfire smoke from volcanic haze (vog): a plume drifting from Kīlauea — often southwest past Ka Lae on the trade winds — is usually vog. Inside the Kīlauea and Mauna Loa volcanic zones, detections are suppressed. No qualifying detection does not mean no haze. Daytime only.";
+      ["desktop", "mobile"].forEach((sfx) => {
+        const b = document.getElementById(`smoke-sat-badge-${sfx}`); if (b) { b.className = "status-badge " + cls; b.textContent = badgeText; }
+        const n = document.getElementById(`smoke-sat-note-${sfx}`); if (n) n.textContent = lead || "—";
+        const sub = document.getElementById(`smoke-sat-subnote-${sfx}`); if (sub) sub.textContent = framing;
+      });
     }
     // SAT-1a2. Density-scaled smoke styling, shared by the layers and the toggle.
     const SMOKE_FILL_COLOR = ["match", ["get", "density"], "heavy", "#6a1b9a", "medium", "#8e24aa", "light", "#ab47bc", "#ab47bc"];
@@ -8619,6 +8717,8 @@
       document.getElementById("satellite-btn-panel-mobile")?.addEventListener("click", toggleBasemap);
       document.getElementById("satellite-btn-mobile")?.addEventListener("click", toggleBasemap);
       document.getElementById("smoke-btn-panel-desktop")?.addEventListener("click", toggleSmokeLayer);
+      document.getElementById("smoke-sat-btn-panel-desktop")?.addEventListener("click", toggleSmokeSatLayer);
+      document.getElementById("smoke-sat-btn-panel-mobile")?.addEventListener("click", toggleSmokeSatLayer);
       document.getElementById("smoke-btn-panel-mobile")?.addEventListener("click", toggleSmokeLayer);
       document.getElementById("smoke-btn-mobile")?.addEventListener("click", toggleSmokeLayer);
       document.getElementById("airnow-btn-panel-desktop")?.addEventListener("click", toggleAirnowLayer);
@@ -9073,6 +9173,7 @@
     syncPerimeterButtons();
     syncWindRiskLayerVisibility();
     updateSmokeStatusUI("unknown", 0);
+    updateSmokeSatUI();
     updatePerimeterStatusUI("unknown", 0);
     updateFlashFloodStatusUI({ sourceStatus: "unknown", features: [], meta: {} });
     updateFloodContextStatusUI(getState("floodContext"));
@@ -9291,6 +9392,7 @@
       // SAT-0a-2: same for smoke — applyAll() resets the badge to its template
       // key, which would leave a detected/unavailable state reading as loading.
       updateSmokeStatusUI(getState("smoke").sourceStatus, getState("smoke").features.length);
+      updateSmokeSatUI(); syncSmokeSatVisibility();   // SAT-1b: row + button text follow the language
       // Re-render panel accordion content (JS-driven strings)
       renderUnifiedPanels();
     });

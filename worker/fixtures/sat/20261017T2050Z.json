@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "region": "hawaii",
+  "product": "GOES-18 ABI-L2-ADPF",
+  "algorithm_version": "v02r00",
+  "source_names": [
+    "main"
+  ],
+  "source_files": [
+    "OR_ABI-L2-ADPF-M6_G18_s20262902050211_e20262902059519_c20262902102522.nc"
+  ],
+  "scan_mode": [
+    "M6"
+  ],
+  "scan_start_utc": [
+    "2026-10-17T20:50:21.1Z"
+  ],
+  "file_created_utc": [
+    "2026-10-17T21:02:52.2Z"
+  ],
+  "generated_at_utc": "2026-10-17T21:05:57Z",
+  "bbox": [
+    -161,
+    18,
+    -154,
+    23
+  ],
+  "crs": "EPSG:3857",
+  "status": "complete",
+  "missing": [],
+  "rules": {
+    "confidence": "medium_high",
+    "persistence": "2_of_3_with_neighbours",
+    "sza_vza_max": 60,
+    "exclusions": [
+      "volcanic",
+      "snowice"
+    ]
+  },
+  "persistence_history_scans": [
+    "2026-10-17T20:40:21.300000+00:00",
+    "2026-10-17T20:30:21.300000+00:00"
+  ],
+  "counts": {
+    "SMOKE": 299,
+    "DUST": 0,
+    "raw_smoke": 338,
+    "raw_dust": 0,
+    "below_threshold": 18,
+    "volcanic_suppressed": 6,
+    "snowice_suppressed": 0,
+    "transient_suppressed": 15,
+    "warming_up_suppressed": 0
+  },
+  "count_unit": "canvas_pixel",
+  "canvas": {
+    "width": 384,
+    "height": 293,
+    "pixel_m_epsg3857": 2029.3
+  },
+  "coverage": {
+    "main": 1.0
+  },
+  "fallback_pixels": {
+    "main": 0
+  },
+  "coverage_geojson": "hawaii_coverage_20261017T2050Z.geojson",
+  "daylight_fraction": 1.0,
+  "cloud_fraction": 0.004426,
+  "meaning_of_absence": "No qualifying satellite detection. Does NOT indicate absence of smoke."
+}

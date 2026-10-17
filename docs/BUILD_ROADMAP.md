@@ -151,6 +151,14 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
       the same 44 with an empty core → wildland.
     - Popup / summary wording for margin pixels: "Likely volcanic heat near
       the active summit eruption" (EN + VI).
+  - **Research ticket (backlog) — Smoke vs vog discrimination** (wind
+    direction, SO₂, plume origin); candidate for the Meta hackathon project.
+    GOES-18 ADP cannot tell wildfire smoke from Kīlauea vog: on 2026-10-17 the
+    Hawaiʻi frame flagged 322 "smoke" pixels offshore SW of Ka Lae — the
+    trade-wind vog plume — outside the pipeline's volcanic boxes. SAT-1b ships
+    the layer as a "haze estimate: smoke or vog"; a discriminator (e.g. plume
+    connected to the summit + trade-wind direction, SO₂ column from TROPOMI /
+    OMPS, DOH SO₂ monitors) would let it say which.
   - **n8n restart runbook (run AFTER the SAT-0b batch deploy)** — Docker has
     been down since 2026-07-19; last successful Morning Brief 2026-07-16.
     1. Long rotates the Facebook token and deletes the v4.6 BACKUP file.

@@ -256,6 +256,12 @@ The ʻokina is a consonant in ʻŌlelo Hawaiʻi, not decoration. RS-O1 corrected
 occurrences; `worker/`, `docs/`, `scripts/` and `kahuola-widget/` were already
 correct.
 
+### B12 — Worker deploys go through `worker/scripts/deploy.sh`
+
+Worker deploys MUST use `worker/scripts/deploy.sh`; a plain `wrangler deploy` drops the `SAT_R2` binding. After every Worker deploy, check `/api/hazards/smoke-sat?region=hawaii` is not `reason: "not_configured"`.
+
+The script adds the read-only `SAT_R2` binding from a local config outside the repo, so the bucket name is never committed. A plain deploy still succeeds but silently turns the satellite haze layer into "unavailable" everywhere: honest, but a regression nobody would notice without the check.
+
 ### B11 — Locales reverted to EN pending native review
 
 When copy is corrected and a translation cannot be corrected responsibly, the

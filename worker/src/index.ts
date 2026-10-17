@@ -50,6 +50,12 @@ export interface Env {
   // rift eruption, e.g. [{"id":"puna-2026","west":-155.0,"south":19.4,
   // "east":-154.8,"north":19.55}]. Unset or "" = summit calderas only.
   VOLCANIC_EXTRA_ZONES?: string;
+  // SAT-1b. READ-ONLY binding to the satellite pipeline's R2 bucket (GOES-18
+  // ADP frames). Bound at deploy time by worker/scripts/deploy.sh from a local
+  // config outside the repo, so the bucket name never appears here. Absent →
+  // /api/hazards/smoke-sat answers "unavailable" (not_configured). Only .get()
+  // is ever called.
+  SAT_R2?: { get(key: string): Promise<{ text(): Promise<string>; arrayBuffer(): Promise<ArrayBuffer> } | null> };
   AIRNOW_API_KEY?: string;
   MEDIA_BRIEF_WEBHOOK?: string;
   MEDIA_BRIEF_WEBHOOK_TOKEN?: string;
@@ -1253,6 +1259,8 @@ export default {
       if (path === '/api/hazards/mrms-qpe' || path === '/hazards/mrms-qpe') return handleMrmsQpe(url, cors);
       if (path === '/api/hazards/landslide' || path === '/hazards/landslide') return handleLandslide(url, cors);
       if (path === '/api/hazards/smoke' || path === '/hazards/smoke') return handleSmoke(url, cors);
+      if (path === '/api/hazards/smoke-sat' || path === '/hazards/smoke-sat') return handleSmokeSat(url, env, cors);
+      if (path === '/api/hazards/smoke-sat/frame' || path === '/hazards/smoke-sat/frame') return handleSmokeSatFrame(url, env, cors);
       if (path === '/api/hazards/perimeters' || path === '/hazards/perimeters') return handlePerimeters(url, cors);
       if (path === '/api/hazards/fire-danger' || path === '/hazards/fire-danger') return handleFireDanger(url, env, cors);
       // Read-only aggregated summary for the embeddable widget + insight script.
@@ -5160,6 +5168,113 @@ async function smokeUnavailable(region: string, cors: CorsHeaders, note: string)
   );
   if (region === 'hawaii') await caches.default.put(new Request(SUMMARY_SMOKE_STATUS_KEY), statusResponse.clone());
   return statusResponse;
+}
+
+// ── SAT-1b: Hawaiʻi satellite haze estimate (GOES-18 ADP) ──────────────────
+// Read-only view of what the satellite pipeline publishes to R2 every 10 min
+// (hawaii/latest.json → frame manifest + EPSG:3857 PNG + coverage outline).
+// NOT an official product and NOT a smoke detector: ADP cannot tell wildfire
+// smoke from volcanic haze (vog); the pipeline suppresses detections inside its
+// wide volcanic boxes (vog suppression), and a plume drifting from Kīlauea is
+// usually vog. HMS stays the official smoke card.
+//
+// States — never "none":
+//   detected                 qualifying haze pixels in a complete/partial frame
+//   no_qualifying_detection  frame ran, nothing qualified (≠ no haze)
+//   night                    ADP is daytime only
+//   warming_up               not enough consecutive scans yet
+//   stale                    newest scan older than SMOKE_SAT_STALE_S
+//   unavailable              no binding / no frame / unreadable / pipeline said so
+const SMOKE_SAT_STALE_S = 40 * 60;
+const SMOKE_SAT_TTL = 120;
+const SMOKE_SAT_FRAME_RE = /^hawaii\/frames\/\d{8}T\d{4}Z\.png$/;
+const VOG_DASHBOARD_URL = 'https://vog.ivhhn.org/';   // Hawaiʻi Interagency Vog Information Dashboard (DOH, USGS HVO, NWS, county CD)
+
+function smokeSatEnvelope(state: string, extra: JsonMap, cors: CorsHeaders, ttl = SMOKE_SAT_TTL): Response {
+  const body: JsonMap = {
+    layer: 'smoke_sat', region: 'hawaii', schema_version: 'v1',
+    generated_at: new Date().toISOString(),
+    state,
+    product: 'NOAA GOES-18 ABI-L2-ADPF (Aerosol Detection) via the Kahu Ola satellite pipeline',
+    official: false,
+    authority: 'estimate',
+    meaning_of_absence: 'No qualifying satellite detection. Does NOT mean there is no haze or smoke.',
+    note: 'Satellite haze estimate, not an official product. ADP cannot tell wildfire smoke from volcanic haze (vog); a plume drifting from Kīlauea, often southwest past Ka Lae on trade winds, is usually vog. Detections inside the Kīlauea and Mauna Loa volcanic zones are suppressed. Daytime only.',
+    official_vog_url: VOG_DASHBOARD_URL,
+    stale_after_seconds: SMOKE_SAT_STALE_S,
+    ...extra,
+  };
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${ttl}`, ...cors },
+  });
+}
+
+async function handleSmokeSat(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
+  const region = (url.searchParams.get('region') || 'hawaii').trim().toLowerCase();
+  if (region !== 'hawaii') return smokeSatEnvelope('unavailable', { reason: 'region_not_covered', region }, cors, 600);
+  if (!env.SAT_R2) return smokeSatEnvelope('unavailable', { reason: 'not_configured' }, cors, 60);
+  const readJson = async (key: string): Promise<any | null> => {
+    try { const o = await env.SAT_R2!.get(key); if (!o) return null; return JSON.parse(await o.text()); } catch { return null; }
+  };
+  const latest = await readJson('hawaii/latest.json');
+  if (!latest || typeof latest.manifest_key !== 'string') return smokeSatEnvelope('unavailable', { reason: 'no_frame' }, cors, 60);
+  const manifest = await readJson(latest.manifest_key);
+  if (!manifest || typeof manifest.status !== 'string') return smokeSatEnvelope('unavailable', { reason: 'manifest_unreadable' }, cors, 60);
+
+  const scans: string[] = Array.isArray(manifest.scan_start_utc) ? manifest.scan_start_utc.filter((x: unknown) => typeof x === 'string') : [];
+  const scanMs = scans.map((x) => Date.parse(x)).filter(Number.isFinite);
+  const scanStart = scanMs.length ? new Date(Math.min(...scanMs)).toISOString() : null;
+  const ageS = scanMs.length ? Math.max(0, Math.round((Date.now() - Math.min(...scanMs)) / 1000)) : null;
+  const bbox: unknown = manifest.bbox;
+  const b = Array.isArray(bbox) && bbox.length === 4 && bbox.every((v) => typeof v === 'number') ? bbox as number[] : null;
+  const counts = manifest.counts && typeof manifest.counts === 'object' ? manifest.counts : {};
+  const hazePixels = (Number(counts.SMOKE) || 0) + (Number(counts.DUST) || 0);
+  const coverage = typeof latest.coverage_key === 'string' ? await readJson(latest.coverage_key) : null;
+  const pngKey = typeof latest.png_key === 'string' && SMOKE_SAT_FRAME_RE.test(latest.png_key) ? latest.png_key : null;
+
+  const base: JsonMap = {
+    scan_start_utc: scanStart,
+    frame_age_seconds: ageS,
+    pipeline_status: manifest.status,
+    partial: manifest.status === 'partial',
+    haze_pixels: hazePixels,
+    // MapLibre image source corners: top-left, top-right, bottom-right, bottom-left.
+    image_coordinates: b ? [[b[0], b[3]], [b[2], b[3]], [b[2], b[1]], [b[0], b[1]]] : null,
+    frame_url: pngKey ? `https://kahuola.org/api/hazards/smoke-sat/frame?key=${encodeURIComponent(pngKey)}` : null,
+    coverage: coverage && coverage.type === 'FeatureCollection' ? coverage : null,
+    volcanic_suppressed_pixels: Number(counts.volcanic_suppressed) || 0,
+  };
+
+  // Order matters: a frame we cannot trust in time is stale whatever it says.
+  if (ageS === null) return smokeSatEnvelope('unavailable', { ...base, reason: 'no_scan_time', frame_url: null }, cors, 60);
+  if (ageS > SMOKE_SAT_STALE_S) return smokeSatEnvelope('stale', { ...base, frame_url: null }, cors, 60);
+  if (manifest.status === 'unavailable') return smokeSatEnvelope('unavailable', { ...base, reason: 'pipeline_unavailable', frame_url: null }, cors, 60);
+  if (manifest.status === 'night') return smokeSatEnvelope('night', { ...base, frame_url: null }, cors);
+  if (manifest.status === 'warming_up') return smokeSatEnvelope('warming_up', { ...base, frame_url: null }, cors);
+  if (manifest.status === 'complete' || manifest.status === 'partial') {
+    if (!b || !pngKey) return smokeSatEnvelope('unavailable', { ...base, reason: 'frame_incomplete', frame_url: null }, cors, 60);
+    return smokeSatEnvelope(hazePixels > 0 ? 'detected' : 'no_qualifying_detection', base, cors);
+  }
+  return smokeSatEnvelope('unavailable', { ...base, reason: 'unknown_status', frame_url: null }, cors, 60);
+}
+
+// The PNG itself, same read-only binding. Only keys of the exact frame shape
+// are served — never an arbitrary bucket path.
+async function handleSmokeSatFrame(url: URL, env: Env, cors: CorsHeaders): Promise<Response> {
+  const key = url.searchParams.get('key') || '';
+  if (!SMOKE_SAT_FRAME_RE.test(key)) return err(400, 'invalid frame key', cors);
+  if (!env.SAT_R2) return err(503, 'satellite haze frames not configured', cors);
+  try {
+    const o = await env.SAT_R2.get(key);
+    if (!o) return err(404, 'frame not found', cors);
+    return new Response(await o.arrayBuffer(), {
+      status: 200,
+      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=3600, immutable', ...cors },
+    });
+  } catch {
+    return err(503, 'frame unavailable', cors);
+  }
 }
 
 // ── SAT-1a: USA smoke region ────────────────────────────────────────────────

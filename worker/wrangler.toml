@@ -77,3 +77,10 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "KAHUOLA_MEDIA"
 bucket_name = "kahuola-media"
+
+# ── SAT-1b: read-only SAT_R2 binding (satellite pipeline frames) ──
+# NOT declared here: the bucket name stays out of the repo. Deploy with
+#   worker/scripts/deploy.sh
+# which appends the binding from ~/.config/kahuola/sat_r2.env. A plain
+# `wrangler deploy` leaves it unbound and /api/hazards/smoke-sat answers
+# "unavailable" (not_configured).
