@@ -159,6 +159,11 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     the layer as a "haze estimate: smoke or vog"; a discriminator (e.g. plume
     connected to the summit + trade-wind direction, SO₂ column from TROPOMI /
     OMPS, DOH SO₂ monitors) would let it say which.
+  - **Ticket (backlog) — Air-quality station badges blow up at zoom 5–6
+    (USA scope).** The AQICN station tiles (`/api/tiles/xyz/airnow/*`) are
+    overzoomed into large blurry number signs that cover much of the map
+    (seen 2026-10-17 while checking USA smoke). Cap the badge size and/or
+    cluster the stations so they stay legible and stop hiding other layers.
   - **n8n restart runbook (run AFTER the SAT-0b batch deploy)** — Docker has
     been down since 2026-07-19; last successful Morning Brief 2026-07-16.
     1. Long rotates the Facebook token and deletes the v4.6 BACKUP file.

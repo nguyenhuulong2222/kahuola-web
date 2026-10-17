@@ -492,6 +492,7 @@
       "map.s_smoke_unavail_note": "Smoke data is temporarily unavailable.",
       "map.s_smoke_unavail_sub": "This is different from “No smoke outlined”.",
       "map.s_smoke_prev_day": "Showing NOAA HMS from the previous day ({date}); today's file is unavailable.",
+      "map.s_smoke_small_plumes": "Most are small plumes next to active fires; zoom in to see them.",
       // Perimeter status
       "map.s_perim_det_metric_1": "Detected (1 perimeter)",
       "map.s_perim_det_metric_n": "Detected ({n} perimeters)",
@@ -1755,6 +1756,7 @@
       "map.s_smoke_unavail_note": "Dữ liệu khói tạm thời không khả dụng.",
       "map.s_smoke_unavail_sub": "Trạng thái này khác với “Chưa có vùng khói được khoanh”.",
       "map.s_smoke_prev_day": "Đang hiển thị NOAA HMS của ngày trước ({date}); dữ liệu hôm nay chưa lấy được.",
+      "map.s_smoke_small_plumes": "Phần lớn là các đám khói nhỏ cạnh đám cháy; phóng to bản đồ để xem.",
       // Perimeter status
       "map.s_perim_det_metric_1": "Phát hiện (1 vành đai)",
       "map.s_perim_det_metric_n": "Phát hiện ({n} vành đai)",
