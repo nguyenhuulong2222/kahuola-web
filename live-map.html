@@ -1923,6 +1923,25 @@
       display: inline-block;
     }
 
+    .det-legend-row[hidden] {
+      display: none;
+    }
+
+    /* SAT-0b-3. Same shapes as the map icons. The square shows EPA's scale
+       because its colour is the measured category, not a fixed hue. */
+    .det-legend-square {
+      border-radius: 2px;
+      background: linear-gradient(135deg, #00e400 0 33%, #ffff00 33% 66%, #ff7e00 66%);
+      border: 1px solid rgba(255, 255, 255, .9);
+    }
+
+    .det-legend-drop {
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: #ffcc66;
+      border: 1px solid #4a3a10;
+    }
+
     @media (max-width:980px) {
       .det-legend {
         top: calc(322px + var(--safe-top));
@@ -2748,6 +2767,17 @@
           <span class="det-legend-dot" style="background:#9b8cff;border:1px solid #c4b8ff" aria-hidden="true"></span>
           <span data-i18n="map.legend_det_volcanic">Volcanic heat (Kīlauea/Mauna Loa) — not wildfire</span>
         </div>
+        <!-- SAT-0b-3. Round orange is fire only; the other point layers name
+             their own shape here while they are on. English until the 0b-5
+             i18n keys land (map.legend_wq / map.legend_aq). -->
+        <div class="det-legend-row" id="legend-row-wq" hidden>
+          <span class="det-legend-dot det-legend-drop" aria-hidden="true"></span>
+          <span>Water quality advisory (Hawaiʻi DOH)</span>
+        </div>
+        <div class="det-legend-row" id="legend-row-aq" hidden>
+          <span class="det-legend-dot det-legend-square" aria-hidden="true"></span>
+          <span>Air quality monitor (EPA AQI)</span>
+        </div>
       </div>
 
       <div id="perimeter-map-legend" class="perim-legend" hidden aria-hidden="true">
@@ -2916,6 +2946,7 @@
 
     <div class="freshness f-unknown" id="freshness-badge">● UNKNOWN</div>
     <div class="metric-subnote" id="fire-feed-updated"></div>
+    <div class="metric-subnote" id="fire-coverage-note"></div>
     <!-- Detection age is INFORMATION, not an alarm — plain, uncoloured. Old
          detections on a calm day are good news. -->
     <div class="metric-subnote" id="detection-age-note"></div>
@@ -3692,14 +3723,32 @@
     // to a quieter second line. applyFreshness() is deliberately NOT modified:
     // smoke, perimeters and the other modules still use it correctly, and
     // changing it for fire's sake would break them.
+    // SAT-0b-3. The panel template's ids are cloned with -desktop / -mobile
+    // suffixes (mountPanel). This wrote to the bare ids, which never exist, so
+    // the badge sat on its template text "● UNKNOWN" and the feed line never
+    // rendered. Both suffixes now.
     function applyFireBadge(fire, fireCurrent) {
-      const feedEl = document.getElementById("fire-feed-updated");
+      ["desktop", "mobile"].forEach((suffix) => applyFireBadgeTo(suffix, fire, fireCurrent));
+    }
+    function applyFireBadgeTo(suffix, fire, fireCurrent) {
+      const feedEl = document.getElementById(`fire-feed-updated-${suffix}`);
       if (feedEl) {
         const mins = fire?.fetchAt ? Math.max(0, Math.round((Date.now() - fire.fetchAt.getTime()) / 60000)) : null;
         feedEl.textContent = mins === null ? ""
           : (_tmpl("map.fire_feed_updated", { n: mins }) || `Data updated ${mins} min ago`);
       }
-      const el = document.getElementById("freshness-badge");
+      // SAT-0b-3. One satellite down: the detections shown are real but cover
+      // fewer passes, so a fire can go unseen for longer. Said every time.
+      const covEl = document.getElementById(`fire-coverage-note-${suffix}`);
+      if (covEl) {
+        const m = fire?.status === "ready" ? (fire.meta || {}) : {};
+        if (m.health === "partial") {
+          const names = (m.datasetsUsed || []).map((d) => FIRMS_DATASET_NAMES[d] || d).join(", ");
+          covEl.textContent = _tmpl("map.fire_partial", { sats: names }) ||
+            `One satellite is temporarily unavailable, so coverage is reduced${names ? ` (showing ${names} only)` : ""}. A fire can go unseen for longer.`;
+        } else covEl.textContent = "";
+      }
+      const el = document.getElementById(`freshness-badge-${suffix}`);
       if (!el) return;
       if (fire?.status === "unavailable") {
         el.className = "freshness f-old";
@@ -3950,6 +3999,11 @@
             freshness_status: n.freshness_status,
             observation_age_s: n.observation_age_s,
             signal_id: n.signal_id,
+            // SAT-0b-3. Worker SAT-0b-1/0b-2 fields, passed through unchanged.
+            seen_by: Array.isArray(props.seen_by) ? props.seen_by.filter((x) => typeof x === "string") : null,
+            location_id: typeof props.location_id === "string" ? props.location_id : null,
+            location_primary: typeof props.location_primary === "boolean" ? props.location_primary : null,
+            corroborated_by: Array.isArray(props.corroborated_by) ? props.corroborated_by.filter((x) => typeof x === "string") : null,
             satellite: n.satellite,
             // RS-2. VIIRS pixel dimensions at the scan angle of this detection,
             // and the day/night pass flag. Passed through unchanged — the popup
@@ -4220,11 +4274,17 @@
         enabled: true,
         affectsGlobalHealth: false, // fire endpoint errors shown per-signal, not as global red banner
         parsePayload(json) {
+          // SAT-0b-1/0b-3. Every FIRMS feed down arrives as HTTP 200 with an empty
+          // collection and health "degraded". Rendered as data it read as zero
+          // fires; thrown, it takes refreshHazard's unavailable path instead.
+          const fp = json && json.properties ? json.properties : {};
+          if (fp.health === "degraded") { const e = new Error("FIRMS: every satellite feed unavailable"); e.isUpstream = true; throw e; }
           const raw = parseCanonicalSignals(json, "fire");
           const features = normalizeFireFeatures(raw);
           const newest = features.map((f) => parseDateMaybe(f.properties?.event_time) || parseFirmsTimestamp(f.properties?.acq_date, f.properties?.acq_time)).filter(Boolean).sort((a, b) => b - a)[0] || null;
           const scopeLabel = (!IS_LOCAL && fireScope === "usa") ? "NASA FIRMS · USA" : "NASA FIRMS · Kahu Ola Worker";
-          return { features, sourceTime: newest || parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local test dataset" : scopeLabel) };
+          return { features, sourceTime: newest || parseDateMaybe(json.newest_acq_at) || parseDateMaybe(json.generated_at) || parseDateMaybe(json.fetched_at) || new Date(), sourceLabel: json.source || json.provider || (IS_LOCAL ? "Local test dataset" : scopeLabel),
+            meta: { health: typeof fp.health === "string" ? fp.health : null, datasetsUsed: Array.isArray(fp.datasets_used) ? fp.datasets_used : [], datasetsRequested: Array.isArray(fp.datasets_requested) ? fp.datasets_requested : [] } };
         },
         ensureLayers, applyData(features) { updateFireSource(features); }, onFetchComplete() { renderUnifiedPanels(); }, visible() { return true; }
       },
@@ -5002,6 +5062,46 @@
     function ensureRainRadarLayers() { setupRainRadar(); }
     // ── EPA AirNow AQI tile proxy (kahuola.org/api/tiles/xyz/airnow/*) ────────
     // All tile requests go through the Worker — Invariant I.
+    // SAT-0b-3. Non-circular marker icons, drawn on demand so they survive a
+    // basemap switch (setStyle drops every image) and so the air-quality square
+    // can take any colour the envelope sends without a fixed palette here.
+    //   kahuola-aq-sq-<css colour>  rounded square, white ring
+    //   kahuola-wq-drop             amber droplet, dark ring, point at the bottom
+    function drawMarkerIcon(id) {
+      const ratio = 2, size = 24 * ratio;
+      const c = document.createElement("canvas"); c.width = size; c.height = size;
+      const g = c.getContext("2d"); if (!g) return null;
+      if (id.startsWith("kahuola-aq-sq-")) {
+        const fill = id.slice("kahuola-aq-sq-".length);
+        const inset = 3 * ratio, r = 4 * ratio, w = size - inset * 2;
+        g.beginPath();
+        g.moveTo(inset + r, inset); g.arcTo(inset + w, inset, inset + w, inset + w, r);
+        g.arcTo(inset + w, inset + w, inset, inset + w, r); g.arcTo(inset, inset + w, inset, inset, r);
+        g.arcTo(inset, inset, inset + w, inset, r); g.closePath();
+        g.fillStyle = fill; g.globalAlpha = 1; g.fill();
+        g.lineWidth = 1.6 * ratio; g.strokeStyle = "rgba(255,255,255,0.9)"; g.stroke();
+      } else if (id === "kahuola-wq-drop") {
+        const cx = size / 2, top = 2 * ratio, rad = 7 * ratio, cy = size - 2 * ratio - rad;
+        g.beginPath();
+        g.moveTo(cx, size - 2 * ratio);
+        g.bezierCurveTo(cx - rad * 1.1, cy + rad * 0.2, cx - rad, cy - rad * 0.9, cx, top);
+        g.bezierCurveTo(cx + rad, cy - rad * 0.9, cx + rad * 1.1, cy + rad * 0.2, cx, size - 2 * ratio);
+        g.closePath();
+        g.fillStyle = WQ_AMBER; g.fill();
+        g.lineWidth = 1.5 * ratio; g.strokeStyle = "#4a3a10"; g.stroke();
+      } else return null;
+      return { data: g.getImageData(0, 0, size, size), ratio };
+    }
+    function ensureMarkerIcons() {
+      if (!map.hasImage("kahuola-wq-drop")) { const ic = drawMarkerIcon("kahuola-wq-drop"); if (ic) map.addImage("kahuola-wq-drop", ic.data, { pixelRatio: ic.ratio }); }
+      if (map.__markerIconsBound) return;
+      map.__markerIconsBound = true;
+      map.on("styleimagemissing", (e) => {
+        if (!e || typeof e.id !== "string" || !e.id.startsWith("kahuola-") || map.hasImage(e.id)) return;
+        const ic = drawMarkerIcon(e.id);
+        if (ic) map.addImage(e.id, ic.data, { pixelRatio: ic.ratio });
+      });
+    }
     function ensureAirnowLayers() {
       if (!map.getSource("airnow-tiles")) {
         ensureSource("airnow-tiles", {
@@ -5028,21 +5128,27 @@
     // Paired with the AQI NUMBER, never colour alone (WCAG 1.4.1): the numeral is
     // the universal language of air quality and survives colour-blindness.
     //
-    // Deliberately reads as a MEASUREMENT POINT, not a hazard zone: small fixed
-    // radius, white ring, no glow — visually separate from FIRMS orange and the
+    // Deliberately reads as a MEASUREMENT POINT, not a hazard zone: fixed size,
+    // white ring, no glow — visually separate from FIRMS orange and the
     // fire-danger magenta wash.
+    //
+    // SAT-0b-3. A SQUARE, not a disc: round orange is fire only. EPA's "Unhealthy
+    // for Sensitive Groups" orange (#ff7e00) on a round marker read as a
+    // wildfire detection. The icon is drawn per colour on demand (see
+    // ensureMarkerIcons), so EPA's palette is still used as published.
     function ensureAirQualityLayers() {
       ensureSource("air-quality", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      ensureMarkerIcons();
       ensureLayer({
-        id: "air-quality-dot", type: "circle", source: "air-quality",
-        layout: { visibility: "none" },
-        paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 9, 9, 12, 13, 15],
-          "circle-color": ["get", "category_color"],
-          "circle-opacity": 0.92,
-          "circle-stroke-width": 1.6,
-          "circle-stroke-color": "rgba(255,255,255,0.9)",
+        id: "air-quality-dot", type: "symbol", source: "air-quality",
+        layout: {
+          visibility: "none",
+          "icon-image": ["concat", "kahuola-aq-sq-", ["coalesce", ["get", "category_color"], "#90a4ae"]],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 5, 0.75, 9, 1, 13, 1.25],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
         },
+        paint: { "icon-opacity": 0.92 },
       });
       ensureLayer({
         id: "air-quality-label", type: "symbol", source: "air-quality",
@@ -5742,6 +5848,7 @@
     // never opacity — so a hidden dot cannot capture a click.
     function syncAirQualityVisibility() {
       ["air-quality-dot", "air-quality-label"].forEach((id) => setLayerVisibility(id, airnowVisible));
+      const row = document.getElementById("legend-row-aq"); if (row) row.hidden = !airnowVisible;
     }
 
     // EPA category names are descriptors, so they translate; the AQI numeral and
@@ -6584,14 +6691,22 @@
         layout: { visibility: waterQualityVisible ? "visible" : "none" },
         paint: { "line-color": WQ_AMBER, "line-width": 1.8, "line-opacity": 0.80 },
       });
+      // SAT-0b-3. A DROPLET, not a disc: round orange is fire only. Amber DOH
+      // advisory dots on Kauaʻi, Oʻahu and Hawaiʻi Island were read as wildfire
+      // detections against the "Wildfire detection" legend.
+      ensureMarkerIcons();
       ensureLayer({
-        id: "water-quality-point", type: "circle", source: "water-quality",
+        id: "water-quality-point", type: "symbol", source: "water-quality",
         filter: ["==", ["geometry-type"], "Point"],
-        layout: { visibility: waterQualityVisible ? "visible" : "none" },
-        paint: {
-          "circle-radius": 6, "circle-color": WQ_AMBER, "circle-opacity": 0.9,
-          "circle-stroke-width": 1.5, "circle-stroke-color": "#4a3a10",
+        layout: {
+          visibility: waterQualityVisible ? "visible" : "none",
+          "icon-image": "kahuola-wq-drop",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 5, 0.8, 10, 1],
+          "icon-anchor": "bottom",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
         },
+        paint: { "icon-opacity": 0.95 },
       });
       if (!map.__wqHoverBound) {
         map.__wqHoverBound = true;
@@ -6610,6 +6725,7 @@
       setLayerVisibility("water-quality-fill", waterQualityVisible);
       setLayerVisibility("water-quality-outline", waterQualityVisible);
       setLayerVisibility("water-quality-point", waterQualityVisible);
+      const row = document.getElementById("legend-row-wq"); if (row) row.hidden = !waterQualityVisible;
     }
 
     function waterQualityGeoJson() {
@@ -7027,6 +7143,7 @@
     // beside a caption saying "about 12 h old".
     function fireIsStaleDrop(f) { return f?.properties?.freshness_status === "STALE_DROP"; }
     function fireIsVolcanic(f) { return f?.properties?.volcanic_zone === true; }
+    const FIRMS_DATASET_NAMES = { VIIRS_NOAA20_NRT: "NOAA-20", VIIRS_NOAA21_NRT: "NOAA-21" };
     // "Current" = a wildfire signal we are willing to treat as present now:
     // not volcanic, and seen within the last 12 h. Everything the panel counts,
     // ranks by distance or calls critical is drawn from this set.
@@ -7086,6 +7203,11 @@
         if (f.properties?.severity === "CRITICAL") criticalCount += 1;
         nearest = Math.min(nearest, distMiles(refPoint, coords));
       }
+      // SAT-0b-3. Feed down (HTTP error, or every satellite failed): there is no
+      // number to show. "0" and "No fire detections" are claims about the
+      // world; an outage is not one. Every fire metric reads unavailable.
+      const fireDown = fire.status === "unavailable";
+      const unavailableText = _t("map.s_unavailable") || "Unavailable";
       ["desktop", "mobile"].forEach((suffix) => {
         const fireCountEl = document.getElementById(`fire-count-${suffix}`);
         if (fireCountEl) {
@@ -7093,6 +7215,7 @@
           // status="loading", and painting a spinner for those made the count
           // flicker — or stick — with no user action behind it (D3).
           if (fire.status === "loading" && fireUserRefreshInFlight) { fireCountEl.className = "metric-value v-fire"; fireCountEl.innerHTML = '<span class="spinner"></span>'; }
+          else if (fireDown) { fireCountEl.textContent = "\u2014"; fireCountEl.className = "metric-value v-neutral"; }
           else { fireCountEl.textContent = String(fireFeatures.length); fireCountEl.className = "metric-value " + (fireFeatures.length > 0 ? "v-fire" : "v-neutral"); }
         }
         // D4 — this panel counts ALL thermal detections; the fire-danger card
@@ -7102,7 +7225,7 @@
         const volcanicEl = document.getElementById(`fire-volcanic-note-${suffix}`);
         if (volcanicEl) {
           const volc = fireFeatures.filter((f) => f?.properties?.volcanic_zone === true).length;
-          volcanicEl.textContent = volc > 0
+          volcanicEl.textContent = !fireDown && volc > 0
             ? (_tmpl("map.metric_detections_volcanic", { n: volc }) ||
               `${volc} of these are volcanic (Kīlauea / Mauna Loa), not wildfire.`)
             : "";
@@ -7114,7 +7237,7 @@
         // are excluded from both halves; they have their own line above.
         const splitEl = document.getElementById(`fire-age-split-${suffix}`);
         if (splitEl) {
-          const splitBase = (fireCurrent.length || fireOlder.length || fireUnknownAge.length)
+          const splitBase = !fireDown && (fireCurrent.length || fireOlder.length || fireUnknownAge.length)
             ? (_tmpl("map.fire_count_split", { current: fireCurrent.length, older: fireOlder.length }) ||
               `Current (≤ 12 h): ${fireCurrent.length} · Older (12–24 h): ${fireOlder.length}`)
             : "";
@@ -7134,7 +7257,7 @@
         // knowing whether a storm is overhead is not knowing there is none.
         const cloudEl = document.getElementById(`fire-cloud-caveat-${suffix}`);
         if (cloudEl) {
-          if (fireCurrent.length > 0) cloudEl.textContent = "";
+          if (fireCurrent.length > 0 || fireDown) cloudEl.textContent = "";
           else {
             const calm = String(summaryStorm?.status || "") === "none";
             cloudEl.textContent = calm
@@ -7146,13 +7269,15 @@
         if (nearestEl) {
           // "None" in green read as "no fire near you". It means no fire was
           // DETECTED — same satellite blind spot as the count above it.
-          if (!fireCurrent.length || !Number.isFinite(nearest)) { nearestEl.textContent = _t("signal.fire_no_detections") || "No fire detections"; nearestEl.className = "metric-value v-neutral"; }
+          if (fireDown) { nearestEl.textContent = unavailableText; nearestEl.className = "metric-value v-neutral"; }
+          else if (!fireCurrent.length || !Number.isFinite(nearest)) { nearestEl.textContent = _t("signal.fire_no_detections") || "No fire detections"; nearestEl.className = "metric-value v-neutral"; }
           else { nearestEl.textContent = `${nearest.toFixed(1)} mi`; nearestEl.className = "metric-value " + (nearest < 5 ? "v-crit" : nearest < 20 ? "v-warn" : "v-fire"); }
         }
         const criticalEl = document.getElementById(`critical-count-${suffix}`);
         // Sweep: a zero critical count sat green beside a now-neutral zero
         // count and its cloud caveat. Same fire-context zero, same treatment.
-        if (criticalEl) { criticalEl.textContent = criticalCount > 0 ? String(criticalCount) : (_t("map.s_none") || "None"); criticalEl.className = "metric-value " + (criticalCount > 0 ? "v-crit" : "v-neutral"); }
+        if (criticalEl && fireDown) { criticalEl.textContent = "\u2014"; criticalEl.className = "metric-value v-neutral"; }
+        else if (criticalEl) { criticalEl.textContent = criticalCount > 0 ? String(criticalCount) : (_t("map.s_none") || "None"); criticalEl.className = "metric-value " + (criticalCount > 0 ? "v-crit" : "v-neutral"); }
         // D1 — two separate clocks. "Latest detection" is when a satellite last
         // saw something (fire.sourceTime); "Updated" is when we last polled
         // successfully (fire.fetchAt, set on every fetch and previously unused).
@@ -7179,6 +7304,7 @@
           const refLabel = lastKnownUserCoord ? (_t("map.ref_label_you") || "your device location") : (_t("map.ref_label_view") || "the reference view");
           const fireScopeRegion = fireScope === "usa" ? (_t("map.region_usa") || "the USA") : (_t("map.region_hawaii") || "Hawai\u02bbi");
           if (appState.diagnostics.isOffline) summaryText.textContent = _t("map.summary_offline") || "Cached hazard data is being shown while connectivity is degraded.";
+          else if (fireDown) summaryText.textContent = _t("map.fire_summary_unavailable") || "NASA FIRMS satellite fire data is unavailable right now. This is not a \u201cno fire\u201d reading \u2014 check official sources.";
           else if (fireCurrent.length === 0 && floodCount > 0) summaryText.textContent = _tmpl("map.fire_summary_flood_active", { n: floodCount, s: floodCount === 1 ? "" : "s" }) || `Flash flood watch geometry is active in ${floodCount} area${floodCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
           else if (fireCurrent.length === 0 && smokeCount > 0) summaryText.textContent = _tmpl("map.fire_summary_smoke_active", { n: smokeCount, s: smokeCount === 1 ? "" : "s" }) || `NOAA HMS is showing ${smokeCount} smoke region${smokeCount === 1 ? "" : "s"}, while NASA FIRMS returned no current wildfire detections.`;
           else if (fireCurrent.length === 0) summaryText.textContent = _tmpl("map.fire_summary_none", { region: fireScopeRegion }) || `NASA FIRMS returned no current wildfire detections across ${fireScopeRegion} in this snapshot.`;
@@ -7403,13 +7529,11 @@
       const satellite = p.satellite || (pv && pv.satellite) || "—";
       const nightBadge = p.is_night_detection === true ? ' <span style="font-size:0.75em;opacity:0.82" title="Night detection">🌙</span>' : '';
       const confNormLow = String(rawConf || "").toLowerCase();
-      const confDisplay = confNormLow === "high"
-        ? '<span style="color:#7fd580;font-weight:600">\u2713 HIGH CONFIDENCE \u00b7 2 satellites</span>'
-        : confNormLow === "nominal"
-          ? '<span style="color:#f0a500">\u25d0 NOMINAL</span>'
-          : confNormLow === "low"
-            ? '<span style="color:#8899aa">\u26a0 LOW CONFIDENCE</span>'
-            : escapeHtml(confLabel);
+      // SAT-0b-3. FIRMS's own VIIRS confidence, shown as a plain label. The old
+      // "✓ HIGH CONFIDENCE · 2 satellites" in green was earned by a MODIS pixel
+      // anywhere in the same ~11 km cell over two days — not two satellites —
+      // and a green tick on a fire popup reads as "all clear". No colour, no tick.
+      const confDisplay = escapeHtml(confLabel);
       const sourceLabel = (pv && pv.source_agency) ? String(pv.source_agency).replace(/_/g, " ") : (p.source || "NASA FIRMS");
       const googleMaps = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`; const appleMaps = `https://maps.apple.com/?ll=${lat},${lng}&q=Wildfire%20Signal`; const googleDirections = lastKnownUserCoord ? `https://www.google.com/maps/dir/${lastKnownUserCoord[1]},${lastKnownUserCoord[0]}/${lat},${lng}` : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; const satelliteFocus = `https://www.google.com/maps/@${lat},${lng},1200m/data=!3m1!1e3`;
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 11.5), duration: 500 });
@@ -7428,9 +7552,14 @@
       // nothing else: an unlisted code drops out of the line rather than being
       // printed raw or guessed at. The pass and the age follow the same rule,
       // and if all three parts are missing the line does not render at all.
-      const SAT_NAMES = { N20: "NOAA-20", N21: "NOAA-21", N: "Suomi NPP", T: "Terra", A: "Aqua" };
+      // SAT-0b-3. Suomi NPP removed (delivery ends 2026-11-01). seen_by (Worker,
+      // SAT-0b-2) lists every satellite that saw this fire within the match
+      // window, so a fire seen by both reads "NOAA-20 + NOAA-21".
+      const SAT_NAMES = { N20: "NOAA-20", N21: "NOAA-21", T: "Terra", A: "Aqua" };
       const satCode = typeof p.satellite === "string" ? p.satellite.trim().toUpperCase() : "";
-      const satName = SAT_NAMES[satCode] || null;
+      const seenBy = Array.isArray(p.seen_by) ? p.seen_by : (typeof p.seen_by === "string" ? (() => { try { return JSON.parse(p.seen_by); } catch (_) { return []; } })() : []);
+      const seenNames = seenBy.map((c) => SAT_NAMES[String(c).trim().toUpperCase()]).filter(Boolean);
+      const satName = seenNames.length > 1 ? seenNames.join(" + ") : (SAT_NAMES[satCode] || null);
       const passLabel = p.daynight === "D" ? _L("map.pass_day", "day pass")
         : p.daynight === "N" ? _L("map.pass_night", "night pass") : null;
       const detectedByParts = [satName, passLabel, ageText].filter(Boolean);

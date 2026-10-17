@@ -123,6 +123,24 @@ done vs not. Each numbered item = one Claude Code prompt = one increment
     than relying on the upstream filter; show "Posted X ago · DOH updated Y ago"
     from `postedDate` / `updatedOn` (the popup labels the posted date
     "Updated"); when DOH fails, say "DOH unavailable", never "clear".
+  - **Ticket (backlog)** — Show distinct fires (`location_count`, SAT-0b-2)
+    alongside detections in the live-map fire panel, with new wording. The
+    panel keeps the detection count (ruling); one fire seen by NOAA-20 and
+    NOAA-21 currently reads "Current (≤ 12 h): 2".
+  - **n8n restart runbook (run AFTER the SAT-0b batch deploy)** — Docker has
+    been down since 2026-07-19; last successful Morning Brief 2026-07-16.
+    1. Long rotates the Facebook token and deletes the v4.6 BACKUP file.
+    2. Run `scripts/sync-brief.sh` (repo generate-brief.mjs → n8n assets).
+    3. Set the n8n container restart policy to "no" before starting it.
+    4. Deactivate "Kahu Ola Morning Brief V5" and "Video Autobuilder FULL V2"
+       first, so nothing fires on start-up catch-up.
+    5. Start Docker / n8n.
+    6. Point the Telegram nodes at a PRIVATE test chat (not public @kahuola),
+       run Morning Brief manually, verify the output (fire wording for
+       detected / none / unavailable / partial, smoke wording, numbers).
+    7. Restore the Telegram chat, reactivate the workflows.
+    8. Investigate "Facebook: Emergency Post" failing with "Bad request -
+       please check your parameters" (every emergency run ~2026-07-12..15).
   There is no RS-4. RS-5 is this documentation increment.
 
 ## TRACK A — NASA Space Apps (Hazard Intelligence Upgrade)
