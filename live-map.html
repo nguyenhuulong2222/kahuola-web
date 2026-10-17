@@ -5012,10 +5012,22 @@
       ensureAlertsLayers();        // other NWS alerts (superset) — just below fire
       ensureFireLayers();          // fire always topmost
     }
+    // SAT-1a2. Density-scaled smoke styling, shared by the layers and the toggle.
+    const SMOKE_FILL_COLOR = ["match", ["get", "density"], "heavy", "#6a1b9a", "medium", "#8e24aa", "light", "#ab47bc", "#ab47bc"];
+    const SMOKE_FILL_OPACITY = ["match", ["get", "density"], "heavy", 0.58, "medium", 0.44, "light", 0.30, 0.30];
+    const SMOKE_LINE_COLOR = ["match", ["get", "density"], "heavy", "#f8e7ff", "medium", "#f1dcfb", "light", "#ead2f6", "#ead2f6"];
+    const SMOKE_LINE_WIDTH = ["match", ["get", "density"], "heavy", 3.2, "medium", 2.4, "light", 1.7, 1.7];
     function ensureSmokeLayers() {
       ensureSource("smoke", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      ensureLayer({ id: "smoke-fill", type: "fill", source: "smoke", paint: { "fill-color": ["match", ["get", "density"], "heavy", "#6a1b9a", "medium", "#8e24aa", "light", "#ba68c8", "#ba68c8"], "fill-opacity": smokeVisible ? ["match", ["get", "density"], "heavy", 0.42, "medium", 0.30, "light", 0.18, 0.18] : 0 } });
-      ensureLayer({ id: "smoke-outline", type: "line", source: "smoke", paint: { "line-color": ["match", ["get", "density"], "heavy", "#ce93d8", "medium", "#d8b4e7", "light", "#e7d2f1", "#e7d2f1"], "line-width": ["match", ["get", "density"], "heavy", 2.4, "medium", 1.8, "light", 1.2, 1.2], "line-opacity": smokeVisible ? 0.82 : 0 } });
+      // SAT-1a2. Smoke must read on the national map, where it sits over bright,
+      // semi-opaque rasters (coral heat stress, CONUS radar, AQI tiles). The
+      // order was already right (smoke above every raster); the contrast was
+      // not — an 18 % lilac fill and a thin pale outline vanished into them.
+      // Now: a dark casing under a bright outline (legible on any colour),
+      // and fill + width that scale with HMS density.
+      ensureLayer({ id: "smoke-fill", type: "fill", source: "smoke", paint: { "fill-color": SMOKE_FILL_COLOR, "fill-opacity": smokeVisible ? SMOKE_FILL_OPACITY : 0 } });
+      ensureLayer({ id: "smoke-outline-casing", type: "line", source: "smoke", layout: { "line-join": "round" }, paint: { "line-color": "#1a0626", "line-width": ["+", SMOKE_LINE_WIDTH, 2.5], "line-opacity": smokeVisible ? 0.85 : 0 } });
+      ensureLayer({ id: "smoke-outline", type: "line", source: "smoke", layout: { "line-join": "round" }, paint: { "line-color": SMOKE_LINE_COLOR, "line-width": SMOKE_LINE_WIDTH, "line-opacity": smokeVisible ? 0.95 : 0 } });
       if (!map.__smokeHoverBound) { map.__smokeHoverBound = true; map.on("mouseenter", "smoke-fill", () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", "smoke-fill", () => { map.getCanvas().style.cursor = ""; }); }
       syncSmokeLayerVisibility();
     }
@@ -6983,9 +6995,11 @@
     }
     function syncSmokeLayerVisibility() {
       setLayerVisibility("smoke-fill", smokeVisible);
+      setLayerVisibility("smoke-outline-casing", smokeVisible);
       setLayerVisibility("smoke-outline", smokeVisible);
-      if (map.getLayer("smoke-fill")) map.setPaintProperty("smoke-fill", "fill-opacity", smokeVisible ? ["match", ["get", "density"], "heavy", 0.42, "medium", 0.30, "light", 0.18, 0.18] : 0);
-      if (map.getLayer("smoke-outline")) map.setPaintProperty("smoke-outline", "line-opacity", smokeVisible ? 0.82 : 0);
+      if (map.getLayer("smoke-fill")) map.setPaintProperty("smoke-fill", "fill-opacity", smokeVisible ? SMOKE_FILL_OPACITY : 0);
+      if (map.getLayer("smoke-outline-casing")) map.setPaintProperty("smoke-outline-casing", "line-opacity", smokeVisible ? 0.85 : 0);
+      if (map.getLayer("smoke-outline")) map.setPaintProperty("smoke-outline", "line-opacity", smokeVisible ? 0.95 : 0);
       syncSmokeButtons();
     }
     function syncSmokeButtons() { ["smoke-btn-panel-desktop", "smoke-btn-panel-mobile", "smoke-btn-mobile"].forEach((id) => { const el = document.getElementById(id); if (!el) return; el.textContent = smokeVisible ? (_t("map.smoke_on") || "Smoke Layer: On") : (_t("map.smoke_off") || "Smoke Layer: Off"); el.classList.toggle("active", smokeVisible); }); }
@@ -7932,7 +7946,7 @@
     function raiseFireLayersAboveOverlays() {
       // "fire-danger-fill" is FIRST so it is re-stacked lowest of this group —
       // every other overlay, and all fire markers, end up above the estimate grid.
-      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline", "perimeter-fill", "perimeter-outline", "water-quality-fill", "water-quality-outline", "water-quality-point", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-cone-fill", "hurricane-cone-outline", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
+      ["fire-danger-fill", "fire-danger-mine-outline", "air-quality-dot", "air-quality-label", "fire-danger-anchor-halo", "fire-danger-anchor-core", "fire-danger-marker-glow", "fire-danger-marker-core", "fire-danger-marker-label", "smoke-fill", "smoke-outline-casing", "smoke-outline", "perimeter-fill", "perimeter-outline", "water-quality-fill", "water-quality-outline", "water-quality-point", "flash-flood-fill", "flash-flood-outline", "flash-flood-point", "flood-context-fill", "flood-context-outline", "mrms-rain-fill", "mrms-rain-outline", "wind-risk-fill", "wind-risk-outline", "tsunami-fill", "tsunami-outline", "tsunami-point", "hurricane-cone-fill", "hurricane-cone-outline", "hurricane-track-line", "hurricane-forecast-point", "hurricane-forecast-label", "hurricane-point", "landslide-fill", "landslide-outline", "local-hazards-line", "local-hazards-fill", "local-hazards-outline", "local-hazards-point", "clusters", "cluster-count", "unclustered-fires-glow", "unclustered-fires"].forEach((id) => {
         if (map.getLayer(id)) { try { map.moveLayer(id); } catch (_) { } }
       });
       // "fires-older-layer" is FIRST so it is re-stacked lowest of the fire
